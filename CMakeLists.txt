@@ -1,5 +1,5 @@
 #
-# Master Opencog CMake file.
+# Master Opencog CogServer CMake file.
 #
 # General organization:
 # -- check for different compilers, OS'es
@@ -167,16 +167,6 @@ ELSE (ATOMSPACE_FOUND)
 	MESSAGE(FATAL_ERROR "AtomSpace missing: it is needed!")
 ENDIF (ATOMSPACE_FOUND)
 
-# URE
-FIND_PACKAGE(URE 1.0.0 CONFIG)
-IF (URE_FOUND)
-	MESSAGE(STATUS "URE found.")
-	ADD_DEFINITIONS(-DHAVE_URE)
-	SET(HAVE_URE 1)
-ELSE (URE_FOUND)
-	MESSAGE(STATUS "URE was not found. PLN will not be built.")
-ENDIF (URE_FOUND)
-
 # ----------------------------------------------------------
 # Check for boost. We need dynamic-linked, threaded libs by default.
 SET(Boost_USE_STATIC_LIBS OFF)
@@ -217,27 +207,6 @@ IF (NOT CXXTEST_FOUND)
 ENDIF (NOT CXXTEST_FOUND)
 
 # ----------------------------------------------------------
-# Glasgow Haskell compiler
-FIND_PACKAGE(GHC)
-IF (GHC_FOUND)
-	ADD_DEFINITIONS(-DHAVE_GHC)
-	SET(HAVE_GHC 1)
-ELSE (GHC_FOUND)
-	SET(GHC_DIR_MESSAGE "GHC was not found; Haskell bindings will not be built.")
-	MESSAGE(STATUS "${GHC_DIR_MESSAGE}")
-ENDIF (GHC_FOUND)
-
-FIND_PACKAGE(Stack)
-IF (STACK_FOUND)
-	ADD_DEFINITIONS(-DHAVE_STACK)
-	SET(HAVE_STACK 1)
-	SET(STACK_FOUND_MESSAGE "The Haskell Tool Stack found.")
-ELSE (STACK_FOUND)
-	SET(STACK_FOUND_MESSAGE "The Haskell Tool Stack not found.")
-ENDIF (STACK_FOUND)
-MESSAGE(STATUS "${STACK_FOUND_MESSAGE}")
-
-# ----------------------------------------------------------
 # This is required for Guile
 FIND_LIBRARY(GMP_LIBRARY gmp)
 FIND_PATH(GMP_INCLUDE_DIR gmp.h)
@@ -253,26 +222,6 @@ ELSE (GUILE_FOUND AND GMP_LIBRARY AND GMP_INCLUDE_DIR)
 	SET(GUILE_DIR_MESSAGE "Guile was not found; the scheme shell will not be built.\nTo over-ride, make sure GUILE_LIBRARIES and GUILE_INCLUDE_DIRS are set.")
 	MESSAGE(STATUS "${GUILE_DIR_MESSAGE}")
 ENDIF (GUILE_FOUND AND GMP_LIBRARY AND GMP_INCLUDE_DIR)
-
-# ----------------------------------------------------------
-# Link-Grammar is needed for several NLP subsystems
-# Only 5.4.0 or newer has the required API in it.
-FIND_PACKAGE(LinkGrammar 5.4.0)
-IF (LINK_GRAMMAR_FOUND)
-	SET(HAVE_LINK_GRAMMAR 1)
-	INCLUDE_DIRECTORIES(${LINK_GRAMMAR_INCLUDE_DIRS})
-ELSE (LINK_GRAMMAR_FOUND)
-	MESSAGE(STATUS "Link Grammar missing: needed for NLP.")
-ENDIF (LINK_GRAMMAR_FOUND)
-
-FIND_PACKAGE(UUID)
-IF (UUID_FOUND)
-	SET(HAVE_UUID 1)
-	INCLUDE_DIRECTORIES(${UUID_INCLUDE_DIRS})
-	ADD_DEFINITIONS(${UUID_DEFINITIONS})
-ELSE (UUID_FOUND)
-	MESSAGE(STATUS "UUID library missing: needed for NLP.")
-ENDIF (UUID_FOUND)
 
 # ----------------------------------------------------------
 # Python and Cython
@@ -377,47 +326,6 @@ ELSE (VALGRIND_FOUND)
 	MESSAGE(STATUS "VALGRIND missing: needed for thread debugging.")
 ENDIF (VALGRIND_FOUND)
 
-# -----------------------------------------------------------------------------
-# XXX FIXME. The jsoncpp, TBB and ZeroMQ packages are needed by
-# the deprecated and/or obsolete AtomSpacePublisher module.
-# I'm not sure, but I suspect that module doesn't work.  It's
-# not maintained by anyone; it's certainly out of date, and doesn't
-# support any of the modern features. So ....!? FIXME
-
-# jsoncpp
-FIND_PACKAGE(PkgConfig)
-IF(PKG_CONFIG_FOUND)
-  pkg_check_modules(JSONCPP jsoncpp)
-  IF(JSONCPP_FOUND)
-    ADD_DEFINITIONS(-DHAVE_JSONCPP)
-    SET(HAVE_JSONCPP 1)
-    SET(JSONCPP_DIR_MESSAGE "JsonCPP was found")
-  ELSE(JSONCPP_FOUND)
-    SET(JSONCPP_DIR_MESSAGE "JsonCPP was not found; the AtomSpace Publisher Module needs JsonCPP to publish events in JSON.\nIf you need to receive AtomSpace events in JSON, install JsonCPP using your package manager \nsuch as apt or build from source: https://github.com/open-source-parsers/jsoncpp/wiki/Building")
-  ENDIF(JSONCPP_FOUND)
-ENDIF(PKG_CONFIG_FOUND)
-MESSAGE(STATUS "${JSONCPP_DIR_MESSAGE}")
-
-# Threaded Building Blocks (Intel TBB) library
-FIND_PACKAGE(TBB)
-IF (TBB_FOUND)
-	SET(HAVE_TBB 1)
-ELSE (TBB_FOUND)
-	SET(TBB_DIR_MESSAGE "Intel TBB (Threaded Building Blocks) was not found; the AtomSpace Publisher module will not be built. Installation instructions: https://www.threadingbuildingblocks.org/download")
-ENDIF (TBB_FOUND)
-MESSAGE(STATUS "${TBB_DIR_MESSAGE}")
-
-# ZeroMQ
-FIND_PACKAGE(ZMQ 3.2.4)
-IF (ZMQ_FOUND AND ZMQ_LIBRARY)
-	ADD_DEFINITIONS(-DHAVE_ZMQ)
-	SET(HAVE_ZMQ 1)
-	SET(ZMQ_DIR_MESSAGE "ZeroMQ was found.")
-ELSE (ZMQ_FOUND AND ZMQ_LIBRARY)
-	SET(ZMQ_DIR_MESSAGE "ZeroMQ was not found; the AtomSpace Publisher module, and the message system used by GUI monitor for OAC will not be built.\nTo over-ride, make sure that the environment variable ZMQ_LIBRARY is set.\nInstallation instructions: http://zeromq.org/intro:get-the-software")
-ENDIF (ZMQ_FOUND AND ZMQ_LIBRARY)
-MESSAGE(STATUS "${ZMQ_DIR_MESSAGE}")
-
 # ===================================================================
 # Global includes
 
@@ -488,30 +396,9 @@ SET (MAN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/man")
 # Decide what to build, based on the packages found.
 
 IF(HAVE_ATOMSPACE AND HAVE_COGUTIL)
-	SET(HAVE_ATTENTION 1)
+	SET(HAVE_SERVER 1)
 ENDIF(HAVE_ATOMSPACE AND HAVE_COGUTIL)
 
-IF(HAVE_URE)
-	SET(HAVE_PLN 1)
-ENDIF(HAVE_URE)
-
-IF(HAVE_ATOMSPACE AND HAVE_GUILE)
-	SET(HAVE_OPENPSI 1)
-ENDIF(HAVE_ATOMSPACE AND HAVE_GUILE)
-
-IF(HAVE_ATOMSPACE)
-	SET(HAVE_SERVER 1)
-ENDIF(HAVE_ATOMSPACE)
-
-IF(HAVE_ATOMSPACE AND HAVE_GUILE AND HAVE_LINK_GRAMMAR AND HAVE_UUID)
-	SET(HAVE_NLP 1)
-ENDIF(HAVE_ATOMSPACE AND HAVE_GUILE AND HAVE_LINK_GRAMMAR AND HAVE_UUID)
-
-IF(HAVE_SERVER AND HAVE_TBB AND HAVE_ZMQ AND HAVE_JSONCPP)
-  SET(HAVE_EVENT_PUBLISHING_DEPENDENCIES 1)
-ENDIF(HAVE_SERVER AND HAVE_TBB AND HAVE_ZMQ AND HAVE_JSONCPP)
-
-ADD_SUBDIRECTORY(lib)
 ADD_SUBDIRECTORY(opencog)
 
 IF (CXXTEST_FOUND)
@@ -548,44 +435,12 @@ IF (CXXTEST_FOUND)
 	ENDIF (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 ENDIF (CXXTEST_FOUND)
 
-ADD_SUBDIRECTORY(examples EXCLUDE_FROM_ALL)
-
-IF (NOT WIN32)
-	ADD_CUSTOM_TARGET (examples
-		# using CMAKE_BUILD_TOOL results in teh cryptic error message
-		# warning: jobserver unavailable: using -j1.  Add `+' to parent make rule.
-		# This is because make doesn't know how to pass jobserver args to
-		# the submake.  So, instead, just use $(MAKE) (with round parens)
-		# -- that will do the right thing.
-		# COMMAND ${CMAKE_BUILD_TOOL}
-		COMMAND $(MAKE)
-		WORKING_DIRECTORY examples
-		COMMENT "Building examples"
-	)
-ENDIF (NOT WIN32)
-
 ADD_CUSTOM_TARGET(cscope
 	COMMAND find opencog examples tests -name '*.cc' -o -name '*.h' -o -name '*.cxxtest' -o -name '*.scm' > ${CMAKE_SOURCE_DIR}/cscope.files
 	COMMAND cscope -b
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 	COMMENT "Generating CScope database"
 )
-
-ADD_SUBDIRECTORY(experiments EXCLUDE_FROM_ALL)
-
-IF (NOT WIN32)
-	ADD_CUSTOM_TARGET (experiments
-		# using CMAKE_BUILD_TOOL results in teh cryptic error message
-		# warning: jobserver unavailable: using -j1.  Add `+' to parent make rule.
-		# This is because make doesn't know how to pass jobserver args to
-		# the submake.  So, instead, just use $(MAKE) (with round parens)
-		# -- that will do the right thing.
-		# COMMAND ${CMAKE_BUILD_TOOL}
-		COMMAND $(MAKE)
-		WORKING_DIRECTORY experiments
-		COMMENT "Building experiments"
-	)
-ENDIF (NOT WIN32)
 
 # ===================================================================
 # Packaging
@@ -626,8 +481,6 @@ SET(DEPENDENCY_LIST
 	"libboost-date-time-dev (>= ${MIN_BOOST})"
 	"libboost-filesystem-dev (>= ${MIN_BOOST})"
 	"libboost-program-options-dev (>= ${MIN_BOOST})"
-	"libboost-regex-dev (>= ${MIN_BOOST})"
-	"libboost-serialization-dev (>= ${MIN_BOOST})"
 	"libboost-thread-dev (>= ${MIN_BOOST})"
 	"libboost-system-dev (>= ${MIN_BOOST})"
 	"libboost-random-dev (>= ${MIN_BOOST})"
@@ -645,22 +498,15 @@ INCLUDE(CPack)
 # ===================================================================
 # documentation
 FIND_PACKAGE(Doxygen)
-ADD_SUBDIRECTORY(doc EXCLUDE_FROM_ALL)
+# ADD_SUBDIRECTORY(doc EXCLUDE_FROM_ALL)
 
 # ===================================================================
 # Show a summary of what we found, what we will do.
 
-SUMMARY_ADD("Attention" "Agents for attention allocation dynamics" HAVE_ATTENTION)
+SUMMARY_ADD("CogServer" "CogServer network and job server" HAVE_SERVER)
 SUMMARY_ADD("Cython bindings" "Cython (python) bindings" HAVE_CYTHON)
 SUMMARY_ADD("Doxygen" "Code documentation" DOXYGEN_FOUND)
 SUMMARY_ADD("Python tests" "Python bindings nose tests" HAVE_NOSETESTS)
-SUMMARY_ADD("REST Events" "REST Atomspace Event Publisher module"
-	HAVE_EVENT_PUBLISHING_DEPENDENCIES)
-SUMMARY_ADD("Server" "The CogServer" HAVE_SERVER)
 SUMMARY_ADD("Unit tests" "Unit tests" CXXTEST_FOUND)
-SUMMARY_ADD("NLP" "Natural Language Processing" HAVE_NLP)
-SUMMARY_ADD("Haskell codes" "Logic via Lojban" HAVE_STACK AND BUILD_LOJBAN)
-SUMMARY_ADD("PLN" "Probabilistic Logic Network" HAVE_PLN)
-SUMMARY_ADD("OpenPsi" "MicroPsi OpenCog implementation" HAVE_OPENPSI)
 
 SUMMARY_SHOW()
