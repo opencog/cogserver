@@ -33,7 +33,6 @@
 #include <tbb/task.h>
 #include <tbb/concurrent_queue.h>
 
-#include <opencog/attentionbank/bank/AttentionBank.h>
 #include <opencog/util/sigslot.h>
 #include <opencog/util/tbb.h>
 
@@ -92,7 +91,6 @@ class AtomSpacePublisherModule : public Module
 {
 private:
 		AtomSpace* as;
-		AttentionBank* _attention_bank;
 
 		AtomPtrSignal* _remove_atom_signal;
 		int _remove_atom_connection;

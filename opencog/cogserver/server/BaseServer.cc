@@ -29,7 +29,6 @@
 using namespace opencog;
 
 AtomSpace* BaseServer::_atomSpace = nullptr;
-AttentionBank* BaseServer::_attentionBank = nullptr;
 
 static BaseServer* serverInstance = nullptr;
 
@@ -61,7 +60,6 @@ BaseServer::BaseServer(AtomSpace* as)
 
     if (as) {
         _atomSpace = as;
-        _attentionBank = &attentionbank(as);
     }
 
     // Set this server as the current server.
@@ -72,18 +70,12 @@ BaseServer::~BaseServer()
 {
     // We are no longer the current server.
     set_current_server(nullptr);
-    _attentionBank = nullptr;
     _atomSpace = nullptr;
 }
 
 AtomSpace& BaseServer::getAtomSpace()
 {
     return *_atomSpace;
-}
-
-AttentionBank& BaseServer::getAttentionBank()
-{
-    return *_attentionBank;
 }
 
 BaseServer& opencog::server(BaseServer* (*factoryFunction)(AtomSpace*),

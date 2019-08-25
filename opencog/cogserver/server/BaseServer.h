@@ -26,7 +26,6 @@
 #define _OPENCOG_BASE_SERVER_H
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/attentionbank/bank/AttentionBank.h>
 
 namespace opencog
 {
@@ -53,13 +52,11 @@ class BaseServer
 protected:
 
     static AtomSpace* _atomSpace;
-    static AttentionBank* _attentionBank;
 
 public:
 
     /** Returns the atomspace instance. */
     static AtomSpace& getAtomSpace();
-    static AttentionBank& getAttentionBank();
 
     /** Returns a new BaseServer instance. */
     static BaseServer* createInstance(AtomSpace* = nullptr);

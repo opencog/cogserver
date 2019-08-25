@@ -112,7 +112,6 @@ CogServer::~CogServer()
     _systemActivityTable.halt();
     if (_private_as)
     {
-        attentionbank(nullptr);
         delete _private_as;
     }
 
@@ -125,7 +124,6 @@ CogServer::CogServer(AtomSpace* as) :
 {
     if (nullptr == as) {
         _atomSpace = new AtomSpace();
-        _attentionBank = &attentionbank(_atomSpace);
         _private_as = _atomSpace;
     }
     else {

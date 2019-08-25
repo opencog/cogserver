@@ -9,6 +9,7 @@ DECLARE_GUILE_CONFIG_TARGET(SCM_CONFIG "opencog oc-config" "OPENCOG_TEST")
 # someday depend on the earlier parts.
 #
 IF (HAVE_SERVER)
+	ADD_SUBDIRECTORY (cython)
 	ADD_SUBDIRECTORY (cogserver)
 ENDIF(HAVE_SERVER)
 
