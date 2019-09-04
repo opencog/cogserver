@@ -28,7 +28,6 @@
 #include <opencog/cython/PyIncludeWrapper.h>
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/attentionbank/avalue/AttentionValue.h>
 #include <opencog/cogserver/server/Agent.h>
 #include <opencog/cogserver/server/Factory.h>
 
