@@ -1,7 +1,16 @@
 
 include(CMakePackageConfigHelpers)
 
+#export(EXPORT CogServerTargets
+#	FILE "${CMAKE_CURRENT_BINARY_DIR}/CogServer/CogServerTargets.cmake"
+#)
+
 set(ConfigPackageLocation lib/cmake/CogServer)
+
+install(EXPORT CogServerTargets
+	FILE CogServerTargets.cmake
+	DESTINATION ${ConfigPackageLocation}
+)
 
 configure_package_config_file(CogServerConfig.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/CogServerConfig.cmake

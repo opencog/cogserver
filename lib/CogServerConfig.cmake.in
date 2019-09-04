@@ -1,5 +1,7 @@
 @PACKAGE_INIT@
 
+include("@CMAKE_INSTALL_PREFIX@/lib/cmake/CogServer/CogServerTargets.cmake")
+
 set(COGSERVER_LIBRARIES
 	server
 )
