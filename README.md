@@ -31,6 +31,9 @@ multiple threads and assigning thread processing priorities, in
 an AtomSpace-aware fashion. It is in need of the caring love and
 attention from an interested developer.
 
+For more info, please consult the
+[CogServer wiki page](https://wiki.opencog.org/w/CogServer).
+
 Building and Running
 --------------------
 For platform dependent instruction on dependencies and building the
