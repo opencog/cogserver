@@ -5,8 +5,11 @@ IF (HAVE_SERVER)
 	ENDIF (HAVE_CYTHON)
 ENDIF (HAVE_SERVER)
 
-IF (HAVE_EVENT_PUBLISHING_DEPENDENCIES)
-	ADD_SUBDIRECTORY(events)
-ENDIF (HAVE_EVENT_PUBLISHING_DEPENDENCIES)
-
-# ----------------------------------------
+# Stub out. This has two issues:
+# 1) It has a circular dependency on the attention subsystem
+# 2) It doesn't publish value-change events.
+# Basically, its bit-rotted code.
+#
+# IF (HAVE_EVENT_PUBLISHING_DEPENDENCIES)
+#	ADD_SUBDIRECTORY(events)
+# ENDIF (HAVE_EVENT_PUBLISHING_DEPENDENCIES)
