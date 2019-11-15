@@ -55,17 +55,7 @@ is then free to interprete the input in any way.
 
 ToDo/Bugs:
 ----------
-* There is curently no job scheduling whatsoever, and no standardized
-  input-queue polling. Thus, all routines that look for input need to
-  poll, yet they also must minimize cpu overhead, to avoid blocking 
-  the command-line processor.   Heavy cpu use must be done in its
-  own threads.
-
 * Need to document how module loading actually works.
-
-* Put together a list of all known MindAgents in default config file, so that
-  MindAgents can be loaded directly (and the CogServer will load the
-  appropriate module(s) first).
 
 * Need to create classes to handle the special commands ctrl-D (0x04)
   and ctrl-C (0xff 0xf4 0xff 0xfd  0x06) which is a sequence of telnet

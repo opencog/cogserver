@@ -31,7 +31,7 @@ cdef extern from "opencog/cogserver/server/BaseServer.h" namespace "opencog":
 # know how to do that with Cython
 ctypedef short stim_t
 
-cdef extern from "opencog/cogserver/server/Agent.h" namespace "opencog":
+cdef extern from "opencog/cogserver/modules/agents/Agent.h" namespace "opencog":
     cdef cppclass cAgent "opencog::Agent":
         int frequency()
         void setFrequency(int f)

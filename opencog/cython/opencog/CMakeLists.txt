@@ -49,7 +49,7 @@ IF (HAVE_SERVER)
 	CYTHON_ADD_MODULE_PYX(cogserver
 		"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
 		"request.pyx" "agent.pyx" "agent_finder_types.h"
-		"../../cogserver/server/Agent.h" "../../cogserver/server/Request.h"
+		"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
 	)
 
 	list(APPEND ADDITIONAL_MAKE_CLEAN_FILES "cogserver.cpp")
@@ -77,7 +77,7 @@ IF (HAVE_SERVER)
 	CYTHON_ADD_MODULE_PYX(agent_finder
 		"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
 		"cogserver.pxd"
-		"../../cogserver/server/Agent.h" "../../cogserver/server/Request.h"
+		"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
 	)
 
 	list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
