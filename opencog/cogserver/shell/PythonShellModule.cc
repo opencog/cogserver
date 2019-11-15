@@ -46,6 +46,12 @@ DECLARE_MODULE(PythonShellModule);
 
 PythonShellModule::PythonShellModule(CogServer& cs) : Module(cs)
 {
+	// Initialize Python.
+	global_python_initialize();
+
+	// Tell the python evaluator to create its singleton instance
+	// with our atomspace.
+	PythonEval::create_singleton_instance(&atomspace());
 }
 
 PythonShellModule::~PythonShellModule()

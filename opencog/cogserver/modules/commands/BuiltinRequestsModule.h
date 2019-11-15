@@ -1,37 +1,21 @@
 /*
- * opencog/cogserver/server/BuiltinRequestsModule.h
+ * opencog/cogserver/modules/commands/BuiltinRequestsModule.h
  *
  * Copyright (C) 2008 by OpenCog Foundation
- * All Rights Reserved
- *
  * Written by Gustavo Gama <gama@vettalabs.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 #ifndef _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 #define _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 
 #include <opencog/cogserver/server/Factory.h>
-#include <opencog/cogserver/server/ListRequest.h>
-#include <opencog/cogserver/server/LoadModuleRequest.h>
 #include <opencog/cogserver/server/Module.h>
-#include <opencog/cogserver/server/ShutdownRequest.h>
-#include <opencog/cogserver/server/UnloadModuleRequest.h>
-#include <opencog/cogserver/server/ListModulesRequest.h>
+#include <opencog/cogserver/modules/commands/ListRequest.h>
+#include <opencog/cogserver/modules/commands/LoadModuleRequest.h>
+#include <opencog/cogserver/modules/commands/ShutdownRequest.h>
+#include <opencog/cogserver/modules/commands/UnloadModuleRequest.h>
+#include <opencog/cogserver/modules/commands/ListModulesRequest.h>
 
 #include <opencog/util/Logger.h>
 #include <opencog/cogserver/server/CogServer.h>
