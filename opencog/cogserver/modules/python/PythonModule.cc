@@ -12,7 +12,7 @@
 #include <opencog/util/Config.h>
 #include <opencog/util/misc.h>
 #include <opencog/atomspace/AtomSpace.h>
-
+#include <opencog/cogserver/modules/agents/AgentsModule.h>
 
 #include "PyMindAgent.h"
 #include "PyRequest.h"
@@ -30,8 +30,6 @@ using namespace opencog;
 #define DPRINTF(...)
 
 DECLARE_MODULE(PythonModule);
-
-// Factories
 
 Agent* PythonAgentFactory::create(CogServer& cs) const
 {
@@ -61,6 +59,17 @@ Request* PythonRequestFactory::create(CogServer& cs) const
 
 PythonModule::PythonModule(CogServer& cs) : Module(cs)
 {
+	_scheduler = nullptr;
+
+	// Hack to load the agents module, which this module depends on.
+	std::string save = config().get("MODULES");
+	config().set("MODULES", "agents/libagents.so");
+	cs.loadModules();
+	config().set("MODULES", save);
+
+	Module* amod = cs.getModule("opencog::AgentsModule");
+	AgentsModule* agmod = (AgentsModule*) amod;
+	_scheduler = &agmod->get_scheduler();
 }
 
 static bool already_loaded = false;
@@ -88,7 +97,7 @@ bool PythonModule::unregisterAgentsAndRequests()
     // Requires GIL
     for (std::string s : _agentNames) {
         DPRINTF("Deleting all instances of %s\n", s.c_str());
-        _scheduler.unregisterAgent(s);
+        if (_scheduler) _scheduler->unregisterAgent(s);
     }
     for (std::string s : _requestNames) {
         DPRINTF("Unregistering requests of id %s\n", s.c_str());
@@ -211,7 +220,7 @@ std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args
             // instantiate new Python MindAgents
             PythonAgentFactory* afact = new PythonAgentFactory(moduleName,s);
             _agentFactories.push_back(afact);
-            _scheduler.registerAgent(dottedName, afact);
+            _scheduler->registerAgent(dottedName, afact);
 
             // save a list of Python agents that we've added to the CogServer
             _agentNames.push_back(dottedName);

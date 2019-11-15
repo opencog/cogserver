@@ -92,8 +92,7 @@ private:
 
     bool preloadModules();
     bool unregisterAgentsAndRequests();
-public:
-    Scheduler _scheduler;
+    Scheduler* _scheduler;
 public:
 
     virtual const ClassInfo& classinfo() const { return info(); }
