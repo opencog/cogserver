@@ -1,6 +1,6 @@
 
 ADD_LIBRARY (agents SHARED
-	# AgentsModule
+	AgentsModule
 	Agent
 	AgentRunnerBase
 	AgentRunnerThread

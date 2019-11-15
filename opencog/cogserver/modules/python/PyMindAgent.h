@@ -28,7 +28,7 @@
 #include <opencog/cython/PyIncludeWrapper.h>
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/Agent.h>
+#include <opencog/cogserver/modules/agent/Agent.h>
 #include <opencog/cogserver/server/Factory.h>
 
 class PythonModuleUTest;
