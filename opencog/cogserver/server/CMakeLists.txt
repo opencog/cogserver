@@ -1,58 +1,25 @@
-INCLUDE_DIRECTORIES (${GUILE_INCLUDE_DIRS})
-
-IF (HAVE_CYTHON)
-	INCLUDE_DIRECTORIES (${PYTHON_INCLUDE_DIRS})
-ENDIF (HAVE_CYTHON)
-
-
-ADD_LIBRARY (builtinreqs SHARED
-	BuiltinRequestsModule
-	Request
-	LoadModuleRequest
-	ListRequest
-	ShutdownRequest
-	UnloadModuleRequest
-	ListModulesRequest
-)
-
-TARGET_LINK_LIBRARIES(builtinreqs
-	server
-)
-
-INSTALL (TARGETS builtinreqs
-	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
-
 # ------------------------------------------------------------
 
 ADD_LIBRARY (server SHARED
 	BaseServer
 	CogServer
-	Request
 	NetworkServer
 	ServerSocket
 	ConsoleSocket
 )
 
 TARGET_LINK_LIBRARIES(server
-	${ATOMSPACE_execution_LIBRARY}
-	${ATOMSPACE_smob_LIBRARY}
 	${COGUTIL_LIBRARY}
 	${Boost_FILESYSTEM_LIBRARY}
 	dl
 )
 
-IF (HAVE_CYTHON)
-	TARGET_LINK_LIBRARIES(server ${ATOMSPACE_PythonEval_LIBRARY})
-ENDIF (HAVE_CYTHON)
-
-# IF (HAVE_GUILE)
-# 	TARGET_LINK_LIBRARIES(server scheme-shell ${ATOMSPACE_LIBRARIES})
-# ENDIF (HAVE_GUILE)
-
 # ------------------------------------------------------------
 # This defines the guile scheme loadable module
 
 IF (HAVE_GUILE)
+	INCLUDE_DIRECTORIES (${GUILE_INCLUDE_DIRS})
+
 	ADD_LIBRARY (guile-cogserver SHARED
 		CogServerSCM
 	)
@@ -99,7 +66,5 @@ INSTALL (FILES
 	Module.h
 	NetworkServer.h
 	Registry.h
-	Request.h
-	RequestClassInfo.h
 	DESTINATION "include/${PROJECT_NAME}/cogserver/server"
 )
