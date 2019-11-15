@@ -92,6 +92,8 @@ public:
 
         TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
         cogserver.loadModules();
+        config().set("MODULES", "agents/libagents.so");
+        cogserver.loadModules();
     }
 
     void tearDown() {
@@ -135,7 +137,7 @@ public:
         // process request
         cogserver.runLoopStep();
 
-        Module* amod = cogserver.getModule("AgentsModule");
+        Module* amod = cogserver.getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
 
         // create agent
@@ -160,7 +162,7 @@ public:
         cogserver.pushRequest(loadpyRequest);
         cogserver.runLoopStep();
 
-        Module* amod = cogserver.getModule("AgentsModule");
+        Module* amod = cogserver.getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
 
         AgentPtr pythonTestAgent = agmod->get_scheduler().createAgent("preload_test.PreloadTestAgent");
@@ -179,7 +181,7 @@ public:
         cogserver.runLoopStep();
 
         // create agent
-        Module* amod = cogserver.getModule("AgentsModule");
+        Module* amod = cogserver.getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
 
         AgentPtr pythonTestAgent = agmod->get_scheduler().createAgent("test_agent.TestAgent", true);
