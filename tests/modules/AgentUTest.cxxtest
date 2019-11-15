@@ -96,7 +96,7 @@ public:
 
     AgentUTest() {
         logger().set_level(Logger::DEBUG);
-        //logger().set_print_to_stdout_flag(true);
+        logger().set_print_to_stdout_flag(true);
     }
 
     ~AgentUTest() {
@@ -108,7 +108,9 @@ public:
     void setUp() {
         CogServer& cogserver = static_cast<CogServer&>(server(CogServer::createInstance));
 
-        Module* amod = cogserver.getModule("AgentsModule");
+        config().set("MODULES", "agents/libagents.so");
+        cogserver.loadModules();
+        Module* amod = cogserver.getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
         sched = &agmod->get_scheduler();
         sched->registerAgent(MyAgentWithDefaults::info().id, &factory);

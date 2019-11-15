@@ -411,10 +411,12 @@ void CogServer::loadModules(std::vector<std::string> module_paths)
 {
     if (module_paths.empty())
     {
-        // XXX FIXME This hack allowsan installed cogserver to inadvertantly load from
-        // a fixed build path. This should be handled by the config file or test environment...
+        // XXX FIXME This hack allows an installed cogserver to
+        // inadvertantly load from a fixed build path. This should
+        // be handled by the config file or test environment...
         // not hard coded.
         // Give priority search order to the build directories
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/server/");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
 
