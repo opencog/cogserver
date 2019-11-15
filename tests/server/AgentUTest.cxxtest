@@ -31,6 +31,9 @@
 #include <opencog/atoms/base/Node.h>
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
 #include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/modules/agents/Agent.h>
+#include <opencog/cogserver/modules/agents/AgentsModule.h>
+#include <opencog/cogserver/modules/agents/Scheduler.h>
 
 using namespace opencog;
 using namespace std;
@@ -74,7 +77,7 @@ public:
     void setName(const std::string& n) { _name = n; }
     unsigned int count() { return _count; }
     virtual void run() {
-        logger().debug("%ld: executed %s", _cogserver.getCycleCount(), _name.c_str());
+        // logger().debug("%ld: executed %s", _scheduler.getCycleCount(), _name.c_str());
         _count++;
     }
 };
@@ -87,6 +90,7 @@ class AgentUTest :  public CxxTest::TestSuite
 private:
 
     Factory<MyAgentWithDefaults, Agent> factory;
+    Scheduler* sched;
 
 public:
 
@@ -103,23 +107,24 @@ public:
 
     void setUp() {
         CogServer& cogserver = static_cast<CogServer&>(server(CogServer::createInstance));
-        cogserver.registerAgent(MyAgentWithDefaults::info().id, &factory);
+
+        Module* amod = cogserver.getModule("AgentsModule");
+        AgentsModule* agmod = (AgentsModule*) amod;
+        sched = &agmod->get_scheduler();
+        sched->registerAgent(MyAgentWithDefaults::info().id, &factory);
     }
 
     void tearDown() {
-        CogServer& cogserver = static_cast<CogServer&>(server());
-        cogserver.unregisterAgent(MyAgentWithDefaults::info().id);
+        sched->unregisterAgent(MyAgentWithDefaults::info().id);
     }
 
     // tests that MyAgentWithDefaults sets Config's parameters to its defaults
     void testDefault() {
         logger().debug("BEGIN TEST: Agent default parameters");
 
-        CogServer& cogserver = static_cast<CogServer&>(server());
-
         // create a MyAgentWithDefaults instance
         MyAgentWithDefaultsPtr agent;
-        agent = cogserver.createAgent<MyAgentWithDefaults>();
+        agent = sched->createAgent<MyAgentWithDefaults>();
 
         logger().debug(config().to_string());
         // the first endl is to put this on a line after "Running 2 tests"
@@ -131,7 +136,7 @@ public:
         TS_ASSERT(config()["MYAGENT_MOOD"] == "happy");
 
         // destroy the MyAgentWithDefaults instance
-        cogserver.stopAllAgents(MyAgentWithDefaults::info().id);
+        sched->stopAllAgents(MyAgentWithDefaults::info().id);
 
         logger().debug("END TEST: Agent default parameters");
     }
@@ -140,8 +145,6 @@ public:
     // and its configuration file
     void testCogserverAndDefaultSettings() {
         logger().debug("BEGIN TEST: Agent default and specified parameters");
-
-        CogServer& cogserver = static_cast<CogServer&>(server());
 
         // first, write the configuration file
         const char *config_file_name = "AgentUTest.config";
@@ -166,7 +169,7 @@ public:
 
         // create a MyAgentWithDefaults instance
         MyAgentWithDefaultsPtr agent;
-        agent = cogserver.createAgent<MyAgentWithDefaults>();
+        agent = sched->createAgent<MyAgentWithDefaults>();
 
         logger().debug(config().to_string());
         cout << endl << agent->to_string() << endl;
@@ -178,7 +181,7 @@ public:
         TS_ASSERT(config()["MYAGENT_MOOD"] == "sad");
 
         // destroy the MyAgentWithDefaults instance
-        cogserver.stopAllAgents(MyAgentWithDefaults::info().id);
+        sched->stopAllAgents(MyAgentWithDefaults::info().id);
 
         // finally, remove the temporary file and free the string with its name
         std::remove(config_file_name);
