@@ -36,6 +36,9 @@ DECLARE_MODULE(SchemeShellModule);
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)
 {
+	// Tell scheme which atomspace to use.
+	SchemeEval::init_scheme();
+	SchemeEval::set_scheme_as(&atomspace());
 }
 
 void SchemeShellModule::init(void)

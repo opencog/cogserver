@@ -28,12 +28,6 @@
 
 #include <opencog/atomspace/AtomSpace.h>
 
-#ifdef HAVE_CYTHON
-#include <opencog/cython/PythonEval.h>
-#endif
-
-#include <opencog/guile/SchemeEval.h>
-
 #include <opencog/cogserver/server/ConsoleSocket.h>
 #include <opencog/cogserver/server/NetworkServer.h>
 #include <opencog/cogserver/server/Request.h>
@@ -101,20 +95,6 @@ CogServer::CogServer(AtomSpace* as) :
         _atomSpace = as;
         _private_as = nullptr;
     }
-
-#ifdef HAVE_GUILE
-    // Tell scheme which atomspace to use.
-    SchemeEval::init_scheme();
-    SchemeEval::set_scheme_as(_atomSpace);
-#endif // HAVE_GUILE
-#ifdef HAVE_CYTHON
-    // Initialize Python.
-    global_python_initialize();
-
-    // Tell the python evaluator to create its singleton instance
-    // with our atomspace.
-    PythonEval::create_singleton_instance(_atomSpace);
-#endif // HAVE_CYTHON
 }
 
 void CogServer::enableNetworkServer(int port)
