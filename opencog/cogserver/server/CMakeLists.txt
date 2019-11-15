@@ -25,16 +25,12 @@ INSTALL (TARGETS builtinreqs
 # ------------------------------------------------------------
 
 ADD_LIBRARY (server SHARED
-	Agent
-	AgentRunnerBase
-	AgentRunnerThread
 	BaseServer
 	CogServer
 	Request
 	NetworkServer
 	ServerSocket
 	ConsoleSocket
-	SystemActivityTable
 )
 
 TARGET_LINK_LIBRARIES(server
@@ -96,16 +92,12 @@ INSTALL (TARGETS server
 )
 
 INSTALL (FILES
-	Agent.h
-	AgentRunnerBase.h
-	AgentRunnerThread.h
 	BaseServer.h
 	CogServer.h
 	ConsoleSocket.h
 	Factory.h
 	Module.h
 	NetworkServer.h
-	SystemActivityTable.h
 	Registry.h
 	Request.h
 	RequestClassInfo.h

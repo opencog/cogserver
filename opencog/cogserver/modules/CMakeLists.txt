@@ -1,9 +1,9 @@
 
-IF (HAVE_SERVER)
-	IF (HAVE_CYTHON)
-		ADD_SUBDIRECTORY(python)
-	ENDIF (HAVE_CYTHON)
-ENDIF (HAVE_SERVER)
+ADD_SUBDIRECTORY(agents)
+
+IF (HAVE_CYTHON)
+	ADD_SUBDIRECTORY(python)
+ENDIF (HAVE_CYTHON)
 
 # Stub out. This has two issues:
 # 1) It has a circular dependency on the attention subsystem
