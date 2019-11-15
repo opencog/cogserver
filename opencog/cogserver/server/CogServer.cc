@@ -137,6 +137,11 @@ void CogServer::serverLoop()
     for (_running = true; _running;)
     {
         runLoopStep();
+
+        // XXX FIXME. terrible terrible hack. What we shoud be
+        // doing is running in our own thread, waiting on a semaphore,
+        // until some request is queued. Spinning is .. just wrong.
+        usleep(20000);
     }
 
     // Perform a clean shutdown. Drain the request queue.
