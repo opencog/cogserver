@@ -3,25 +3,9 @@
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Copyright (C) 2008 by OpenCog Foundation
- * All Rights Reserved
- *
  * Written by Andre Senna <senna@vettalabs.com>
  *            Gustavo Gama <gama@vettalabs.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 #include <time.h>
@@ -50,26 +34,14 @@
 
 #include <opencog/guile/SchemeEval.h>
 
-#include <opencog/cogserver/server/Agent.h>
 #include <opencog/cogserver/server/ConsoleSocket.h>
 #include <opencog/cogserver/server/NetworkServer.h>
-#include <opencog/cogserver/server/SystemActivityTable.h>
 #include <opencog/cogserver/server/Request.h>
 
 #include "CogServer.h"
 #include "BaseServer.h"
 
 using namespace opencog;
-
-namespace opencog {
-struct equal_to_id :
-    public std::binary_function<AgentPtr, const std::string&, bool>
-{
-    bool operator()(AgentPtr a, const std::string& cid) const {
-        return (a->classinfo().id != cid);
-    }
-};
-}
 
 BaseServer* CogServer::createInstance(AtomSpace* as)
 {
@@ -108,8 +80,6 @@ CogServer::~CogServer()
         }
     }
 
-    // Shut down the system activity table.
-    _systemActivityTable.halt();
     if (_private_as)
     {
         delete _private_as;
@@ -120,7 +90,8 @@ CogServer::~CogServer()
 
 CogServer::CogServer(AtomSpace* as) :
     BaseServer(as),
-    cycleCount(1), running(false), _networkServer(nullptr)
+    _networkServer(nullptr),
+    _running(true)
 {
     if (nullptr == as) {
         _atomSpace = new AtomSpace();
@@ -144,11 +115,6 @@ CogServer::CogServer(AtomSpace* as) :
     // with our atomspace.
     PythonEval::create_singleton_instance(_atomSpace);
 #endif // HAVE_CYTHON
-
-    _systemActivityTable.init(this);
-    agentScheduler.set_activity_table(&_systemActivityTable);
-
-    agentsRunning = true;
 }
 
 void CogServer::enableNetworkServer(int port)
@@ -165,34 +131,12 @@ void CogServer::disableNetworkServer()
     }
 }
 
-SystemActivityTable& CogServer::systemActivityTable()
-{
-    return _systemActivityTable;
-}
-
 void CogServer::serverLoop()
 {
-    struct timeval timer_start, timer_end, elapsed_time;
-    time_t cycle_duration = config().get_int("SERVER_CYCLE_DURATION", 100) * 1000;
-//    bool externalTickMode = config().get_bool("EXTERNAL_TICK_MODE");
-
     logger().info("Starting CogServer loop.");
-
-    gettimeofday(&timer_start, NULL);
-    for (running = true; running;)
+    for (_running = true; _running;)
     {
         runLoopStep();
-
-        gettimeofday(&timer_end, NULL);
-        timersub(&timer_end, &timer_start, &elapsed_time);
-
-        // sleep long enough so that the next cycle will only start
-        // after config["SERVER_CYCLE_DURATION"] milliseconds
-        long delta = cycle_duration;
-        delta -= 1000.0*elapsed_time.tv_sec + elapsed_time.tv_usec/1000.0;
-        if (delta > 0)
-            usleep((unsigned int) delta);
-        timer_start = timer_end;
     }
 
     // Perform a clean shutdown. Drain the request queue.
@@ -207,46 +151,19 @@ void CogServer::serverLoop()
 
 void CogServer::runLoopStep(void)
 {
-    struct timeval timer_start, timer_end, elapsed_time, requests_time;
-    // this refers to the current cycle, so that logging reports correctly
-    // regardless of whether cycle is incremented.
-    long currentCycle = this->cycleCount;
-
     // Process requests
     if (0 < getRequestQueueSize())
     {
+        struct timeval timer_start, timer_end, requests_time;
         gettimeofday(&timer_start, NULL);
         processRequests();
         gettimeofday(&timer_end, NULL);
         timersub(&timer_end, &timer_start, &requests_time);
 
-        logger().fine("[CogServer::runLoopStep cycle = %d] Time to process requests: %f",
-                   currentCycle,
+        logger().fine("[CogServer::runLoopStep] Time to process requests: %f",
                    requests_time.tv_usec/1000000.0
                   );
     }
-
-    // Process mind agents
-    if (customLoopRun() and agentsRunning and 0 < agentScheduler.get_agents().size())
-    {
-        gettimeofday(&timer_start, NULL);
-        agentScheduler.process_agents();
-
-        gettimeofday(&timer_end, NULL);
-        timersub(&timer_end, &timer_start, &elapsed_time);
-        logger().fine("[CogServer::runLoopStep cycle = %d] Time to process MindAgents: %f",
-               currentCycle,
-               elapsed_time.tv_usec/1000000.0, currentCycle
-              );
-    }
-
-    cycleCount++;
-    if (cycleCount < 0) cycleCount = 0;
-}
-
-bool CogServer::customLoopRun(void)
-{
-    return true;
 }
 
 void CogServer::processRequests(void)
@@ -257,95 +174,6 @@ void CogServer::processRequests(void)
         request->execute();
         delete request;
     }
-}
-
-bool CogServer::registerAgent(const std::string& id, AbstractFactory<Agent> const* factory)
-{
-    return Registry<Agent>::register_(id, factory);
-}
-
-bool CogServer::unregisterAgent(const std::string& id)
-{
-    logger().debug("[CogServer] unregister agent \"%s\"", id.c_str());
-    stopAllAgents(id);
-    return Registry<Agent>::unregister(id);
-}
-
-std::list<const char*> CogServer::agentIds() const
-{
-    return Registry<Agent>::all();
-}
-
-AgentSeq CogServer::runningAgents(void)
-{
-    AgentSeq agents = agentScheduler.get_agents();
-    for (auto &runner: agentThreads) {
-        auto t = runner->get_agents();
-        agents.insert(agents.end(), t.begin(), t.end());
-    }
-    return agents;
-}
-
-AgentPtr CogServer::createAgent(const std::string& id, const bool start)
-{
-    AgentPtr a(Registry<Agent>::create(*this, id));
-    if (a && start) startAgent(a);
-    return a;
-}
-
-void CogServer::startAgent(AgentPtr agent, bool dedicated_thread,
-    const std::string &thread_name)
-{
-    if (dedicated_thread) {
-        AgentRunnerThread *runner;
-        auto runner_ptr = threadNameMap.find(thread_name);
-        if (runner_ptr != threadNameMap.end())
-            runner = runner_ptr->second;
-        else {
-            agentThreads.emplace_back(new AgentRunnerThread);
-            runner = agentThreads.back().get();
-            runner->set_activity_table(&_systemActivityTable);
-            if (!thread_name.empty())
-            {
-                runner->set_name(thread_name);
-                threadNameMap[thread_name] = runner;
-            }
-        }
-        runner->add_agent(agent);
-        if (agentsRunning)
-            runner->start();
-    }
-    else
-        agentScheduler.add_agent(agent);
-}
-
-void CogServer::stopAgent(AgentPtr agent)
-{
-    agentScheduler.remove_agent(agent);
-    for (auto &runner: agentThreads)
-        runner->remove_agent(agent);
-    logger().debug("[CogServer] stopped agent \"%s\"", agent->to_string().c_str());
-}
-
-void CogServer::stopAllAgents(const std::string& id)
-{
-    agentScheduler.remove_all_agents(id);
-    for (auto &runner: agentThreads)
-        runner->remove_all_agents(id);
-}
-
-void CogServer::startAgentLoop(void)
-{
-    agentsRunning = true;
-    for (auto &runner: agentThreads)
-        runner->start();
-}
-
-void CogServer::stopAgentLoop(void)
-{
-    agentsRunning = false;
-    for (auto &runner: agentThreads)
-        runner->stop();
 }
 
 bool CogServer::registerRequest(const std::string& name, AbstractFactory<Request> const* factory)
@@ -373,14 +201,9 @@ std::list<const char*> CogServer::requestIds() const
     return Registry<Request>::all();
 }
 
-long CogServer::getCycleCount()
-{
-    return cycleCount;
-}
-
 void CogServer::stop()
 {
-    running = false;
+    _running = false;
 }
 
 bool CogServer::loadModule(const std::string& filename)

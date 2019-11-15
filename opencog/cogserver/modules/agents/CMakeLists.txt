@@ -4,6 +4,7 @@ ADD_LIBRARY (agents SHARED
 	Agent
 	AgentRunnerBase
 	AgentRunnerThread
+	Scheduler
 	SystemActivityTable
 )
 
