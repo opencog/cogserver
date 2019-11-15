@@ -1,5 +1,5 @@
 /*
- * tests/server/CogServerUTest.cxxtest
+ * tests/server/AgentModuleUTest.cxxtest
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * All Rights Reserved
@@ -27,6 +27,9 @@
 
 #include <opencog/util/Config.h>
 #include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/modules/agents/Agent.h>
+#include <opencog/cogserver/modules/agents/AgentsModule.h>
+#include <opencog/cogserver/modules/agents/Scheduler.h>
 
 using namespace opencog;
 
@@ -52,7 +55,6 @@ public:
     unsigned int count() { return _count; }
     virtual void run()
     {
-        _log->debug("%ld: executed %s", _cogserver.getCycleCount(), _name.c_str());
         _count++;
 
         // add some nodes to test the SystemActivityTable
@@ -73,18 +75,14 @@ public:
 
 typedef std::shared_ptr<MyAgent> MyAgentPtr;
 
-class CustomCogServer : public CogServer
+class CustomScheduler : public Scheduler
 {
     int tickCount;
     bool tickBased;
     int maxCount;
     public: 
 
-        static BaseServer* createInstance() {
-            return new CustomCogServer();
-        }
-
-        CustomCogServer() : tickCount(1), tickBased(false), maxCount(1000) {}
+        CustomScheduler() : tickCount(1), tickBased(false), maxCount(1000) {}
 
         void setTickBased(bool _tickBased) {
             tickBased = _tickBased;
@@ -101,7 +99,7 @@ class CustomCogServer : public CogServer
         }
 };
 
-class CogServerUTest :  public CxxTest::TestSuite
+class AgentModuleUTest :  public CxxTest::TestSuite
 {
 
 private:
@@ -109,12 +107,12 @@ private:
 
 public:
 
-    CogServerUTest() {
+    AgentModuleUTest() {
         logger().set_level(Logger::DEBUG);
         //logger().set_print_to_stdout_flag(true);
     }
 
-    ~CogServerUTest() {
+    ~AgentModuleUTest() {
 	    // erase the log file if no assertions failed
 	    if (!CxxTest::TestTracker::tracker().suiteFailed())
             std::remove(logger().get_filename().c_str());
@@ -130,21 +128,21 @@ public:
         // set cycle duration to a smaller value so that this test do not take too long.
         config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
         Factory<MyAgent, Agent> factory;
-        CustomCogServer cogserver;
-        cogserver.setTickBased(false);
-        cogserver.setMaxCount(50);
-        cogserver.registerAgent(MyAgent::info().id, &factory);
+        CustomScheduler scheduler;
+        scheduler.setTickBased(false);
+        scheduler.setMaxCount(50);
+        scheduler.registerAgent(MyAgent::info().id, &factory);
 
         MyAgentPtr a[5];
         for (int i = 0; i < 5; ++i) {
-            a[i] = cogserver.createAgent<MyAgent>();
+            a[i] = scheduler.createAgent<MyAgent>();
             std::ostringstream oss; oss << "Agent" << i;
             a[i]->setName(oss.str());
             a[i]->setFrequency(i+1);
-            cogserver.startAgent(a[i]);
+            scheduler.startAgent(a[i]);
         }
 
-        cogserver.serverLoop();
+        scheduler.serverLoop();
 
         TS_ASSERT(a[0]->count() == 50);
         TS_ASSERT(a[1]->count() == 25);
@@ -152,7 +150,7 @@ public:
         TS_ASSERT(a[3]->count() == 12);
         TS_ASSERT(a[4]->count() == 10);
 
-        SystemActivityTable &sat = cogserver.systemActivityTable();
+        SystemActivityTable &sat = scheduler.systemActivityTable();
         AgentActivityTable aat = sat.agentActivityTable();
         TS_ASSERT(aat[a[0]].size() == 50);
         TS_ASSERT(aat[a[1]].size() == 25);
@@ -180,7 +178,7 @@ public:
         // the sets in the activity tables.
         Activity *firstAct = aat[a[0]][0];
         Handle h = *firstAct->utilizedHandleSets[0].begin();
-        cogserver.getAtomSpace().remove_atom(h);
+        cogserver().getAtomSpace().remove_atom(h);
         TS_ASSERT(firstAct->utilizedHandleSets[0].size() == 0);
 
         // test max size of activity seq
@@ -194,7 +192,7 @@ public:
 
         // Destroy all the agents.
         for (int i = 0; i < 5; ++i) {
-            cogserver.stopAgent(a[i]);
+            scheduler.stopAgent(a[i]);
         }
 
     } // testProcessAgents
@@ -207,12 +205,12 @@ public:
         // commented out and removed from cogserver maybe 5-10 years
         // ago.  So this test doesn't do what it claims to do.
         config().set("EXTERNAL_TICK_MODE", "true");
-        CustomCogServer cogserver;
-        cogserver.setTickBased(true);
-        cogserver.setMaxCount(9);
-        cogserver.serverLoop();
-        printf("Got %ld ticks\n", cogserver.getCycleCount());
-        TS_ASSERT(cogserver.getCycleCount() == 10);
-    }
+        CustomScheduler scheduler;
 
+        scheduler.setTickBased(true);
+        scheduler.setMaxCount(9);
+        scheduler.serverLoop();
+        printf("Got %ld ticks\n", scheduler.getCycleCount());
+        TS_ASSERT(scheduler.getCycleCount() == 10);
+    }
 };

@@ -92,6 +92,7 @@ private:
 
     bool preloadModules();
     bool unregisterAgentsAndRequests();
+public:
     Scheduler _scheduler;
 public:
 
