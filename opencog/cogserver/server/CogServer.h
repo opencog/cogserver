@@ -96,8 +96,6 @@ namespace opencog
  */
 class CogServer : public BaseServer, public Registry<Request>
 {
-    AtomSpace* _private_as;
-
 protected:
 
     // Define a map with the list of loaded modules.

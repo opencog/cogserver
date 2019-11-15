@@ -74,11 +74,6 @@ CogServer::~CogServer()
         }
     }
 
-    if (_private_as)
-    {
-        delete _private_as;
-    }
-
     logger().debug("[CogServer] exit destructor");
 }
 
@@ -87,14 +82,6 @@ CogServer::CogServer(AtomSpace* as) :
     _networkServer(nullptr),
     _running(true)
 {
-    if (nullptr == as) {
-        _atomSpace = new AtomSpace();
-        _private_as = _atomSpace;
-    }
-    else {
-        _atomSpace = as;
-        _private_as = nullptr;
-    }
 }
 
 void CogServer::enableNetworkServer(int port)

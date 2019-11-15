@@ -55,11 +55,16 @@ BaseServer::BaseServer(AtomSpace* as)
     // that's indicative of a missing call to BaseServer::~BaseServer.
     if (_atomSpace) {
         throw (RuntimeException(TRACE_INFO,
-               "Found non-NULL atomSpace. BaseServer::~BaseServer not called!"));
+               "Reinitialized BaseServer!"));
     }
 
-    if (as) {
+    if (nullptr == as) {
+        _atomSpace = new AtomSpace();
+        _private_as = _atomSpace;
+    }
+    else {
         _atomSpace = as;
+        _private_as = nullptr;
     }
 
     // Set this server as the current server.
@@ -71,6 +76,9 @@ BaseServer::~BaseServer()
     // We are no longer the current server.
     set_current_server(nullptr);
     _atomSpace = nullptr;
+
+    if (_private_as)
+        delete _private_as;
 }
 
 AtomSpace& BaseServer::getAtomSpace()

@@ -48,8 +48,8 @@ namespace opencog
  */
 class BaseServer
 {
-
 protected:
+    AtomSpace* _private_as;
 
     static AtomSpace* _atomSpace;
 
