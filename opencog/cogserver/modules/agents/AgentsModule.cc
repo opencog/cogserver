@@ -20,7 +20,9 @@ using namespace opencog;
 
 DECLARE_MODULE(AgentsModule)
 
-AgentsModule::AgentsModule(CogServer& cs) : Module(cs)
+AgentsModule::AgentsModule(CogServer& cs) :
+    Module(cs),
+    _scheduler(Scheduler())
 {
     registerAgentRequests();
 }
@@ -60,7 +62,7 @@ void AgentsModule::init()
 // Various agents commands
 std::string AgentsModule::do_startAgents(Request *dummy, std::list<std::string> args)
 {
-    std::list<const char*> availableAgents = _cogserver.agentIds();
+    std::list<const char*> availableAgents = _scheduler.agentIds();
 
     std::vector<std::tuple<std::string, bool, std::string>> agents;
 
@@ -97,8 +99,8 @@ std::string AgentsModule::do_startAgents(Request *dummy, std::list<std::string> 
 
     for (auto it = agents.cbegin();
          it != agents.cend(); ++it) {
-        auto agent = _cogserver.createAgent(std::get<0>(*it));
-        _cogserver.startAgent(agent, std::get<1>(*it), std::get<2>(*it));
+        auto agent = _scheduler.createAgent(std::get<0>(*it));
+        _scheduler.startAgent(agent, std::get<1>(*it), std::get<2>(*it));
     }
 
     return "Successfully started agents\n";
@@ -106,7 +108,7 @@ std::string AgentsModule::do_startAgents(Request *dummy, std::list<std::string> 
 
 std::string AgentsModule::do_stopAgents(Request *dummy, std::list<std::string> args)
 {
-    std::list<const char*> availableAgents = _cogserver.agentIds();
+    std::list<const char*> availableAgents = _scheduler.agentIds();
 
     std::vector<std::string> agents;
 
@@ -132,7 +134,7 @@ std::string AgentsModule::do_stopAgents(Request *dummy, std::list<std::string> a
     for (std::vector<std::string>::const_iterator it = agents.begin();
          it != agents.end(); ++it)
     {
-        _cogserver.stopAllAgents(*it);
+        _scheduler.stopAllAgents(*it);
     }
 
     return "Successfully stopped agents\n";
@@ -140,7 +142,7 @@ std::string AgentsModule::do_stopAgents(Request *dummy, std::list<std::string> a
 
 std::string AgentsModule::do_stepAgents(Request *dummy, std::list<std::string> args)
 {
-    AgentSeq agents = _cogserver.runningAgents();
+    AgentSeq agents = _scheduler.runningAgents();
 
     if (args.empty()) {
         for (AgentSeq::const_iterator it = agents.begin();
@@ -163,10 +165,10 @@ std::string AgentsModule::do_stepAgents(Request *dummy, std::list<std::string> a
             AgentPtr agent;
             if (agents.end() == tmp) {
                 // construct a temporary agent
-                agent = AgentPtr(_cogserver.createAgent(*it, false));
+                agent = AgentPtr(_scheduler.createAgent(*it, false));
                 if (agent) {
                     agent->run();
-                    _cogserver.stopAgent(agent);
+                    _scheduler.stopAgent(agent);
                     numberAgentsRun++;
                 } else {
                     unknownAgents.push_back(*it);
@@ -189,21 +191,21 @@ std::string AgentsModule::do_stepAgents(Request *dummy, std::list<std::string> a
 
 std::string AgentsModule::do_stopAgentLoop(Request *dummy, std::list<std::string> args)
 {
-    _cogserver.stopAgentLoop();
+    _scheduler.stopAgentLoop();
 
     return "Stopped agent loop\n";
 }
 
 std::string AgentsModule::do_startAgentLoop(Request *dummy, std::list<std::string> args)
 {
-    _cogserver.startAgentLoop();
+    _scheduler.startAgentLoop();
 
     return "Started agent loop\n";
 }
 
 std::string AgentsModule::do_listAgents(Request *dummy, std::list<std::string> args)
 {
-    std::list<const char*> agentNames = _cogserver.agentIds();
+    std::list<const char*> agentNames = _scheduler.agentIds();
     std::ostringstream oss;
 
     for (std::list<const char*>::const_iterator it = agentNames.begin();
@@ -216,7 +218,7 @@ std::string AgentsModule::do_listAgents(Request *dummy, std::list<std::string> a
 
 std::string AgentsModule::do_activeAgents(Request *dummy, std::list<std::string> args)
 {
-    AgentSeq agents = _cogserver.runningAgents();
+    AgentSeq agents = _scheduler.runningAgents();
     std::ostringstream oss;
 
     for (AgentSeq::const_iterator it = agents.begin();

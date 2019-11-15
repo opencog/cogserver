@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/server/SystemActivityTable.cc
+ * opencog/cogserver/modules/agent/SystemActivityTable.cc
  *
  * Copyright (C) 2009 by OpenCog Foundation
  * Copyright (C) 2010-2011 OpenCog Foundation
