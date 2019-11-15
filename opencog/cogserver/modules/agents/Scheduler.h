@@ -9,6 +9,16 @@
 #ifndef _OPENCOG_AGENTS_SCHEDULER_H
 #define _OPENCOG_AGENTS_SCHEDULER_H
 
+#include <list>
+#include <map>
+#include <memory>
+#include <vector>
+
+#include <opencog/cogserver/server/Registry.h>
+#include <opencog/cogserver/modules/agents/Agent.h>
+#include <opencog/cogserver/modules/agents/AgentRunnerThread.h>
+#include <opencog/cogserver/modules/agents/SystemActivityTable.h>
+
 namespace opencog
 {
 /** \addtogroup grp_server
@@ -33,7 +43,7 @@ namespace opencog
  * We chose to wrap the register methods in the server class to avoid
  * conflicts with the other registry inheritance (Registry<Command>).
  */
-class Scheduler
+class Scheduler : public Registry<Agent>
 {
 
 protected:
@@ -51,6 +61,9 @@ protected:
     SystemActivityTable _systemActivityTable;
 
 public:
+    Scheduler(void);
+    ~Scheduler();
+
     /**** Agent Registry API ****/
     /** Register a new agent class/type. Takes the class' id and a
      *  derived factory for this particular agent type. (note: the
@@ -93,6 +106,9 @@ public:
 
     /** Stops running agents as part of the serverLoop */
     virtual void stopAgentLoop(void);
+
+    void serverLoop(void);
+    void runLoopStep(void);
 
     /** Customized server loop run. This method is called inside serverLoop
      *  (between processing request queue and scheduled agents) and can be

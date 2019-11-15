@@ -1,5 +1,5 @@
 /*
- * opencog/server/AgentRunnerBase.h
+ * opencog/cogserver/modules/agents/AgentRunnerBase.h
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -8,8 +8,8 @@
 
 #include <string>
 #include <vector>
-#include <opencog/cogserver/server/Agent.h>
-#include <opencog/cogserver/server/SystemActivityTable.h>
+#include <opencog/cogserver/modules/agents/Agent.h>
+#include <opencog/cogserver/modules/agents/SystemActivityTable.h>
 
 namespace opencog
 {

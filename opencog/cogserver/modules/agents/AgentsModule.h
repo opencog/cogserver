@@ -10,6 +10,8 @@
 #define _OPENCOG_AGENTS_MODULE_H
 
 #include <opencog/cogserver/server/Module.h>
+#include <opencog/cogserver/server/Request.h>
+#include <opencog/cogserver/server/RequestClassInfo.h>
 
 #include <opencog/cogserver/modules/agents/Scheduler.h>
 
@@ -79,7 +81,7 @@ DECLARE_CMD_REQUEST(AgentsModule, "agents-active", do_activeAgents,
     void registerAgentRequests();
     void unregisterAgentRequests();
 
-    Scheduler& _scheduler;
+    Scheduler _scheduler;
 public:
     static const char* id();
     AgentsModule(CogServer&);

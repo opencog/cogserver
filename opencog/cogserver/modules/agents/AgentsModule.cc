@@ -6,23 +6,21 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include <iomanip>
+
+#include <memory>
 #include <unistd.h>
 
-#include <opencog/util/ansi.h>
 #include <opencog/util/oc_assert.h>
-#include <opencog/cogserver/server/CogServer.h>
-#include <opencog/cogserver/server/ConsoleSocket.h>
 
 #include "AgentsModule.h"
+#include "AgentRunnerThread.h"
 
 using namespace opencog;
 
 DECLARE_MODULE(AgentsModule)
 
 AgentsModule::AgentsModule(CogServer& cs) :
-    Module(cs),
-    _scheduler(Scheduler())
+    Module(cs)
 {
     registerAgentRequests();
 }

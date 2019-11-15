@@ -14,17 +14,13 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/exceptions.h>
+#include <opencog/util/Config.h>
 
-#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/modules/agents/Agent.h>
+#include <opencog/cogserver/modules/agents/SystemActivityTable.h>
 
-#ifdef HAVE_CYTHON
-#include <opencog/cython/PythonEval.h>
-#endif
-
-#include <opencog/guile/SchemeEval.h>
-
-#include <opencog/cogserver/modules/agent/Agent.h>
-#include <opencog/cogserver/modules/agent/SystemActivityTable.h>
+#include "Scheduler.h"
 
 using namespace opencog;
 
@@ -46,28 +42,13 @@ Scheduler::~Scheduler()
     logger().debug("[Scheduler] exit destructor");
 }
 
-Scheduler::Scheduler(AtomSpace* as) :
-    BaseServer(as),
-    cycleCount(1), running(false), _networkServer(nullptr)
+Scheduler::Scheduler(void) :
+    cycleCount(1), running(false)
 {
-    _systemActivityTable.init(this);
+    _systemActivityTable.init(&cogserver());
     agentScheduler.set_activity_table(&_systemActivityTable);
 
     agentsRunning = true;
-}
-
-void Scheduler::enableNetworkServer(int port)
-{
-    if (_networkServer) return;
-    _networkServer = new NetworkServer(config().get_int("SERVER_PORT", port));
-}
-
-void Scheduler::disableNetworkServer()
-{
-    if (_networkServer) {
-        delete _networkServer;
-        _networkServer = nullptr;
-    }
 }
 
 SystemActivityTable& Scheduler::systemActivityTable()
@@ -103,7 +84,7 @@ void Scheduler::serverLoop()
 
 void Scheduler::runLoopStep(void)
 {
-    struct timeval timer_start, timer_end, elapsed_time, requests_time;
+    struct timeval timer_start, timer_end, elapsed_time;
     // this refers to the current cycle, so that logging reports correctly
     // regardless of whether cycle is incremented.
     long currentCycle = this->cycleCount;
