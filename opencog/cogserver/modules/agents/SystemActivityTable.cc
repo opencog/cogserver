@@ -102,7 +102,8 @@ void SystemActivityTable::logActivity(AgentPtr agent,
     std::lock_guard<std::mutex> lock(_activityTableMutex);
     ActivitySeq& as = _agentActivityTable[agent];
     as.insert(as.begin(),
-        new Activity(_cogServer->getCycleCount(), elapsedTime, memUsed,
+        new Activity(0, //Scheduler::getCycleCount(),
+                 elapsedTime, memUsed,
                  atomsUsed,
                  agent->getUtilizedHandleSets()));
     trimActivitySeq(as, _maxAgentActivityTableSeqSize);

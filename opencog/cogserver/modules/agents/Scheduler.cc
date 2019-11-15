@@ -141,7 +141,7 @@ AgentSeq Scheduler::runningAgents(void)
 
 AgentPtr Scheduler::createAgent(const std::string& id, const bool start)
 {
-    AgentPtr a(Registry<Agent>::create(*this, id));
+    AgentPtr a(Registry<Agent>::create(cogserver(), id));
     if (a && start) startAgent(a);
     return a;
 }

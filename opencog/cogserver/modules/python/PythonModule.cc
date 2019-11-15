@@ -1,23 +1,8 @@
 /*
- * opencog/cython/PythonModule.cc
+ * opencog/cogserver/modules/python/PythonModule.cc
  *
  * Copyright (C) 2013 by OpenCog Foundation
- * All Rights Reserved
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 #include <opencog/cython/PyIncludeWrapper.h>
 #include <opencog/cython/PythonEval.h>
@@ -103,7 +88,7 @@ bool PythonModule::unregisterAgentsAndRequests()
     // Requires GIL
     for (std::string s : _agentNames) {
         DPRINTF("Deleting all instances of %s\n", s.c_str());
-        _cogserver.unregisterAgent(s);
+        _scheduler.unregisterAgent(s);
     }
     for (std::string s : _requestNames) {
         DPRINTF("Unregistering requests of id %s\n", s.c_str());
@@ -226,7 +211,7 @@ std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args
             // instantiate new Python MindAgents
             PythonAgentFactory* afact = new PythonAgentFactory(moduleName,s);
             _agentFactories.push_back(afact);
-            _cogserver.registerAgent(dottedName, afact);
+            _scheduler.registerAgent(dottedName, afact);
 
             // save a list of Python agents that we've added to the CogServer
             _agentNames.push_back(dottedName);

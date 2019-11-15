@@ -87,6 +87,7 @@ public:
     AgentsModule(CogServer&);
     virtual ~AgentsModule();
     virtual void init();
+    Scheduler& get_scheduler() { return _scheduler; }
 
 }; // class
 
