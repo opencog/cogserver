@@ -4,6 +4,7 @@ ADD_LIBRARY (server SHARED
 	BaseServer
 	CogServer
 	NetworkServer
+	Request
 	ServerSocket
 	ConsoleSocket
 )
@@ -66,5 +67,7 @@ INSTALL (FILES
 	Module.h
 	NetworkServer.h
 	Registry.h
+	Request.h
+	RequestClassInfo.h
 	DESTINATION "include/${PROJECT_NAME}/cogserver/server"
 )
