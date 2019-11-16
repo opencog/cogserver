@@ -6,6 +6,9 @@
  * Written by Andre Senna <senna@vettalabs.com>
  *            Gustavo Gama <gama@vettalabs.com>
  * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * The Cogserver Module system is deprecated; users are encouraged to
+ * explore writing guile (scheme) or python modules instead.
  */
 
 #include <dlfcn.h>

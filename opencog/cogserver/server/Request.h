@@ -4,7 +4,11 @@
  * Copyright (C) 2008 by OpenCog Foundation
  * Written by Gustavo Gama <gama@vettalabs.com>,
  * Simple-API implementation by Linas Vepstas <linasvepstas@gmail.com>
+ *
  * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * The Cogserver Request system is deprecated; users are encouraged to
+ * explore writing guile (scheme) or python modules instead.
  */
 
 

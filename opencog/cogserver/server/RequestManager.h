@@ -7,6 +7,9 @@
  *            Gustavo Gama <gama@vettalabs.com>
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * The Cogserver Request system is deprecated; users are encouraged to
+ * explore writing guile (scheme) or python modules instead.
  */
 
 #ifndef _OPENCOG_REQUEST_MANAGER_H

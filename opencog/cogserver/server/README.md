@@ -30,6 +30,9 @@ faile, and loaded by saying `cat somefile | netcat localhost 17001`.
 
 Loadable Modules
 ----------------
+The loadable module subsystem is deprecated; interested users should
+consider writing Scheme (guile) or Python modules instead.
+
 The CogServer can be extended with task-specific dynamically loadable
 modules. These can be loaded at run-time, with the `loadmodule`
 CogServer shell command.
@@ -49,3 +52,27 @@ Additional interfaces can be created by specializing
 command processor, and passes input data over to the overloaded
 generic `eval()` method, which is then free to interpret the input
 in any way desired.
+
+Long-term strategy
+------------------
+Long term, it would probably be best to eliminate the module and request
+subsystems; these do not offer any abilities that cannot be performed
+more easily or elegantly by using either Scheme or Python modules.
+This removal cannot be currently done, as there are too many dependent
+users (most notably, the ECAN Attention Allocation subsystem).
+
+After the Request and Module subsystems are removed, what's left is the
+network server. This part is worth keeping, mostly because there does
+not seems to be any existing alternative out there.  For example, Python
+does not offer a networked shell. Guile does, but the current guile
+implementation is painfully slow, crashy, and subject to hangs. The
+OpenCog wiki does describe an attempt to emulate the network server with
+a clever use of netcat.  That ... almost works, but not quite. Thus,
+there is a real need for the network server.
+
+The MindAgents idea is interesting but immature. The idea here is that
+an OpenCog may want some sort of sophisticated thread scheduling (either
+using kernel threads, or using shared cooperative threads).
+Unfortunately, it is not clear who the users of this facility would be,
+or what they would want it to do. Thus, its not clear how to design
+this properly.

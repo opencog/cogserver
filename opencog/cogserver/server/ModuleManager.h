@@ -24,6 +24,9 @@ namespace opencog
  */
 
 /**
+ * The Cogserver Module system is deprecated; users are encouraged to
+ * explore writing guile (scheme) or python modules instead.
+ *
  * Module management is responsible for extending the server
  * through the use of dynamically loadable libraries (or modules).
  * Valid modules must extended the class defined in Module.h and be

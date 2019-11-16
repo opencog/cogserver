@@ -5,6 +5,9 @@
  * Copyright (C) 2008, 2013 Linas Vepstas <linasvepstas@gmail.com>
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * The Cogserver Module system is deprecated; users are encouraged to
+ * explore writing guile (scheme) or python modules instead.
  */
 
 #include <string>
