@@ -28,7 +28,7 @@ multiple megabytes of Atoms and (Truth)Values as UTF-8
 (i.e. human-readable) data is easy and efficient. In particular,
 it does not require fiddling with complex binary formats or
 protocols or the use of protocol libraries or API's. (We're looking
-at you, HTTP, REST, ZeroMQ, ProtoBuff and freinds. You are all
+at you, HTTP, REST, ZeroMQ, ProtoBuff and friends. You are all
 very sophisticated, yes, but are hard to use. And sometimes painfully
 slow.)
 
@@ -72,7 +72,7 @@ be built and run.
   to `sudo make install` at the end.
 
 ###### AtomSpace
-> OpenCog Atomspace database and reasoning engine
+> OpenCog AtomSpace database and reasoning engine
 > http://github.com/opencog/atomspace
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
