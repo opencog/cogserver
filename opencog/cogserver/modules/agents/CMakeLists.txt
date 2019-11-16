@@ -20,6 +20,7 @@ INSTALL (FILES
 	Agent.h
 	AgentRunnerBase.h
 	AgentRunnerThread.h
+	AgentsModule.h
 	Scheduler.h
 	SystemActivityTable.h
 	DESTINATION "include/${PROJECT_NAME}/cogserver/modules/agents"
