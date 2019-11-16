@@ -1,10 +1,10 @@
 Overview
 ========
 
-The AtomSpacePublisherModule class publishes AtomSpace change events
-across the network using [ZeroMQ sockets](http://zeromq.org) to allow
-for external clients to receive updates from the AtomSpace via a
-publish/subscribe pattern.
+The AtomSpacePublisherModule publishes AtomSpace change events
+across the network using [ZeroMQ sockets](http://zeromq.org). This
+allows external clients to receive update messages from the AtomSpace
+via a publish/subscribe pattern.
 
 Clients can subscribe to the events by subscribing to a ZeroMQ socket.
 
@@ -12,14 +12,25 @@ Status
 ------
 This code has bit-rotted and no longer works. It needs a maintainer to
 be brought back to life.  Issues include:
-* Its slow; it has a heavy overhead. Some of this is ZeroMQ, some is the
-  Json decoding.
-* It also hurts the atomspace, when it runs: events are incredibly
-  CPU-piggy, and add a huge overhead to even simple manipulations.
-* There is no support for Values; only the much older TruthValues
-  are supported.
-* The AttentionBank has been factored out. It would be best to move
-  this module to its own git repo, to accomadate this.
+* Asking the AtomSpace for change events is extremely CPU-piggy;
+  monitoring change events add a huge overhead to all AtomSpace
+  operations. This can make the AtomSpace run 2x or 3x slower, or more.
+  This is a disaster for bulk data processing.
+* As a corrollary: the event publisher is a firehose: for rapidly
+  changing AtomSpaces, this might deliver hundreds of thousands of
+  events per second. It seems very unlikely that your app needs to
+  drink from this firehose.
+* The code here does not yet support Values; it only exposes the much
+  older TruthValues API.
+* The code here depends on the AttentionBank, but the AttentionBank
+  has been factored out into it's own github repo. Thus, it would be
+  best to move this module to its own git repo, as well.
+
+Potential users are strongly encouraged to consider using the Scheme
+(guile) or Python CogServer shells.  It is straight-forward to monitor
+Values and AtomSpace contents with the occasional poll. This avoids the
+firehose problem, of being sprayed with huge numbers of events in a very
+short timeframe.
 
 ##### Supported events:
 

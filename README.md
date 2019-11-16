@@ -93,4 +93,5 @@ See also these README's:
 * [cogserver/README](opencog/cogserver/server/README.md)
 * [builtin-module/README](opencog/cogserver/modules/commands/README.md)
 * [cython/README](opencog/cython/README.md)
+* [agents-module/README](opencog/cogserver/modules/agents/README.md)
 * [events-module/README](opencog/cogserver/modules/events/README.md)
