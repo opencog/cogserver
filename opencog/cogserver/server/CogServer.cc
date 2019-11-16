@@ -14,7 +14,6 @@
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
-#include <opencog/util/exceptions.h>
 #include <opencog/util/misc.h>
 #include <opencog/util/platform.h>
 
@@ -22,7 +21,6 @@
 #include <opencog/network/NetworkServer.h>
 
 #include <opencog/cogserver/server/ServerConsole.h>
-#include <opencog/cogserver/server/Request.h>
 
 #include "CogServer.h"
 #include "BaseServer.h"
@@ -117,46 +115,4 @@ void CogServer::runLoopStep(void)
     }
 }
 
-void CogServer::processRequests(void)
-{
-    std::lock_guard<std::mutex> lock(processRequestsMutex);
-    while (0 < getRequestQueueSize()) {
-        Request* request = popRequest();
-        request->execute();
-        delete request;
-    }
-}
-
 // =============================================================
-// Request registration
-
-bool CogServer::registerRequest(const std::string& name,
-                                AbstractFactory<Request> const* factory)
-{
-    return Registry<Request>::register_(name, factory);
-}
-
-bool CogServer::unregisterRequest(const std::string& name)
-{
-    return Registry<Request>::unregister(name);
-}
-
-Request* CogServer::createRequest(const std::string& name)
-{
-    return Registry<Request>::create(*this, name);
-}
-
-const RequestClassInfo& CogServer::requestInfo(const std::string& name) const
-{
-    return static_cast<const RequestClassInfo&>(Registry<Request>::classinfo(name));
-}
-
-std::list<const char*> CogServer::requestIds() const
-{
-    return Registry<Request>::all();
-}
-
-Logger &CogServer::logger()
-{
-    return ::logger();
-}
