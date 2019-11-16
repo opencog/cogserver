@@ -26,7 +26,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
-#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/cogserver/network/ConsoleSocket.h>
 #include <opencog/eval/GenericEval.h>
 #include "GenericShell.h"
 
@@ -130,7 +130,7 @@ const std::string& GenericShell::get_prompt(void)
 /**
  * Register this shell with the console.
  */
-void GenericShell::set_socket(ServerConsole *s)
+void GenericShell::set_socket(ConsoleSocket *s)
 {
 	OC_ASSERT(socket==nullptr, "Shell already associated with socket!");
 
@@ -196,7 +196,6 @@ void GenericShell::eval(const std::string &expr)
 	// We have to do this here; there is no other opportunity to call dtor.
 	if (self_destruct)
 	{
-		socket->sendPrompt();
 		socket->SetShell(nullptr);
 		delete this;
 	}
@@ -362,7 +361,7 @@ void GenericShell::line_discipline(const std::string &expr)
 
 	// Look for either an isolated control-D, or a single period on a line
 	// by itself. This means "leave the shell". We leave the shell by
-	// unsetting the shell pointer in the ServerConsole.
+	// unsetting the shell pointer in the ConsoleSocket.
 	// 0x4 is ASCII EOT, which is what ctrl-D at keybd becomes.
 	if ((false == _evaluator->input_pending()) and
 	    ((EOT == expr[len-1]) or ((1 == len) and ('.' == expr[0]))))

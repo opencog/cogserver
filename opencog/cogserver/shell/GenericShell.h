@@ -49,7 +49,7 @@ namespace opencog {
  *  @{
  */
 
-class ServerConsole;
+class ConsoleSocket;
 class GenericEval;
 
 class GenericShell
@@ -58,7 +58,7 @@ class GenericShell
 		std::mutex _pending_mtx;
 		std::string _pending_output;
 
-		ServerConsole* socket;
+		ConsoleSocket* socket;
 		std::thread* evalthr;
 		std::thread* pollthr;
 		concurrent_queue<std::string> evalque;
@@ -99,7 +99,7 @@ class GenericShell
 		GenericShell(void);
 		virtual ~GenericShell();
 
-		virtual void set_socket(ServerConsole *);
+		virtual void set_socket(ConsoleSocket *);
 		virtual void eval(const std::string &);
 
 		virtual const std::string& get_prompt(void);
