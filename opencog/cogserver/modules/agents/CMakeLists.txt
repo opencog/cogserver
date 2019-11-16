@@ -20,5 +20,6 @@ INSTALL (FILES
 	Agent.h
 	AgentRunnerBase.h
 	AgentRunnerThread.h
-	DESTINATION "include/${PROJECT_NAME}/cogserver/server"
+	Scheduler.h
+	DESTINATION "include/${PROJECT_NAME}/cogserver/modules/agents"
 )
