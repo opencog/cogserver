@@ -24,30 +24,6 @@ public:
     }
 };
 
-class TestCogServer : public CogServer
-{
-    int tickCount;
-    bool tickBased;
-    int maxCount;
-    public:
-
-        TestCogServer() : tickCount(1), tickBased(false), maxCount(1000) {}
-
-        void setTickBased(bool _tickBased) {
-            tickBased = _tickBased;
-        }
-
-        void setMaxCount(int _maxCount) {
-            maxCount = _maxCount;
-        }
-
-        bool customLoopRun() {
-            bool runCycle  = tickBased?(tickCount % 100 == 0):true;
-            if (++tickCount > maxCount) stop();
-            return runCycle;
-        }
-};
-
 class PythonModuleUTest :  public CxxTest::TestSuite
 {
     
@@ -86,10 +62,9 @@ public:
         config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
         config().set("MODULES", "opencog/cogserver/modules/python/libPythonModule.so");
 
-        TestCogServer cogserver;
-        cogserver.loadModules();
+        cogserver().loadModules();
         config().set("MODULES", "agents/libagents.so");
-        cogserver.loadModules();
+        cogserver().loadModules();
     }
 
     void tearDown() {
@@ -98,16 +73,15 @@ public:
 
     void testLoadExceptionAgent()
     {
-        TestCogServer cogserver;
         // test loading a module
-        Request* loadpyRequest = cogserver.createRequest("loadpy");
+        Request* loadpyRequest = cogserver().createRequest("loadpy");
         TS_ASSERT(loadpyRequest != NULL);
         loadpyRequest->addParameter("test_agent_w_load_exception");
         StringRequestResult *srr = new StringRequestResult();
         // add request to queue
-        cogserver.pushRequest(loadpyRequest);
+        cogserver().pushRequest(loadpyRequest);
         // process request
-        cogserver.runLoopStep();
+        cogserver().runLoopStep();
         // ensure that the exception is reported
         printf("Got >>>%s<<<\n", srr->result.c_str());
         // The python shell is currently not returning results.
@@ -117,20 +91,18 @@ public:
 
     void testAgentWithRunException()
     {
-        TestCogServer cogserver;
-
         // test loading a module
-        Request* loadpyRequest = cogserver.createRequest("loadpy");
+        Request* loadpyRequest = cogserver().createRequest("loadpy");
         TS_ASSERT(loadpyRequest != NULL);
         loadpyRequest->addParameter("test_agent_w_run_exception");
 
         // add request to queue
-        cogserver.pushRequest(loadpyRequest);
+        cogserver().pushRequest(loadpyRequest);
 
         // process request
-        cogserver.runLoopStep();
+        cogserver().runLoopStep();
 
-        Module* amod = cogserver.getModule("opencog::AgentsModule");
+        Module* amod = cogserver().getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
 
         // create agent
@@ -143,19 +115,18 @@ public:
 
     void testPreloadAgent ()
     {
-        TestCogServer cogserver;
         config().set("PYTHON_PRELOAD", "preload_test");
-        cogserver.loadModules();
+        cogserver().loadModules();
 
         // agent is loaded from python module in test constructor
         // check it can actually be created
-        Request* loadpyRequest = cogserver.createRequest("loadpy");
+        Request* loadpyRequest = cogserver().createRequest("loadpy");
         TS_ASSERT(loadpyRequest != NULL);
         loadpyRequest->addParameter("preload_test");
-        cogserver.pushRequest(loadpyRequest);
-        cogserver.runLoopStep();
+        cogserver().pushRequest(loadpyRequest);
+        cogserver().runLoopStep();
 
-        Module* amod = cogserver.getModule("opencog::AgentsModule");
+        Module* amod = cogserver().getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
 
         AgentPtr pythonTestAgent = agmod->get_scheduler().createAgent("preload_test.PreloadTestAgent");
@@ -164,24 +135,22 @@ public:
 
     void testProcessAgents()
     {
-        TestCogServer cogserver;
-
         // test loading a module
-        Request* loadpyRequest = cogserver.createRequest("loadpy");
+        Request* loadpyRequest = cogserver().createRequest("loadpy");
         TS_ASSERT(loadpyRequest != NULL);
         loadpyRequest->addParameter("test_agent");
-        cogserver.pushRequest(loadpyRequest);
-        cogserver.runLoopStep();
+        cogserver().pushRequest(loadpyRequest);
+        cogserver().runLoopStep();
 
         // create agent
-        Module* amod = cogserver.getModule("opencog::AgentsModule");
+        Module* amod = cogserver().getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
 
         AgentPtr pythonTestAgent = agmod->get_scheduler().createAgent("test_agent.TestAgent", true);
         TS_ASSERT(pythonTestAgent != NULL);
 
-        cogserver.runLoopStep();
-        cogserver.runLoopStep();
+        cogserver().runLoopStep();
+        cogserver().runLoopStep();
 
         // test setting properties
         TS_ASSERT(pythonTestAgent->frequency() == 1);
