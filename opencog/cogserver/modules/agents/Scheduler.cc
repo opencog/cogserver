@@ -112,21 +112,25 @@ bool Scheduler::customLoopRun(void)
     return true;
 }
 
-bool Scheduler::registerAgent(const std::string& id, AbstractFactory<Agent> const* factory)
+bool Scheduler::registerAgent(const std::string& id,
+                              AbstractFactory<Agent> const* factory)
 {
-    return Registry<Agent>::register_(id, factory);
+    return _factories.insert({id, factory}).second;
 }
 
 bool Scheduler::unregisterAgent(const std::string& id)
 {
     logger().debug("[Scheduler] unregister agent \"%s\"", id.c_str());
     stopAllAgents(id);
-    return Registry<Agent>::unregister(id);
+    return _factories.erase(id) == 1;
 }
 
 std::list<const char*> Scheduler::agentIds() const
 {
-    return Registry<Agent>::all();
+    std::list<const char*> l;
+    for (const auto& fact : _factories)
+        l.push_back(fact.first.c_str());
+    return l;
 }
 
 AgentSeq Scheduler::runningAgents(void)
@@ -141,8 +145,13 @@ AgentSeq Scheduler::runningAgents(void)
 
 AgentPtr Scheduler::createAgent(const std::string& id, const bool start)
 {
-    AgentPtr a(Registry<Agent>::create(cogserver(), id));
-    if (a && start) startAgent(a);
+    const auto it = _factories.find(id);
+    if (it == _factories.end()) {
+        logger().info("Unknown agent \"%s\"", id.c_str());
+        return nullptr;
+    }
+    AgentPtr a(it->second->create(cogserver()));
+    if (a and start) startAgent(a);
     return a;
 }
 

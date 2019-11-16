@@ -67,7 +67,6 @@ INSTALL (FILES
 	Factory.h
 	Module.h
 	ModuleManager.h
-	Registry.h
 	Request.h
 	RequestClassInfo.h
 	RequestManager.h

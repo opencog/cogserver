@@ -12,6 +12,7 @@
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/RequestClassInfo.h>
+#include <opencog/cogserver/server/CogServer.h>
 
 #include <opencog/cogserver/modules/agents/Scheduler.h>
 

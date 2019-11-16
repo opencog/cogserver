@@ -17,8 +17,7 @@
 #include <opencog/util/misc.h>
 #include <opencog/util/platform.h>
 
-#include <opencog/cogserver/server/Request.h>
-
+#include <opencog/cogserver/server/CogServer.h>
 #include "RequestManager.h"
 
 using namespace opencog;
@@ -47,30 +46,46 @@ void RequestManager::processRequests(void)
 // Request registration
 
 bool RequestManager::registerRequest(const std::string& name,
-                                AbstractFactory<Request> const* factory)
+                                     AbstractFactory<Request> const* factory)
 {
-    return Registry<Request>::register_(name, factory);
+    return _factories.insert({name, factory}).second;
 }
 
 bool RequestManager::unregisterRequest(const std::string& name)
 {
-    return Registry<Request>::unregister(name);
+    return _factories.erase(name) == 1;
 }
 
 Request* RequestManager::createRequest(const std::string& name,
                                        CogServer& cs)
 {
-    return Registry<Request>::create(cs, name);
+    const auto it = _factories.find(name);
+    if (it == _factories.end()) {
+        // Probably a user typo at the server prompt.
+        logger().debug("Cannot create unknown request \"%s\"", name.c_str());
+        return nullptr;
+    }
+    return it->second->create(cogserver());
 }
 
 const RequestClassInfo& RequestManager::requestInfo(const std::string& name) const
 {
-    return static_cast<const RequestClassInfo&>(Registry<Request>::classinfo(name));
+    static RequestClassInfo emptyClassInfo;
+    const auto it = _factories.find(name);
+    if (it == _factories.end()) {
+        // Probably a user typo at the server prompt.
+        logger().debug("No info about unknown request \"%s\"", name.c_str());
+        return emptyClassInfo;
+    }
+    return static_cast<const RequestClassInfo&>(it->second->info());
 }
 
 std::list<const char*> RequestManager::requestIds() const
 {
-    return Registry<Request>::all();
+    std::list<const char*> l;
+    for (const auto& fact : _factories)
+        l.push_back(fact.first.c_str());
+    return l;
 }
 
 // =============================================================

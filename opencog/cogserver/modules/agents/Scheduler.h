@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-#include <opencog/cogserver/server/Registry.h>
+#include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/modules/agents/Agent.h>
 #include <opencog/cogserver/modules/agents/AgentRunnerThread.h>
 #include <opencog/cogserver/modules/agents/SystemActivityTable.h>
@@ -43,10 +43,12 @@ namespace opencog
  * We chose to wrap the register methods in the server class to avoid
  * conflicts with the other registry inheritance (Registry<Command>).
  */
-class Scheduler : public Registry<Agent>
+class Scheduler
 {
-
 protected:
+    std::map<const std::string, AbstractFactory<Agent> const*>
+        _factories;
+
     typedef std::unique_ptr<AgentRunnerThread> AgentRunnerThreadPtr;
 
     long cycleCount;
@@ -64,11 +66,11 @@ public:
     Scheduler(void);
     ~Scheduler();
 
-    /**** Agent Registry API ****/
     /** Register a new agent class/type. Takes the class' id and a
      *  derived factory for this particular agent type. (note: the
-     *  caller owns the factory instance). */
-    virtual bool registerAgent(const std::string& id, AbstractFactory<Agent> const* factory);
+     *  caller owns the factory instance). Hmmm. That's not good. */
+    virtual bool registerAgent(const std::string& id,
+                               AbstractFactory<Agent> const* factory);
 
     /** Unregister an agent class/type. Takes the class' id. */
     virtual bool unregisterAgent(const std::string& id);

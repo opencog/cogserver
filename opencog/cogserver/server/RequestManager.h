@@ -16,8 +16,9 @@
 #include <vector>
 
 #include <opencog/util/concurrent_queue.h>
+#include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Request.h>
-#include <opencog/cogserver/server/Registry.h>
+#include <opencog/cogserver/server/RequestClassInfo.h>
 
 namespace opencog
 {
@@ -44,9 +45,11 @@ namespace opencog
  * ctrl-C, so the user can always ctrl-C to kill an out-of-control
  * Scheme or Python job.
  */
-class RequestManager : public Registry<Request>
+class RequestManager
 {
 protected:
+    std::map<const std::string, AbstractFactory<Request> const*>
+        _factories;
 
     // Container used to store references to requests
     std::map<const std::string, Request*> requests;
