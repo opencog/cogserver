@@ -17,5 +17,6 @@ INSTALL (FILES
 	ConsoleSocket.h
 	GenericShell.h
 	NetworkServer.h
+	ServerSocket.h
 	DESTINATION "include/${PROJECT_NAME}/network"
 )
