@@ -14,6 +14,7 @@
 #include <string>
 
 #include <opencog/cogserver/network/ServerSocket.h>
+#include <opencog/cogserver/shell/GenericShell.h>
 
 namespace opencog
 {
@@ -67,6 +68,7 @@ private:
     static std::condition_variable _max_cv;
 
 protected:
+    GenericShell *_shell;
 
     /**
      * Connection callback: called whenever a new connection arrives
@@ -89,6 +91,12 @@ public:
 
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
     void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }
+
+    /**
+     * SetShell: Declare an alternate shell, that will perform all
+     * command line processing.
+     */
+    void SetShell(GenericShell *);
 
     /**
      * Assorted debugging utilities.

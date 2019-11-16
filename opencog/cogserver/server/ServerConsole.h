@@ -39,37 +39,7 @@ namespace opencog
 class ServerConsole : public ConsoleSocket
 {
 private:
-    GenericShell *_shell;
-
     static std::string _prompt;
-
-    // We need the use-count and the condition variables to avoid races
-    // between asynchronous socket closures and unsent replies. So, for
-    // example, the user may send a command, but then close the socket
-    // before the reply is sent.  The boost::asio code notices the
-    // closed socket, and ServerSocket::handle_connection() exits it's
-    // loop, and then tries to destruct this class and exit the thread
-    // that has been handling the socket i/o. We have to hold off this
-    // destruction, until all of the users of this class have completed
-    // thier work. We accomplish this with a use-count: each in-flight
-    // request increments the use-count, and then decrements it when done.
-    // The destructor can run only when the use-count has dropped to zero.
-    //
-    // Sockets with a shell on them will typically have a use-count of
-    // zero already; these use a different method of holding off the dtor.
-    // Basically, the shell dtor has to run first, before the
-    // ServerSocket::handle_connection() invokes this dtor.
-    volatile unsigned int _use_count;
-    std::mutex _in_use_mtx;
-    std::condition_variable _in_use_cv;
-
-    // A count of the number of concurrent open sockets. This is used
-    // to limit the number of connections to the cogserver, so that it
-    // doesn't crash with a `accept: Too many open files` error.
-    static unsigned int _max_open_sockets;
-    static volatile unsigned int _num_open_sockets;
-    static std::mutex _max_mtx;
-    static std::condition_variable _max_cv;
 
 protected:
 
@@ -115,6 +85,9 @@ public:
      */
     void SendResult(const std::string&);
 
+    /**
+     * Send a prompt string.
+     */
     void sendPrompt();
 
     /**
@@ -122,11 +95,6 @@ public:
      */
     void Exit();
 
-    /**
-     * SetShell: Declare an alternate shell, that will perform all
-     * command line processing.
-     */
-    void SetShell(GenericShell *);
 }; // class
 
 /** @}*/

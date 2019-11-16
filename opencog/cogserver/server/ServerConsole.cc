@@ -22,8 +22,6 @@ std::string ServerConsole::_prompt;
 
 ServerConsole::ServerConsole(void)
 {
-    _shell = nullptr;
-
     if (0 == _prompt.size()) {
         if (nullptr == &config()) {
             _prompt = "[0;32mopencog[1;32m> [0m";
@@ -209,9 +207,4 @@ void ServerConsole::Exit()
 void ServerConsole::SendResult(const std::string& res)
 {
     Send(res);
-}
-
-void ServerConsole::SetShell(GenericShell *g)
-{
-    _shell = g;
 }

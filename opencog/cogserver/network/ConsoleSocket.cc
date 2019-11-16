@@ -35,6 +35,7 @@ std::condition_variable ConsoleSocket::_max_cv;
 
 ConsoleSocket::ConsoleSocket(void)
 {
+    _shell = nullptr;
     _use_count = 0;
 
     // Block here, if there are too many concurrently-open sockets.
@@ -67,8 +68,7 @@ ConsoleSocket::~ConsoleSocket()
     lck.unlock();
 
     // If there's a shell, kill it.
-// XXX FIXME...
-    // if (_shell) delete _shell;
+    if (_shell) delete _shell;
 
     std::unique_lock<std::mutex> mxlck(_max_mtx);
     _num_open_sockets--;
@@ -76,4 +76,9 @@ ConsoleSocket::~ConsoleSocket()
     mxlck.unlock();
 
     logger().debug("[ConsoleSocket] destructor finished");
+}
+
+void ConsoleSocket::SetShell(GenericShell *g)
+{
+    _shell = g;
 }
