@@ -20,7 +20,8 @@ using namespace opencog;
 DECLARE_MODULE(AgentsModule)
 
 AgentsModule::AgentsModule(CogServer& cs) :
-    Module(cs)
+    Module(cs),
+    _scheduler(cs)
 {
     registerAgentRequests();
 }
