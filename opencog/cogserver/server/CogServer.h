@@ -55,11 +55,12 @@ protected:
     NetworkServer* _networkServer;
     bool _running;
 
-public:
-
-    /** CogServer's constructor. */
+    /** Protected; singleton instance! Bad things happen when there is
+     * more than one. Alas. */
     CogServer(AtomSpace* = nullptr);
+friend CogServer& cogserver(AtomSpace*);
 
+public:
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);
@@ -102,7 +103,7 @@ public:
 }; // class
 
 // Singleton instance of the cogserver
-CogServer& cogserver(AtomSpace* as = nullptr);
+CogServer& cogserver(AtomSpace* = nullptr);
 
 // Only cython needs this.
 inline AtomSpace& cython_server_atomspace(void)
