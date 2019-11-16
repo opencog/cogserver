@@ -12,7 +12,7 @@
 #include <opencog/util/ansi.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/cogserver/server/ConsoleSocket.h>
+#include <opencog/cogserver/server/ServerConsole.h>
 
 #include "BuiltinRequestsModule.h"
 
@@ -69,14 +69,14 @@ void BuiltinRequestsModule::init()
 // Various flavors of closing the connection
 std::string BuiltinRequestsModule::do_exit(Request* req, std::list<std::string> args)
 {
-    ConsoleSocket* con = req->get_console();
+    ServerConsole* con = req->get_console();
     OC_ASSERT(con, "Bad request state");
 
     con->Exit();
 
     // After the exit, the pointer to the console will be invalid,
     // so zero it out now, to avoid a bad dereference.  (Note that
-    // this call may trigger the ConsoleSocket dtor to run).
+    // this call may trigger the ServerConsole dtor to run).
     req->set_console(nullptr);
     return "";
 }
@@ -155,7 +155,7 @@ std::string BuiltinRequestsModule::do_h(Request *req, std::list<std::string> arg
 std::string BuiltinRequestsModule::do_stats(Request *req, std::list<std::string> args)
 {
     std::ostringstream oss;
-    ConsoleSocket* con = req->get_console();
+    ServerConsole* con = req->get_console();
 
     oss << "Console use-count = " << con->get_use_count() << "\n";
     oss << "Console max-open-sockets = " << con->get_max_open_sockets() << "\n";
