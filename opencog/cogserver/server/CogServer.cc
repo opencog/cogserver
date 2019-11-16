@@ -27,11 +27,6 @@
 
 using namespace opencog;
 
-BaseServer* CogServer::createInstance(AtomSpace* as)
-{
-    return new CogServer(as);
-}
-
 CogServer::~CogServer()
 {
     logger().debug("[CogServer] enter destructor");
@@ -113,6 +108,19 @@ void CogServer::runLoopStep(void)
                    requests_time.tv_usec/1000000.0
                   );
     }
+}
+
+// =============================================================
+// Singleton instance stuff.
+
+static CogServer* serverInstance = nullptr;
+
+CogServer& opencog::cogserver(AtomSpace* as)
+{
+    if (nullptr == serverInstance)
+        serverInstance = new CogServer(as);
+
+    return *serverInstance;
 }
 
 // =============================================================

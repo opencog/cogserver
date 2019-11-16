@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <opencog/cogserver/modules/agents/AgentRunnerBase.h>
-#include <opencog/cogserver/server/BaseServer.h>
+#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/platform.h>
 
@@ -18,10 +18,10 @@ namespace opencog
 
 struct equal_to_id: public std::binary_function<AgentPtr, const std::string&, bool>
 {
-        bool operator()(AgentPtr a, const std::string& cid) const
-        {
-            return (a->classinfo().id != cid);
-        }
+    bool operator()(AgentPtr a, const std::string& cid) const
+    {
+        return (a->classinfo().id != cid);
+    }
 };
 
 AgentRunnerBase::AgentRunnerBase(std::string runner_name): name(runner_name),
@@ -60,7 +60,7 @@ void AgentRunnerBase::remove_agent(AgentPtr a)
         agents.erase(ai);
         sat->clearActivity(a);
         a->stop();
-        logger().debug("[CogServer::%s] stopped agent \"%s\"", name.c_str(),
+        logger().debug("[AgentRunnerBase::%s] stopped agent \"%s\"", name.c_str(),
             a->to_string().c_str());
     }
 }
@@ -80,7 +80,7 @@ void AgentRunnerBase::remove_all_agents(const std::string& id)
     // remove those agents from the main container
     agents.erase(last, agents.end());
 
-    logger().debug("[CogServer::%s] stopped all agents of type \"%s\"",
+    logger().debug("[AgentRunner::%s] stopped all agents of type \"%s\"",
         name.c_str(), id.c_str());
 }
 
@@ -91,15 +91,15 @@ void AgentRunnerBase::remove_all_agents()
         a->stop();
     }
     agents.clear();
-    logger().debug("[CogServer::%s] stopped all agents", name.c_str());
+    logger().debug("[AgentRunnerBase::%s] stopped all agents", name.c_str());
 }
 
 void AgentRunnerBase::run_agent(AgentPtr a)
 {
     size_t mem_start = getMemUsage();
-    int atoms_start = atomspace().get_size();
+    int atoms_start = cogserver().getAtomSpace().get_size();
 
-    logger().debug("[CogServer::%s] begin to run mind agent: %s, [cycle = %d]",
+    logger().debug("[AgentRunnerBase::%s] begin to run mind agent: %s, [cycle = %d]",
                    name.c_str(), a->classinfo().id.c_str(), cycle_count);
 
     auto timer_start = system_clock::now();
@@ -110,7 +110,7 @@ void AgentRunnerBase::run_agent(AgentPtr a)
     auto timer_end = system_clock::now();
 
     size_t mem_end = getMemUsage();
-    int atoms_end = atomspace().get_size();
+    int atoms_end = cogserver().getAtomSpace().get_size();
 
     size_t mem_used;
     if (mem_start > mem_end)
@@ -126,7 +126,7 @@ void AgentRunnerBase::run_agent(AgentPtr a)
 
     auto elapsed = timer_end - timer_start;
     auto elapsed_secs = duration_cast<duration<float>>(elapsed).count();
-    logger().debug("[CogServer::%s] running mind agent: %s, elapsed time (sec): "
+    logger().debug("[AgentRunnerBase::%s] running mind agent: %s, elapsed time (sec): "
             "%f, memory used: %d, atom used: %d [cycle = %d]", name.c_str(),
             a->classinfo().id.c_str(), elapsed_secs, mem_used, atoms_used,
             cycle_count);

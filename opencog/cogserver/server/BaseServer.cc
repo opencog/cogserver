@@ -30,23 +30,6 @@ using namespace opencog;
 
 AtomSpace* BaseServer::_atomSpace = nullptr;
 
-static BaseServer* serverInstance = nullptr;
-
-BaseServer* BaseServer::createInstance(AtomSpace* as)
-{
-    OC_ASSERT(0,
-        "Accidentally called the base class!\n"
-        "To fix this bug, be sure to make the following call in your code:\n"
-        "   server(MyServer::MyCreateInstance);\n"
-        "maybe this:\n"
-        "   server(CogServer::createInstance);\n"
-        "depending on which you want.  You only need to do this once,\n"
-        "early during the initialization of your program.\n"
-    );
-    return NULL;
-}
-
-
 // There might already be an atomspace, whose management we should
 // take over.  The user can specify this atomspace.
 BaseServer::BaseServer(AtomSpace* as)
@@ -66,18 +49,10 @@ BaseServer::BaseServer(AtomSpace* as)
         _atomSpace = as;
         _private_as = nullptr;
     }
-
-    // Set this server as the current server.
-    if (serverInstance)
-        throw (RuntimeException(TRACE_INFO,
-                "Can't create more than one server singleton instance!"));
-
-    serverInstance = this;
 }
 
 BaseServer::~BaseServer()
 {
-    serverInstance = nullptr;
     _atomSpace = nullptr;
 
     if (_private_as)
@@ -87,16 +62,4 @@ BaseServer::~BaseServer()
 AtomSpace& BaseServer::getAtomSpace()
 {
     return *_atomSpace;
-}
-
-BaseServer& opencog::server(BaseServer* (*factoryFunction)(AtomSpace*),
-                            AtomSpace* as)
-{
-    // Create a new instance using the factory function if we don't
-    // already have one.
-    if (!serverInstance)
-        serverInstance = (*factoryFunction)(as);
-    
-    // Return a reference to our server instance.
-    return *serverInstance;
 }

@@ -60,10 +60,6 @@ public:
     /** CogServer's constructor. */
     CogServer(AtomSpace* = nullptr);
 
-    /** Factory method. Override's the base class factory method
-     * and returns an instance of CogServer instead. */
-    static BaseServer* createInstance(AtomSpace* = nullptr);
-
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);
@@ -105,10 +101,13 @@ public:
 
 }; // class
 
-// Handy dandy utility
-inline CogServer& cogserver(AtomSpace* as = nullptr)
+// Singleton instance of the cogserver
+CogServer& cogserver(AtomSpace* as = nullptr);
+
+// Only cython needs this.
+inline AtomSpace& cython_server_atomspace(void)
 {
-    return dynamic_cast<CogServer&>(server(CogServer::createInstance, as));
+    return cogserver().getAtomSpace();
 }
 
 /** @}*/
