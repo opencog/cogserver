@@ -10,35 +10,50 @@ The main project site is at https://opencog.org
 
 Overview
 --------
-The CogServer provides a network server and a job scheduler.
-The network server provides a fast, efficient telnet interface,
-giving access to scheme (guile) and python command-lines.
-In particular, it is much faster (and more stable) than the native
-guile read-evaluate-print-loop (REPL) network server.
-Python does not even provide a networked REPL server.
+The CogServer provides a network command-line console server and
+a job scheduler.  The network console server provides a fast,
+efficient telnet interface, giving access to scheme (guile) and
+python command-lines. This itself is notable: by default, Python
+does not allow multiple users to access it at the same time. As
+to scheme/guile, there is an ice-9 REPL server, but the CogServer
+is an order of magnitude faster, and infinitely more stable,
+free of lockups, hangs and crashes.
 
-Both can be used by multiple users at the same time, and provide
-not only a convenient interface for ad-hoc issuing of commands,
-but also provide a very good (and easy, and strong) way of doing
-bulk data transfers. In particular, the transfer of multiple
-megabytes of Atoms and (Truth)Values as UTF-8 (i.e. human-readable)
-data is easy and efficient. In particular, it does not require
-fiddling with complex binary formats or protocols or the use of
-protocol libraries or API's.
+Both Python and Scheme can be used by multiple users at the same
+time, all obtaining access to the *same* AtomSpace.  Thus, the
+Cogserver provides not only a convenient interface for ad-hoc
+data processing, but also provides a very good (and easy, and strong)
+way of doing bulk data transfers. In particular, the transfer of
+multiple megabytes of Atoms and (Truth)Values as UTF-8
+(i.e. human-readable) data is easy and efficient. In particular,
+it does not require fiddling with complex binary formats or
+protocols or the use of protocol libraries or API's. (We're looking
+at you, HTTP, REST, ZeroMQ, ProtoBuff and freinds. You are all
+very sophisticated, yes, but are hard to use. And sometimes painfully
+slow.)
 
-The job scheduler is an experimental prototype for controlling
-multiple threads and assigning thread processing priorities, in
-an AtomSpace-aware fashion. It is in need of the caring love and
-attention from an interested developer.
+The job scheduler (aka 'MindAgents' or just 'Agents') is an
+experimental prototype for controlling multiple threads and assigning
+thread processing priorities, in an AtomSpace-aware fashion. It is in
+need of the caring love and attention from an interested developer.
 
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
 
 Building and Running
 --------------------
-For platform dependent instruction on dependencies and building the
-code, as well as other options for setting up development environments,
-more details are found on the [Building Opencog
+The CogServer is build exactly the same way that all other OpenCog
+components are built:
+```
+clone https://github.com/opencog/cogserver
+cd cogserver
+mkdir build
+cd build
+cmake ..
+make -j
+```
+For additional information on dependencies and general hand-holding
+with the build, see the [building Opencog
 wiki](http://wiki.opencog.org/wikihome/index.php/Building_OpenCog).
 
 Prerequisites
@@ -62,20 +77,6 @@ be built and run.
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
 
-Building OpenCog
-----------------
-Perform the following steps at the shell prompt:
-```
-    cd to project root dir
-    mkdir build
-    cd build
-    cmake ..
-    make
-```
-Libraries will be built into subdirectories within build, mirroring
-the structure of the source directory root.
-
-
 Unit tests
 ----------
 To build and run the unit tests, from the `./build` directory enter
@@ -83,18 +84,3 @@ To build and run the unit tests, from the `./build` directory enter
 ```
     make test
 ```
-
-CMake notes
------------
-Some useful CMake's web sites/pages:
-
- - http://www.cmake.org (main page)
- - http://www.cmake.org/Wiki/CMake_Useful_Variables
- - http://www.cmake.org/Wiki/CMake_Useful_Variables/Get_Variables_From_CMake_Dashboards
- - http://www.cmake.org/Wiki/CMakeMacroAddCxxTest
- - http://www.cmake.org/Wiki/CMake_HowToFindInstalledSoftware
-
-
--Wno-deprecated is currently enabled by default to avoid a number of
-warnings regarding hash_map being deprecated (because the alternative
-is still experimental!)
