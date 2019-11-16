@@ -5,6 +5,7 @@ ADD_LIBRARY (server SHARED
 	CogServer
 	ModuleManager
 	Request
+	RequestManager
 	ServerConsole
 )
 
@@ -69,5 +70,6 @@ INSTALL (FILES
 	Registry.h
 	Request.h
 	RequestClassInfo.h
+	RequestManager.h
 	DESTINATION "include/${PROJECT_NAME}/cogserver/server"
 )
