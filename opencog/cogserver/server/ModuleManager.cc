@@ -14,6 +14,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include <opencog/util/Config.h>
+#include <opencog/util/Logger.h>
 #include <opencog/util/exceptions.h>
 #include <opencog/util/files.h>
 #include <opencog/util/misc.h>
@@ -61,7 +62,8 @@ ModuleManager::ModuleManager(void)
 {
 }
 
-bool ModuleManager::loadModule(const std::string& filename)
+bool ModuleManager::loadModule(const std::string& filename,
+                               CogServer& cs)
 {
 // TODO FIXME I guess this needs to be different for windows.
 #define PATH_SEP '/'
@@ -137,7 +139,7 @@ bool ModuleManager::loadModule(const std::string& filename)
     }
 
     // load and init module
-    Module* module = (Module*) (*load_func)(*this);
+    Module* module = (Module*) (*load_func)(cs);
 
     // store two entries in the module map:
     //    1: filename => <struct module data>
@@ -263,7 +265,8 @@ Module* ModuleManager::getModule(const std::string& moduleId)
     return getModuleData(moduleId).module;
 }
 
-void ModuleManager::loadModules(std::vector<std::string> module_paths)
+void ModuleManager::loadModules(std::vector<std::string> module_paths,
+                                CogServer& cs)
 {
     if (module_paths.empty())
     {
@@ -308,16 +311,16 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths)
                 boost::filesystem::path modulePath(module_path);
                 modulePath /= module;
                 if (boost::filesystem::exists(modulePath)) {
-                    rc = loadModule(modulePath.string());
+                    rc = loadModule(modulePath.string(), cs);
                     if (rc) break;
                 }
             }
         } else {
-            rc = loadModule(module);
+            rc = loadModule(module, cs);
         }
         if (!rc)
         {
-            logger().warn("Failed to load cogserver module %s", module.c_str());
+            logger().warn("Failed to load module %s", module.c_str());
 				load_failure = true;
         }
     }

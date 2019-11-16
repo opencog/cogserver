@@ -160,6 +160,12 @@ public:
     /** Force drain of all outstanding requests */
     void processRequests(void);
 
+    /**** Module API ****/
+    bool loadModule(const std::string& filename) {
+        return ModuleManager::loadModule(filename, *this);
+    }
+    void loadModules(void) { ModuleManager::loadModules(*this); }
+
     /** Return the logger */
     Logger &logger(void);
 

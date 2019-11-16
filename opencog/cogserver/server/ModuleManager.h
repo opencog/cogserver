@@ -15,7 +15,7 @@
 #include <map>
 #include <vector>
 
-#include <opencog/module/Module.h>
+#include <opencog/cogserver/server/Module.h>
 
 namespace opencog
 {
@@ -56,39 +56,42 @@ protected:
 public:
 
     /** ModuleManager's constructor. */
-    ModuleManager(void)
+    ModuleManager(void);
 
     /** ModuleManager's destructor. Unloads all modules. */
-    virtual ~ModuleManager(void);
+    ~ModuleManager(void);
 
     /** Loads a dynamic library/module. Takes the filename of the
      *  library (.so or .dylib or .dll). On Linux/Unix, the filename may
      *  be absolute or relative to the server's RPATH path (which
      *  typically, should be "INSTALL_PREFIX/lib/opencog") */
-    virtual bool loadModule(const std::string& filename);
+    bool loadModule(const std::string& filename, CogServer&);
 
     /** Unloads a dynamic library/module. Takes the module's id, as
      *  defined in the Module base class and overriden by the derived
      *  module classes. See the documentation in the Module.h file for
      *  more details. */
-    virtual bool unloadModule(const std::string& id);
+    bool unloadModule(const std::string& id);
 
     /** Lists the modules that are currently loaded. */
-    virtual std::string listModules();
+    std::string listModules();
 
     /** Retrieves the module's meta-data (id, filename, load/unload
      * function pointers, etc). Takes the module's id */
-    virtual ModuleData getModuleData(const std::string& id);
+    ModuleData getModuleData(const std::string& id);
 
     /** Retrieves the module's instance. Takes the module's id */
-    virtual Module* getModule(const std::string& id);
+    Module* getModule(const std::string& id);
 
     /** Load all modules specified in configuration file. If
         module_paths is empty then DEFAULT_MODULE_PATHS is used
         instead, which is why it is passed as copy instead of const
         ref. */
-    virtual void loadModules(std::vector<std::string> module_paths =
-                             std::vector<std::string>());
+    void loadModules(std::vector<std::string> module_paths,
+                             CogServer&);
+    void loadModules(CogServer& cs) {
+        loadModules(std::vector<std::string>(), cs);
+    }
 
 }; // class
 
