@@ -84,3 +84,13 @@ To build and run the unit tests, from the `./build` directory enter
 ```
     make test
 ```
+
+Architecture
+------------
+See also these README's:
+
+* [network/README](opencog/cogserver/network/README.md)
+* [cogserver/README](opencog/cogserver/server/README.md)
+* [builtin-module/README](opencog/cogserver/modules/commands/README.md)
+* [cython/README](opencog/cython/README.md)
+* [events-module/README](opencog/cogserver/modules/events/README.md)

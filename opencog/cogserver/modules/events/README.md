@@ -2,10 +2,24 @@ Overview
 ========
 
 The AtomSpacePublisherModule class publishes AtomSpace change events
-across the network using [ZeroMQ sockets](http://zeromq.org) to allow for external
-clients to receive updates from the AtomSpace via a publish/subscribe pattern.
+across the network using [ZeroMQ sockets](http://zeromq.org) to allow
+for external clients to receive updates from the AtomSpace via a
+publish/subscribe pattern.
 
 Clients can subscribe to the events by subscribing to a ZeroMQ socket.
+
+Status
+------
+This code has bit-rotted and no longer works. It needs a maintainer to
+be brought back to life.  Issues include:
+* Its slow; it has a heavy overhead. Some of this is ZeroMQ, some is the
+  Json decoding.
+* It also hurts the atomspace, when it runs: events are incredibly
+  CPU-piggy, and add a huge overhead to even simple manipulations.
+* There is no support for Values; only the much older TruthValues
+  are supported.
+* The AttentionBank has been factored out. It would be best to move
+  this module to its own git repo, to accomadate this.
 
 ##### Supported events:
 
@@ -81,7 +95,7 @@ Atom object
 ##### Format
 
     {
-            "atom": {
+           "atom": {
 	        "handle": UUID,
 	        "type": TYPENAME,
 	        "name": NAME,
