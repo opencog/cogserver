@@ -55,15 +55,12 @@ protected:
     NetworkServer* _networkServer;
     bool _running;
 
-public:
-
-    /** CogServer's constructor. */
+    /** Protected; singleton instance! Bad things happen when there is
+     * more than one. Alas. */
     CogServer(AtomSpace* = nullptr);
+friend CogServer& cogserver(AtomSpace*);
 
-    /** Factory method. Override's the base class factory method
-     * and returns an instance of CogServer instead. */
-    static BaseServer* createInstance(AtomSpace* = nullptr);
-
+public:
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);
@@ -105,10 +102,13 @@ public:
 
 }; // class
 
-// Handy dandy utility
-inline CogServer& cogserver(AtomSpace* as = nullptr)
+// Singleton instance of the cogserver
+CogServer& cogserver(AtomSpace* = nullptr);
+
+// Only cython needs this.
+inline AtomSpace& cython_server_atomspace(void)
 {
-    return dynamic_cast<CogServer&>(server(CogServer::createInstance, as));
+    return cogserver().getAtomSpace();
 }
 
 /** @}*/

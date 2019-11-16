@@ -146,8 +146,8 @@ void ServerConsole::OnLine(const std::string& line)
     std::string cmdName = params.front();
     params.pop_front();
 
-    CogServer& cogserver = static_cast<CogServer&>(server());
-    Request* request = cogserver.createRequest(cmdName);
+    CogServer& cs = cogserver();
+    Request* request = cs.createRequest(cmdName);
 
     // Command not found.
     if (nullptr == request)
@@ -158,7 +158,7 @@ void ServerConsole::OnLine(const std::string& line)
         Send(msg);
 
         // Try to send "help" command response
-        request = cogserver.createRequest("help");
+        request = cs.createRequest("help");
         if (nullptr == request)
         {
             // no help request; just terminate the request
@@ -175,7 +175,7 @@ void ServerConsole::OnLine(const std::string& line)
     // Caution: after the pushRequest, the request might be executed
     // and then deleted in a different thread. It must NOT be accessed
     // after the push!
-    cogserver.pushRequest(request);
+    cs.pushRequest(request);
 
     if (is_shell)
     {
@@ -186,7 +186,7 @@ void ServerConsole::OnLine(const std::string& line)
         // shell mode before handling any additional input from the
         // socket (since all subsequent input will be for the new shell,
         // not for the cogserver command processor).
-        cogserver.processRequests();
+        cs.processRequests();
     }
 }
 

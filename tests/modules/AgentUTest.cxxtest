@@ -106,11 +106,9 @@ public:
     }
 
     void setUp() {
-        CogServer& cogserver = static_cast<CogServer&>(server(CogServer::createInstance));
-
         config().set("MODULES", "agents/libagents.so");
-        cogserver.loadModules();
-        Module* amod = cogserver.getModule("opencog::AgentsModule");
+        cogserver().loadModules();
+        Module* amod = cogserver().getModule("opencog::AgentsModule");
         AgentsModule* agmod = (AgentsModule*) amod;
         sched = &agmod->get_scheduler();
         sched->registerAgent(MyAgentWithDefaults::info().id, &factory);

@@ -82,7 +82,8 @@ class CustomScheduler : public Scheduler
     int maxCount;
     public: 
 
-        CustomScheduler() : tickCount(1), tickBased(false), maxCount(1000) {}
+        CustomScheduler(CogServer& cs) :
+            Scheduler(cs), tickCount(1), tickBased(false), maxCount(1000) {}
 
         void setTickBased(bool _tickBased) {
             tickBased = _tickBased;
@@ -128,7 +129,7 @@ public:
         // set cycle duration to a smaller value so that this test do not take too long.
         config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
         Factory<MyAgent, Agent> factory;
-        CustomScheduler scheduler;
+        CustomScheduler scheduler(cogserver());
         scheduler.setTickBased(false);
         scheduler.setMaxCount(50);
         scheduler.registerAgent(MyAgent::info().id, &factory);
@@ -198,14 +199,14 @@ public:
     } // testProcessAgents
 
     /* test tick-based server */
-    void testTickBasedCogServer() {
+    void testTickBasedScheduler() {
         // Make it use external tick so that it does not call
         // sleep inside serverLoop
         // Ahem cough cough. The external tick code was
         // commented out and removed from cogserver maybe 5-10 years
         // ago.  So this test doesn't do what it claims to do.
         config().set("EXTERNAL_TICK_MODE", "true");
-        CustomScheduler scheduler;
+        CustomScheduler scheduler(cogserver());
 
         scheduler.setTickBased(true);
         scheduler.setMaxCount(9);

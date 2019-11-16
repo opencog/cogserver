@@ -204,7 +204,7 @@ public:
 
 	void setUp()
 	{
-		csrv = new CogServer();
+		csrv = &cogserver();
 		csrv->loadModules();
 		csrv->enableNetworkServer(17333);
 		main_loop = new std::thread(&CogServer::serverLoop, csrv);
@@ -218,7 +218,6 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
-		delete csrv;
 	}
 
 	void testControlD()

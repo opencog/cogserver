@@ -23,34 +23,6 @@ public:
     }
 };
 
-class TestCogServer : public CogServer
-{
-    int tickCount;
-    bool tickBased;
-    int maxCount;
-    public:
-
-        static BaseServer* createInstance(AtomSpace* as) {
-            return new TestCogServer();
-        }
-
-        TestCogServer() : tickCount(1), tickBased(false), maxCount(1000) {}
-
-        void setTickBased(bool _tickBased) {
-            tickBased = _tickBased;
-        }
-
-        void setMaxCount(int _maxCount) {
-            maxCount = _maxCount;
-        }
-
-        bool customLoopRun() {
-            bool runCycle  = tickBased?(tickCount % 100 == 0):true;
-            if (++tickCount > maxCount) stop();
-            return runCycle;
-        }
-};
-
 class PyEvalUTest :  public CxxTest::TestSuite
 {
 
@@ -66,11 +38,10 @@ public:
 
         // Set cycle duration to a smaller value so that this test does not take too long.
         config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
 
         // This path is relative to the build diretory, not the install dir...
         config().set("MODULES", "opencog/cogserver/shell/libpy-shell.so");
-        cogserver.loadModules();
+        cogserver().loadModules();
     }
 
     ~PyEvalUTest()
@@ -88,23 +59,21 @@ public:
 
     void testPyEvalScript()
     {
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
-
         //  Create the py-eval request.
-        Request* pythonEvalRequest = cogserver.createRequest("py-eval");
+        Request* pythonEvalRequest = cogserver().createRequest("py-eval");
         TS_ASSERT_DIFFERS(pythonEvalRequest, (Request*) NULL);
         pythonEvalRequest->addParameter("print('Hello')");
         // StringRequestResult *pythonEvalRequestResult = new StringRequestResult();
 
         // Add request to queue.
-        cogserver.pushRequest(pythonEvalRequest);
+        cogserver().pushRequest(pythonEvalRequest);
 
         // Process this request.
-        cogserver.runLoopStep();
+        cogserver().runLoopStep();
 
         // Make sure we get a "Hello" back.
 // XXX stub this out. The test is failing, because printing and I/O is borken
-// in cython, and no one wants to fix it.  See issue #2315
+// in cython, and no one wants to fix it.  See issue opencog/opencog#2315
         // TS_ASSERT_DIFFERS(pythonEvalRequestResult->result.find("Hello"), std::string::npos)
     }
 };

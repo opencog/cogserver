@@ -42,10 +42,10 @@ Scheduler::~Scheduler()
     logger().debug("[Scheduler] exit destructor");
 }
 
-Scheduler::Scheduler(void) :
-    cycleCount(1), running(false)
+Scheduler::Scheduler(CogServer& cs) :
+    cycleCount(1), running(false), _cogserver(cs)
 {
-    _systemActivityTable.init(&cogserver());
+    _systemActivityTable.init(&cs);
     agentScheduler.set_activity_table(&_systemActivityTable);
 
     agentsRunning = true;
@@ -150,7 +150,7 @@ AgentPtr Scheduler::createAgent(const std::string& id, const bool start)
         logger().info("Unknown agent \"%s\"", id.c_str());
         return nullptr;
     }
-    AgentPtr a(it->second->create(cogserver()));
+    AgentPtr a(it->second->create(_cogserver));
     if (a and start) startAgent(a);
     return a;
 }

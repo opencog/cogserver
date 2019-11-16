@@ -60,10 +60,11 @@ protected:
     std::vector<AgentRunnerThreadPtr> agentThreads;
     std::map<std::string, AgentRunnerThread*> threadNameMap;
 
+    CogServer& _cogserver;
     SystemActivityTable _systemActivityTable;
 
 public:
-    Scheduler(void);
+    Scheduler(CogServer&);
     ~Scheduler();
 
     /** Register a new agent class/type. Takes the class' id and a
