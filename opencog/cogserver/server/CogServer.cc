@@ -9,13 +9,9 @@
  */
 
 #include <time.h>
-#ifdef WIN32
-#include <winsock2.h>
-#else
 #include <dlfcn.h>
 #include <unistd.h>
 #include <sys/time.h>
-#endif
 
 #include <boost/filesystem/operations.hpp>
 
@@ -80,7 +76,7 @@ CogServer::~CogServer()
 CogServer::CogServer(AtomSpace* as) :
     BaseServer(as),
     _networkServer(nullptr),
-    _running(true)
+    _running(false)
 {
 }
 
@@ -92,33 +88,44 @@ void CogServer::enableNetworkServer(int port)
     auto make_console = [](void)->ConsoleSocket*
 	     { return new ServerConsole(); };
     _networkServer->run(make_console);
+    _running = true;
 }
 
 void CogServer::disableNetworkServer()
 {
-    if (_networkServer) {
+    stop();
+    if (_networkServer)
+    {
         delete _networkServer;
         _networkServer = nullptr;
     }
 }
 
+void CogServer::stop()
+{
+    // Prevent the Network server from accepting any more connections,
+    // and from queing any more Requests. I think. This might be racey.
+    if (_networkServer) _networkServer->stop();
+
+    _running = false;
+
+    // Drain whatever is left in the queue.
+    while (0 < getRequestQueueSize())
+        processRequests();
+}
+
 void CogServer::serverLoop()
 {
     logger().info("Starting CogServer loop.");
-    for (_running = true; _running;)
+    while(_running)
     {
-        runLoopStep();
+        while (0 < getRequestQueueSize())
+            runLoopStep();
 
-        // XXX FIXME. terrible terrible hack. What we shoud be
+        // XXX FIXME. terrible terrible hack. What we should be
         // doing is running in our own thread, waiting on a semaphore,
         // until some request is queued. Spinning is .. just wrong.
         usleep(20000);
-    }
-
-    // Perform a clean shutdown. Drain the request queue.
-    while (0 < getRequestQueueSize())
-    {
-        processRequests();
     }
 
     // No way to process requests. Stop accepting network connections.
@@ -152,7 +159,11 @@ void CogServer::processRequests(void)
     }
 }
 
-bool CogServer::registerRequest(const std::string& name, AbstractFactory<Request> const* factory)
+// =============================================================
+// Request registration
+
+bool CogServer::registerRequest(const std::string& name,
+                                AbstractFactory<Request> const* factory)
 {
     return Registry<Request>::register_(name, factory);
 }
@@ -177,10 +188,8 @@ std::list<const char*> CogServer::requestIds() const
     return Registry<Request>::all();
 }
 
-void CogServer::stop()
-{
-    _running = false;
-}
+// =============================================================
+// Module handling
 
 bool CogServer::loadModule(const std::string& filename)
 {
@@ -252,7 +261,8 @@ bool CogServer::loadModule(const std::string& filename)
 	    (Module::UnloadFunction*) dlsym(dynLibrary, Module::unload_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
-        logger().error("Unable to find symbol \"opencog_module_unload\": %s", dlsymError);
+        logger().error("Unable to find symbol \"opencog_module_unload\": %s",
+                       dlsymError);
         return false;
     }
 

@@ -61,10 +61,10 @@ namespace opencog
  * dettached state, until user reconnect, or until it is shut down.
  *
  * The network server is implemented by devoting one thread to listening
- * for tcp/ip socket connections. Upon connection, a new thread is
+ * for TCP/IP socket connections. Upon connection, a new thread is
  * forked to handle user requests and the run the python/scheme shells.
  * Command-line commands are implemented as "Requests", described below.
- * The atomspace is thread-safe, as well as the Request queue, and the
+ * The AtomSpace is thread-safe, as well as the Request queue, and the
  * python/scheme REPL shells, so there should be no issues with
  * multi-user access.
  *
@@ -82,17 +82,23 @@ namespace opencog
  * is called after the module has been instantiated and its meta-data 
  * has been filled.
  *
- * Request management uses the same Registry base template as the agent
- * subsystem -- only, this time, using the Request base class. Thus, the
- * functionalities provided are very similar:
+ * Request management uses the Registry base template, specialized
+ * with the Request base class. The functionalities provided are:
  *   1. register, unregister and list request classes;
  *   2. create requests instances;
  *   3. push/pop from requests queue.
- * Contrary to the agent management, the lifecycle of each Request is
- * controlled by the server itself (that why no "destroyRequest" is
- * provided), which destroys the instance right after its execution.
- * That is, requests are assumed to run to completion in a small amount
- * of time, so that they don't block later requests.
+ * The lifecycle of each Request is controlled by the server itself
+ * (that why no "destroyRequest" is provided). The server destroys the
+ * Request instance right after its execution. All requests are assumed
+ * to run to completion in a small amount of time, so that they don't
+ * block later requests.
+ *
+ * This constraint does not apply to the Python and Scheme shells:
+ * Work there can run for unlimited amounts of time. All that happens
+ * there is that the shell client is blocked, until the job finshes
+ * or until they kill it.  The GenericShell suppoprts out-of-band
+ * ctrl-C, so the user can always ctrl-C to kill an out-of-control
+ * Scheme or Python job.
  */
 class CogServer : public BaseServer, public Registry<Request>
 {
@@ -122,12 +128,11 @@ protected:
 
 public:
 
-    /** CogServer's constructor. Initializes the mutex, atomspace
-     * and cycleCount  variables*/
+    /** CogServer's constructor. */
     CogServer(AtomSpace* = nullptr);
 
     /** Factory method. Override's the base class factory method
-     * and returns an  instance of CogServer instead. */
+     * and returns an instance of CogServer instead. */
     static BaseServer* createInstance(AtomSpace* = nullptr);
 
     /** CogServer's destructor. Disables the network server and
@@ -135,9 +140,8 @@ public:
     virtual ~CogServer(void);
 
     /** Server's main loop. Executed while the 'running' flag is set
-     *  to true. It processes the request queue, then the scheduled
-     *  agents and finally sleeps for the remaining time until the end
-     * of the cycle (if any). */
+     *  to true. It processes the request queue.
+     */
     virtual void serverLoop(void);
 
     /** Runs a single server loop step. Quasi-private method, made
@@ -191,7 +195,8 @@ public:
     /** Register a new request class/type. Takes the class id and a derived
      *  factory for this particular request type. (note: the caller owns the
      *  factory instance). */
-    virtual bool registerRequest(const std::string& id, AbstractFactory<Request> const* factory);
+    virtual bool registerRequest(const std::string& id,
+                                 AbstractFactory<Request> const* factory);
 
     /** Unregister a request class/type. Takes the class' id. */
     virtual bool unregisterRequest(const std::string& id);
@@ -207,8 +212,9 @@ public:
 
     /**
      * Adds request to the end of the requests queue.
-     * Caution: after this push, the request might be executed and deleted
-     * in a different thread, and so it must NOT be referenced after the push!
+     * Caution: after this push, the request might be executed and
+     * deleted in a different thread, and so it must NOT be referenced
+     * after the push!
      */
     void pushRequest(Request* request) { requestQueue.push(request); }
 
