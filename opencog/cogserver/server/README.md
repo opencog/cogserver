@@ -26,7 +26,7 @@ an editable command-line history (i.e. enables the arrow-keys.))
 
 This is a generic network server, and so `netcat localhost 17001`
 also works. Long or complex sequences of commands may be placed in a
-faile, and loaded by saying `cat somefile | netcat localhost 17001`.
+file, and loaded by saying `cat somefile | netcat localhost 17001`.
 
 Loadable Modules
 ----------------
@@ -37,7 +37,7 @@ The CogServer can be extended with task-specific dynamically loadable
 modules. These can be loaded at run-time, with the `loadmodule`
 CogServer shell command.
 
-Modules can be automatically loaded on server startup by sppecifying
+Modules can be automatically loaded on server startup by specifying
 them in a `cogserver.conf` file, and adding the module name to the
 list therein.  By default, the `/etc/cogserver.conf` file is used;
 or you can start to cogserver with `cogserver -c myconfig.conf`.
