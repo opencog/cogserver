@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/network/ServerSocket.h
+ * opencog/network/ServerSocket.h
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Written by Welter Luigi <welter@vettalabs.com>
@@ -19,7 +19,7 @@ namespace opencog
 
 /**
  * This class defines the minimal set of methods a server socket must
- * have to handle the primary interface of the cogserver.
+ * have to handle the primary interface of the server.
  *
  * Each ServerSocket supports a client that connects to the cog server.
  */

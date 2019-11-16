@@ -8,10 +8,9 @@ DECLARE_GUILE_CONFIG_TARGET(SCM_CONFIG "opencog cs-config" "OPENCOG_TEST")
 # dependencies: the later parts depend on, or may
 # someday depend on the earlier parts.
 #
-IF (HAVE_SERVER)
-	ADD_SUBDIRECTORY (cython)
-	ADD_SUBDIRECTORY (cogserver)
-ENDIF(HAVE_SERVER)
+ADD_SUBDIRECTORY (network)
+ADD_SUBDIRECTORY (cogserver)
+ADD_SUBDIRECTORY (cython)
 
 WRITE_GUILE_CONFIG(${GUILE_BIN_DIR}/opencog/cs-config.scm SCM_CONFIG TRUE)
 

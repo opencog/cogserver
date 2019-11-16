@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/network/ServerConsole.cc
+ * opencog/cogserver/server/ServerConsole.cc
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Written by Andre Senna <senna@vettalabs.com>

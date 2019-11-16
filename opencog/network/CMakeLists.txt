@@ -15,5 +15,5 @@ TARGET_LINK_LIBRARIES(network
 INSTALL (FILES
 	ConsoleSocket.h
 	NetworkServer.h
-	DESTINATION "include/${PROJECT_NAME}/cogserver/network"
+	DESTINATION "include/${PROJECT_NAME}/network"
 )

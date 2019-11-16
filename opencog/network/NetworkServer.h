@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/network/NetworkServer.h
+ * opencog/network/NetworkServer.h
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Written by Andre Senna <senna@vettalabs.com>
@@ -14,7 +14,7 @@
 #include <thread>
 
 #include <boost/asio.hpp>
-#include <opencog/cogserver/network/ConsoleSocket.h>
+#include <opencog/network/ConsoleSocket.h>
 
 namespace opencog
 {
@@ -24,11 +24,12 @@ namespace opencog
 
 /**
  * This class implements the entity responsible for managing the
- * cogserver's network server.
+ * server's network server.
  *
- * The network server runs on its own thread (thus freeing the cogserver's main
- * loop to deal with requests and agents only). It may be enabled/disabled
- * at will so that a cogserver may run in networkless mode if desired.
+ * The network server runs on its own thread (thus freeing the server's
+ * main loop to deal with requests and agents only). It may be
+ * enabled/disabled at will so that a server may run in networkless
+ * mode if desired.
  *
  * The network server supports only one server socket. Client applications
  * should use the 'start' methodr to start listening to a port.

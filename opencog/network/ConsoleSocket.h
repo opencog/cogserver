@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/network/ConsoleSocket.h
+ * opencog/network/ConsoleSocket.h
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Written by Andre Senna <senna@vettalabs.com>
@@ -13,7 +13,7 @@
 #include <mutex>
 #include <string>
 
-#include <opencog/cogserver/network/ServerSocket.h>
+#include <opencog/network/ServerSocket.h>
 #include <opencog/cogserver/shell/GenericShell.h>
 
 namespace opencog
@@ -24,7 +24,7 @@ namespace opencog
 
 /**
  * This class implements the ServerSocket that handles the primary
- * interface of the cogserver: the plain text command line.
+ * interface of the server: the plain text command line.
  *
  * There may be multiple instances of ConsoleSocket to support multiple
  * simultaneous clients. This is done by creating a separate thread and
@@ -60,7 +60,7 @@ private:
     std::condition_variable _in_use_cv;
 
     // A count of the number of concurrent open sockets. This is used
-    // to limit the number of connections to the cogserver, so that it
+    // to limit the number of connections to the server, so that it
     // doesn't crash with a `accept: Too many open files` error.
     static unsigned int _max_open_sockets;
     static volatile unsigned int _num_open_sockets;

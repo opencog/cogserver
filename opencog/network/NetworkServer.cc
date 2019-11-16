@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/server/NetworkServer.cc
+ * opencog/server/NetworkServer.cc
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Copyright (C) 2008 by OpenCog Foundation
@@ -9,7 +9,7 @@
  */
 
 #include <opencog/util/Logger.h>
-#include <opencog/cogserver/network/ConsoleSocket.h>
+#include <opencog/network/ConsoleSocket.h>
 
 #include "NetworkServer.h"
 

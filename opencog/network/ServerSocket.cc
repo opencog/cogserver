@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/network/ServerSocket.cc
+ * opencog/network/ServerSocket.cc
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Copyright (C) 2010 Linas Vepstas <linasvepstas@gmail.com>
@@ -11,7 +11,7 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
-#include <opencog/cogserver/network/ServerSocket.h>
+#include <opencog/network/ServerSocket.h>
 
 using namespace opencog;
 

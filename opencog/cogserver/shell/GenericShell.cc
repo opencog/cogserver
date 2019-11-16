@@ -26,7 +26,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
-#include <opencog/cogserver/network/ConsoleSocket.h>
+#include <opencog/network/ConsoleSocket.h>
 #include <opencog/eval/GenericEval.h>
 #include "GenericShell.h"
 

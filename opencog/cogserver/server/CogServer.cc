@@ -23,9 +23,9 @@
 #include <opencog/util/platform.h>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/network/NetworkServer.h>
 
 #include <opencog/cogserver/server/ServerConsole.h>
-#include <opencog/cogserver/network/NetworkServer.h>
 #include <opencog/cogserver/server/Request.h>
 
 #include "CogServer.h"

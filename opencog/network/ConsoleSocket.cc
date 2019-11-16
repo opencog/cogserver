@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/network/ConsoleSocket.cc
+ * opencog/network/ConsoleSocket.cc
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Written by Andre Senna <senna@vettalabs.com>
@@ -12,12 +12,12 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
 
-#include <opencog/cogserver/network/ConsoleSocket.h>
+#include <opencog/network/ConsoleSocket.h>
 
 using namespace opencog;
 
 // _max_open_sockets is the largest number of concurrently open
-// sockets we will allow in the cogserver. Currently set to 60.
+// sockets we will allow in the server. Currently set to 60.
 // Note that each SchemeShell (actually, SchemeEval) will open
 // another half-dozen pipes and what-not, so actually, the number
 // of open files will increase by 4 or 6 or so for each network
