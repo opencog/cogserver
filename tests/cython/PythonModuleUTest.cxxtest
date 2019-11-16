@@ -31,10 +31,6 @@ class TestCogServer : public CogServer
     int maxCount;
     public:
 
-        static BaseServer* createInstance(AtomSpace* as) {
-            return new TestCogServer();
-        }
-
         TestCogServer() : tickCount(1), tickBased(false), maxCount(1000) {}
 
         void setTickBased(bool _tickBased) {
@@ -90,7 +86,7 @@ public:
         config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
         config().set("MODULES", "opencog/cogserver/modules/python/libPythonModule.so");
 
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
+        TestCogServer cogserver;
         cogserver.loadModules();
         config().set("MODULES", "agents/libagents.so");
         cogserver.loadModules();
@@ -98,14 +94,11 @@ public:
 
     void tearDown() {
         config().reset();
-        
-        TestCogServer* delete_server = &(static_cast<TestCogServer&>(server(TestCogServer::createInstance)));
-        delete delete_server;
     }
 
     void testLoadExceptionAgent()
     {
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
+        TestCogServer cogserver;
         // test loading a module
         Request* loadpyRequest = cogserver.createRequest("loadpy");
         TS_ASSERT(loadpyRequest != NULL);
@@ -124,7 +117,7 @@ public:
 
     void testAgentWithRunException()
     {
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
+        TestCogServer cogserver;
 
         // test loading a module
         Request* loadpyRequest = cogserver.createRequest("loadpy");
@@ -150,7 +143,7 @@ public:
 
     void testPreloadAgent ()
     {
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
+        TestCogServer cogserver;
         config().set("PYTHON_PRELOAD", "preload_test");
         cogserver.loadModules();
 
@@ -171,7 +164,7 @@ public:
 
     void testProcessAgents()
     {
-        TestCogServer& cogserver = static_cast<TestCogServer&>(server(TestCogServer::createInstance));
+        TestCogServer cogserver;
 
         // test loading a module
         Request* loadpyRequest = cogserver.createRequest("loadpy");

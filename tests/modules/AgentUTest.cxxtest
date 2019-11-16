@@ -106,7 +106,7 @@ public:
     }
 
     void setUp() {
-        CogServer& cogserver = static_cast<CogServer&>(server(CogServer::createInstance));
+        CogServer cogserver;
 
         config().set("MODULES", "agents/libagents.so");
         cogserver.loadModules();
