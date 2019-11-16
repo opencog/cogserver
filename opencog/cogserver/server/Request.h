@@ -14,7 +14,6 @@
 #include <list>
 #include <string>
 
-#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Factory.h>
 
 namespace opencog
