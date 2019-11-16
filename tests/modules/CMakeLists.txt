@@ -5,7 +5,7 @@ INCLUDE_DIRECTORIES (
 )
 
 LINK_DIRECTORIES(
-	${PROJECT_BINARY_DIR}/opencog/atomspace
+	${PROJECT_BINARY_DIR}/opencog/cogserver/modules
 	${PROJECT_BINARY_DIR}/opencog/cogserver/server
 )
 
