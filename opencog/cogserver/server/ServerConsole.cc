@@ -63,7 +63,7 @@ void ServerConsole::OnConnection()
     // Anyway, this won't work for netcat, socat, because they'll
     // just pass all this crap back to the user, and we don't want
     // that.  I'm not sure how to tell if we're talking to a true
-    // RFC telnet.
+    // RFC telnet. Maybe we need to listen to a different port?
     char utf_plz[20];
     utf_plz[0] = IAC;
     utf_plz[1] = WILL;

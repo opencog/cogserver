@@ -34,6 +34,14 @@ namespace opencog
  */
 
 /**
+ * This class is deprecated; it is a left-over from an earlier design.
+ * It provides no value-add, while also making most things more
+ * complicated than they need to be. Pretty much the ONLY thing that
+ * this is good for is providing a singleton instance of the AtomSpace
+ * so that all users telneted into the CogServer, whether they be
+ * Python or Scheme users, can share this same common AtomSpace.
+ * See comments below about Singleton Interfaces.
+ *
  * This class implements a base server class that provides basic functionality
  * for third parties who might wish to use their custom server.
  * There are only two primitives provided by this class: an atomspace instance
@@ -88,9 +96,9 @@ public:
 // BaseServer so you can use stack-based servers and count on the singleton
 // reference calls like:
 //
-//     server().someServerFuntion(); 
+//     server().someServerFuntion();
 //
-// operating on the stack-based server. It also generates a runtime error 
+// operating on the stack-based server. It also generates a runtime error
 // if you call set_current_server(some_server) with a different server when
 // one is already set (whether via server() or otherwise), so the developer
 // knows there is a problem like the above example, so developers don't create
@@ -103,8 +111,6 @@ public:
 // or more instances of the server, as desired? The number of problems
 // that singleton instances create exceeds the number of problems they
 // solve. They should be eliminated from the code.
-//
-// - Linas
 
 BaseServer& server(BaseServer* (*)(AtomSpace*) = BaseServer::createInstance,
                    AtomSpace* = nullptr);
