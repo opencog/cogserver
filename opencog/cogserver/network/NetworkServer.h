@@ -14,6 +14,7 @@
 #include <thread>
 
 #include <boost/asio.hpp>
+#include <opencog/cogserver/network/ConsoleSocket.h>
 
 namespace opencog
 {
@@ -47,6 +48,7 @@ protected:
 
     /** The network server's main listener thread.  */
     void listen();
+    ConsoleSocket* (*_getConsole)(void);
 
 public:
 
@@ -58,7 +60,7 @@ public:
     ~NetworkServer();
 
     /** Start and stop the server */
-    void run();
+    void run(ConsoleSocket* (*)(void));
     void stop();
 
 }; // class

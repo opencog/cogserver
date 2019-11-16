@@ -22,8 +22,6 @@ NetworkServer::NetworkServer(unsigned short port) :
         boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 {
     logger().debug("[NetworkServer] constructor");
-
-    run();
 }
 
 NetworkServer::~NetworkServer()
@@ -53,7 +51,7 @@ void NetworkServer::stop()
     _listener_thread = nullptr;
 }
 
-void NetworkServer::listen()
+void NetworkServer::listen(void)
 {
     printf("Listening on port %d\n", _port);
     while (_running)
@@ -74,16 +72,17 @@ void NetworkServer::listen()
         // The total number of concurrently open sockets is managed by
         // keeping a count in ConsoleSocket, and blocking when there are
         // too many.
-        ConsoleSocket* ss = new ConsoleSocket();
+        ConsoleSocket* ss = _getConsole();
         ss->set_connection(sock);
         std::thread(&ConsoleSocket::handle_connection, ss).detach();
     }
 }
 
-void NetworkServer::run()
+void NetworkServer::run(ConsoleSocket* (*handler)(void))
 {
     if (_running) return;
     _running = true;
+    _getConsole = handler;
 
     try {
         _io_service.run();

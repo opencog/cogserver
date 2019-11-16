@@ -13,7 +13,6 @@
 #include <mutex>
 #include <string>
 
-#include <opencog/cogserver/shell/GenericShell.h>
 #include <opencog/cogserver/network/ServerSocket.h>
 
 namespace opencog
@@ -39,10 +38,6 @@ namespace opencog
 class ConsoleSocket : public ServerSocket
 {
 private:
-    GenericShell *_shell;
-
-    static std::string _prompt;
-
     // We need the use-count and the condition variables to avoid races
     // between asynchronous socket closures and unsent replies. So, for
     // example, the user may send a command, but then close the socket
@@ -95,15 +90,12 @@ public:
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
     void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }
 
-    void OnRequestComplete();
-
     /**
-     * Sends a request result to the client,
+     * Assorted debugging utilities.
      */
-    void SendResult(const std::string&);
-
-    void sendPrompt();
-
+    unsigned int get_use_count() const { return _use_count; }
+    unsigned int get_max_open_sockets() const { return _max_open_sockets; }
+    unsigned int get_num_open_sockets() const { return _num_open_sockets; }
 }; // class
 
 /** @}*/

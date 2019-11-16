@@ -36,7 +36,7 @@
 #include <opencog/util/concurrent_queue.h>
 #include <opencog/cogserver/server/BaseServer.h>
 #include <opencog/cogserver/server/Module.h>
-#include <opencog/cogserver/server/NetworkServer.h>
+#include <opencog/cogserver/network/NetworkServer.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/Registry.h>
 

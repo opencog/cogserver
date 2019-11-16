@@ -60,13 +60,15 @@ ConsoleSocket::~ConsoleSocket()
     // forgets" a bunch of commands, and then closes the socket before
     // these requests have completed.  boost:asio notices that the
     // remote socket has closed, and so decides its a good day to call
-    // destructors. But of course, its not ...
+    // destructors. But of course, its not ... because the requests
+    // still have to be handled.
     std::unique_lock<std::mutex> lck(_in_use_mtx);
     while (_use_count) _in_use_cv.wait(lck);
     lck.unlock();
 
     // If there's a shell, kill it.
-    if (_shell) delete _shell;
+// XXX FIXME...
+    // if (_shell) delete _shell;
 
     std::unique_lock<std::mutex> mxlck(_max_mtx);
     _num_open_sockets--;
@@ -74,15 +76,4 @@ ConsoleSocket::~ConsoleSocket()
     mxlck.unlock();
 
     logger().debug("[ConsoleSocket] destructor finished");
-}
-
-void ConsoleSocket::Exit()
-{
-    logger().debug("[ConsoleSocket] ExecuteExitRequest");
-    SetCloseAndDelete();
-}
-
-void ConsoleSocket::SendResult(const std::string& res)
-{
-    Send(res);
 }

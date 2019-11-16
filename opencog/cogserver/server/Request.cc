@@ -26,7 +26,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
-#include <opencog/cogserver/server/ConsoleSocket.h>
+#include <opencog/cogserver/server/ServerConsole.h>
 
 #include "Request.h"
 
@@ -47,7 +47,7 @@ Request::~Request()
     }
 }
 
-void Request::set_console(ConsoleSocket* con)
+void Request::set_console(ServerConsole* con)
 {
     // The "exit" request causes the console to be destroyed,
     // rendering the _console pointer invalid. However, generic

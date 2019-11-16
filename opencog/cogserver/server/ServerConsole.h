@@ -23,15 +23,15 @@ namespace opencog
  */
 
 /**
- * This class implements the ServerSocket that handles the primary
+ * This class implements the ConsoleSocket that handles the primary
  * interface of the cogserver: the plain text command line.
  *
- * There may be multiple instances of ServerConsole to support multiple
+ * There may be multiple instances of ConsoleSocket to support multiple
  * simultaneous clients. This is done by creating a separate thread and
  * dispatching a client socket for each client that connects to the
  * server socket.
  *
- * We provide a callback method: 'OnRequestCompleted()'. This callback
+ * We provide a callback method: `OnRequestComplete()`. This callback
  * tells the server socket that request processing has finished (so that
  * the command prompt can be sent to the client immediately, while the
  * request itself is processed 'asynchronously'.
@@ -103,9 +103,6 @@ public:
     ServerConsole(void);
     ~ServerConsole();
 
-    void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
-    void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }
-
     /**
      * OnRequestComplete: called when a request has finished. It
      * just sends another command prompt (configuration parameter
@@ -130,13 +127,6 @@ public:
      * command line processing.
      */
     void SetShell(GenericShell *);
-
-    /**
-     * Assorted debugging utilities.
-     */
-    unsigned int get_use_count() const { return _use_count; }
-    unsigned int get_max_open_sockets() const { return _max_open_sockets; }
-    unsigned int get_num_open_sockets() const { return _num_open_sockets; }
 }; // class
 
 /** @}*/
