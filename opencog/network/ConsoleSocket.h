@@ -14,7 +14,7 @@
 #include <string>
 
 #include <opencog/network/ServerSocket.h>
-#include <opencog/cogserver/shell/GenericShell.h>
+#include <opencog/network/GenericShell.h>
 
 namespace opencog
 {

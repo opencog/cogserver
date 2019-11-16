@@ -1,9 +1,10 @@
 # ------------------------------------------------------------
 
 ADD_LIBRARY (network SHARED
+	ConsoleSocket
+	GenericShell
 	NetworkServer
 	ServerSocket
-	ConsoleSocket
 )
 
 TARGET_LINK_LIBRARIES(network
@@ -14,6 +15,7 @@ TARGET_LINK_LIBRARIES(network
 
 INSTALL (FILES
 	ConsoleSocket.h
+	GenericShell.h
 	NetworkServer.h
 	DESTINATION "include/${PROJECT_NAME}/network"
 )
