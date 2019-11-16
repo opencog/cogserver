@@ -16,6 +16,14 @@ It is weakly assumed that the console is working with text data; it uses
 `std::string` as the main API. I suppose it would be tweaked to handle
 binary data, but this has not been a requirement.
 
+Why?
+----
+The idea of a network console server seems to be so generic that you
+might think that there would be dozens of such servers to choose from.
+No such luck: I was unable to find even one  generic network server.
+It seems that no one has ever felt the need to create and publish one,
+as a generic tool. Oh well. So here we are.
+
 Operation
 ---------
 This console server listens for and accepts network connections on a
@@ -29,6 +37,22 @@ Closed connections are handled automatically. Connection closure is
 handled in such a way that a server can complete pending, unfinished
 work, even as the network client disconnected. There's a fair amount
 of implementation trickery to allow this to happen.
+
+The multi-threaded handling means that dozens of clients can be handled
+without any problems, without any spinloops, dispatching or other dicey
+network handler issues.  This code is *fast* -- or rather, its a lot
+faster than any other REPL shell server I was able to find.  Also,
+bonus: it doesn't jam up, deadlock, crash or fail. It just works. Woot!
+
+The network connections are NOT encrypted (SSL is not used). If you need
+encryption, you should route traffic over an ssh tunnel.
+
+The server does NOT provide any user-login management. If you need login
+management, that has to be done at the console layer.
+
+The server provides minimal DDOS mitigation: the max number of
+simultaneously allowed connections are configurable; additional
+connections are forced to wait.
 
 Example Usage
 -------------
