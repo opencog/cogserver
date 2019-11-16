@@ -115,8 +115,6 @@ class ServerConsole;
  * commands with the command processing subsystem, implement the "do"
  * routine, and go. A module may declare as many commands as desired.
  * Be sure to register and unregister each command.
- *
- * See also: persist/PersistModule.cc as a working real-life example.
  */
 #define DECLARE_CMD_REQUEST(mod_type,cmd_str,do_cmd,                  \
                             cmd_sum,cmd_desc,shell_cmd,hidden)        \
