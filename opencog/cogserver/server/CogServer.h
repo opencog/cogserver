@@ -32,7 +32,7 @@ namespace opencog
  * The most useful thing that the cogserver currently provides is
  * shared multi-user network access to a command line, from which
  * the python and scheme read-evaluate-print-loop (REPL) shells
- * can be accessed. This allows users to perform management and 
+ * can be accessed. This allows users to perform management and
  * development on an atomspace by attaching to it from a remote
  * location.  In particular, the atomspace(s) are not killed when
  * the last user disconnects; the server will stay running in this
@@ -89,6 +89,11 @@ public:
     /** Stops the network server and closes all the open server sockets. */
     virtual void disableNetworkServer(void);
 
+    /*** Request API ***/
+    Request* createRequest(const std::string& id) {
+        return RequestManager::createRequest(id, *this);
+    }
+
     /**** Module API ****/
     bool loadModule(const std::string& filename) {
         return ModuleManager::loadModule(filename, *this);
@@ -96,7 +101,7 @@ public:
     void loadModules(void) { ModuleManager::loadModules(*this); }
 
     /** Return the logger */
-    Logger &logger(void) { return ::logger(); }
+    Logger &logger(void) { return opencog::logger(); }
 
 }; // class
 

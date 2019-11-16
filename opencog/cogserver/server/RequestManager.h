@@ -60,26 +60,26 @@ public:
     RequestManager(void);
 
     /** RequestManager's destructor. */
-    virtual ~RequestManager(void);
+    ~RequestManager(void);
 
     /**** Request Registry API ****/
     /** Register a new request class/type. Takes the class id and a derived
      *  factory for this particular request type. (note: the caller owns the
      *  factory instance). */
-    virtual bool registerRequest(const std::string& id,
-                                 AbstractFactory<Request> const* factory);
+    bool registerRequest(const std::string& id,
+                         AbstractFactory<Request> const* factory);
 
     /** Unregister a request class/type. Takes the class' id. */
-    virtual bool unregisterRequest(const std::string& id);
+    bool unregisterRequest(const std::string& id);
 
     /** Returns a list with the ids of all the registered request classes. */
-    virtual std::list<const char*> requestIds(void) const;
+    std::list<const char*> requestIds(void) const;
 
     /** Creates and returns a new instance of a request of class 'id'. */
-    virtual Request* createRequest(const std::string& id);
+    Request* createRequest(const std::string& id, CogServer&);
 
     /** Returns the class metadata from request class 'id'. */
-    virtual const RequestClassInfo& requestInfo(const std::string& id) const;
+    const RequestClassInfo& requestInfo(const std::string& id) const;
 
     /**
      * Adds request to the end of the requests queue.

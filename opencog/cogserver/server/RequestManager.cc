@@ -57,9 +57,10 @@ bool RequestManager::unregisterRequest(const std::string& name)
     return Registry<Request>::unregister(name);
 }
 
-Request* RequestManager::createRequest(const std::string& name)
+Request* RequestManager::createRequest(const std::string& name,
+                                       CogServer& cs)
 {
-    return Registry<Request>::create(*this, name);
+    return Registry<Request>::create(cs, name);
 }
 
 const RequestClassInfo& RequestManager::requestInfo(const std::string& name) const
