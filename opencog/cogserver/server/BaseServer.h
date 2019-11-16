@@ -115,16 +115,9 @@ public:
 BaseServer& server(BaseServer* (*)(AtomSpace*) = BaseServer::createInstance,
                    AtomSpace* = nullptr);
 
-void set_current_server(BaseServer* currentServer);
-
 inline AtomSpace& atomspace(void)
 {
     return server().getAtomSpace();
-}
-
-inline AtomSpace* server_atomspace(void)
-{
-    return &atomspace();
 }
 
 /** @}*/

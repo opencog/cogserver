@@ -68,13 +68,16 @@ BaseServer::BaseServer(AtomSpace* as)
     }
 
     // Set this server as the current server.
-    set_current_server(this);
+    if (serverInstance)
+        throw (RuntimeException(TRACE_INFO,
+                "Can't create more than one server singleton instance!"));
+
+    serverInstance = this;
 }
 
 BaseServer::~BaseServer()
 {
-    // We are no longer the current server.
-    set_current_server(nullptr);
+    serverInstance = nullptr;
     _atomSpace = nullptr;
 
     if (_private_as)
@@ -96,24 +99,4 @@ BaseServer& opencog::server(BaseServer* (*factoryFunction)(AtomSpace*),
     
     // Return a reference to our server instance.
     return *serverInstance;
-}
-
-void opencog::set_current_server(BaseServer* currentServer)
-{
-    // Normally used for stack-based server instantiation.
-
-    // Nothing to do if we've already done this.
-    if (serverInstance == currentServer)
-        return;
-
-    // Should not call this on more than one server at a time.
-    if (serverInstance &&
-        currentServer != serverInstance &&
-        currentServer != NULL ) {
-        throw (RuntimeException(TRACE_INFO,
-                "Can't create more than one server singleton instance!"));
-    }
-
-    // Set the current server. 
-    serverInstance = currentServer;
 }
