@@ -3,29 +3,13 @@
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Copyright (C) 2008 by OpenCog Foundation
- * All Rights Reserved
- *
  * Written by Andre Senna <senna@vettalabs.com>
  *            Gustavo Gama <gama@vettalabs.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 #include <opencog/util/Logger.h>
-#include <opencog/cogserver/server/ConsoleSocket.h>
+#include <opencog/cogserver/network/ConsoleSocket.h>
 
 #include "NetworkServer.h"
 
@@ -38,8 +22,6 @@ NetworkServer::NetworkServer(unsigned short port) :
         boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 {
     logger().debug("[NetworkServer] constructor");
-
-    run();
 }
 
 NetworkServer::~NetworkServer()
@@ -69,7 +51,7 @@ void NetworkServer::stop()
     _listener_thread = nullptr;
 }
 
-void NetworkServer::listen()
+void NetworkServer::listen(void)
 {
     printf("Listening on port %d\n", _port);
     while (_running)
@@ -90,16 +72,17 @@ void NetworkServer::listen()
         // The total number of concurrently open sockets is managed by
         // keeping a count in ConsoleSocket, and blocking when there are
         // too many.
-        ConsoleSocket* ss = new ConsoleSocket();
+        ConsoleSocket* ss = _getConsole();
         ss->set_connection(sock);
         std::thread(&ConsoleSocket::handle_connection, ss).detach();
     }
 }
 
-void NetworkServer::run()
+void NetworkServer::run(ConsoleSocket* (*handler)(void))
 {
     if (_running) return;
     _running = true;
+    _getConsole = handler;
 
     try {
         _io_service.run();

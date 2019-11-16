@@ -1,25 +1,9 @@
 /*
- * opencog/cogserver/server/ConsoleSocket.h
+ * opencog/cogserver/network/ConsoleSocket.h
  *
  * Copyright (C) 2002-2007 Novamente LLC
- * All Rights Reserved
- *
  * Written by Andre Senna <senna@vettalabs.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 #ifndef _OPENCOG_CONSOLE_SOCKET_H
@@ -29,8 +13,8 @@
 #include <mutex>
 #include <string>
 
+#include <opencog/cogserver/network/ServerSocket.h>
 #include <opencog/cogserver/shell/GenericShell.h>
-#include <opencog/cogserver/server/ServerSocket.h>
 
 namespace opencog
 {
@@ -55,10 +39,6 @@ namespace opencog
 class ConsoleSocket : public ServerSocket
 {
 private:
-    GenericShell *_shell;
-
-    static std::string _prompt;
-
     // We need the use-count and the condition variables to avoid races
     // between asynchronous socket closures and unsent replies. So, for
     // example, the user may send a command, but then close the socket
@@ -88,28 +68,18 @@ private:
     static std::condition_variable _max_cv;
 
 protected:
+    GenericShell *_shell;
 
     /**
      * Connection callback: called whenever a new connection arrives
      */
-    void OnConnection(void);
+    void OnConnection(void) = 0;
 
     /**
-     * OnLine callback: called when a new command/request is received
-     * from the client. It parses the command line by splitting it into
-     * space-separated tokens.
-     *
-     * The first token is used as the request's id/name and the
-     * remaining tokens are used as the request's parameters. The
-     * request name is used to identify the request type.
-     *
-     * If the request type is not found, we execute the 'HelpRequest',
-     * which will return a useful message to the client.
-     *
-     * If the request class is found, we instantiate a new request,
-     * set its parameters and push it to the cogserver's request queue.
+     * OnLine callback: called when a newline-terminated line is received
+     * from the client.
      */
-    void OnLine(const std::string&);
+    void OnLine(const std::string&) = 0;
 
 public:
     /**
@@ -121,25 +91,6 @@ public:
 
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
     void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }
-
-    /**
-     * OnRequestComplete: called when a request has finished. It
-     * just sends another command prompt (configuration parameter
-     * "PROMPT") to the client.
-     */
-    void OnRequestComplete();
-
-    /**
-     * Sends a request result to the client,
-     */
-    void SendResult(const std::string&);
-
-    void sendPrompt();
-
-    /**
-     * Called when a Request exits the connection
-     */
-    void Exit();
 
     /**
      * SetShell: Declare an alternate shell, that will perform all

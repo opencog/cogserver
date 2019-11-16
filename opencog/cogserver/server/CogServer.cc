@@ -28,8 +28,8 @@
 
 #include <opencog/atomspace/AtomSpace.h>
 
-#include <opencog/cogserver/server/ConsoleSocket.h>
-#include <opencog/cogserver/server/NetworkServer.h>
+#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/cogserver/network/NetworkServer.h>
 #include <opencog/cogserver/server/Request.h>
 
 #include "CogServer.h"
@@ -88,6 +88,10 @@ void CogServer::enableNetworkServer(int port)
 {
     if (_networkServer) return;
     _networkServer = new NetworkServer(config().get_int("SERVER_PORT", port));
+
+    auto make_console = [](void)->ConsoleSocket*
+	     { return new ServerConsole(); };
+    _networkServer->run(make_console);
 }
 
 void CogServer::disableNetworkServer()
