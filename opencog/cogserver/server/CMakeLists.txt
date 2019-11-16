@@ -3,6 +3,7 @@
 ADD_LIBRARY (server SHARED
 	BaseServer
 	CogServer
+	ModuleManager
 	Request
 	ServerConsole
 )
@@ -64,6 +65,7 @@ INSTALL (FILES
 	CogServer.h
 	Factory.h
 	Module.h
+	ModuleManager.h
 	Registry.h
 	Request.h
 	RequestClassInfo.h

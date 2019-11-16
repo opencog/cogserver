@@ -3,40 +3,25 @@
  *
  * Copyright (C) 2002-2007 Novamente LLC
  * Copyright (C) 2008 by OpenCog Foundation
- * All Rights Reserved
- *
  * Written by Andre Senna <senna@vettalabs.com>
  *            Gustavo Gama <gama@vettalabs.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 #ifndef _OPENCOG_COGSERVER_H
 #define _OPENCOG_COGSERVER_H
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <vector>
 #include <thread>
 
 #include <opencog/util/concurrent_queue.h>
+#include <opencog/cogserver/server/Module.h>
+#include <opencog/cogserver/server/ModuleManager.h>
 #include <opencog/network/NetworkServer.h>
 #include <opencog/cogserver/server/BaseServer.h>
-#include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/Registry.h>
 
@@ -71,17 +56,6 @@ namespace opencog
  * -----------------------------------------------------------------
  * Implementation details:
  * 
- * Module management is the part responsible for extending the server
- * through the use of dynamically loadable libraries (or modules).
- * Valid modules must extended the class defined in Module.h and be
- * compiled and linked as a shared library. Currently, only Unix DSOs
- * are supported; Win32 DLLs are not. The server API itself provides
- * methods to load, unload and retrieve  modules. The server provides
- * modules with two entry points: the constructor, which is typically
- * invoked by the module's load function; and the 'init' method, which
- * is called after the module has been instantiated and its meta-data 
- * has been filled.
- *
  * Request management uses the Registry base template, specialized
  * with the Request base class. The functionalities provided are:
  *   1. register, unregister and list request classes;
@@ -100,24 +74,14 @@ namespace opencog
  * ctrl-C, so the user can always ctrl-C to kill an out-of-control
  * Scheme or Python job.
  */
-class CogServer : public BaseServer, public Registry<Request>
+class CogServer :
+    public BaseServer,
+    public Registry<Request>,
+    public ModuleManager
 {
 protected:
 
-    // Define a map with the list of loaded modules.
-    typedef struct {
-        Module*                 module;
-        std::string             id;
-        std::string             filename;
-        Module::LoadFunction*   loadFunction;
-        Module::UnloadFunction* unloadFunction;
-        void*                   handle;
-    } ModuleData;
-    typedef std::map<const std::string, ModuleData> ModuleMap;
-
-    // Containers used to store references to the modules, requests
-    // and agents
-    ModuleMap modules;
+    // Container used to store references to requests
     std::map<const std::string, Request*> requests;
 
     std::mutex processRequestsMutex;
@@ -160,37 +124,6 @@ public:
     /** Stops the network server and closes all the open server sockets. */
     virtual void disableNetworkServer(void);
 
-    /**** Module API ****/
-    /** Loads a dynamic library/module. Takes the filename of the
-     *  library (.so or .dylib or .dll). On Linux/Unix, the filename may
-     *  be absolute or relative to the server's RPATH path (which
-     *  typically, should be "INSTALL_PREFIX/lib/opencog") */
-    virtual bool loadModule(const std::string& filename);
-
-    /** Unloads a dynamic library/module. Takes the module's id, as
-     *  defined in the Module base class and overriden by the derived
-     *  module classes. See the documentation in the Module.h file for
-     *  more details. */
-    virtual bool unloadModule(const std::string& id);
-
-    /** Lists the modules that are currently loaded. */
-    virtual std::string listModules();
-
-    /** Retrieves the module's meta-data (id, filename, load/unload
-     * function pointers, etc). Takes the module's id */
-    virtual ModuleData getModuleData(const std::string& id);
-
-    /** Retrieves the module's instance. Takes the module's id */
-    virtual Module* getModule(const std::string& id);
-
-    /** Load all modules specified in configuration file. If
-        module_paths is empty then DEFAULT_MODULE_PATHS is used
-        instead, which is why it is passed as copy instead of const
-        ref. */
-    virtual void loadModules(std::vector<std::string> module_paths =
-                             std::vector<std::string>());
-
-
     /**** Request Registry API ****/
     /** Register a new request class/type. Takes the class id and a derived
      *  factory for this particular request type. (note: the caller owns the
@@ -226,6 +159,12 @@ public:
 
     /** Force drain of all outstanding requests */
     void processRequests(void);
+
+    /**** Module API ****/
+    bool loadModule(const std::string& filename) {
+        return ModuleManager::loadModule(filename, *this);
+    }
+    void loadModules(void) { ModuleManager::loadModules(*this); }
 
     /** Return the logger */
     Logger &logger(void);
