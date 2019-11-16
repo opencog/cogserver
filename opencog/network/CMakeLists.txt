@@ -11,6 +11,12 @@ TARGET_LINK_LIBRARIES(network
 	${COGUTIL_LIBRARY}
 )
 
+# XXX What does this do? What is the point of this?
+INSTALL (TARGETS network
+	EXPORT CogServerTargets
+	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+)
+
 # ------------------------------------------------------------
 
 INSTALL (FILES
