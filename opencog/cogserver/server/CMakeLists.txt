@@ -3,13 +3,12 @@
 ADD_LIBRARY (server SHARED
 	BaseServer
 	CogServer
-	NetworkServer
 	Request
-	ServerSocket
-	ConsoleSocket
+	ServerConsole
 )
 
 TARGET_LINK_LIBRARIES(server
+	network
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}
 	${Boost_FILESYSTEM_LIBRARY}
@@ -55,7 +54,7 @@ ENDIF (WIN32)
 
 INSTALL (TARGETS cogserver RUNTIME DESTINATION "bin")
 
-INSTALL (TARGETS server
+INSTALL (TARGETS server network
 	EXPORT CogServerTargets
 	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
 )
@@ -63,10 +62,8 @@ INSTALL (TARGETS server
 INSTALL (FILES
 	BaseServer.h
 	CogServer.h
-	ConsoleSocket.h
 	Factory.h
 	Module.h
-	NetworkServer.h
 	Registry.h
 	Request.h
 	RequestClassInfo.h

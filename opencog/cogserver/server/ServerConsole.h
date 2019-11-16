@@ -1,36 +1,20 @@
 /*
- * opencog/cogserver/server/ConsoleSocket.h
+ * opencog/cogserver/server/ServerConsole.h
  *
  * Copyright (C) 2002-2007 Novamente LLC
- * All Rights Reserved
- *
  * Written by Andre Senna <senna@vettalabs.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#ifndef _OPENCOG_CONSOLE_SOCKET_H
-#define _OPENCOG_CONSOLE_SOCKET_H
+#ifndef _OPENCOG_SERVER_CONSOLE_H
+#define _OPENCOG_SERVER_CONSOLE_H
 
 #include <condition_variable>
 #include <mutex>
 #include <string>
 
 #include <opencog/cogserver/shell/GenericShell.h>
-#include <opencog/cogserver/server/ServerSocket.h>
+#include <opencog/cogserver/network/ConsoleSocket.h>
 
 namespace opencog
 {
@@ -42,7 +26,7 @@ namespace opencog
  * This class implements the ServerSocket that handles the primary
  * interface of the cogserver: the plain text command line.
  *
- * There may be multiple instances of ConsoleSocket to support multiple
+ * There may be multiple instances of ServerConsole to support multiple
  * simultaneous clients. This is done by creating a separate thread and
  * dispatching a client socket for each client that connects to the
  * server socket.
@@ -52,7 +36,7 @@ namespace opencog
  * the command prompt can be sent to the client immediately, while the
  * request itself is processed 'asynchronously'.
  */
-class ConsoleSocket : public ServerSocket
+class ServerConsole : public ConsoleSocket
 {
 private:
     GenericShell *_shell;
@@ -116,8 +100,8 @@ public:
      * Ctor. Defines the socket's mime-type as 'text/plain' and then
      * configures the Socket to use line protocol.
      */
-    ConsoleSocket(void);
-    ~ConsoleSocket();
+    ServerConsole(void);
+    ~ServerConsole();
 
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
     void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }
@@ -158,4 +142,4 @@ public:
 /** @}*/
 }  // namespace
 
-#endif // _OPENCOG_CONSOLE_SOCKET_H
+#endif // _OPENCOG_SERVER_CONSOLE_H

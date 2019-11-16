@@ -1,25 +1,9 @@
 /*
- * opencog/cogserver/server/ConsoleSocket.cc
+ * opencog/cogserver/network/ServerConsole.cc
  *
  * Copyright (C) 2002-2007 Novamente LLC
- * All Rights Reserved
- *
  * Written by Andre Senna <senna@vettalabs.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 #include <string>
@@ -29,12 +13,12 @@
 #include <opencog/util/misc.h>
 
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/cogserver/server/ConsoleSocket.h>
+#include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/cogserver/server/Request.h>
 
 using namespace opencog;
 
-std::string ConsoleSocket::_prompt;
+std::string ServerConsole::_prompt;
 
 // _max_open_sockets is the largest number of concurrently open
 // sockets we will allow in the cogserver. Currently set to 60.
@@ -48,12 +32,12 @@ std::string ConsoleSocket::_prompt;
 // July 2019 - change to 10. When it is 60, it just thrashes like
 // crazy, mostly because there are 60 threads thrashing in guile
 // on some lock. And that's pretty pointless...
-unsigned int ConsoleSocket::_max_open_sockets = 10;
-volatile unsigned int ConsoleSocket::_num_open_sockets = 0;
-std::mutex ConsoleSocket::_max_mtx;
-std::condition_variable ConsoleSocket::_max_cv;
+unsigned int ServerConsole::_max_open_sockets = 10;
+volatile unsigned int ServerConsole::_num_open_sockets = 0;
+std::mutex ServerConsole::_max_mtx;
+std::condition_variable ServerConsole::_max_cv;
 
-ConsoleSocket::ConsoleSocket(void)
+ServerConsole::ServerConsole(void)
 {
     _use_count = 0;
     _shell = nullptr;
@@ -76,14 +60,14 @@ ConsoleSocket::ConsoleSocket(void)
     while (_max_open_sockets < _num_open_sockets) _max_cv.wait(lck);
 }
 
-ConsoleSocket::~ConsoleSocket()
+ServerConsole::~ServerConsole()
 {
-    logger().debug("[ConsoleSocket] destructor");
+    logger().debug("[ServerConsole] destructor");
 
     // We need the use-count and the condition variables because
     // somehow the design of either this subsystem, or boost:asio
     // is broken. Basically, the boost::asio code calls this destructor
-    // for ConsoleSocket while there are still requests outstanding
+    // for ServerConsole while there are still requests outstanding
     // in another thread.  We have to stall the destructor until all
     // the in-flight requests are complete; we use the condition
     // variable to do this. But really, something somewhere is broken
@@ -106,7 +90,7 @@ ConsoleSocket::~ConsoleSocket()
     _max_cv.notify_all();
     mxlck.unlock();
 
-    logger().debug("[ConsoleSocket] destructor finished");
+    logger().debug("[ServerConsole] destructor finished");
 }
 
 // Some random RFC 854 characters
@@ -121,9 +105,9 @@ ConsoleSocket::~ConsoleSocket()
 #define DONT 0xfe   // Telnet DONT
 #define CHARSET 0x2a // Telnet RFC 2066 charset
 
-void ConsoleSocket::OnConnection()
+void ServerConsole::OnConnection()
 {
-    logger().debug("[ConsoleSocket] OnConnection");
+    logger().debug("[ServerConsole] OnConnection");
 
 #ifdef NOT_RIGHT_NOW
     // Crude attempt to negotiate for a utf-8 clean channel.
@@ -161,14 +145,14 @@ void ConsoleSocket::OnConnection()
     sendPrompt();
 }
 
-void ConsoleSocket::sendPrompt()
+void ServerConsole::sendPrompt()
 {
     // Hush prompts are empty. Don't call.
     if (0 < _prompt.size())
         Send(_prompt);
 }
 
-void ConsoleSocket::OnLine(const std::string& line)
+void ServerConsole::OnLine(const std::string& line)
 {
     // If a shell processor has been designated, then defer all
     // processing to the shell.  In particular, avoid as much overhead
@@ -201,7 +185,7 @@ void ConsoleSocket::OnLine(const std::string& line)
         }
     }
 
-    logger().debug("[ConsoleSocket] OnLine [%s]", line.c_str());
+    logger().debug("[ServerConsole] OnLine [%s]", line.c_str());
 
     // Parse command line
     std::list<std::string> params;
@@ -249,7 +233,7 @@ void ConsoleSocket::OnLine(const std::string& line)
 
     if (is_shell)
     {
-        logger().debug("ConsoleSocket::OnLine() request \"%s\" is a shell",
+        logger().debug("ServerConsole::OnLine() request \"%s\" is a shell",
                        line.c_str());
 
         // Force a drain of the request queue, because we *must* enter
@@ -260,26 +244,26 @@ void ConsoleSocket::OnLine(const std::string& line)
     }
 }
 
-void ConsoleSocket::OnRequestComplete()
+void ServerConsole::OnRequestComplete()
 {
-    logger().debug("[ConsoleSocket] OnRequestComplete");
+    logger().debug("[ServerConsole] OnRequestComplete");
 
     // Shells will send their own prompt
     if (nullptr == _shell) sendPrompt();
 }
 
-void ConsoleSocket::Exit()
+void ServerConsole::Exit()
 {
-    logger().debug("[ConsoleSocket] ExecuteExitRequest");
+    logger().debug("[ServerConsole] ExecuteExitRequest");
     SetCloseAndDelete();
 }
 
-void ConsoleSocket::SendResult(const std::string& res)
+void ServerConsole::SendResult(const std::string& res)
 {
     Send(res);
 }
 
-void ConsoleSocket::SetShell(GenericShell *g)
+void ServerConsole::SetShell(GenericShell *g)
 {
     _shell = g;
 }
