@@ -35,7 +35,7 @@ protected:
     virtual void OnConnection(void) = 0;
 
     /**
-     * Callback: called when client has a text line to send.
+     * Callback: called when a client has sent us a line of text.
      */
     virtual void OnLine (const std::string&) = 0;
 

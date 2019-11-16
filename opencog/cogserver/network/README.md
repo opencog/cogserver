@@ -1,0 +1,67 @@
+
+Console Server
+==============
+The Console Server implements a fast multi-threaded TCP/IPv4 network
+Read-Evaluate-Print-Loop (REPL) server. It allows multiple network
+clients to get shell-like access ("a console") to the cogserver.
+
+The code here is generic enough that you can build other servers with
+it; there's nothing OpenCog or CogServer-specific in here. All you have
+to do is to create a derived class from the abstract `class ConsoleSocket`
+and supply the pure virtual methods `ConsoleSocket::OnConnection()` and
+`ConsoleSocket::OnLine()`.  Then just call `NetworkServer::run()` and
+you are good to go.  See the example usage below.
+
+It is weakly assumed that the console is working with text data; it uses
+`std::string` as the main API. I suppose it would be tweaked to handle
+binary data, but this has not been a requirement.
+
+Operation
+---------
+This console server listens for and accepts network connections on a
+configurable TCPIPv4 port (port 17001 by default). When a connection
+is made, the `ConsoleSocket::OnConnection()` pure virtual method is
+called.  For each established connection, it forks a new thread.  As
+data comes in over the socket, the `ConsoleSocket::OnLine()` pure
+virtual method is called.
+
+Closed connections are handled automatically. Connection closure is
+handled in such a way that a server can complete pending, unfinished
+work, even as the network client disconnected. There's a fair amount
+of implementation trickery to allow this to happen.
+
+Example Usage
+-------------
+Here is a short example. It provides anidea of how simple this is to
+use.
+```
+class MyServerConsole : public ConsoleSocket
+{
+protected:
+	void OnConnection(void)
+	{
+		Send("my-server-prompt>");
+	}
+	void OnLine(const std::string& cmd)
+	{
+		std::string reply = "Recieved this command: " + cmd + "\n";
+		Send(reply);
+		Send("my-server-prompt>");
+	}
+};
+
+main()
+{
+	// Create a server listening on port 4242
+	NetworkServer* ns = new NetworkServer(4242);
+
+	// Create a new handler for each connection.
+	// The delete is handled automatically.
+	auto make_console = [](void)->ConsoleSocket*
+        { return new MyServerConsole(); };
+
+	// Process incoming commands.
+	ns->run(make_console);
+}
+
+```
