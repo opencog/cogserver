@@ -96,7 +96,7 @@ public:
     void pushRequest(Request* request) { requestQueue.push(request); }
 
     /** Removes and returns the first request from the requests queue. */
-    Request* popRequest(void) { return requestQueue.pop(); }
+    Request* popRequest(void) { return requestQueue.value_pop(); }
 
     /** Returns the requests queue size. */
     int getRequestQueueSize(void) { return requestQueue.size(); }

@@ -209,7 +209,7 @@ void GenericShell::user_interrupt()
 	// Discard all pending, unevaluated junk in the queue.
 	// Failure to do so will typically result in confusing
 	// the shell user.
-	while (not evalque.is_empty()) evalque.pop();
+	while (not evalque.is_empty()) evalque.value_pop();
 
 	// Work around timing window, where queue was just now emptyied,
 	// but the scheme evaluator has not yet started... and so the
