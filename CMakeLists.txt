@@ -174,7 +174,7 @@ SET(Boost_USE_MULTITHREADED ON)
 SET(MIN_BOOST 1.46)
 
 # Required boost packages
-FIND_PACKAGE(Boost ${MIN_BOOST} COMPONENTS date_time filesystem program_options system REQUIRED)
+FIND_PACKAGE(Boost ${MIN_BOOST} COMPONENTS filesystem system REQUIRED)
 
 IF(Boost_FOUND)
 	SET(Boost_FOUND_SAVE 1)
