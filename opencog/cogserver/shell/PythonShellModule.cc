@@ -50,8 +50,7 @@ PythonShellModule::PythonShellModule(CogServer& cs) : Module(cs)
 	global_python_initialize();
 
 	// Tell the python evaluator to create its singleton instance
-	// with our atomspace.
-	PythonEval::create_singleton_instance(&cs.getAtomSpace());
+	PythonEval::create_singleton_instance();
 }
 
 PythonShellModule::~PythonShellModule()
