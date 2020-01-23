@@ -24,14 +24,14 @@ cdef extern from "opencog/atoms/base/Handle.h" namespace "opencog":
 
 # AtomSpaces
 from opencog.atomspace cimport cAtomSpace
-cdef extern from "opencog/cogserver/server/BaseServer.h" namespace "opencog":
-    cAtomSpace* server_atomspace()
+cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
+    cAtomSpace& cython_server_atomspace()
 
 # ideally we'd import these typedefs instead of defining them here but I don't
 # know how to do that with Cython
 ctypedef short stim_t
 
-cdef extern from "opencog/cogserver/server/Agent.h" namespace "opencog":
+cdef extern from "opencog/cogserver/modules/agents/Agent.h" namespace "opencog":
     cdef cppclass cAgent "opencog::Agent":
         int frequency()
         void setFrequency(int f)

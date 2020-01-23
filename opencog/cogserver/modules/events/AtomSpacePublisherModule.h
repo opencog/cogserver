@@ -36,7 +36,6 @@
 #include <opencog/util/sigslot.h>
 #include <opencog/util/tbb.h>
 
-#include <opencog/cogserver/server/Agent.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/CogServer.h>
 

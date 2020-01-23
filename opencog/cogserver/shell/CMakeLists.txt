@@ -9,13 +9,13 @@ IF (HAVE_CYTHON)
 	)
 
 	ADD_LIBRARY (py-shell SHARED
-		GenericShell
 		PythonShell
 		PythonShellModule
 	)
 
 	TARGET_LINK_LIBRARIES(py-shell
-		server
+		network
+		server # Python shell uses the cogserver atomspace
 		${ATOMSPACE_smob_LIBRARY}
 		${ATOMSPACE_LIBRARY}
 		${COGUTIL_LIBRARY}
@@ -25,13 +25,13 @@ IF (HAVE_CYTHON)
 ENDIF (HAVE_CYTHON)
 
 ADD_LIBRARY (scheme-shell SHARED
-	GenericShell
 	SchemeShell
 	SchemeShellModule
 )
 
 TARGET_LINK_LIBRARIES(scheme-shell
-	server # setting the guile atomspace needs atomspace of server.
+	network
+	server # Guile shell uses the cogserver atomspace.
 	${ATOMSPACE_smob_LIBRARY}
 	${ATOMSPACE_LIBRARY}
 	${COGUTIL_LIBRARY}
@@ -45,8 +45,3 @@ ENDIF (HAVE_CYTHON)
 
 INSTALL (TARGETS scheme-shell
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
-
-INSTALL (FILES
-	GenericShell.h
-	DESTINATION "include/${PROJECT_NAME}/cogserver/shell"
-)
