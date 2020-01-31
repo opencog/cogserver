@@ -2,25 +2,13 @@
  * opencog/cogserver/server/Request.h
  *
  * Copyright (C) 2008 by OpenCog Foundation
- * All Rights Reserved
- *
  * Written by Gustavo Gama <gama@vettalabs.com>,
  * Simple-API implementation by Linas Vepstas <linasvepstas@gmail.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License v3 as
- * published by the Free Software Foundation and including the exceptions
- * at http://opencog.org/wiki/Licenses
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * The Cogserver Request system is deprecated; users are encouraged to
+ * explore writing guile (scheme) or python modules instead.
  */
 
 
@@ -39,7 +27,7 @@ namespace opencog
  */
 
 class CogServer;
-class ConsoleSocket;
+class ServerConsole;
 
 /**
  * The DECLARE_CMD_REQUEST macro provides a simple, easy-to-use interface
@@ -131,8 +119,6 @@ class ConsoleSocket;
  * commands with the command processing subsystem, implement the "do"
  * routine, and go. A module may declare as many commands as desired.
  * Be sure to register and unregister each command.
- *
- * See also: persist/PersistModule.cc as a working real-life example.
  */
 #define DECLARE_CMD_REQUEST(mod_type,cmd_str,do_cmd,                  \
                             cmd_sum,cmd_desc,shell_cmd,hidden)        \
@@ -246,7 +232,7 @@ class ConsoleSocket;
 class Request
 {
 private:
-    ConsoleSocket*         _console;
+    ServerConsole*         _console;
 
 protected:
     CogServer&             _cogserver;
@@ -271,8 +257,8 @@ public:
     void send(const std::string& msg) const;
 
     /** Stores the socket on which to return results. */
-    void set_console(ConsoleSocket*);
-    ConsoleSocket *get_console(void) const { return _console; }
+    void set_console(ServerConsole*);
+    ServerConsole *get_console(void) const { return _console; }
 
     /** sets the command's parameter list. */
     virtual void setParameters(const std::list<std::string>&);

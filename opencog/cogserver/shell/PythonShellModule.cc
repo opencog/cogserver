@@ -36,7 +36,7 @@
 #include <opencog/util/platform.h>
 
 #include <opencog/cython/PythonEval.h>
-#include <opencog/cogserver/server/ConsoleSocket.h>
+#include <opencog/cogserver/server/ServerConsole.h>
 #include "PythonShellModule.h"
 
 namespace opencog
@@ -46,6 +46,11 @@ DECLARE_MODULE(PythonShellModule);
 
 PythonShellModule::PythonShellModule(CogServer& cs) : Module(cs)
 {
+	// Initialize Python.
+	global_python_initialize();
+
+	// Tell the python evaluator to create its singleton instance
+	PythonEval::create_singleton_instance();
 }
 
 PythonShellModule::~PythonShellModule()
@@ -62,7 +67,7 @@ void PythonShellModule::init(void)
 
 std::string PythonShellModule::shellout(Request *req, std::list<std::string> args)
 {
-    ConsoleSocket *con = req->get_console();
+    ServerConsole *con = req->get_console();
     OC_ASSERT(con, "Invalid Request object");
 
     PythonShell *sh = new PythonShell();

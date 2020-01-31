@@ -25,7 +25,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/guile/SchemeEval.h>
-#include <opencog/cogserver/server/ConsoleSocket.h>
+#include <opencog/cogserver/server/ServerConsole.h>
 
 #include "SchemeShell.h"
 #include "SchemeShellModule.h"
@@ -36,6 +36,9 @@ DECLARE_MODULE(SchemeShellModule);
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)
 {
+	// Tell scheme which atomspace to use.
+	SchemeEval::init_scheme();
+	SchemeEval::set_scheme_as(&cs.getAtomSpace());
 }
 
 void SchemeShellModule::init(void)
@@ -72,7 +75,7 @@ SchemeShellModule::shelloutRequest::info(void)
 bool
 SchemeShellModule::shelloutRequest::execute(void)
 {
-	ConsoleSocket *con = this->get_console();
+	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
 	SchemeShell *sh = new SchemeShell();

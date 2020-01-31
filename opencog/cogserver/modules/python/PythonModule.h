@@ -8,7 +8,8 @@
 
 #include <string>
 
-#include <opencog/cogserver/server/Agent.h>
+#include <opencog/cogserver/modules/agents/Agent.h>
+#include <opencog/cogserver/modules/agents/Scheduler.h>
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
@@ -91,6 +92,7 @@ private:
 
     bool preloadModules();
     bool unregisterAgentsAndRequests();
+    Scheduler* _scheduler;
 public:
 
     virtual const ClassInfo& classinfo() const { return info(); }

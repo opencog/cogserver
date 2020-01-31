@@ -64,14 +64,10 @@ void opencog_cogserver_init(void);
 
 /**
  * Implement a dynamically-loadable cogserver guile module.
- * This is mostly to allow a networked, agent-based system to run.
  *
  * This is a bare-bones implementation. Things like the server
  * port number, and maybe even the server atomspace, should be
  * configurable from guile, instead of the conf file.
- *
- * If/when python agents are supplanted by something newer, then
- * maybe this goes away.
  */
 
 using namespace opencog;

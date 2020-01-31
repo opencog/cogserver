@@ -1,10 +1,6 @@
 
 include(CMakePackageConfigHelpers)
 
-#export(EXPORT CogServerTargets
-#	FILE "${CMAKE_CURRENT_BINARY_DIR}/CogServer/CogServerTargets.cmake"
-#)
-
 set(ConfigPackageLocation lib/cmake/CogServer)
 
 install(EXPORT CogServerTargets
@@ -38,7 +34,7 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/lib/opencog-test.conf
 
 # Place a default config file in a default location
 # CONFDIR normally expands to /usr/local/etc/
-# XXX: why is cogserver.conf installed if the default file name is opencog.conf?
+# Install `opencog.conf` for backwards-compat.
 INSTALL (FILES
 	cogserver.conf
 	opencog.conf
