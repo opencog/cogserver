@@ -2,51 +2,41 @@ INCLUDE_DIRECTORIES(
 	${PYTHON_INCLUDE_PATH}
 )
 
-# The PythonModuleUTest is derived from the CogServer class, and so
-# cannot be tested unless the cogserver is actually being built!
-IF (HAVE_SERVER)
-	ADD_CXXTEST(PythonModuleUTest)
-	ADD_DEPENDENCIES(PythonModuleUTest
-		PythonModule
-	)
+ADD_CXXTEST(PythonModuleUTest)
+ADD_DEPENDENCIES(PythonModuleUTest
+	PythonModule
+)
 
-	TARGET_LINK_LIBRARIES(PythonModuleUTest
-		PythonModule
-		agents
-		${COGSERVER_LIBRARIES}
-		${ATOMSPACE_LIBRARIES}
-		${COGUTIL_LIBRARY}
-	)
-	SET_TESTS_PROPERTIES(PythonModuleUTest
-		PROPERTIES ENVIRONMENT
-		"PYTHONPATH=${PROJECT_BINARY_DIR}/opencog/cython:${PROJECT_SOURCE_DIR}/tests/cython/agents/:${PYTHON_ROOT}"
-	)
-ENDIF (HAVE_SERVER)
+TARGET_LINK_LIBRARIES(PythonModuleUTest
+	PythonModule
+	agents
+	${COGSERVER_LIBRARIES}
+	${ATOMSPACE_LIBRARIES}
+	${COGUTIL_LIBRARY}
+)
+SET_TESTS_PROPERTIES(PythonModuleUTest
+	PROPERTIES ENVIRONMENT
+	"PYTHONPATH=${PROJECT_BINARY_DIR}/opencog/cython:${PROJECT_SOURCE_DIR}/tests/cython/agents/:${PYTHON_ROOT}"
+)
 
 
-# The PyEvalUTest is derived from the CogServer class, and so
-# cannot be tested unless the cogserver is actually being built!
-IF (HAVE_SERVER)
-	ADD_CXXTEST(PyEvalUTest)
+ADD_CXXTEST(PyEvalUTest)
 
-	TARGET_LINK_LIBRARIES(PyEvalUTest
-		py-shell
-		${COGSERVERLIBRARIES}
-		${ATOMSPACE_LIBRARIES}
-		${COGUTIL_LIBRARY}
-	)
-ENDIF (HAVE_SERVER)
+TARGET_LINK_LIBRARIES(PyEvalUTest
+	py-shell
+	${COGSERVERLIBRARIES}
+	${ATOMSPACE_LIBRARIES}
+	${COGUTIL_LIBRARY}
+)
 
 IF (HAVE_NOSETESTS)
 
-	IF (HAVE_SERVER)
-		ADD_TEST(CythonServer ${NOSETESTS_EXECUTABLE} -vs
-			${CMAKE_SOURCE_DIR}/tests/cython/server/)
-			SET_PROPERTY(TEST CythonServer
-				PROPERTY ENVIRONMENT
-				"PYTHONPATH=${PYTHON_ROOT}:${PROJECT_BINARY_DIR}/opencog/cython:${PROJECT_SOURCE_DIR}/tests/cython/agents:${PYTHON_ROOT}"
-				"GUILE_LOAD_PATH=${GUILE_LOAD_PATH}"
-				)
-	ENDIF(HAVE_SERVER)
+	ADD_TEST(CythonServer ${NOSETESTS_EXECUTABLE} -vs
+		${CMAKE_SOURCE_DIR}/tests/cython/server/)
+		SET_PROPERTY(TEST CythonServer
+			PROPERTY ENVIRONMENT
+			"PYTHONPATH=${PYTHON_ROOT}:${PROJECT_BINARY_DIR}/opencog/cython:${PROJECT_SOURCE_DIR}/tests/cython/agents:${PYTHON_ROOT}"
+			"GUILE_LOAD_PATH=${GUILE_LOAD_PATH}"
+			)
 
 ENDIF (HAVE_NOSETESTS)
