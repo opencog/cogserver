@@ -50,12 +50,13 @@ There are three ways to start the cogserver: from a bash shell prompt
 (as a stand-alone process), from the guile command line, or from the
 python command line.
 
-* From bash, just start the process: `$ build/opencog/cogserver/server`
+* From bash, just start the process:
+  `$ build/opencog/cogserver/server/cogserver`
 
 * From guile: `(use-modules (opencopg cogserver)) (start-cogserver)`
 
 * From python: `import opencog.cogserver` and then
-   `??? start cogserver ???` (where's the documentation for this?)
+   `??? start_cogserver() ???` (where's the documentation for this?)
 
 Once started, one can obtain a shell by saying `rlwrap telnet localhost
 17001`, and then `py` or `scm` to obtain a python or scheme shell.  This
@@ -117,7 +118,7 @@ Architecture
 ------------
 See also these README's:
 
-* [network/README](opencog/cogserver/network/README.md)
+* [network/README](opencog/network/README.md)
 * [cogserver/README](opencog/cogserver/server/README.md)
 * [builtin-module/README](opencog/cogserver/modules/commands/README.md)
 * [cython/README](opencog/cython/README.md)
