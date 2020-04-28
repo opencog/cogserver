@@ -37,4 +37,4 @@ cdef class MindAgent:
 #        pass
 
     def run(self, atomspace):
-        print "Implement me in your MindAgent subclass: " + atomspace
+        print("Implement me in your MindAgent subclass: " + atomspace)
