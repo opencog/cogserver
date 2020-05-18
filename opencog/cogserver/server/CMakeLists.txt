@@ -71,5 +71,5 @@ INSTALL (FILES
 	Request.h
 	RequestClassInfo.h
 	RequestManager.h
-	DESTINATION "include/${PROJECT_NAME}/cogserver/server"
+	DESTINATION "include/opencog/${PROJECT_NAME}/server"
 )
