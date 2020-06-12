@@ -1,5 +1,5 @@
-Python bindings for OpenCog
----------------------------
+Cogserver Python Interface
+--------------------------
 
 ## Requirements ##
 
@@ -22,6 +22,15 @@ Currently the package structure looks like this:
  opencog.atomspace.types
  opencog.cogserver
 ```
+
+Start the cogserver by saying:
+```
+ import opencog.cogserver
+ something...something (???)
+ start_cogserver() (???)
+```
+Something is wrong with the above documentation. Can an experienced
+python user help figure out the stuff above?
 
 ## Tutorial ##
 

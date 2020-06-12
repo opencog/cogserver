@@ -24,5 +24,5 @@ INSTALL (FILES
 	GenericShell.h
 	NetworkServer.h
 	ServerSocket.h
-	DESTINATION "include/${PROJECT_NAME}/network"
+	DESTINATION "include/opencog/network"
 )

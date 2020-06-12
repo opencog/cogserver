@@ -14,7 +14,7 @@ INCLUDE_DIRECTORIES(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
-SET(CYTHON_FLAGS "-2" "-f" "-I" "${ATOMSPACE_INCLUDE_DIR}/opencog/cython")
+SET(CYTHON_FLAGS "-3" "-f" "-I" "${ATOMSPACE_INCLUDE_DIR}/opencog/cython")
 
 # Use this as a guide:
 # https://github.com/OpenKinect/libfreenect/blob/master/wrappers/python/CMakeLists.txt
@@ -44,61 +44,59 @@ IF (HAVE_ATOMSPACE)
 ENDIF (HAVE_ATOMSPACE)
 
 
-IF (HAVE_SERVER)
-	############################ cogserver #########################
-	CYTHON_ADD_MODULE_PYX(cogserver
-		"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
-		"request.pyx" "agent.pyx" "agent_finder_types.h"
-		"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
-	)
+############################ cogserver #########################
+CYTHON_ADD_MODULE_PYX(cogserver
+	"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
+	"request.pyx" "agent.pyx" "agent_finder_types.h"
+	"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
+)
 
-	list(APPEND ADDITIONAL_MAKE_CLEAN_FILES "cogserver.cpp")
+list(APPEND ADDITIONAL_MAKE_CLEAN_FILES "cogserver.cpp")
 
-	# opencog.cogserver Python bindings
-	ADD_LIBRARY(cogserver_cython SHARED
-		cogserver.cpp
-	)
+# opencog.cogserver Python bindings
+ADD_LIBRARY(cogserver_cython SHARED
+	cogserver.cpp
+)
 
-	TARGET_LINK_LIBRARIES(cogserver_cython
-		server
-		${ATOMSPACE_LIBRARIES}
-		${COGUTIL_LIBRARY}
-		${PYTHON_LIBRARIES}
-	)
+TARGET_LINK_LIBRARIES(cogserver_cython
+	server
+	${ATOMSPACE_LIBRARIES}
+	${COGUTIL_LIBRARY}
+	${PYTHON_LIBRARIES}
+)
 
-	SET_TARGET_PROPERTIES(cogserver_cython PROPERTIES
-		PREFIX ""
-		OUTPUT_NAME cogserver)
+SET_TARGET_PROPERTIES(cogserver_cython PROPERTIES
+	PREFIX ""
+	OUTPUT_NAME cogserver)
 
-	INSTALL (TARGETS cogserver_cython
-		DESTINATION "${PYTHON_DEST}")
+INSTALL (TARGETS cogserver_cython
+	DESTINATION "${PYTHON_DEST}")
 
-	####################### agent finder ########################
-	CYTHON_ADD_MODULE_PYX(agent_finder
-		"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
-		"cogserver.pxd"
-		"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
-	)
+####################### agent finder ########################
+CYTHON_ADD_MODULE_PYX(agent_finder
+	"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
+	"cogserver.pxd"
+	"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
+)
 
-	list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
-		"agent_finder.cpp" "agent_finder_api.h")
+list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
+	"agent_finder.cpp" "agent_finder_api.h")
 
-	# utility library for PythonModule
-	ADD_LIBRARY(agent_finder SHARED
-		agent_finder.cpp
-	)
+# utility library for PythonModule
+ADD_LIBRARY(agent_finder SHARED
+	agent_finder.cpp
+)
 
-	TARGET_LINK_LIBRARIES(agent_finder
-		${ATOMSPACE_LIBRARIES}
-		${PYTHON_LIBRARIES}
-		${Boost_THREAD_LIBRARY}
-		${Boost_SYSTEM_LIBRARY}
-	)
+TARGET_LINK_LIBRARIES(agent_finder
+	${ATOMSPACE_LIBRARIES}
+	${PYTHON_LIBRARIES}
+	${Boost_THREAD_LIBRARY}
+	${Boost_SYSTEM_LIBRARY}
+)
 
-	SET_TARGET_PROPERTIES(agent_finder PROPERTIES
-		PREFIX ""
-		OUTPUT_NAME agent_finder)
+SET_TARGET_PROPERTIES(agent_finder PROPERTIES
+	PREFIX ""
+	OUTPUT_NAME agent_finder)
 
-	INSTALL (TARGETS agent_finder
-		DESTINATION "${PYTHON_DEST}")
-ENDIF(HAVE_SERVER)
+INSTALL (TARGETS agent_finder
+	DESTINATION "${PYTHON_DEST}")
