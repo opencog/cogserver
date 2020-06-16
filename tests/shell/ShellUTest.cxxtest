@@ -61,18 +61,16 @@ void gargleblast(int tid, int reps)
 		// guile> (EvaluationLink
 		//   (PredicateNode "visible face")
 		//   (ListLink
-		//      (NumberNode "28010")
-		//   )
-		// )
+		//      (NumberNode "28010")))
 		//
 		// guile> 
 		// guile> ; note blank space here
-		// Which is exactly 275 chars long.
+		// Which is exactly 266 chars long.
 		// If the greeting changes, then adjust for the correct size.
 		//
 		// Hmm. Seems that sometimes some trailing newline gets cut,
 		// and so the reply might be short by one byte. Seems harmless.
-#define CUR_MSG_SZ 274
+#define CUR_MSG_SZ 265
 		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, reso.size());
 		TS_ASSERT_LESS_THAN_EQUALS(reso.size(), CUR_MSG_SZ+1);
 		if (reso.size() < CUR_MSG_SZ or (CUR_MSG_SZ+1) < reso.size())
