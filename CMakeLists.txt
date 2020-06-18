@@ -350,7 +350,7 @@ SET(CPACK_PACKAGE_CONTACT "opencog@googlegroups.com")
 SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 SET(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/packages")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Open Cognition Framework")
-SET(CPACK_PACKAGE_NAME "opencog-dev")
+SET(CPACK_PACKAGE_NAME "cogserver-dev")
 SET(CPACK_PACKAGE_VENDOR "opencog.org")
 SET(CPACK_PACKAGE_VERSION "${SEMANTIC_VERSION}-${UTC_DATE}")
 SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
@@ -362,7 +362,7 @@ SET(CPACK_PACKAGE_EXECUTABLES "cogserver" "The Open Cognition Framework")
 ## Debian specific configurations
 SET(DEPENDENCY_LIST
 	"guile-2.2-dev (>= 2.2.2)"
-	"python-dev (>= 2.7.5)"
+	"python3-dev (>= 3.6.7)"
 	"libboost-date-time-dev (>= ${MIN_BOOST})"
 	"libboost-filesystem-dev (>= ${MIN_BOOST})"
 	"libboost-program-options-dev (>= ${MIN_BOOST})"
