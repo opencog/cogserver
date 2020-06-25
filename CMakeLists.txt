@@ -147,47 +147,6 @@ ENDIF (GUILE_FOUND AND GMP_LIBRARY AND GMP_INCLUDE_DIR)
 
 include(OpenCogFindPython)
 
-# -----------------------------------------------------------------------------
-# XXX FIXME. The jsoncpp, TBB and ZeroMQ packages are needed by
-# the deprecated and/or obsolete AtomSpacePublisher module.
-# I'm not sure, but I suspect that module doesn't work.  It's
-# not maintained by anyone; it's certainly out of date, and doesn't
-# support any of the modern features. So ....!? FIXME
-
-# jsoncpp
-FIND_PACKAGE(PkgConfig)
-IF(PKG_CONFIG_FOUND)
-  pkg_check_modules(JSONCPP jsoncpp)
-  IF(JSONCPP_FOUND)
-    ADD_DEFINITIONS(-DHAVE_JSONCPP)
-    SET(HAVE_JSONCPP 1)
-    SET(JSONCPP_DIR_MESSAGE "JsonCPP was found")
-  ELSE(JSONCPP_FOUND)
-    SET(JSONCPP_DIR_MESSAGE "JsonCPP was not found; the AtomSpace Publisher Module needs JsonCPP to publish events in JSON.\nIf you need to receive AtomSpace events in JSON, install JsonCPP using your package manager \nsuch as apt or build from source: https://github.com/open-source-parsers/jsoncpp/wiki/Building")
-  ENDIF(JSONCPP_FOUND)
-ENDIF(PKG_CONFIG_FOUND)
-
-
-# Threaded Building Blocks (Intel TBB) library
-FIND_PACKAGE(TBB)
-IF (TBB_FOUND)
-   SET(HAVE_TBB 1)
-ELSE (TBB_FOUND)
-   SET(TBB_DIR_MESSAGE "Intel TBB (Threaded Building Blocks) was not found; the AtomSpace Publisher module will not be built. Installation instructions: https://www.threadingbuildingblocks.org/download")
-ENDIF (TBB_FOUND)
-MESSAGE(STATUS "${TBB_DIR_MESSAGE}")
-
-# ZeroMQ
-FIND_PACKAGE(ZMQ 3.2.4)
-IF (ZMQ_FOUND AND ZMQ_LIBRARY)
-   ADD_DEFINITIONS(-DHAVE_ZMQ)
-   SET(HAVE_ZMQ 1)
-   SET(ZMQ_DIR_MESSAGE "ZeroMQ was found.")
-ELSE (ZMQ_FOUND AND ZMQ_LIBRARY)
-   SET(ZMQ_DIR_MESSAGE "ZeroMQ was not found; the AtomSpace Publisher module, and the message system used by GUI monitor for OAC will not be built.\nTo over-ride, make sure that the environment variable ZMQ_LIBRARY is set.\nInstallation instructions: http://zeromq.org/intro:get-the-software")
-ENDIF (ZMQ_FOUND AND ZMQ_LIBRARY)
-MESSAGE(STATUS "${ZMQ_DIR_MESSAGE}")
-
 # ----------------------------------------------------------
 # Optional, currently needed only to hush up DRD in util/Logger.cc
 FIND_PACKAGE(VALGRIND)
