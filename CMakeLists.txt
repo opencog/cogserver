@@ -71,6 +71,8 @@ ENDIF (COGUTIL_FOUND)
 list(APPEND CMAKE_MODULE_PATH  ${COGUTIL_DATA_DIR}/cmake)
 
 include(${COGUTIL_DATA_DIR}/cmake/OpenCogGccOptions.cmake)
+include(${COGUTIL_DATA_DIR}/cmake/OpenCogLibOptions.cmake)
+include(${COGUTIL_DATA_DIR}/cmake/OpenCogInstallOptions.cmake)
 include(${COGUTIL_DATA_DIR}/cmake/Summary.cmake)
 
 # ===================================================================
@@ -126,67 +128,10 @@ IF (NOT CXXTEST_FOUND)
 ENDIF (NOT CXXTEST_FOUND)
 
 # ----------------------------------------------------------
-# This is required for Guile
-FIND_LIBRARY(GMP_LIBRARY gmp)
-FIND_PATH(GMP_INCLUDE_DIR gmp.h)
+# Guile Python and Cython
 
-# Gnu Guile scheme interpreter
-# Version 2.2.2 is needed for mrs io ports, compilation, atomics, nlp
-FIND_PACKAGE(Guile 2.2.2)
-IF (GUILE_FOUND AND GMP_LIBRARY AND GMP_INCLUDE_DIR)
-	ADD_DEFINITIONS(-DHAVE_GUILE)
-	SET(HAVE_GUILE 1)
-	INCLUDE_DIRECTORIES(${GUILE_INCLUDE_DIR})
-ELSE (GUILE_FOUND AND GMP_LIBRARY AND GMP_INCLUDE_DIR)
-	SET(GUILE_DIR_MESSAGE "Guile was not found; the scheme shell will not be built.\nTo over-ride, make sure GUILE_LIBRARIES and GUILE_INCLUDE_DIRS are set.")
-	MESSAGE(STATUS "${GUILE_DIR_MESSAGE}")
-ENDIF (GUILE_FOUND AND GMP_LIBRARY AND GMP_INCLUDE_DIR)
-
-# ----------------------------------------------------------
-# Python and Cython
-
+include(OpenCogFindGuile)
 include(OpenCogFindPython)
-
-# -----------------------------------------------------------------------------
-# XXX FIXME. The jsoncpp, TBB and ZeroMQ packages are needed by
-# the deprecated and/or obsolete AtomSpacePublisher module.
-# I'm not sure, but I suspect that module doesn't work.  It's
-# not maintained by anyone; it's certainly out of date, and doesn't
-# support any of the modern features. So ....!? FIXME
-
-# jsoncpp
-FIND_PACKAGE(PkgConfig)
-IF(PKG_CONFIG_FOUND)
-  pkg_check_modules(JSONCPP jsoncpp)
-  IF(JSONCPP_FOUND)
-    ADD_DEFINITIONS(-DHAVE_JSONCPP)
-    SET(HAVE_JSONCPP 1)
-    SET(JSONCPP_DIR_MESSAGE "JsonCPP was found")
-  ELSE(JSONCPP_FOUND)
-    SET(JSONCPP_DIR_MESSAGE "JsonCPP was not found; the AtomSpace Publisher Module needs JsonCPP to publish events in JSON.\nIf you need to receive AtomSpace events in JSON, install JsonCPP using your package manager \nsuch as apt or build from source: https://github.com/open-source-parsers/jsoncpp/wiki/Building")
-  ENDIF(JSONCPP_FOUND)
-ENDIF(PKG_CONFIG_FOUND)
-
-
-# Threaded Building Blocks (Intel TBB) library
-FIND_PACKAGE(TBB)
-IF (TBB_FOUND)
-   SET(HAVE_TBB 1)
-ELSE (TBB_FOUND)
-   SET(TBB_DIR_MESSAGE "Intel TBB (Threaded Building Blocks) was not found; the AtomSpace Publisher module will not be built. Installation instructions: https://www.threadingbuildingblocks.org/download")
-ENDIF (TBB_FOUND)
-MESSAGE(STATUS "${TBB_DIR_MESSAGE}")
-
-# ZeroMQ
-FIND_PACKAGE(ZMQ 3.2.4)
-IF (ZMQ_FOUND AND ZMQ_LIBRARY)
-   ADD_DEFINITIONS(-DHAVE_ZMQ)
-   SET(HAVE_ZMQ 1)
-   SET(ZMQ_DIR_MESSAGE "ZeroMQ was found.")
-ELSE (ZMQ_FOUND AND ZMQ_LIBRARY)
-   SET(ZMQ_DIR_MESSAGE "ZeroMQ was not found; the AtomSpace Publisher module, and the message system used by GUI monitor for OAC will not be built.\nTo over-ride, make sure that the environment variable ZMQ_LIBRARY is set.\nInstallation instructions: http://zeromq.org/intro:get-the-software")
-ENDIF (ZMQ_FOUND AND ZMQ_LIBRARY)
-MESSAGE(STATUS "${ZMQ_DIR_MESSAGE}")
 
 # ----------------------------------------------------------
 # Optional, currently needed only to hush up DRD in util/Logger.cc
@@ -204,9 +149,6 @@ ELSE (VALGRIND_FOUND)
 ENDIF (VALGRIND_FOUND)
 
 # ===================================================================
-# Global includes
-
-# -------------------------------------------------
 # Include configuration.
 
 # Set default include paths.
@@ -221,53 +163,6 @@ ENDIF (NOT DEFINED ATOMSPACE_DATA_DIR)
 INCLUDE("${ATOMSPACE_DATA_DIR}/cmake/OpenCogMacros.cmake")
 INCLUDE("${ATOMSPACE_DATA_DIR}/cmake/OpenCogGuile.cmake")
 INCLUDE("${ATOMSPACE_DATA_DIR}/cmake/OpenCogCython.cmake")
-
-# -------------------------------------------------
-# Library configuration
-
-# Small hack to handle unixes that use "/usr/lib64" instead of
-# "/usr/lib" as the default lib path on 64 bit archs.
-IF (NOT DEFINED LIB_DIR_SUFFIX)
-	EXECUTE_PROCESS(COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs OUTPUT_VARIABLE PRINT_SEARCH_DIRS_OUTPUT)
-	STRING(REGEX MATCH "\r?\nlibraries:.*\r?\n" COMPILER_LIB_SEARCH_DIRS ${PRINT_SEARCH_DIRS_OUTPUT})
-	IF (NOT ${COMPILER_LIB_SEARCH_DIRS} STREQUAL "")
-		STRING(REGEX MATCH "/lib64/:|/lib64:|/lib64\n" HAS_LIB64 ${COMPILER_LIB_SEARCH_DIRS})
-		IF (NOT ${HAS_LIB64} STREQUAL "")
-			SET(LIB_DIR_SUFFIX "64")
-		ENDIF (NOT ${HAS_LIB64} STREQUAL "")
-	ENDIF (NOT ${COMPILER_LIB_SEARCH_DIRS} STREQUAL "")
-ENDIF (NOT DEFINED LIB_DIR_SUFFIX)
-
-# RPATH handling (see https://cmake.org/Wiki/CMake_RPATH_handling)
-# Note: RPATH only supported under Linux!
-SET(CMAKE_SKIP_BUILD_RPATH	FALSE)
-SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-SET(CMAKE_INSTALL_RPATH
-	"${CMAKE_INSTALL_PREFIX}/lib/opencog"
-	"${CMAKE_INSTALL_PREFIX}/lib/opencog/modules")
-
-SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# -------------------------------------------------
-# Install configuration
-
-# Only list install files that have actually changed.
-SET(CMAKE_INSTALL_MESSAGE "LAZY")
-
-# Set confdir and datadir
-IF (NOT DEFINED CONFDIR)
-	SET (CONFDIR "${CMAKE_INSTALL_PREFIX}/etc")
-ENDIF (NOT DEFINED CONFDIR)
-
-IF (NOT DEFINED DATADIR)
-	SET (DATADIR "${CMAKE_INSTALL_PREFIX}/share/opencog")
-ENDIF (NOT DEFINED DATADIR)
-
-ADD_DEFINITIONS(-DCONFDIR="${CONFDIR}")
-ADD_DEFINITIONS(-DDATADIR="${DATADIR}")
-
-# (re?)define MAN_INSTALL_DIR
-SET (MAN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/man")
 
 # ==========================================================
 # Decide what to build, based on the packages found.
@@ -296,10 +191,6 @@ IF (CXXTEST_FOUND AND HAVE_SERVER)
 			# TODO set it up so that we can pick to run coverage per test, or
 			# combined across all tests (the latter is MUCH faster). Use a define?
 			# There is coverage specific stuff in AddCxxTest.cmake now...
-			# -
-			# Depends on cogserver because RESTFulTest needs it
-			# and cmake has no way to add non-test dependencies to tests
-			DEPENDS tests cogserver
 			WORKING_DIRECTORY tests
 			COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure $(ARGS)
 
@@ -349,7 +240,7 @@ SET(CPACK_GENERATOR "DEB")
 SET(CPACK_PACKAGE_CONTACT "opencog@googlegroups.com")
 SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 SET(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/packages")
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Open Cognition Framework")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The OpenCog Network Server")
 SET(CPACK_PACKAGE_NAME "cogserver-dev")
 SET(CPACK_PACKAGE_VENDOR "opencog.org")
 SET(CPACK_PACKAGE_VERSION "${SEMANTIC_VERSION}-${UTC_DATE}")
@@ -357,18 +248,13 @@ SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 SET(CPACK_PACKAGE_FILE_NAME
 	"${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${PACKAGE_ARCHITECTURE}")
 SET(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
-SET(CPACK_PACKAGE_EXECUTABLES "cogserver" "The Open Cognition Framework")
+SET(CPACK_PACKAGE_EXECUTABLES "cogserver" "The OpenCog Network Server")
 
 ## Debian specific configurations
 SET(DEPENDENCY_LIST
 	"guile-2.2-dev (>= 2.2.2)"
 	"python3-dev (>= 3.6.7)"
-	"libboost-date-time-dev (>= ${MIN_BOOST})"
-	"libboost-filesystem-dev (>= ${MIN_BOOST})"
-	"libboost-program-options-dev (>= ${MIN_BOOST})"
 	"libboost-thread-dev (>= ${MIN_BOOST})"
-	"libboost-system-dev (>= ${MIN_BOOST})"
-	"libboost-random-dev (>= ${MIN_BOOST})"
 	"libstdc++6 (>= 4.7)"
 	"libcogutil-dev (>= 2.0.2)"
 	"atomspace-dev (>= 5.0.3)"
