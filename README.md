@@ -1,7 +1,9 @@
 OpenCog CogServer
 =================
 
-[![CircleCI](https://circleci.com/gh/opencog/cogserver.svg?style=svg)](https://circleci.com/gh/opencog/cogserver)
+opencog | singnet
+------- | -------
+[![CircleCI](https://circleci.com/gh/opencog/cogserver.svg?style=svg)](https://circleci.com/gh/opencog/cogserver) | [![CircleCI](https://circleci.com/gh/singnet/cogserver.svg?style=svg)](https://circleci.com/gh/singnet/cogserver)
 
 The OpenCog Cogserver is a network scheme/python command-line
 and job server for the [OpenCog framework](https://opencog.org).
