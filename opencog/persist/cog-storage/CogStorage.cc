@@ -93,5 +93,6 @@ void CogStorage::clear_stats(void)
 
 void CogStorage::print_stats(void)
 {
+}
 
 /* ============================= END OF FILE ================= */

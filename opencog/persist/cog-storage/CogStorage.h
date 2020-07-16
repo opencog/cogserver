@@ -41,6 +41,10 @@ namespace opencog
 
 class CogStorage : public BackingStore
 {
+	private:
+		void init(const char *);
+		std::string _uri;
+
 	public:
 		CogStorage(std::string uri);
 		CogStorage(const CogStorage&) = delete; // disable copying
