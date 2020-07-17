@@ -43,6 +43,20 @@ void CogStorage::removeAtom(const Handle& atom, bool recursive)
 	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
+/// Get the Value on the Atom at Key.
+ValuePtr CogStorage::get_value(const std::string& atom,
+                               const std::string& key)
+{
+printf("asking for key >>%s<<\n", key.c_str());
+	// This should not fail.
+	do_send("(cog-value (" + atom + ")" + key + ")\n");
+	std::string msg = do_recv();
+
+printf("got value %s\n", msg.c_str());
+// Use DHTAtomStorage::decodeStrValue() here ...
+	return nullptr;
+}
+
 Handle CogStorage::getNode(Type t, const char * str)
 {
 	std::string typena = nameserver().getTypeName(t) + " \"" + str + "\"";
@@ -60,7 +74,6 @@ Handle CogStorage::getNode(Type t, const char * str)
 	std::string get_keys = "(cog-keys (" + typena + "))\n";
 	do_send(get_keys);
 	msg = do_recv();
-printf("duude nowgot >>%s<<\n", msg.c_str());
 	if (0 == msg.compare(0, 2, "()"))
 		return h;
 
@@ -72,7 +85,7 @@ printf("duude nowgot >>%s<<\n", msg.c_str());
 	{
 		size_t last = msg.find(')', first);
 		std::string key = msg.substr(first, last);
-printf("dyooo >>%s<<\n", key.c_str());
+		ValuePtr v = get_value(typena, key);
 		first = msg.find('(', last);
 	}
 

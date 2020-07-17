@@ -44,9 +44,14 @@ class CogStorage : public BackingStore
 	private:
 		void init(const char *);
 		std::string _uri;
+
+		// Socket API
 		int _sockfd;
 		void do_send(const std::string&);
 		std::string do_recv(void);
+
+		// Utilities
+		ValuePtr get_value(const std::string&, const std::string&);
 
 	public:
 		CogStorage(std::string uri);

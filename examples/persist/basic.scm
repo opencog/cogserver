@@ -7,6 +7,7 @@
 
 (cogserver-open "cog://localhost")
 
-(Concept "a")
 
 (fetch-atom (Concept "b"))
+
+(Concept "a")
