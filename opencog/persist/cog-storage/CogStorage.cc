@@ -73,16 +73,33 @@ void CogStorage::init(const char * uri)
 	_sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 
 	if (0 > _sockfd)
+	{
+		int norr = errno;
+		free(servinfo);
 		throw IOException(TRACE_INFO, "Unable to create socket to host %s: %s",
-			host.c_str(), strerror(errno));
+			host.c_str(), strerror(norr));
+	}
 
 	rc = connect(_sockfd, servinfo->ai_addr, servinfo->ai_addrlen);
 	if (0 > rc)
+	{
+		int norr = errno;
+		free(servinfo);
 		throw IOException(TRACE_INFO, "Unable to connect to host %s: %s",
+			host.c_str(), strerror(norr));
+	}
+
+	free(servinfo);
+
+	// Get to the scheme prompt, but make it be silent.
+	std::string eval = "scm hush\n";
+	rc = send(_sockfd, eval.c_str(), eval.size(), 0);
+	if (0 > rc)
+		throw IOException(TRACE_INFO, "Unable to talk to cogserver at host %s: %s",
 			host.c_str(), strerror(errno));
 
-
-	printf("ok\n");
+	// Throw away the cogserver prompt.
+	do_recv();
 }
 
 CogStorage::CogStorage(std::string uri)
@@ -93,11 +110,48 @@ CogStorage::CogStorage(std::string uri)
 
 CogStorage::~CogStorage()
 {
+	if (connected())
+		close(_sockfd);
 }
 
 bool CogStorage::connected(void)
 {
 	return 0 < _sockfd;
+}
+
+/* ================================================================== */
+
+void CogStorage::do_send(const std::string& str)
+{
+	if (not connected())
+		throw IOException(TRACE_INFO, "Not connected to cogserver!");
+
+	int rc = send(_sockfd, str.c_str(), str.size(), 0);
+	if (0 > rc)
+		throw IOException(TRACE_INFO, "Unable to talk to cogserver: %s",
+			strerror(errno));
+}
+
+std::string CogStorage::do_recv()
+{
+	if (not connected())
+		throw IOException(TRACE_INFO, "Not connected to cogserver!");
+
+	char buf[4097];
+	int len = recv(_sockfd, buf, 4096, 0);
+
+	if (0 > len)
+		throw IOException(TRACE_INFO, "Unable to talk to cogserver: %s",
+			strerror(errno));
+	if (0 == len)
+	{
+		close(_sockfd);
+		_sockfd = 0;
+		throw IOException(TRACE_INFO, "Cogserver unexpectedly closed connection");
+	}
+
+	buf[len] = 0;
+	return buf;
 }
 
 /* ================================================================== */
@@ -119,6 +173,10 @@ void CogStorage::registerWith(AtomSpace* as)
 
 void CogStorage::unregisterWith(AtomSpace* as)
 {
+	if (connected())
+		close(_sockfd);
+	_sockfd = -1;
+
 	BackingStore::unregisterWith(as);
 }
 

@@ -41,6 +41,7 @@ Then create some atoms (if desired)
 ```
 $ guile
 scheme@(guile-user)> (use-modules (opencog))
+scheme@(guile-user)> (use-modules (opencog persist))
 scheme@(guile-user)> (use-modules (opencog persist-cog))
 scheme@(guile-user)> (cogserver-open "cog://example.com/")
 ```

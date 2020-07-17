@@ -1,4 +1,8 @@
 
+Simple Cogserver Backend
+------------------------
+Look at the examples in the [persist](persist) subdirectory.
+
 
 Deprecated examples:
 --------------------

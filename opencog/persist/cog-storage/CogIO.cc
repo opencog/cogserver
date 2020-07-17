@@ -42,7 +42,12 @@ void CogStorage::removeAtom(const Handle& atom, bool recursive)
 
 Handle CogStorage::getNode(Type t, const char * str)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	std::string req = "(cog-node '" + nameserver().getTypeName(t)
+		+ " \"" + str + "\")\n";
+	do_send(req);
+
+	std::string atom = do_recv();
+printf("duude got %s\n", atom.c_str());
 	return Handle();
 }
 
