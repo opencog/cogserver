@@ -6,7 +6,7 @@
  *
  * LICENSE:
  * SPDX-License-Identifier: AGPL-3.0-or-later
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License v3 as
  * published by the Free Software Foundation and including the exceptions
@@ -24,6 +24,9 @@
  */
 
 #include <opencog/atoms/base/Atom.h>
+#include <opencog/atoms/base/Node.h>
+#include <opencog/atoms/base/Link.h>
+#include <opencog/atoms/value/Value.h>
 #include <opencog/atomspace/AtomSpace.h>
 
 #include "CogStorage.h"
@@ -42,13 +45,38 @@ void CogStorage::removeAtom(const Handle& atom, bool recursive)
 
 Handle CogStorage::getNode(Type t, const char * str)
 {
-	std::string req = "(cog-node '" + nameserver().getTypeName(t)
-		+ " \"" + str + "\")\n";
-	do_send(req);
+	std::string typena = nameserver().getTypeName(t) + " \"" + str + "\"";
 
-	std::string atom = do_recv();
-printf("duude got %s\n", atom.c_str());
-	return Handle();
+	// Does the cogserver even know about this atom?
+	do_send("(cog-node '" + typena + ")\n");
+	std::string msg = do_recv();
+	if (0 == msg.compare(0, 2, "()"))
+		return Handle();
+
+	// Yes, the cogserver knows about this atom
+	Handle h = createNode(t, str);
+
+	// Get all of the keys.
+	std::string get_keys = "(cog-keys (" + typena + "))\n";
+	do_send(get_keys);
+	msg = do_recv();
+printf("duude nowgot >>%s<<\n", msg.c_str());
+	if (0 == msg.compare(0, 2, "()"))
+		return h;
+
+	// Loop over all the keys.
+	// This is quasi-fragile, depending on what the server returned.
+	// But it will do for now.
+	size_t first = 1;
+	while (std::string::npos != first)
+	{
+		size_t last = msg.find(')', first);
+		std::string key = msg.substr(first, last);
+printf("dyooo >>%s<<\n", key.c_str());
+		first = msg.find('(', last);
+	}
+
+	return h;
 }
 
 Handle CogStorage::getLink(Type t, const HandleSeq& hs)
