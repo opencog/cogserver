@@ -36,7 +36,10 @@ using namespace opencog;
 
 void CogStorage::storeAtom(const Handle& h, bool synchronous)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	std::string atom = "(cog-set-values! " + Sexpr::encode_atom(h) +
+		Sexpr::encode_atom_values(h) + ")\n";
+	do_send(atom);
+	std::string msg = do_recv();
 }
 
 void CogStorage::removeAtom(const Handle& atom, bool recursive)
