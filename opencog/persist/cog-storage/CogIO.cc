@@ -28,6 +28,7 @@
 #include <opencog/atoms/base/Link.h>
 #include <opencog/atoms/value/Value.h>
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/persist/sexpr/Sexpr.h>
 
 #include "CogStorage.h"
 
@@ -41,20 +42,6 @@ void CogStorage::storeAtom(const Handle& h, bool synchronous)
 void CogStorage::removeAtom(const Handle& atom, bool recursive)
 {
 	throw RuntimeException(TRACE_INFO, "Not implemented!");
-}
-
-/// Get the Value on the Atom at Key.
-ValuePtr CogStorage::get_value(const std::string& atom,
-                               const std::string& key)
-{
-printf("asking for key >>%s<<\n", key.c_str());
-	// This should not fail.
-	do_send("(cog-value (" + atom + ")" + key + ")\n");
-	std::string msg = do_recv();
-
-printf("got value %s\n", msg.c_str());
-// Use DHTAtomStorage::decodeStrValue() here ...
-	return nullptr;
 }
 
 Handle CogStorage::getNode(Type t, const char * str)
@@ -71,23 +58,11 @@ Handle CogStorage::getNode(Type t, const char * str)
 	Handle h = createNode(t, str);
 
 	// Get all of the keys.
-	std::string get_keys = "(cog-keys (" + typena + "))\n";
+	std::string get_keys = "(cog-keys->alist (" + typena + "))\n";
 	do_send(get_keys);
 	msg = do_recv();
-	if (0 == msg.compare(0, 2, "()"))
-		return h;
 
-	// Loop over all the keys.
-	// This is quasi-fragile, depending on what the server returned.
-	// But it will do for now.
-	size_t first = 1;
-	while (std::string::npos != first)
-	{
-		size_t last = msg.find(')', first);
-		std::string key = msg.substr(first, last);
-		ValuePtr v = get_value(typena, key);
-		first = msg.find('(', last);
-	}
+	Sexpr::decode_alist(h, msg);
 
 	return h;
 }

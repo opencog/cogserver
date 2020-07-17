@@ -50,9 +50,6 @@ class CogStorage : public BackingStore
 		void do_send(const std::string&);
 		std::string do_recv(void);
 
-		// Utilities
-		ValuePtr get_value(const std::string&, const std::string&);
-
 	public:
 		CogStorage(std::string uri);
 		CogStorage(const CogStorage&) = delete; // disable copying
