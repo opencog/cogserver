@@ -32,43 +32,53 @@ using namespace opencog;
 
 void CogStorage::storeAtom(const Handle& h, bool synchronous)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 void CogStorage::removeAtom(const Handle& atom, bool recursive)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 Handle CogStorage::getNode(Type t, const char * str)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 	return Handle();
 }
 
 Handle CogStorage::getLink(Type t, const HandleSeq& hs)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 	return Handle();
 }
 
 void CogStorage::loadType(AtomTable &table, Type atom_type)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 void CogStorage::getIncomingSet(AtomTable& table, const Handle& h)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 void CogStorage::getIncomingByType(AtomTable& table, const Handle& h, Type t)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 void CogStorage::loadAtomSpace(AtomTable &table)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 void CogStorage::storeAtomSpace(const AtomTable &table)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
 void CogStorage::load_atomspace(AtomSpace* as,
                                 const std::string& spacename)
 {
+	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }

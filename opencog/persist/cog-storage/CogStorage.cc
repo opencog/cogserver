@@ -27,6 +27,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
+
 #include "CogStorage.h"
 
 using namespace opencog;
@@ -47,9 +52,41 @@ void CogStorage::init(const char * uri)
 	// We expect the URI to be for the form
 	//    cog://ipv4-addr/atomspace-name
 	//    cog://ipv4-addr:port/atomspace-name
+
+	std::string host(uri + URIX_LEN);
+	size_t slash = host.find('/');
+	if (std::string::npos != slash)
+		host = host.substr(0, slash);
+
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	struct addrinfo *servinfo;
+	int rc = getaddrinfo(host.c_str(), "17001", &hints, &servinfo);
+	if (rc)
+		throw IOException(TRACE_INFO, "Unknown host %s: %s",
+			host.c_str(), strerror(rc));
+
+	_sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+
+	if (0 > _sockfd)
+		throw IOException(TRACE_INFO, "Unable to create socket to host %s: %s",
+			host.c_str(), strerror(errno));
+
+	rc = connect(_sockfd, servinfo->ai_addr, servinfo->ai_addrlen);
+	if (0 > rc)
+		throw IOException(TRACE_INFO, "Unable to connect to host %s: %s",
+			host.c_str(), strerror(errno));
+
+
+	printf("ok\n");
 }
 
 CogStorage::CogStorage(std::string uri)
+	: _sockfd(-1)
 {
 	init(uri.c_str());
 }
@@ -60,7 +97,7 @@ CogStorage::~CogStorage()
 
 bool CogStorage::connected(void)
 {
-	return true;
+	return 0 < _sockfd;
 }
 
 /* ================================================================== */
@@ -93,6 +130,7 @@ void CogStorage::clear_stats(void)
 
 void CogStorage::print_stats(void)
 {
+	printf("no stats yet\n");
 }
 
 /* ============================= END OF FILE ================= */
