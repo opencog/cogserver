@@ -61,7 +61,6 @@ Handle CogStorage::getNode(Type t, const char * str)
 	std::string get_keys = "(cog-keys->alist (" + typena + "))\n";
 	do_send(get_keys);
 	msg = do_recv();
-
 	Sexpr::decode_alist(h, msg);
 
 	return h;
@@ -69,8 +68,26 @@ Handle CogStorage::getNode(Type t, const char * str)
 
 Handle CogStorage::getLink(Type t, const HandleSeq& hs)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
-	return Handle();
+	std::string typena = nameserver().getTypeName(t) + " ";
+	for (const Handle& ho: hs)
+		typena += Sexpr::encode_atom(ho);
+
+	// Does the cogserver even know about this atom?
+	do_send("(cog-link '" + typena + ")\n");
+	std::string msg = do_recv();
+	if (0 == msg.compare(0, 2, "()"))
+		return Handle();
+
+	// Yes, the cogserver knows about this atom
+	Handle h = createLink(hs, t);
+
+	// Get all of the keys.
+	std::string get_keys = "(cog-keys->alist (" + typena + "))\n";
+	do_send(get_keys);
+	msg = do_recv();
+	Sexpr::decode_alist(h, msg);
+
+	return h;
 }
 
 void CogStorage::loadType(AtomTable &table, Type atom_type)
