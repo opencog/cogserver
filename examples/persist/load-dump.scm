@@ -10,6 +10,9 @@
 ; load-atoms-of-type TYPE -- to load only atoms of type TYPE
 ; load-atomspace -- load everything.
 ;
+; store-referers ATOM -- store all graphs that contain ATOM
+; store-atomspace -- store everything.
+;
 (use-modules (opencog) (opencog persist))
 (use-modules (opencog persist-cog))
 
@@ -32,3 +35,10 @@
 ; What the heck -- get everything.
 (load-atomspace)
 (cog-get-all-roots)
+
+; -------------------------------------------------
+; Lets create some more atoms, and the store everything.
+(Concept "foo" (stv 0.1 0.2))
+(Concept "bar" (stv 0.3 0.4))
+(Set (List (Set (List (Concept "bazzzz" (stv 0.5 0.6))))))
+(store-atomspace)
