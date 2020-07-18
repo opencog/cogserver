@@ -1,0 +1,307 @@
+/*
+ * tests/persist/dht/LargeZipfTest.cxxtest
+ *
+ * Emulate word-pair dataset with Zipfian incoming sets.
+ * This creates nodes with large incoming sets; database should
+ * not choke on these.
+ *
+ * Copyright (C) 2008, 2009, 2013, 2019 Linas Vepstas <linasvepstas@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cstdio>
+
+#include <opencog/atoms/atom_types/atom_types.h>
+#include <opencog/atoms/base/Atom.h>
+#include <opencog/atoms/base/Link.h>
+#include <opencog/atoms/base/Node.h>
+#include <opencog/atoms/truthvalue/CountTruthValue.h>
+#include <opencog/persist/dht/DHTAtomStorage.h>
+#include <opencog/persist/dht/DHTPersistSCM.h>
+
+#include <opencog/util/Logger.h>
+
+using namespace opencog;
+
+class LargeZipfUTest :  public CxxTest::TestSuite
+{
+	private:
+		AtomSpace *_as;
+		std::string uri;
+		std::string boot;
+		DHTAtomStorage *astore;
+
+#define NWORDS 5000
+		Handle hword[NWORDS];
+#define NPAIRS 45000
+		Handle hpair[NPAIRS];
+		int npairs; // actual number of pairs created.
+
+	public:
+
+		LargeZipfUTest(void);
+		~LargeZipfUTest();
+
+		void setUp(void);
+		void tearDown(void);
+
+		int filler_up(AtomSpace *);
+		void fetch_space(AtomSpace *);
+		void check_space(AtomSpace *, std::string dbgmsg);
+		void check_empty(AtomSpace *);
+		void atomCompare(AtomPtr, AtomPtr, std::string);
+
+		void test_atomspace(void);
+};
+
+LargeZipfUTest:: LargeZipfUTest(void)
+{
+	// logger().set_level(Logger::DEBUG);
+	logger().set_level(Logger::INFO);
+	logger().set_print_to_stdout_flag(true);
+
+	uri = "dht:///atomspace-dht-test";
+	boot = "dht://localhost:4555/";
+
+	// Create a singe DHT node that will act as
+	// as the repo for the duration of the test.
+	astore = new DHTAtomStorage("dht://:4555/");
+	if (!astore->connected())
+	{
+		logger().error("LargeZipfUTest: cannot setup a DHT node");
+		exit(1);
+	}
+}
+
+LargeZipfUTest::~LargeZipfUTest()
+{
+	delete astore;
+	// erase the log file if no assertions failed
+	if (!CxxTest::TestTracker::tracker().suiteFailed())
+		std::remove(logger().get_filename().c_str());
+}
+
+/*
+ * This is called once before each test, for each test (!!)
+ */
+void LargeZipfUTest::setUp(void)
+{
+	_as = new AtomSpace();
+}
+
+void LargeZipfUTest::tearDown(void)
+{
+	delete _as;
+}
+
+// ============================================================
+
+void LargeZipfUTest::atomCompare(AtomPtr a, AtomPtr b, std::string where)
+{
+	// printf("Check %s expect %s\n", where.c_str(), a->to_string().c_str());
+	TSM_ASSERT("No atom found", b != nullptr);
+
+	if (nullptr == b) return;
+
+	TSM_ASSERT_EQUALS("Type mismatch", a->get_type(), b->get_type());
+
+	if (a->is_node())
+	{
+		TSM_ASSERT_EQUALS("Name mismatch", a->get_name(), b->get_name());
+	}
+
+	if (a->is_link())
+	{
+		TSM_ASSERT_EQUALS("Arity mismatch", a->get_arity(), b->get_arity());
+		if (*a != *b)
+		{
+			printf("Mismatching la = %s\n", a->to_string().c_str());
+			printf("Mismatching lb = %s\n", b->to_string().c_str());
+			TSM_ASSERT_EQUALS("Link mis-match", a, b);
+		}
+	}
+
+	TruthValuePtr ta = a->getTruthValue();
+	TruthValuePtr tb = b->getTruthValue();
+	if (ta or tb)
+	{
+		TSM_ASSERT("Missing truth value", ta);
+		TSM_ASSERT("Missing truth value", tb);
+		if (ta and tb)
+		{
+			TSM_ASSERT("Truth value miscompare", (*ta)==(*tb));
+
+			if (not ((*ta) == (*tb)))
+			{
+				fprintf(stderr, "Error, truth value miscompare, "
+				   "ma=%f mb=%f ca=%f cb=%f\n",
+				   ta->get_mean(), tb->get_mean(),
+				   ta->get_confidence(), tb->get_confidence());
+			}
+		}
+	}
+}
+
+// ============================================================
+
+void LargeZipfUTest::fetch_space(AtomSpace *space)
+{
+	for (int w=0; w<NWORDS; w++)
+	{
+		Handle h = space->add_node(hword[w]->get_type(), hword[w]->get_name());
+		space->fetch_atom(h); // get the TV
+	}
+
+	for (int p=0; p<npairs; p++)
+	{
+		Handle h = space->add_link(hpair[p]->get_type(),
+		                           hpair[p]->getOutgoingSet());
+		space->fetch_atom(h); // get the TV
+	}
+}
+
+void LargeZipfUTest::check_space(AtomSpace *space, std::string dbgmsg)
+{
+	for (int w=0; w<NWORDS; w++)
+	{
+		Handle h = space->get_handle(hword[w]->get_type(), hword[w]->get_name());
+		atomCompare(hword[w], h, dbgmsg + "-word-" + std::to_string(w));
+	}
+
+	for (int p=0; p<npairs; p++)
+	{
+		Handle h = space->get_handle(hpair[p]->get_type(),
+		                             hpair[p]->getOutgoingSet());
+		atomCompare(hpair[p], h, dbgmsg + "pair-" + std::to_string(p));
+	}
+}
+
+void LargeZipfUTest::check_empty(AtomSpace *space)
+{
+	for (int w=0; w<NWORDS; w++)
+	{
+		Handle h = space->get_handle(hword[w]->get_type(), hword[w]->get_name());
+		TSM_ASSERT("Should not find this word", h == Handle::UNDEFINED);
+	}
+
+	for (int p=0; p<npairs; p++)
+	{
+		Handle h = space->get_handle(hpair[p]->get_type(),
+		                             hpair[p]->getOutgoingSet());
+		TSM_ASSERT("Should not find this pair", h == Handle::UNDEFINED);
+	}
+}
+
+// ============================================================
+
+int LargeZipfUTest::filler_up(AtomSpace *space)
+{
+	// Emulate a word, with a spelling that is not long, not short ...
+	std::string wrd = "Word-ishy ";
+	for (int w=0; w<NWORDS; w++)
+	{
+		hword[w] = space->add_node(CONCEPT_NODE, wrd + std::to_string(w));
+		TruthValuePtr tv(CountTruthValue::createTV(1, 0, ((int) NWORDS/(w+1))));
+		hword[w]->setTruthValue(tv);
+	}
+
+	// Emulate a zipfian distribution.
+	// Half of words linked once.  rpt = 1, wmax = NWORDS
+	// quarter of words linked twice.  rpt = 2, wmax = NWORDS/2
+	// eighth of words linked 4 times.  rpt = 4, wmax = NWORDS/4
+	// 1/16 of words linked 8 times. rpt = 8, wmax = NWORDS/8
+	int w1 = 0;
+	int w2 = 0;
+	int wmax = NWORDS;
+	int rpt = 1;
+	int again = 0;
+	int p = 0;
+	while (p<NPAIRS)
+	{
+		hpair[p] = space->add_link(LIST_LINK, hword[w1], hword[w2]);
+		TruthValuePtr tv(CountTruthValue::createTV(1, 0, wmax));
+		hpair[p]->setTruthValue(tv);
+
+		w2++;
+		p++;
+		if (wmax <= w2)
+		{
+			w2=0;
+			w1++;
+			again ++;
+			if (rpt <= again)
+			{
+				again = 0;
+				rpt *= 2;
+			}
+			wmax = NWORDS / (double) (w1 + 1);
+			if (NWORDS <= w1) break;
+		}
+	}
+	npairs = p;
+	logger().info("Created %d words and %d pairs", NWORDS, npairs);
+
+	for (int i=0; i<20; i++)
+	{
+		logger().info("Word %d has incoming size=%zu", i,
+		              hword[i]->getIncomingSetSize());
+	}
+
+	return p;
+}
+
+// ============================================================
+
+void LargeZipfUTest::test_atomspace(void)
+{
+	logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+	DHTPersistSCM* _pm = new DHTPersistSCM(_as);
+	TSM_ASSERT("Persist Module not loaded", _pm);
+
+	_pm->do_open(uri);
+
+	/* Create a large number of atoms */
+	filler_up(_as);
+
+	/* Verify that the atoms were added */
+	check_space(_as, "verify-add");
+
+	/* Push all atoms out to the SQL DB */
+	_as->store_atomspace();
+
+	/* Extract atoms from the AtomSpace. This does not delete them from
+	 * the SQL storage, though; to do that, they must be deleted, not
+	 * extracted.
+	 */
+	_as->barrier();
+	_as->clear();
+	TSM_ASSERT("Non-empty atomspace", 0 == _as->get_size());
+
+	/* Verify that the atoms can still be fetched from storage. */
+	fetch_space(_as);
+	check_space(_as, "verify-fetch");
+
+	/* Do it again, for good luck.  */
+	_as->clear();
+	TSM_ASSERT("Non-empty atomspace", 0 == _as->get_size());
+
+	/* Verify that the atoms can still be fetched from storage. */
+	fetch_space(_as);
+	check_space(_as, "ver-again");
+
+	/* Kill data for good */
+	_as->clear();
+	TSM_ASSERT("Non-empty atomspace", 0 == _as->get_size());
+
+	/* Verify that the atoms are no longer being found. */
+	check_empty(_as);
+
+	/* Orderly shutdown avoids warning in Postgres log file. */
+	_pm->do_close();
+
+	delete _pm;
+	logger().debug("END TEST: %s", __FUNCTION__);
+}
+
+/* ============================= END OF FILE ================= */

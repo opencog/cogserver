@@ -1,0 +1,417 @@
+/*
+ * tests/persist/dht/BasicSaveUTest.cxxtest
+ *
+ * Most basic, simplest sniff test, saves and restores a few atoms.
+ * Copied from tests/persist/sql/BasicSaveUTest.cxxtest and
+ * lightly modified.
+ *
+ * Copyright (C) 2008, 2009, 2019 Linas Vepstas <linasvepstas@gmail.com>
+ *
+ * LICENSE:
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+#include <cstdio>
+
+#include <opencog/atoms/base/Atom.h>
+#include <opencog/atoms/base/Link.h>
+#include <opencog/atoms/base/Node.h>
+#include <opencog/atoms/atom_types/atom_types.h>
+#include <opencog/atoms/truthvalue/SimpleTruthValue.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/persist/dht/DHTAtomStorage.h>
+
+#include <opencog/util/Logger.h>
+
+using namespace opencog;
+
+class BasicSaveUTest :  public CxxTest::TestSuite
+{
+    private:
+        AtomSpace *as;
+        std::string uri;
+        std::string boot;
+        DHTAtomStorage *astore;
+
+        Handle n1[10];
+        Handle n2[10];
+        Handle n3[10];
+        Handle n4[10];
+        Handle   l[10];
+        AtomPtr a1[10];
+        AtomPtr a2[10];
+        AtomPtr a3[10];
+        AtomPtr a4[10];
+        AtomPtr al[10];
+
+    public:
+
+        BasicSaveUTest(void)
+        {
+            logger().set_level(Logger::DEBUG);
+            logger().set_print_to_stdout_flag(true);
+
+            uri = "dht:///atomspace-dht-test";
+            // boot = "dht://localhost:4444/";
+            boot = "dht://localhost:4555/";
+
+            // Create a singe DHT node that will act as
+				// as the repo for the duration of the test.
+            astore = new DHTAtomStorage("dht://:4555/");
+            if (!astore->connected())
+            {
+                logger().error("BasicSaveUTest: cannot setup a DHT node");
+                exit(1);
+            }
+            // astore->dht_bootstrap("dht://localhost:4444/");
+            // printf("Repo:\n%s\n", astore->dht_node_info().c_str());
+        }
+
+        ~BasicSaveUTest()
+        {
+            delete astore;
+            // erase the log file if no assertions failed
+            if (!CxxTest::TestTracker::tracker().suiteFailed())
+                std::remove(logger().get_filename().c_str());
+        }
+
+        void setUp(void);
+        void tearDown(void);
+
+        void single_atom_save_restore(std::string id);
+        void add_to_table(int, AtomTable *, std::string id);
+        void check_table(int, AtomTable *, std::string id);
+
+        void test_single_atom(void);
+        void test_fresh_atom(void);
+        void test_table(void);
+};
+
+/*
+ * This is called once before each test, for each test (!!)
+ */
+void BasicSaveUTest::setUp(void)
+{
+    as = new AtomSpace();
+}
+
+void BasicSaveUTest::tearDown(void)
+{
+    delete as;
+}
+
+// ============================================================
+
+static void atomCompare(AtomPtr a, AtomPtr b, const char* where)
+{
+    printf("Testing at %s\n", where);
+    TSM_ASSERT("No atom found", b != nullptr);
+    if (nullptr == b) return;
+
+    TSM_ASSERT_EQUALS("Type mismatch", a->get_type(), b->get_type());
+
+    NodePtr na(NodeCast(a));
+    NodePtr nb(NodeCast(b));
+    if (na and nb)
+    {
+        TSM_ASSERT_EQUALS("Name mismatch", na->get_name(), nb->get_name());
+    }
+
+    LinkPtr la(LinkCast(a));
+    LinkPtr lb(LinkCast(b));
+    if (la and lb)
+    {
+        TSM_ASSERT_EQUALS("Arity mismatch", la->get_arity(), lb->get_arity());
+        if (*la != *lb)
+        {
+            printf("Mismatching la = %s\n", la->to_string().c_str());
+            printf("Mismatching lb = %s\n", lb->to_string().c_str());
+            TSM_ASSERT_EQUALS("Link mis-match", la, lb);
+        }
+    }
+
+    TruthValuePtr ta = a->getTruthValue();
+    TruthValuePtr tb = b->getTruthValue();
+    if (ta or tb)
+    {
+        TSM_ASSERT("Missing truth value", ta);
+        TSM_ASSERT("Missing truth value", tb);
+        if (ta and tb)
+        {
+            TSM_ASSERT("Truth value miscompare", (*ta)==(*tb));
+
+            if (not ((*ta) == (*tb)))
+            {
+                fprintf(stderr, "Error, truth value miscompare, "
+                    "ma=%f mb=%f ca=%f cb=%f\n",
+                    ta->get_mean(), tb->get_mean(),
+                    ta->get_confidence(), tb->get_confidence());
+            }
+        }
+    }
+}
+
+// ============================================================
+/**
+ * A simple test case that tests the save and restore of
+ * a couple of nodes and a link. Does not test atomtable/atomspace at all.
+ */
+void BasicSaveUTest::single_atom_save_restore(std::string id)
+{
+    DHTAtomStorage *store = new DHTAtomStorage(uri);
+    store->dht_bootstrap(boot);
+    if (!store->connected())
+    {
+        logger().debug("single_atom_save_restore: cannot connect to db");
+        return;
+    }
+    // printf("Single save/restore:\n%s\n", store->dht_node_info().c_str());
+
+    // Create an atom ...
+    AtomPtr a(createNode(SCHEMA_NODE, id + "someNode"));
+    TruthValuePtr stv(SimpleTruthValue::createTV(0.55, 0.6));
+    a->setTruthValue(stv);
+
+    Handle h = a->get_handle();
+
+    TSM_ASSERT("Bad Handle", nullptr != h);
+
+    // Store the atom ...
+    store->storeAtom(h, true);
+    printf("Done storing single node\n");
+
+    // Fetch it back ...
+    std::string nam = id + "someNode";
+    Handle b = store->getNode(SCHEMA_NODE, nam.c_str());
+    printf("Done fetching single node\n");
+
+    // Are they equal ??
+    atomCompare(a, b, "Single node save-restore");
+
+    // Create a second atom, connect it to the first
+    // with a link. Save it, fetch it ... are they equal?
+    AtomPtr a2(createNode(SCHEMA_NODE, id + "otherNode"));
+    store->storeAtom(a2->get_handle(), true);
+
+    HandleSeq hvec;
+    hvec.push_back(a->get_handle());
+    hvec.push_back(a2->get_handle());
+
+    Handle l(createLink(hvec, LIST_LINK));
+    store->storeAtom(l->get_handle(), true);
+    printf("Done storing single link\n");
+
+    Handle hl = store->getLink(LIST_LINK, hvec);
+    atomCompare(l, hl, "Single link save-restore");
+    printf("Done fetching single link\n");
+
+    store->kill_data();
+    delete store;
+}
+
+// ============================================================
+
+void BasicSaveUTest::add_to_table(int idx, AtomTable *table, std::string id)
+{
+    // Create an atom ...
+    n1[idx] = createNode(SCHEMA_NODE, id + "fromNode");
+    TruthValuePtr stv(SimpleTruthValue::createTV(0.11, 1.0/(100.0+idx)));
+    n1[idx]->setTruthValue(stv);
+    n1[idx] = table->add(n1[idx], false);
+    a1[idx] = n1[idx];
+
+    n2[idx] = createNode(SCHEMA_NODE, id + "toNode");
+    TruthValuePtr stv2(SimpleTruthValue::createTV(0.22, 1.0/(200.0+idx)));
+    n2[idx]->setTruthValue(stv2);
+    n2[idx] = table->add(n2[idx], false);
+    a2[idx] = n2[idx];
+
+    // ODBC fails when there is a question mark in the text.
+    // Sad but painfully true.
+    std::string qmark = "? ";
+    n3[idx] = createNode(SCHEMA_NODE, qmark + id + "third ? wheel");
+
+    // We need to test crazy-large and crazy-small float point values.
+    TruthValuePtr stv3(SimpleTruthValue::createTV(1.0e33/3.0, (1.0e-30)/(300.0+idx)));
+    n3[idx]->setTruthValue(stv3);
+    n3[idx] = table->add(n3[idx], false);
+    a3[idx] = n3[idx];
+
+    // The NumberNode will go through the AtomTable clone factory
+    // and should thus elicit any errors in clone uuid handling.
+    char buf[40]; sprintf(buf, "%f", idx+0.14159265358979);
+    n4[idx] = createNode(NUMBER_NODE, buf);
+
+    // We need to test crazy-large and crazy-small float point values.
+    TruthValuePtr stv4(SimpleTruthValue::createTV((4.0e-200)/9.0, 1.0e40/(400.0+idx)));
+    n4[idx]->setTruthValue(stv4);
+    n4[idx] = table->add(n4[idx], false);
+    a4[idx] = n4[idx];
+
+    HandleSeq hvec;
+    hvec.push_back(a1[idx]->get_handle());
+    hvec.push_back(a2[idx]->get_handle());
+    hvec.push_back(a3[idx]->get_handle());
+    hvec.push_back(a4[idx]->get_handle());
+
+    l[idx] = createLink(hvec, SET_LINK);
+    l[idx] = table->add(l[idx], false);
+    al[idx] = l[idx];
+}
+
+void BasicSaveUTest::check_table(int idx, AtomTable *table, std::string id)
+{
+    Handle hb1 = table->getHandle(Handle(n1[idx]));
+    atomCompare(a1[idx], hb1, "check_table hb1");
+
+    Handle hb2 = table->getHandle(Handle(n2[idx]));
+    atomCompare(a2[idx], hb2, "check_table hb2");
+
+    Handle hb3 = table->getHandle(Handle(n3[idx]));
+    atomCompare(a3[idx], hb3, "check_table hb3");
+
+    Handle hb4 = table->getHandle(Handle(n4[idx]));
+    atomCompare(a4[idx], hb4, "check_table hb4");
+
+    HandleSeq hvec;
+    hvec.push_back(hb1);
+    hvec.push_back(hb2);
+    hvec.push_back(hb3);
+    hvec.push_back(hb4);
+
+    Handle lb(createLink(hvec, SET_LINK));
+    Handle hlb = table->getHandle(lb);
+    atomCompare(al[idx], hlb, "check_table hlb");
+}
+
+// ============================================================
+
+void BasicSaveUTest::test_single_atom(void)
+{
+    logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+
+    // Trash the contents of the database.
+    single_atom_save_restore("aaa ");
+    single_atom_save_restore("bbb ");
+    single_atom_save_restore("ccc ");
+    single_atom_save_restore("ddd ");
+    single_atom_save_restore("eee ");
+    single_atom_save_restore("$$$ ");
+
+    logger().debug("END TEST: %s", __FUNCTION__);
+}
+
+void BasicSaveUTest::test_fresh_atom(void)
+{
+    logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+    DHTAtomStorage *store = new DHTAtomStorage(uri);
+    store->dht_bootstrap(boot);
+    if (!store->connected())
+    {
+        logger().debug("single_atom_save_restore: cannot connect to db");
+        return;
+    }
+
+    Handle ha(createNode(CONCEPT_NODE, "electrical"));
+    Handle hb(createNode(CONCEPT_NODE, "energy"));
+
+    // Store a ListLink with stuff in it.
+    Handle lf(createLink(LIST_LINK, ha, hb));
+    lf->setTruthValue(SimpleTruthValue::createTV(0.55, 0.6));
+    store->storeAtom(lf, true);
+
+    // Store an empty ListLink.
+    Handle le(createLink(HandleSeq(), LIST_LINK));
+    le->setTruthValue(SimpleTruthValue::createTV(0.1, 0.9));
+    store->storeAtom(le, true);
+
+    // Now get them back.  Get empty after full.
+    Handle hf(store->getLink(LIST_LINK, {ha, hb}));
+    atomCompare(lf, hf, "Fully Fresh");
+
+    Handle he(store->getLink(LIST_LINK, HandleSeq()));
+
+    printf("Expecting %s\n", le->to_string().c_str());
+
+    if (he) printf("Got %s\n", he->to_string().c_str());
+    atomCompare(le, he, "Empty Fresh");
+
+    store->kill_data();
+    delete store;
+
+    logger().debug("END TEST: %s", __FUNCTION__);
+}
+
+void BasicSaveUTest::test_table()
+{
+    logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+    // Use a distinct atomspace name for this test; that's because
+    // currently, kill_data() doesn't work, and the test space is
+    // polluted.
+    uri += "-table";
+    DHTAtomStorage *store = new DHTAtomStorage(uri);
+    store->dht_bootstrap(boot);
+    if (!store->connected())
+    {
+        logger().debug("test_table: cannot connect to db");
+        return;
+    }
+
+    AtomSpace *as1 = new AtomSpace();
+    AtomTable *table1 = &as1->get_atomtable();
+    store->registerWith(as1);
+
+    int idx = 0;
+    add_to_table(idx++, table1, "AA-aa-wow ");
+    add_to_table(idx++, table1, "BB-bb-wow ");
+    add_to_table(idx++, table1, "CC-cc-wow ");
+    add_to_table(idx++, table1, "DD-dd-wow ");
+    add_to_table(idx++, table1, "EE-ee-wow ");
+
+    store->storeAtomSpace(*table1);
+    size_t num_stored = table1->getSize();
+    // table1->print();
+#ifdef DOPRT
+    HandleSet hset;
+    table1->getHandleSetByType(hset, ATOM, true, false);
+    for (auto h: hset) {
+        printf("Store table has %s\n", h->to_string().c_str());
+    }
+#endif
+    delete store;
+    delete as1;
+    printf("Done storing table; size=%lu\n", num_stored);
+
+    // Reopen connection, and load the atom table.
+    store = new DHTAtomStorage(uri);
+    store->dht_bootstrap(boot);
+    TSM_ASSERT("Not connected to database", store->connected());
+
+    AtomSpace *as2 = new AtomSpace();
+    AtomTable *table2 = &as2->get_atomtable();
+    store->registerWith(as2);
+
+    store->loadAtomSpace(*table2);
+    // table2->print();
+    size_t num_fetched = table2->getSize();
+    printf("test_table: Done loading table; fetched %lu, expected %lu\n",
+           num_fetched, num_stored);
+    // One extra, for the (PredicateNode "*-TruthValueKey-*")
+    TSM_ASSERT("Wrong number of atoms fetched", num_fetched == num_stored+1);
+
+    idx = 0;
+    check_table(idx++, table2, "aaa ");
+    check_table(idx++, table2, "bbb ");
+    check_table(idx++, table2, "ccc ");
+    check_table(idx++, table2, "ddd ");
+    check_table(idx++, table2, "eee ");
+
+    store->kill_data();
+    delete store;
+    delete as2;
+    logger().debug("END TEST: %s", __FUNCTION__);
+}
+
+/* ============================= END OF FILE ================= */

@@ -1,0 +1,791 @@
+/*
+ * tests/persist/dht/ValueSaveUTest.cxxtest
+ *
+ * Test of save and restore of generic values.
+ * Ported from tests/persist/sql/multi-driver/ValueSaveUTest.cxxtest
+ *
+ * Copyright (C) 2008, 2009, 2017, 2019 Linas Vepstas <linasvepstas@gmail.com>
+ *
+ * LICENSE:
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+#include <cstdio>
+
+#include <opencog/atoms/base/Atom.h>
+#include <opencog/atoms/base/Link.h>
+#include <opencog/atoms/base/Node.h>
+#include <opencog/atoms/atom_types/atom_types.h>
+#include <opencog/atomspace/AtomSpace.h>
+
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/LinkValue.h>
+#include <opencog/atoms/value/StringValue.h>
+#include <opencog/atoms/base/Valuation.h>
+
+#include <opencog/atoms/truthvalue/SimpleTruthValue.h>
+
+#include <opencog/persist/dht/DHTAtomStorage.h>
+
+#include <opencog/util/Logger.h>
+
+using namespace opencog;
+
+class ValueSaveUTest :  public CxxTest::TestSuite
+{
+	private:
+		std::string uri;
+		std::string boot;
+		DHTAtomStorage *astore;
+
+	public:
+
+		ValueSaveUTest(void)
+		{
+			logger().set_level(Logger::DEBUG);
+			logger().set_print_to_stdout_flag(true);
+
+			uri = "dht:///atomspace-dht-test";
+			boot = "dht://localhost:4555/";
+
+			// Create a singe DHT node that will act as
+			// as the repo for the duration of the test.
+			astore = new DHTAtomStorage("dht://:4555/");
+			if (!astore->connected())
+			{
+				logger().error("ValueSaveUTest: cannot setup a DHT node");
+				exit(1);
+			}
+		}
+
+		~ValueSaveUTest()
+		{
+			delete astore;
+			// erase the log file if no assertions failed
+			if (!CxxTest::TestTracker::tracker().suiteFailed())
+				std::remove(logger().get_filename().c_str());
+		}
+
+		void setUp(void);
+		void tearDown(void);
+
+		void test_single_atom_save();
+		void test_save_restore(bool);
+		void check_one(ValuePtr, bool);
+		void test_load_by_type();
+		void test_link_by_type();
+		void test_incoming();
+		void test_load_by_key(bool);
+};
+
+/*
+ * This is called once before each test, for each test (!!)
+ */
+void ValueSaveUTest::setUp(void) {}
+
+void ValueSaveUTest::tearDown(void) {}
+
+// ============================================================
+/**
+ * A simple test case that tests the saving of various values.
+ * Test passes if the save succeeds; the accuracy of the save
+ * is not tested (i.e. there's no restore; that's in the next test.
+ */
+void ValueSaveUTest::test_single_atom_save()
+{
+	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	AtomSpace* as = new AtomSpace();
+	store->registerWith(as);
+
+	Handle key = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle atom = as->add_node(CONCEPT_NODE, "some node");
+
+	// Store the key and the atom, so as to avoid any UUID
+	// confusions.
+	as->store_atom(key);
+	as->store_atom(atom);
+	as->barrier();
+
+	// --------------------
+	// Now set some values
+	ValuePtr pvf = createFloatValue(
+		std::vector<double>({1.12345678901234567, 2.12345678901234567e35,
+		                     3.09876543210987654e200}));
+
+	atom->setValue(key, pvf);
+	as->store_atom(atom);
+	as->barrier();
+
+	// --------------------
+	ValuePtr pvs = createStringValue(
+		std::vector<std::string>({"aaa", "bb bb bb", "ccc ccc ccc"}));
+
+	atom->setValue(key, pvs);
+	as->store_atom(atom);
+	as->barrier();
+
+	// --------------------
+	ValuePtr pvl = createLinkValue(
+		std::vector<ValuePtr>({pvf, pvs}));
+
+	atom->setValue(key, pvl);
+	as->store_atom(atom);
+	as->barrier();
+
+	// --------------------
+	ValuePtr pvl2 = createLinkValue(
+		std::vector<ValuePtr>({pvl, pvl, pvf, pvs}));
+
+	atom->setValue(key, pvl2);
+	as->store_atom(atom);
+	as->barrier();
+
+	delete as;
+	delete store;
+}
+
+// ============================================================
+/**
+ * Similar to above, but attempts to verify that the saved
+ * values are correct.
+ */
+void ValueSaveUTest::check_one(ValuePtr pap, bool fetchkey)
+{
+	Handle bkey(createNode(PREDICATE_NODE, "some pred key"));
+	Handle batom(createNode(CONCEPT_NODE, "some node"));
+
+	// ------
+	// First, save the value
+	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	AtomSpace* as = new AtomSpace();
+	store->registerWith(as);
+
+	Handle key = as->fetch_atom(bkey);
+	Handle atom = as->fetch_atom(batom);
+	printf ("Setup atom %s\n", atom->to_string().c_str());
+	printf ("Vals %s\n", atom->valuesToString().c_str());
+
+	atom->setValue(key, pap);
+	as->store_atom(atom);
+	as->barrier();
+
+	printf ("Stored atom %s\n", atom->to_string().c_str());
+	printf ("Stored vals %s\n", atom->valuesToString().c_str());
+
+	delete as;
+	delete store;
+
+	// ---------------------------------
+	// Now, fetch the value and compare.
+	store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	as = new AtomSpace();
+	store->registerWith(as);
+
+	// Storage uses a different code path if the key is not yet
+	// known when the values are fetched.  Test this code path.
+	if (fetchkey) key = as->fetch_atom(bkey);
+	atom = as->fetch_atom(batom);
+
+	printf("Got atom %s\n", atom->to_string().c_str());
+	printf("Got vals %s\n", atom->valuesToString().c_str());
+	ValuePtr fap = atom->getValue(key);
+
+	printf("Expecting %s\n", pap->to_string().c_str());
+	TS_ASSERT(*pap == *fap);
+
+	delete as;
+	delete store;
+}
+
+void ValueSaveUTest::test_save_restore(bool fkey)
+{
+	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	AtomSpace* as = new AtomSpace();
+	store->registerWith(as);
+
+	Handle key = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle atom = as->add_node(CONCEPT_NODE, "some node");
+
+	// Store the key and the atom, so as to avoid any UUID
+	// confusions.
+	as->store_atom(key);
+	as->store_atom(atom);
+	as->barrier();
+
+	// --------------------
+	// Now set some values
+	ValuePtr pvf = createFloatValue(
+		std::vector<double>({1.6543210987654321, 2.67890123456789012e-35,
+		                     3.2109876543210987e-200}));
+
+	check_one(pvf, fkey);
+
+	// --------------------
+	ValuePtr pvs = createStringValue(
+		std::vector<std::string>({"aaa", "bb bb bb", "ccc ccc ccc"}));
+
+	check_one(pvs, fkey);
+
+	// --------------------
+	ValuePtr pvl = createLinkValue(
+		std::vector<ValuePtr>({pvf, pvs}));
+
+	check_one(pvl, fkey);
+
+	// --------------------
+	ValuePtr pvl2 = createLinkValue(
+		std::vector<ValuePtr>({pvl, pvl, pvf, pvs}));
+
+	check_one(pvl2, fkey);
+
+	delete as;
+	delete store;
+}
+
+// ============================================================
+
+// Test the fetch_all_atoms_of_type() method in the atomspace.
+// The fetch should restore the truth values, and the other values,
+// as well.  This tests the fetching of nodes.
+void ValueSaveUTest::test_load_by_type()
+{
+	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	AtomSpace* as = new AtomSpace();
+	store->registerWith(as);
+
+	Handle key = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle af = as->add_node(CONCEPT_NODE, "float node");
+	Handle at = as->add_node(CONCEPT_NODE, "string node");
+	Handle al = as->add_node(CONCEPT_NODE, "link depth-1 node");
+	Handle av = as->add_node(CONCEPT_NODE, "link depth-2 node");
+
+	// --------------------
+	// Now set some values
+	ValuePtr pvf = createFloatValue(
+		std::vector<double>({1.1098765432109876, 2.1234567890123456e37,
+		                     3.2109876543210987e-250}));
+	af->setValue(key, pvf);
+
+	TruthValuePtr tf(SimpleTruthValue::createTV(0.11, 100));
+	af->setTruthValue(tf);
+
+	// --------------------
+	ValuePtr pvt = createStringValue(
+		std::vector<std::string>({"aaa", "bb bb bb", "ccc ccc ccc"}));
+	at->setValue(key, pvt);
+
+	TruthValuePtr tt(SimpleTruthValue::createTV(0.22, 200));
+	at->setTruthValue(tt);
+
+	// --------------------
+	ValuePtr pvl = createLinkValue(
+		std::vector<ValuePtr>({pvf, pvt}));
+	al->setValue(key, pvl);
+
+	TruthValuePtr tl(SimpleTruthValue::createTV(0.33, 300));
+	al->setTruthValue(tl);
+
+	// --------------------
+	ValuePtr pvv = createLinkValue(
+		std::vector<ValuePtr>({pvl, pvl, pvf, pvt}));
+	av->setValue(key, pvv);
+
+	TruthValuePtr tv(SimpleTruthValue::createTV(0.44, 400));
+	av->setTruthValue(tv);
+
+	// --------------------
+	// Save, and close things down.
+	as->store_atom(af);
+	as->store_atom(at);
+	as->store_atom(al);
+	as->store_atom(av);
+	as->barrier();
+
+	delete as;
+	delete store;
+
+	// --------------------
+	// Start it up again.
+
+	store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	as = new AtomSpace();
+	store->registerWith(as);
+
+	// --------------------
+	// Fetch by type. This is what we are testing.
+	as->fetch_all_atoms_of_type(CONCEPT_NODE);
+	TSM_ASSERT("Wrong number of Atoms fetched!", as->get_size() == 5);
+
+	Handle gkey = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle gaf = as->add_node(CONCEPT_NODE, "float node");
+	Handle gat = as->add_node(CONCEPT_NODE, "string node");
+	Handle gal = as->add_node(CONCEPT_NODE, "link depth-1 node");
+	Handle gav = as->add_node(CONCEPT_NODE, "link depth-2 node");
+
+	TS_ASSERT(*gaf == *af);
+	TS_ASSERT(*gat == *at);
+	TS_ASSERT(*gal == *al);
+	TS_ASSERT(*gav == *av);
+
+	TruthValuePtr gtf = gaf->getTruthValue();
+	TruthValuePtr gtt = gat->getTruthValue();
+	TruthValuePtr gtl = gal->getTruthValue();
+	TruthValuePtr gtv = gav->getTruthValue();
+
+	printf("Wanted: %s\n", tf->to_string().c_str());
+	printf("Got:    %s\n", gtf->to_string().c_str());
+	TS_ASSERT(*gtf == *tf);
+	TS_ASSERT(*gtt == *tt);
+	TS_ASSERT(*gtl == *tl);
+	TS_ASSERT(*gtv == *tv);
+
+	ValuePtr gpf = gaf->getValue(gkey);
+	ValuePtr gpt = gat->getValue(gkey);
+	ValuePtr gpl = gal->getValue(gkey);
+	ValuePtr gpv = gav->getValue(gkey);
+
+	TS_ASSERT(*gpf == *pvf);
+	TS_ASSERT(*gpt == *pvt);
+	TS_ASSERT(*gpl == *pvl);
+	TS_ASSERT(*gpv == *pvv);
+
+	// --------------------
+	delete as;
+	delete store;
+}
+
+// ============================================================
+
+// Test the fetch_all_atoms_of_type() method in the atomspace.
+// The fetch should restore the truth values, and the other values,
+// as well.  This tests the fetching of links. This differs from
+// the above, in that the values of the outgoing set should NOT
+// be fetched.
+void ValueSaveUTest::test_link_by_type()
+{
+	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	AtomSpace* as = new AtomSpace();
+	store->registerWith(as);
+
+	Handle key = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle af = as->add_node(CONCEPT_NODE, "a float node");
+	Handle at = as->add_node(CONCEPT_NODE, "a string node");
+	Handle al = as->add_node(CONCEPT_NODE, "a depth-1 node");
+	Handle av = as->add_node(CONCEPT_NODE, "a depth-2 node");
+
+	Handle bf = as->add_node(CONCEPT_NODE, "b float node");
+	Handle bt = as->add_node(CONCEPT_NODE, "b string node");
+	Handle bl = as->add_node(CONCEPT_NODE, "b depth-1 node");
+	Handle bv = as->add_node(CONCEPT_NODE, "b depth-2 node");
+
+	Handle cf = as->add_link(LIST_LINK, {af, bf});
+	Handle ct = as->add_link(LIST_LINK, {at, bt});
+	Handle cl = as->add_link(LIST_LINK, {al, bl});
+	Handle cv = as->add_link(LIST_LINK, {av, bv});
+
+	// --------------------
+	// Now set some values
+	ValuePtr pvf = createFloatValue(
+		std::vector<double>({1.1098765432109876, 2.1234567890123456e37,
+		                     3.2109876543210987e-250}));
+	af->setValue(key, pvf);
+	bf->setValue(key, pvf);
+	cf->setValue(key, pvf);
+
+	TruthValuePtr tf(SimpleTruthValue::createTV(0.11, 100));
+	af->setTruthValue(tf);
+	bf->setTruthValue(tf);
+	cf->setTruthValue(tf);
+
+	// --------------------
+	ValuePtr pvt = createStringValue(
+		std::vector<std::string>({"aaa", "bb bb bb", "ccc ccc ccc"}));
+	at->setValue(key, pvt);
+	bt->setValue(key, pvt);
+	ct->setValue(key, pvt);
+
+	TruthValuePtr tt(SimpleTruthValue::createTV(0.22, 200));
+	at->setTruthValue(tt);
+	bt->setTruthValue(tt);
+	ct->setTruthValue(tt);
+
+	// --------------------
+	ValuePtr pvl = createLinkValue(
+		std::vector<ValuePtr>({pvf, pvt}));
+	al->setValue(key, pvl);
+	bl->setValue(key, pvl);
+	cl->setValue(key, pvl);
+
+	TruthValuePtr tl(SimpleTruthValue::createTV(0.33, 300));
+	al->setTruthValue(tl);
+	bl->setTruthValue(tl);
+	cl->setTruthValue(tl);
+
+	// --------------------
+	ValuePtr pvv = createLinkValue(
+		std::vector<ValuePtr>({pvl, pvl, pvf, pvt}));
+	av->setValue(key, pvv);
+	bv->setValue(key, pvv);
+	cv->setValue(key, pvv);
+
+	TruthValuePtr tv(SimpleTruthValue::createTV(0.44, 400));
+	av->setTruthValue(tv);
+	bv->setTruthValue(tv);
+	cv->setTruthValue(tv);
+
+	// --------------------
+	// Save, and close things down.
+	// Note that this store will also *recursively* store the
+	// values on the outgoing atoms, as well.
+	as->store_atom(cf);
+	as->store_atom(ct);
+	as->store_atom(cl);
+	as->store_atom(cv);
+	as->barrier();
+
+	delete as;
+	delete store;
+
+	// --------------------
+	// Start it up again.
+
+	store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	as = new AtomSpace();
+	store->registerWith(as);
+
+	// --------------------
+	// Fetch by type. This is what we are testing.
+
+	Handle gkey = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle gaf = as->add_node(CONCEPT_NODE, "a float node");
+	Handle gat = as->add_node(CONCEPT_NODE, "a string node");
+	Handle gal = as->add_node(CONCEPT_NODE, "a depth-1 node");
+	Handle gav = as->add_node(CONCEPT_NODE, "a depth-2 node");
+
+	// Note that the A-nodes above are added *before* the fetch;
+	// The B-nodes are added after the fetch. In either case,
+	// there should not be any values fetched for either A or B;
+	// only the values on the C-links should be fetched.
+	as->fetch_all_atoms_of_type(LIST_LINK);
+	TSM_ASSERT("Wrong number of Atoms fetched!", as->get_size() == 13);
+
+	Handle gbf = as->add_node(CONCEPT_NODE, "b float node");
+	Handle gbt = as->add_node(CONCEPT_NODE, "b string node");
+	Handle gbl = as->add_node(CONCEPT_NODE, "b depth-1 node");
+	Handle gbv = as->add_node(CONCEPT_NODE, "b depth-2 node");
+
+	Handle gcf = as->add_link(LIST_LINK, {gaf, gbf});
+	Handle gct = as->add_link(LIST_LINK, {gat, gbt});
+	Handle gcl = as->add_link(LIST_LINK, {gal, gbl});
+	Handle gcv = as->add_link(LIST_LINK, {gav, gbv});
+
+	TS_ASSERT(*gcf == *cf);
+	TS_ASSERT(*gct == *ct);
+	TS_ASSERT(*gcl == *cl);
+	TS_ASSERT(*gcv == *cv);
+
+	TruthValuePtr gtf = gaf->getTruthValue();
+	TruthValuePtr gtt = gat->getTruthValue();
+	TruthValuePtr gtl = gal->getTruthValue();
+	TruthValuePtr gtv = gav->getTruthValue();
+
+	TS_ASSERT(gtf == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtt == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtl == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtv == TruthValue::DEFAULT_TV());
+
+	gtf = gbf->getTruthValue();
+	gtt = gbt->getTruthValue();
+	gtl = gbl->getTruthValue();
+	gtv = gbv->getTruthValue();
+
+	TS_ASSERT(gtf == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtt == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtl == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtv == TruthValue::DEFAULT_TV());
+
+	gtf = gcf->getTruthValue();
+	gtt = gct->getTruthValue();
+	gtl = gcl->getTruthValue();
+	gtv = gcv->getTruthValue();
+
+	TS_ASSERT(*gtf == *tf);
+	TS_ASSERT(*gtt == *tt);
+	TS_ASSERT(*gtl == *tl);
+	TS_ASSERT(*gtv == *tv);
+
+	// --------------------
+
+	ValuePtr gpf;
+	ValuePtr gpt;
+	ValuePtr gpl;
+	ValuePtr gpv;
+
+	try { gpf = gaf->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpt = gat->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpl = gal->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpv = gav->getValue(gkey); } catch(const RuntimeException&) {}
+
+	TS_ASSERT(gpf == nullptr);
+	TS_ASSERT(gpt == nullptr);
+	TS_ASSERT(gpl == nullptr);
+	TS_ASSERT(gpv == nullptr);
+
+	try { gpf = gbf->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpt = gbt->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpl = gbl->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpv = gbv->getValue(gkey); } catch(const RuntimeException&) {}
+
+	TS_ASSERT(gpf == nullptr);
+	TS_ASSERT(gpt == nullptr);
+	TS_ASSERT(gpl == nullptr);
+	TS_ASSERT(gpv == nullptr);
+
+	gpf = gcf->getValue(gkey);
+	gpt = gct->getValue(gkey);
+	gpl = gcl->getValue(gkey);
+	gpv = gcv->getValue(gkey);
+
+	TS_ASSERT(*gpf == *pvf);
+	TS_ASSERT(*gpt == *pvt);
+	TS_ASSERT(*gpl == *pvl);
+	TS_ASSERT(*gpv == *pvv);
+
+	// --------------------
+	delete as;
+	delete store;
+}
+
+// ============================================================
+
+// Test the fetch_incoming_set() method in the atomspace.
+// The fetch should restore the truth values, and the other values,
+// as well, but only on the incoming set!
+void ValueSaveUTest::test_incoming()
+{
+	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	AtomSpace* as = new AtomSpace();
+	store->registerWith(as);
+
+	Handle key = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle af = as->add_node(CONCEPT_NODE, "a float node");
+	Handle at = as->add_node(CONCEPT_NODE, "a string node");
+	Handle al = as->add_node(CONCEPT_NODE, "a depth-1 node");
+	Handle av = as->add_node(CONCEPT_NODE, "a depth-2 node");
+
+	Handle bf = as->add_node(CONCEPT_NODE, "b float node");
+	Handle bt = as->add_node(CONCEPT_NODE, "b string node");
+	Handle bl = as->add_node(CONCEPT_NODE, "b depth-1 node");
+	Handle bv = as->add_node(CONCEPT_NODE, "b depth-2 node");
+
+	Handle cf = as->add_link(LIST_LINK, {af, bf});
+	Handle ct = as->add_link(LIST_LINK, {at, bt});
+	Handle cl = as->add_link(LIST_LINK, {al, bl});
+	Handle cv = as->add_link(LIST_LINK, {av, bv});
+
+	// --------------------
+	// Now set some values
+	ValuePtr pvf = createFloatValue(
+		std::vector<double>({1.1098765432109876, 2.1234567890123456e-37,
+		                     3.2109876543210987e250}));
+	af->setValue(key, pvf);
+	bf->setValue(key, pvf);
+	cf->setValue(key, pvf);
+
+	TruthValuePtr tf(SimpleTruthValue::createTV(0.11, 100));
+	af->setTruthValue(tf);
+	bf->setTruthValue(tf);
+	cf->setTruthValue(tf);
+
+	// --------------------
+	ValuePtr pvt = createStringValue(
+		std::vector<std::string>({"aaa", "bb bb bb", "ccc ccc ccc"}));
+	at->setValue(key, pvt);
+	bt->setValue(key, pvt);
+	ct->setValue(key, pvt);
+
+	TruthValuePtr tt(SimpleTruthValue::createTV(0.22, 200));
+	at->setTruthValue(tt);
+	bt->setTruthValue(tt);
+	ct->setTruthValue(tt);
+
+	// --------------------
+	ValuePtr pvl = createLinkValue(
+		std::vector<ValuePtr>({pvf, pvt}));
+	al->setValue(key, pvl);
+	bl->setValue(key, pvl);
+	cl->setValue(key, pvl);
+
+	TruthValuePtr tl(SimpleTruthValue::createTV(0.33, 300));
+	al->setTruthValue(tl);
+	bl->setTruthValue(tl);
+	cl->setTruthValue(tl);
+
+	// --------------------
+	ValuePtr pvv = createLinkValue(
+		std::vector<ValuePtr>({pvl, pvl, pvf, pvt}));
+	av->setValue(key, pvv);
+	bv->setValue(key, pvv);
+	cv->setValue(key, pvv);
+
+	TruthValuePtr tv(SimpleTruthValue::createTV(0.44, 400));
+	av->setTruthValue(tv);
+	bv->setTruthValue(tv);
+	cv->setTruthValue(tv);
+
+	// --------------------
+	// Save, and close things down.
+	// Note that this store will also *recursively* store the
+	// values on the outgoing atoms, as well.
+	as->store_atom(cf);
+	as->store_atom(ct);
+	as->store_atom(cl);
+	as->store_atom(cv);
+	as->barrier();
+
+	delete as;
+	delete store;
+
+	// --------------------
+	// Start it up again.
+
+	store = new DHTAtomStorage(uri);
+	store->dht_bootstrap(boot);
+	TS_ASSERT(store->connected())
+
+	as = new AtomSpace();
+	store->registerWith(as);
+
+	// --------------------
+	// Fetch incoming set. This is what we are testing.
+
+	Handle gkey = as->add_node(PREDICATE_NODE, "some pred key");
+	Handle gaf = as->add_node(CONCEPT_NODE, "a float node");
+	Handle gat = as->add_node(CONCEPT_NODE, "a string node");
+	Handle gal = as->add_node(CONCEPT_NODE, "a depth-1 node");
+	Handle gav = as->add_node(CONCEPT_NODE, "a depth-2 node");
+
+	// Note that the A-nodes above are added *before* the fetch;
+	// The B-nodes are added after the fetch. In either case,
+	// there should not be any values fetched for either A or B;
+	// only the values on the C-links should be fetched.
+	as->fetch_incoming_set(gaf, false);
+	as->fetch_incoming_set(gat, false);
+	as->fetch_incoming_set(gal, false);
+	as->fetch_incoming_set(gav, false);
+	TSM_ASSERT("Wrong number of Atoms fetched!", as->get_size() == 13);
+
+	Handle gbf = as->add_node(CONCEPT_NODE, "b float node");
+	Handle gbt = as->add_node(CONCEPT_NODE, "b string node");
+	Handle gbl = as->add_node(CONCEPT_NODE, "b depth-1 node");
+	Handle gbv = as->add_node(CONCEPT_NODE, "b depth-2 node");
+
+	Handle gcf = as->add_link(LIST_LINK, {gaf, gbf});
+	Handle gct = as->add_link(LIST_LINK, {gat, gbt});
+	Handle gcl = as->add_link(LIST_LINK, {gal, gbl});
+	Handle gcv = as->add_link(LIST_LINK, {gav, gbv});
+
+	TS_ASSERT(*gcf == *cf);
+	TS_ASSERT(*gct == *ct);
+	TS_ASSERT(*gcl == *cl);
+	TS_ASSERT(*gcv == *cv);
+
+	TruthValuePtr gtf = gaf->getTruthValue();
+	TruthValuePtr gtt = gat->getTruthValue();
+	TruthValuePtr gtl = gal->getTruthValue();
+	TruthValuePtr gtv = gav->getTruthValue();
+
+	TS_ASSERT(gtf == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtt == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtl == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtv == TruthValue::DEFAULT_TV());
+
+	gtf = gbf->getTruthValue();
+	gtt = gbt->getTruthValue();
+	gtl = gbl->getTruthValue();
+	gtv = gbv->getTruthValue();
+
+	TS_ASSERT(gtf == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtt == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtl == TruthValue::DEFAULT_TV());
+	TS_ASSERT(gtv == TruthValue::DEFAULT_TV());
+
+	gtf = gcf->getTruthValue();
+	gtt = gct->getTruthValue();
+	gtl = gcl->getTruthValue();
+	gtv = gcv->getTruthValue();
+
+	TS_ASSERT(*gtf == *tf);
+	TS_ASSERT(*gtt == *tt);
+	TS_ASSERT(*gtl == *tl);
+	TS_ASSERT(*gtv == *tv);
+
+	// --------------------
+
+	ValuePtr gpf;
+	ValuePtr gpt;
+	ValuePtr gpl;
+	ValuePtr gpv;
+
+	try { gpf = gaf->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpt = gat->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpl = gal->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpv = gav->getValue(gkey); } catch(const RuntimeException&) {}
+
+	TS_ASSERT(gpf == nullptr);
+	TS_ASSERT(gpt == nullptr);
+	TS_ASSERT(gpl == nullptr);
+	TS_ASSERT(gpv == nullptr);
+
+	try { gpf = gbf->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpt = gbt->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpl = gbl->getValue(gkey); } catch(const RuntimeException&) {}
+	try { gpv = gbv->getValue(gkey); } catch(const RuntimeException&) {}
+
+	TS_ASSERT(gpf == nullptr);
+	TS_ASSERT(gpt == nullptr);
+	TS_ASSERT(gpl == nullptr);
+	TS_ASSERT(gpv == nullptr);
+
+	gpf = gcf->getValue(gkey);
+	gpt = gct->getValue(gkey);
+	gpl = gcl->getValue(gkey);
+	gpv = gcv->getValue(gkey);
+
+	TS_ASSERT(*gpf == *pvf);
+	TS_ASSERT(*gpt == *pvt);
+	TS_ASSERT(*gpl == *pvl);
+	TS_ASSERT(*gpv == *pvv);
+
+	// --------------------
+	delete as;
+	delete store;
+}
+
+/* ============================= END OF FILE ================= */

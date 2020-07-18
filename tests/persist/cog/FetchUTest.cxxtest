@@ -1,0 +1,279 @@
+/*
+ * tests/persist/dht/FetchUTest.cxxtest
+ *
+ * Test atom fetch semantics.  Assumes PersistUTest is passing.
+ * Ported over from original unit test at
+ * tests/persist/sql/multi-driver/FetchUTest.cxxtest
+ *
+ * Copyright (C) 2017,2019 Linas Vepstas <linasvepstas@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cstdio>
+
+#include <opencog/atoms/atom_types/atom_types.h>
+#include <opencog/atoms/base/Atom.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/guile/SchemeEval.h>
+#include <opencog/persist/dht/DHTAtomStorage.h>
+#include <opencog/atoms/truthvalue/SimpleTruthValue.h>
+
+#include <opencog/util/Logger.h>
+
+using namespace opencog;
+
+class FetchUTest :  public CxxTest::TestSuite
+{
+	private:
+		std::string uri;
+		std::string boot;
+		std::string dht_open;
+		DHTAtomStorage *astore;
+
+		AtomSpace *_as;
+		SchemeEval *eval;
+
+	public:
+
+		FetchUTest(void);
+		~FetchUTest()
+		{
+			delete astore;
+
+			// erase the log file if no assertions failed
+			if (!CxxTest::TestTracker::tracker().suiteFailed())
+				std::remove(logger().get_filename().c_str());
+		}
+
+		void setUp(void);
+		void tearDown(void);
+		void kill_data(void);
+
+		void atomCompare(AtomPtr, AtomPtr, std::string);
+		void test_stuff(void);
+		void test_readonly(void);
+};
+
+FetchUTest::FetchUTest(void)
+{
+	logger().set_level(Logger::DEBUG);
+	logger().set_print_to_stdout_flag(true);
+
+	uri = "dht:///atomspace-dht-test";
+	boot = "dht://localhost:4555/";
+
+	// Create a singe DHT node that will act as
+	// as the repo for the duration of the test.
+	astore = new DHTAtomStorage("dht://:4555/");
+	if (!astore->connected())
+	{
+		logger().error("FetchUTest: cannot setup a DHT node");
+		exit(1);
+	}
+
+	dht_open = "(dht-open \"" + uri + "\")\n" +
+	           "(dht-bootstrap \"" + boot + "\")\n";
+}
+
+/*
+ * This is called once before each test, for each test (!!)
+ */
+void FetchUTest::setUp(void)
+{
+	_as = new AtomSpace();
+	eval = SchemeEval::get_evaluator(_as);
+}
+
+void FetchUTest::tearDown(void)
+{
+	delete _as;
+}
+
+// ============================================================
+
+void FetchUTest::atomCompare(AtomPtr a, AtomPtr b, std::string where)
+{
+	printf("Check %s expect %s\n", where.c_str(), a->to_string().c_str());
+	TSM_ASSERT("No atom found", b != nullptr);
+
+	if (nullptr == b) return;
+
+	TSM_ASSERT_EQUALS("Type mismatch", a->get_type(), b->get_type());
+
+	NodePtr na(NodeCast(a));
+	NodePtr nb(NodeCast(b));
+	if (na and nb)
+	{
+		TSM_ASSERT_EQUALS("Name mismatch", na->get_name(), nb->get_name());
+	}
+
+	LinkPtr la(LinkCast(a));
+	LinkPtr lb(LinkCast(b));
+	if (la and lb)
+	{
+		TSM_ASSERT_EQUALS("Arity mismatch", la->get_arity(), lb->get_arity());
+		if (*la != *lb)
+		{
+			printf("Mismatching la = %s\n", la->to_string().c_str());
+			printf("Mismatching lb = %s\n", lb->to_string().c_str());
+			TSM_ASSERT_EQUALS("Link mis-match", la, lb);
+		}
+	}
+
+	TruthValuePtr ta = a->getTruthValue();
+	TruthValuePtr tb = b->getTruthValue();
+	if (ta or tb)
+	{
+		TSM_ASSERT("Missing truth value", ta);
+		TSM_ASSERT("Missing truth value", tb);
+		if (ta and tb)
+		{
+			TSM_ASSERT("Truth value miscompare", (*ta)==(*tb));
+
+			if (not ((*ta) == (*tb)))
+			{
+				fprintf(stderr, "Error, truth value miscompare, "
+					"ma=%f mb=%f ca=%f cb=%f\n",
+					ta->get_mean(), tb->get_mean(), ta->get_count(), tb->get_count());
+			}
+		}
+	}
+}
+
+// ============================================================
+
+void FetchUTest::test_stuff(void)
+{
+	logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+	// First, initialize the database
+	eval->eval("(use-modules (opencog persist) (opencog persist-dht))");
+	eval->eval(dht_open);
+	eval->eval(R"((cog-set-tv! (Concept "AAA") (stv 0.1 0.11)))");
+	eval->eval(R"((cog-set-tv! (Concept "BBB") (stv 0.2 0.22)))");
+	eval->eval("(store-atomspace)");
+	eval->eval("(dht-close)");
+
+	delete _as;
+	_as = new AtomSpace();
+	eval = SchemeEval::get_evaluator(_as);
+	eval->eval(dht_open);
+	eval->eval(R"((fetch-atom (List (Concept "AAA") (Concept "BBB"))))");
+
+	// The above should NOT update the TV of (Concept "AAA")
+	TruthValuePtr tv = eval->eval_tv(R"((cog-tv (Concept "AAA")))");
+	printf("Expecting default, got %s\n", tv->to_string().c_str());
+	TruthValuePtr dtv = TruthValue::DEFAULT_TV();
+	TS_ASSERT((*tv) == (*dtv));
+
+	// If we fetch the TV explicitly, then we should get the
+	// value from the database.
+	eval->eval(R"((fetch-atom (Concept "AAA")))");
+	tv = eval->eval_tv(R"((cog-tv (Concept "AAA")))");
+	TruthValuePtr etv = SimpleTruthValue::createTV(0.1, 0.11);
+	TS_ASSERT((*tv) == (*etv));
+	printf("Expecting %s\n", etv->to_string().c_str());
+	printf("Got %s\n", tv->to_string().c_str());
+
+	// Update A.
+	eval->eval(R"((cog-set-tv! (Concept "AAA") (stv 0.3 0.33)))");
+
+	// Saving everything should not crash.  It should, however,
+	// change the TV on (Concept "BBB") back to DEFAULT_TV.
+	eval->eval("(store-atomspace)");
+	eval->eval("(dht-close)");
+
+	delete _as;
+	_as = new AtomSpace();
+	eval = SchemeEval::get_evaluator(_as);
+	eval->eval(dht_open);
+
+	// AAA should have been updated, as above.
+	eval->eval(R"((fetch-atom (Concept "AAA")))");
+	tv = eval->eval_tv(R"((cog-tv (Concept "AAA")))");
+	etv = SimpleTruthValue::createTV(0.3, 0.33);
+	TS_ASSERT((*tv) == (*etv));
+	printf("Expecting %s\n", etv->to_string().c_str());
+	printf("Got %s\n", tv->to_string().c_str());
+
+	// BBB should have been clobbered.
+	eval->eval(R"((fetch-atom (Concept "BBB")))");
+	tv = eval->eval_tv(R"((cog-tv (Concept "BBB")))");
+	TS_ASSERT((*tv) == (*dtv));
+	printf("Expecting %s\n", dtv->to_string().c_str());
+	printf("Got %s\n", tv->to_string().c_str());
+
+	eval->eval("(dht-close)");
+	logger().debug("END TEST: %s", __FUNCTION__);
+}
+
+// ============================================================
+
+void FetchUTest::test_readonly(void)
+{
+	logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+	// First, initialize the database
+	eval->eval("(use-modules (opencog persist) (opencog persist-dht))");
+	eval->eval(dht_open);
+	eval->eval(R"((cog-set-tv! (Concept "AAA") (stv 0.1 0.11)))");
+	eval->eval(R"((cog-set-tv! (Concept "BBB") (stv 0.2 0.22)))");
+	eval->eval(R"((List (Concept "AAA") (Concept "BBB")))");
+	eval->eval("(store-atomspace)");
+	eval->eval("(dht-close)");
+
+	delete _as;
+	_as = new AtomSpace();
+	_as->set_read_only();
+	eval = SchemeEval::get_evaluator(_as);
+	eval->eval(dht_open);
+
+	// Despite the AtomSpace being readonly, we should still be
+	// able to load atoms from the database.
+	eval->eval(R"((load-atoms-of-type 'ConceptNode))");
+	std::string prt = eval->eval("(cog-prt-atomspace)");
+	printf("Atomspace contents:\n%s\n", prt.c_str());
+	Handle a = eval->eval_h(R"((Concept "AAA"))");
+	TS_ASSERT(nullptr != a);
+
+	TruthValuePtr tv = eval->eval_tv(R"((cog-tv (Concept "AAA")))");
+	TruthValuePtr etv = SimpleTruthValue::createTV(0.1, 0.11);
+	TS_ASSERT((*tv) == (*etv));
+	printf("Expecting %s\n", etv->to_string().c_str());
+	printf("Got %s\n", tv->to_string().c_str());
+
+	// No one is messing with the flag, eh?
+	TS_ASSERT(true == _as->get_read_only());
+	Handle c = _as->add_node(CONCEPT_NODE, "foobar");
+	TS_ASSERT(c == nullptr);
+
+	// Try to change TV on A -- should fail; should get old value.
+	// We should get an assert, for good measure.
+	// The assert is turned into an evaluator error.
+	TS_ASSERT(false == eval->eval_error());
+	eval->clear_pending();
+	eval->eval(R"((cog-set-tv! (Concept "AAA") (stv 0.3 0.33)))");
+	TS_ASSERT(eval->eval_error());
+	eval->clear_pending();
+	tv = eval->eval_tv(R"((cog-tv (Concept "AAA")))");
+	TS_ASSERT((*tv) == (*etv));
+
+	// Should be possible to extract, even though its read-only
+	TS_ASSERT(2 == _as->get_size());
+	eval->eval(R"((cog-extract (Concept "AAA")))");
+	eval->eval(R"((cog-extract (Concept "BBB")))");
+	TS_ASSERT(0 == _as->get_size());
+
+	// And re-load them again.
+	eval->eval(R"((load-atoms-of-type 'ConceptNode))");
+	TS_ASSERT(2 == _as->get_size());
+
+	TS_ASSERT(true == _as->get_read_only());
+	Handle d = _as->add_node(CONCEPT_NODE, "barfoo");
+	TS_ASSERT(d == nullptr);
+	TS_ASSERT(2 == _as->get_size());
+
+	logger().debug("END TEST: %s", __FUNCTION__);
+}
+
+/* ============================= END OF FILE ================= */
