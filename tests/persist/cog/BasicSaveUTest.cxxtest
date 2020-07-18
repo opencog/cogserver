@@ -346,10 +346,6 @@ void BasicSaveUTest::test_table()
 {
     logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-    // Use a distinct atomspace name for this test; that's because
-    // currently, kill_data() doesn't work, and the test space is
-    // polluted.
-    uri += "-table";
     CogStorage *store = new CogStorage(uri);
     if (!store->connected())
     {
