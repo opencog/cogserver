@@ -59,7 +59,7 @@ class CogStorage : public BackingStore
 		virtual ~CogStorage();
 		bool connected(void); // connection to DB is alive
 
-		void load_atomspace(AtomSpace*, const std::string&);
+		void kill_data(void); // destroy DB contents
 
 		void registerWith(AtomSpace*);
 		void unregisterWith(AtomSpace*);

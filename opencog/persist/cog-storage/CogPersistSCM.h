@@ -54,7 +54,6 @@ public:
 	void do_close(void);
 	void do_load(void);
 	void do_store(void);
-	void do_load_atomspace(const std::string&);
 
 	void do_stats(void);
 	void do_clear_stats(void);

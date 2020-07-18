@@ -167,8 +167,8 @@ void CogStorage::storeAtomSpace(const AtomTable &table)
 		storeAtom(h);
 }
 
-void CogStorage::load_atomspace(AtomSpace* as,
-                                const std::string& spacename)
+void CogStorage::kill_data(void)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	do_send("(cog-atomspace-clear)");
+	do_recv();
 }

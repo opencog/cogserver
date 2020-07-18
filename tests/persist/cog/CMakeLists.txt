@@ -1,8 +1,9 @@
 
 LINK_LIBRARIES(
-    persist-dht
-    persist
-    atomspace
+	persist-cog
+	persist
+	server
+	atomspace
 )
 
 # The seven unit tests, ported over from the

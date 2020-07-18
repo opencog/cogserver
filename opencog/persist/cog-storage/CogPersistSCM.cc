@@ -66,7 +66,6 @@ void CogPersistSCM::init(void)
     define_scheme_primitive("cogserver-close", &CogPersistSCM::do_close, this, "persist-cog");
     define_scheme_primitive("cogserver-stats", &CogPersistSCM::do_stats, this, "persist-cog");
     define_scheme_primitive("cogserver-clear-stats", &CogPersistSCM::do_clear_stats, this, "persist-cog");
-    define_scheme_primitive("cogserver-load-atomspace", &CogPersistSCM::do_load_atomspace, this, "persist-cog");
 }
 
 CogPersistSCM::~CogPersistSCM()
@@ -125,15 +124,6 @@ void CogPersistSCM::do_close(void)
     // Only then actually call the dtor.
     backing->unregisterWith(_as);
     delete backing;
-}
-
-void CogPersistSCM::do_load_atomspace(const std::string& asname)
-{
-    if (nullptr == _backing)
-        throw RuntimeException(TRACE_INFO,
-            "cog-load-atomspace: Error: AtomSpace not connected to CogServer!");
-
-    _backing->load_atomspace(_as, asname);
 }
 
 void CogPersistSCM::do_stats(void)

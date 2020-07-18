@@ -207,6 +207,7 @@ void CogStorage::clear_stats(void)
 
 void CogStorage::print_stats(void)
 {
+	printf("Connected to %s\n", _uri.c_str());
 	printf("no stats yet\n");
 }
 
