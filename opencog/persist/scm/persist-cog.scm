@@ -4,7 +4,6 @@
 
 (define-module (opencog persist-cog))
 
-
 (use-modules (opencog))
 (use-modules (opencog cs-config))
 (load-extension
@@ -53,13 +52,5 @@ cogserver-stats cogserver-load-atomspace)
  cogserver-stats - report performance statistics.
     This will cause some database performance statistics to be printed
     to the stdout of the server. These statistics can be quite arcane
-    and are useful primarily to the developers of the database backend.
-")
-
-(set-procedure-property! cogserver-load-atomspace 'documentation
-"
- cogserver-load-atomspace PATH - Load all Atoms from the PATH into the AtomSpace.
-
-   For example:
-      `(cogserver-load-atomspace \"QmT9tZttJ4gVZQwVFHWTmJYqYGAAiKEcvW9k98T5syYeYU\")`
+    and are useful primarily to the developers of the server.
 ")
