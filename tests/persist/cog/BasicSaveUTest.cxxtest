@@ -56,6 +56,7 @@ class BasicSaveUTest :  public CxxTest::TestSuite
             // Create a single cogserver node that will act as
             // as the repo for the duration of the test.
             srvr = &cogserver();
+            srvr->loadModules();
             srvr->enableNetworkServer(16001);
             main_loop = new std::thread(&CogServer::serverLoop, srvr);
             printf("Started CogServer\n");
