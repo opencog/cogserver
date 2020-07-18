@@ -18,6 +18,7 @@
 #include <opencog/atoms/atom_types/atom_types.h>
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/persist/cog-storage/CogStorage.h>
 
 #include <opencog/util/Logger.h>
@@ -29,8 +30,8 @@ class BasicSaveUTest :  public CxxTest::TestSuite
     private:
         AtomSpace *as;
         std::string uri;
-        std::string boot;
-        CogStorage *astore;
+        CogServer* srvr = NULL;
+        std::thread * main_loop = NULL;
 
         Handle n1[10];
         Handle n2[10];
@@ -50,25 +51,24 @@ class BasicSaveUTest :  public CxxTest::TestSuite
             logger().set_level(Logger::DEBUG);
             logger().set_print_to_stdout_flag(true);
 
-            uri = "dht:///atomspace-dht-test";
-            // boot = "dht://localhost:4444/";
-            boot = "dht://localhost:4555/";
+            uri = "cog://localhost:16001";
 
-            // Create a singe DHT node that will act as
-				// as the repo for the duration of the test.
-            astore = new CogStorage("dht://:4555/");
-            if (!astore->connected())
-            {
-                logger().error("BasicSaveUTest: cannot setup a DHT node");
-                exit(1);
-            }
-            // astore->dht_bootstrap("dht://localhost:4444/");
-            // printf("Repo:\n%s\n", astore->dht_node_info().c_str());
+            // Create a single cogserver node that will act as
+            // as the repo for the duration of the test.
+            srvr = &cogserver();
+            srvr->enableNetworkServer(16001);
+            main_loop = new std::thread(&CogServer::serverLoop, srvr);
+            printf("Started CogServer\n");
         }
 
         ~BasicSaveUTest()
         {
-            delete astore;
+            srvr->stop();
+            main_loop->join();
+            srvr->disableNetworkServer();
+            delete main_loop;
+            delete srvr;
+
             // erase the log file if no assertions failed
             if (!CxxTest::TestTracker::tracker().suiteFailed())
                 std::remove(logger().get_filename().c_str());
@@ -158,7 +158,6 @@ static void atomCompare(AtomPtr a, AtomPtr b, const char* where)
 void BasicSaveUTest::single_atom_save_restore(std::string id)
 {
     CogStorage *store = new CogStorage(uri);
-    store->dht_bootstrap(boot);
     if (!store->connected())
     {
         logger().debug("single_atom_save_restore: cannot connect to db");
@@ -306,7 +305,6 @@ void BasicSaveUTest::test_fresh_atom(void)
     logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
     CogStorage *store = new CogStorage(uri);
-    store->dht_bootstrap(boot);
     if (!store->connected())
     {
         logger().debug("single_atom_save_restore: cannot connect to db");
@@ -352,7 +350,6 @@ void BasicSaveUTest::test_table()
     // polluted.
     uri += "-table";
     CogStorage *store = new CogStorage(uri);
-    store->dht_bootstrap(boot);
     if (!store->connected())
     {
         logger().debug("test_table: cannot connect to db");
@@ -386,7 +383,6 @@ void BasicSaveUTest::test_table()
 
     // Reopen connection, and load the atom table.
     store = new CogStorage(uri);
-    store->dht_bootstrap(boot);
     TSM_ASSERT("Not connected to database", store->connected());
 
     AtomSpace *as2 = new AtomSpace();

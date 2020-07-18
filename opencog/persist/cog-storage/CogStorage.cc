@@ -49,14 +49,27 @@ void CogStorage::init(const char * uri)
 	if (strncmp(uri, "cog://", URIX_LEN))
 		throw IOException(TRACE_INFO, "Unknown URI '%s'\n", uri);
 
+	_uri = uri;
+
 	// We expect the URI to be for the form
 	//    cog://ipv4-addr/atomspace-name
 	//    cog://ipv4-addr:port/atomspace-name
 
 	std::string host(uri + URIX_LEN);
-	size_t slash = host.find('/');
+	size_t slash = host.find_first_of(":/");
 	if (std::string::npos != slash)
 		host = host.substr(0, slash);
+
+#define DEFAULT_COGSERVER_PORT "17001"
+	std::string port = DEFAULT_COGSERVER_PORT;
+	size_t colon = _uri.find(':', URIX_LEN + host.length());
+	if (std::string::npos != colon)
+	{
+		port = _uri.substr(colon+1);
+		slash = port.find('/');
+		if (std::string::npos != slash)
+			port = port.substr(0, slash);
+	}
 
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof hints);
@@ -65,7 +78,7 @@ void CogStorage::init(const char * uri)
 	hints.ai_flags = AI_PASSIVE;
 
 	struct addrinfo *servinfo;
-	int rc = getaddrinfo(host.c_str(), "17001", &hints, &servinfo);
+	int rc = getaddrinfo(host.c_str(), port.c_str(), &hints, &servinfo);
 	if (rc)
 		throw IOException(TRACE_INFO, "Unknown host %s: %s",
 			host.c_str(), strerror(rc));
