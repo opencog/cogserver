@@ -39,7 +39,9 @@ void CogStorage::storeAtom(const Handle& h, bool synchronous)
 	std::string atom = "(cog-set-values! " + Sexpr::encode_atom(h) +
 		Sexpr::encode_atom_values(h) + ")\n";
 	do_send(atom);
-	std::string msg = do_recv();
+
+	// Flush the response.
+	do_recv();
 }
 
 void CogStorage::removeAtom(const Handle& atom, bool recursive)
@@ -98,14 +100,45 @@ void CogStorage::loadType(AtomTable &table, Type atom_type)
 	throw RuntimeException(TRACE_INFO, "Not implemented!");
 }
 
+void CogStorage::decode_atom_list(AtomTable& table)
+{
+	// XXX FIXME .. this may fail if the incoming set is very large.
+	// Basically, we don't know quite when all thhe bytes have been
+	// received on the socket...
+	std::string expr = do_recv();
+
+	// Loop and decode atoms.
+	size_t l = expr.find('(') + 1; // skip the first paren.
+	size_t end = expr.rfind(')');  // trim tailing paren.
+	size_t r = end;
+	if (l == r) return;
+	while (true)
+	{
+		// get_next_expr() updates the l and r to bracket an expression.
+		int pcnt = Sexpr::get_next_expr(expr, l, r, 0);
+		if (l == r) break;
+		if (0 < pcnt) break;
+		table.add(Sexpr::decode_atom(expr, l, r, 0));
+
+		// advance to next.
+		l = r+1;
+		r = end;
+	}
+}
+
 void CogStorage::getIncomingSet(AtomTable& table, const Handle& h)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	std::string atom = "(cog-incoming-set " + Sexpr::encode_atom(h) + ")\n";
+	do_send(atom);
+	decode_atom_list(table);
 }
 
 void CogStorage::getIncomingByType(AtomTable& table, const Handle& h, Type t)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	std::string atom = "(cog-incoming-by-type " + Sexpr::encode_atom(h)
+		+ " '" + nameserver().getTypeName(t) + ")\n";
+	do_send(atom);
+	decode_atom_list(table);
 }
 
 void CogStorage::loadAtomSpace(AtomTable &table)

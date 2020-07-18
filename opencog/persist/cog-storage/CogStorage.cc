@@ -137,6 +137,12 @@ std::string CogStorage::do_recv()
 	if (not connected())
 		throw IOException(TRACE_INFO, "Not connected to cogserver!");
 
+	// Receive 4K bytes of message.
+	// XXX FIXME Clearly, this fails is the result is larger than
+	// 4K. One possible fix is to loop while len == 4096. Another
+	// possible fix is have do_send() send something that causes
+	// the cogserver to write some end-of-message mark. For now,
+	// we are keeping it super-ultra-simple.
 	char buf[4097];
 	int len = recv(_sockfd, buf, 4096, 0);
 

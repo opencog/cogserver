@@ -50,6 +50,8 @@ class CogStorage : public BackingStore
 		void do_send(const std::string&);
 		std::string do_recv(void);
 
+		void decode_atom_list(AtomTable&);
+
 	public:
 		CogStorage(std::string uri);
 		CogStorage(const CogStorage&) = delete; // disable copying

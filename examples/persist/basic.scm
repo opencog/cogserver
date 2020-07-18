@@ -36,3 +36,7 @@
 
 ; Get them back:
 (fetch-atom (Concept "a"))
+
+; Verify that they were delivered:
+(cog-keys (Concept "a"))
+(cog-keys->alist (Concept "a"))
