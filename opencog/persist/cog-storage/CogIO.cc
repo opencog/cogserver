@@ -44,7 +44,7 @@ void CogStorage::storeAtom(const Handle& h, bool synchronous)
 	do_recv();
 }
 
-void CogStorage::removeAtom(const Handle& atom, bool recursive)
+void CogStorage::removeAtom(const Handle& h, bool recursive)
 {
 	std::string msg;
 	if (recursive)
@@ -161,7 +161,10 @@ void CogStorage::loadType(AtomTable &table, Type t)
 
 void CogStorage::storeAtomSpace(const AtomTable &table)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	HandleSet all_roots;
+	table.getHandleSetByType(all_roots, ATOM, true);
+	for (const Handle& h : all_roots)
+		storeAtom(h);
 }
 
 void CogStorage::load_atomspace(AtomSpace* as,
