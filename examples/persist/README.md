@@ -36,3 +36,9 @@ scheme@(guile-user)> Listening on port 17001
 ```
 
 You can also do this in python.
+
+Run the Demos
+-------------
+The examples got through some simple usage scenarios.
+
+* fetch-store.scm -- Basic fetch and store of single atoms.

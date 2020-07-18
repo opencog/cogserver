@@ -1,6 +1,8 @@
 ;
-; basic.scm
-; basic demo.
+; fetch-store.scm
+;
+; Demo of basic fetching individual atoms from the remote server,
+; and storing (sending) them to the server for safe-keeping.
 ;
 (use-modules (opencog) (opencog persist))
 (use-modules (opencog persist-cog))
@@ -40,3 +42,30 @@
 ; Verify that they were delivered:
 (cog-keys (Concept "a"))
 (cog-keys->alist (Concept "a"))
+;
+; -----------------------------------------------------------
+; One can get just the incoming set in a similar fashion.
+; Assume that, for example, the remote server contains
+;    (List (Concept "a")(Concept "b"))
+; Then `(fetch-incoming-set (Concept "a"))` will get the ListLink.
+; Similarly, `(fetch-incoming-by-type (Concept "a") 'List)` will
+; get only the ListLink, and not other types.
+;
+; Start by creating the ListLink, and storing it. And also a SetLink.
+(store-atom (List (Concept "a")(Concept "b")))
+(store-atom (Set (Concept "a")(Concept "b")))
+
+; Erase both of them locally. This also erases `(Concept "a")` in the
+; local atomspace.
+(cog-extract-recursive! (Concept "a"))
+
+; Recreate `(Concept "a")` but verify that nothing contains it:
+(cog-incoming-set (Concept "a"))
+
+; Fetch only the ListLink
+(fetch-incoming-by-type (Concept "a") 'List)
+(cog-incoming-set (Concept "a"))
+
+; Fetch everything
+(fetch-incoming-set (Concept "a"))
+(cog-incoming-set (Concept "a"))
