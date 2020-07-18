@@ -169,6 +169,6 @@ void CogStorage::storeAtomSpace(const AtomTable &table)
 
 void CogStorage::kill_data(void)
 {
-	do_send("(cog-atomspace-clear)");
+	do_send("(cog-atomspace-clear)\n");
 	do_recv();
 }
