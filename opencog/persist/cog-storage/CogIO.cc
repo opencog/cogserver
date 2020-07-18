@@ -95,16 +95,11 @@ Handle CogStorage::getLink(Type t, const HandleSeq& hs)
 	return h;
 }
 
-void CogStorage::loadType(AtomTable &table, Type atom_type)
-{
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
-}
-
 void CogStorage::decode_atom_list(AtomTable& table)
 {
-	// XXX FIXME .. this may fail if the incoming set is very large.
-	// Basically, we don't know quite when all thhe bytes have been
-	// received on the socket...
+	// XXX FIXME .. this WILL fail if the returned list is large.
+	// Basically, we don't know quite when all the bytes have been
+	// received on the socket... For now, we punt.
 	std::string expr = do_recv();
 
 	// Loop and decode atoms.
@@ -135,15 +130,24 @@ void CogStorage::getIncomingSet(AtomTable& table, const Handle& h)
 
 void CogStorage::getIncomingByType(AtomTable& table, const Handle& h, Type t)
 {
-	std::string atom = "(cog-incoming-by-type " + Sexpr::encode_atom(h)
+	std::string msg = "(cog-incoming-by-type " + Sexpr::encode_atom(h)
 		+ " '" + nameserver().getTypeName(t) + ")\n";
-	do_send(atom);
+	do_send(msg);
 	decode_atom_list(table);
 }
 
 void CogStorage::loadAtomSpace(AtomTable &table)
 {
-	throw RuntimeException(TRACE_INFO, "Not implemented!");
+	std::string msg = "(cog-get-all-roots)\n";
+	do_send(msg);
+	decode_atom_list(table);
+}
+
+void CogStorage::loadType(AtomTable &table, Type t)
+{
+	std::string msg = "(cog-get-atoms '" + nameserver().getTypeName(t) + ")\n";
+	do_send(msg);
+	decode_atom_list(table);
 }
 
 void CogStorage::storeAtomSpace(const AtomTable &table)
