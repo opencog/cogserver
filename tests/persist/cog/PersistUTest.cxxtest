@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/PersistUTest.cxxtest
+ * tests/persist/cog/PersistUTest.cxxtest
  *
  * Test AtomSpace persistance.  Assumes BasicSaveUTest is passing.
  * Ported from tests/persist/sql/multi-driver/PersistUTest.cxxtest
@@ -16,8 +16,8 @@
 #include <opencog/atoms/base/Link.h>
 #include <opencog/atoms/base/Node.h>
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
-#include <opencog/persist/dht/DHTAtomStorage.h>
-#include <opencog/persist/dht/DHTPersistSCM.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
+#include <opencog/persist/cog-storage/CogPersistSCM.h>
 
 #include <opencog/util/Logger.h>
 
@@ -281,7 +281,7 @@ void PersistUTest::test_atomspace(void)
 {
     logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-    DHTPersistSCM* _pm = new DHTPersistSCM(_as);
+    CogPersistSCM* _pm = new CogPersistSCM(_as);
     TSM_ASSERT("Persist Module not loaded", _pm);
 
     _pm->do_open("dht:///atomspace-dht-test");

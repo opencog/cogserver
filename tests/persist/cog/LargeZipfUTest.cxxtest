@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/LargeZipfTest.cxxtest
+ * tests/persist/cog/LargeZipfTest.cxxtest
  *
  * Emulate word-pair dataset with Zipfian incoming sets.
  * This creates nodes with large incoming sets; database should
@@ -16,8 +16,8 @@
 #include <opencog/atoms/base/Link.h>
 #include <opencog/atoms/base/Node.h>
 #include <opencog/atoms/truthvalue/CountTruthValue.h>
-#include <opencog/persist/dht/DHTAtomStorage.h>
-#include <opencog/persist/dht/DHTPersistSCM.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
+#include <opencog/persist/cog-storage/CogPersistSCM.h>
 
 #include <opencog/util/Logger.h>
 
@@ -29,7 +29,7 @@ class LargeZipfUTest :  public CxxTest::TestSuite
 		AtomSpace *_as;
 		std::string uri;
 		std::string boot;
-		DHTAtomStorage *astore;
+		CogStorage *astore;
 
 #define NWORDS 5000
 		Handle hword[NWORDS];
@@ -65,7 +65,7 @@ LargeZipfUTest:: LargeZipfUTest(void)
 
 	// Create a singe DHT node that will act as
 	// as the repo for the duration of the test.
-	astore = new DHTAtomStorage("dht://:4555/");
+	astore = new CogStorage("dht://:4555/");
 	if (!astore->connected())
 	{
 		logger().error("LargeZipfUTest: cannot setup a DHT node");
@@ -256,7 +256,7 @@ void LargeZipfUTest::test_atomspace(void)
 {
 	logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-	DHTPersistSCM* _pm = new DHTPersistSCM(_as);
+	CogPersistSCM* _pm = new CogPersistSCM(_as);
 	TSM_ASSERT("Persist Module not loaded", _pm);
 
 	_pm->do_open(uri);

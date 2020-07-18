@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/MultiUserUTest.cxxtest
+ * tests/persist/cog/MultiUserUTest.cxxtest
  * Ported over from
  * tests/persist/sql/multi-driver/MultiUserUTest.cxxtest
  *
@@ -18,8 +18,8 @@
 #include <opencog/atoms/base/Atom.h>
 #include <opencog/atoms/base/Link.h>
 #include <opencog/atoms/base/Node.h>
-#include <opencog/persist/dht/DHTAtomStorage.h>
-#include <opencog/persist/dht/DHTPersistSCM.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
+#include <opencog/persist/cog-storage/CogPersistSCM.h>
 #include <opencog/atoms/truthvalue/CountTruthValue.h>
 
 #include <opencog/util/Logger.h>
@@ -50,12 +50,12 @@ class MultiUserUTest :  public CxxTest::TestSuite
     private:
 #define NUSERS 6
         AtomSpace* _as[NUSERS];
-        DHTPersistSCM* _pm[NUSERS];
+        CogPersistSCM* _pm[NUSERS];
         std::atomic<int> nstarted;
 
         std::string uri;
         std::string boot;
-        DHTAtomStorage *astore;
+        CogStorage *astore;
 
 #define NCLAUSE 8
 #define NATOMS (NUSERS * NCLAUSE)
@@ -116,7 +116,7 @@ MultiUserUTest:: MultiUserUTest(void)
 
     // Create a singe DHT node that will act as
     // as the repo for the duration of the test.
-    astore = new DHTAtomStorage("dht://:4555/");
+    astore = new CogStorage("dht://:4555/");
     if (!astore->connected())
     {
         logger().error("DeleteUTest: cannot setup a DHT node");
@@ -151,7 +151,7 @@ void MultiUserUTest::setUp(void)
 void MultiUserUTest::connect_to_db(int i)
 {
     _as[i] = new AtomSpace();
-    _pm[i] = new DHTPersistSCM(_as[i]);
+    _pm[i] = new CogPersistSCM(_as[i]);
     _pm[i]->do_open(uri);
     _pm[i]->do_bootstrap(boot);
 }
@@ -437,7 +437,7 @@ void MultiUserUTest::do_test_multiuser(void)
     printf("Done joining threads\n");
 
     AtomSpace* aspace = new AtomSpace();
-    DHTPersistSCM* pm = new DHTPersistSCM(aspace);
+    CogPersistSCM* pm = new CogPersistSCM(aspace);
 
     pm->do_open(uri);
     pm->do_bootstrap(boot);

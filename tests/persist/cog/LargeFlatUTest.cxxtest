@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/LargeFlatUTest.cxxtest
+ * tests/persist/cog/LargeFlatUTest.cxxtest
  *
  * Test larger AtomSpace persistance.  Assumes PersistUTest is passing.
  *
@@ -14,8 +14,8 @@
 #include <opencog/atoms/base/Link.h>
 #include <opencog/atoms/base/Node.h>
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
-#include <opencog/persist/dht/DHTAtomStorage.h>
-#include <opencog/persist/dht/DHTPersistSCM.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
+#include <opencog/persist/cog-storage/CogPersistSCM.h>
 
 #include <opencog/util/Logger.h>
 
@@ -27,7 +27,7 @@ class LargeFlatUTest :  public CxxTest::TestSuite
 		AtomSpace *_as;
 		std::string uri;
 		std::string boot;
-		DHTAtomStorage *astore;
+		CogStorage *astore;
 
 // 75000 * 7 == half-a-million atoms
 // 19000 * 7 == 133K atoms
@@ -76,7 +76,7 @@ LargeFlatUTest::LargeFlatUTest(void)
 
 	// Create a singe DHT node that will act as
 	// as the repo for the duration of the test.
-	astore = new DHTAtomStorage("dht://:4555/");
+	astore = new CogStorage("dht://:4555/");
 	if (!astore->connected())
 	{
 		logger().error("LargeFlatUTest: cannot setup a DHT node");
@@ -325,7 +325,7 @@ void LargeFlatUTest::test_atomspace(void)
 {
 	logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-	DHTPersistSCM* _pm = new DHTPersistSCM(_as);
+	CogPersistSCM* _pm = new CogPersistSCM(_as);
 	TSM_ASSERT("Persist Module not loaded", _pm);
 
 	_pm->do_open(uri);

@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/BasicSaveUTest.cxxtest
+ * tests/persist/cog/BasicSaveUTest.cxxtest
  *
  * Most basic, simplest sniff test, saves and restores a few atoms.
  * Copied from tests/persist/sql/BasicSaveUTest.cxxtest and
@@ -18,7 +18,7 @@
 #include <opencog/atoms/atom_types/atom_types.h>
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/persist/dht/DHTAtomStorage.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
 
 #include <opencog/util/Logger.h>
 
@@ -30,7 +30,7 @@ class BasicSaveUTest :  public CxxTest::TestSuite
         AtomSpace *as;
         std::string uri;
         std::string boot;
-        DHTAtomStorage *astore;
+        CogStorage *astore;
 
         Handle n1[10];
         Handle n2[10];
@@ -56,7 +56,7 @@ class BasicSaveUTest :  public CxxTest::TestSuite
 
             // Create a singe DHT node that will act as
 				// as the repo for the duration of the test.
-            astore = new DHTAtomStorage("dht://:4555/");
+            astore = new CogStorage("dht://:4555/");
             if (!astore->connected())
             {
                 logger().error("BasicSaveUTest: cannot setup a DHT node");
@@ -157,7 +157,7 @@ static void atomCompare(AtomPtr a, AtomPtr b, const char* where)
  */
 void BasicSaveUTest::single_atom_save_restore(std::string id)
 {
-    DHTAtomStorage *store = new DHTAtomStorage(uri);
+    CogStorage *store = new CogStorage(uri);
     store->dht_bootstrap(boot);
     if (!store->connected())
     {
@@ -305,7 +305,7 @@ void BasicSaveUTest::test_fresh_atom(void)
 {
     logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-    DHTAtomStorage *store = new DHTAtomStorage(uri);
+    CogStorage *store = new CogStorage(uri);
     store->dht_bootstrap(boot);
     if (!store->connected())
     {
@@ -351,7 +351,7 @@ void BasicSaveUTest::test_table()
     // currently, kill_data() doesn't work, and the test space is
     // polluted.
     uri += "-table";
-    DHTAtomStorage *store = new DHTAtomStorage(uri);
+    CogStorage *store = new CogStorage(uri);
     store->dht_bootstrap(boot);
     if (!store->connected())
     {
@@ -385,7 +385,7 @@ void BasicSaveUTest::test_table()
     printf("Done storing table; size=%lu\n", num_stored);
 
     // Reopen connection, and load the atom table.
-    store = new DHTAtomStorage(uri);
+    store = new CogStorage(uri);
     store->dht_bootstrap(boot);
     TSM_ASSERT("Not connected to database", store->connected());
 

@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/MultiPersistUTest.cxxtest
+ * tests/persist/cog/MultiPersistUTest.cxxtest
  *
  * Test multi-threaded persistance.  Assumes PersistUTest is passing.
  * Ported over from original unit test at
@@ -17,8 +17,8 @@
 #include <opencog/atoms/base/Atom.h>
 #include <opencog/atoms/base/Link.h>
 #include <opencog/atoms/base/Node.h>
-#include <opencog/persist/dht/DHTAtomStorage.h>
-#include <opencog/persist/dht/DHTPersistSCM.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
+#include <opencog/persist/cog-storage/CogPersistSCM.h>
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
 
 #include <opencog/util/Logger.h>
@@ -29,10 +29,10 @@ class MultiPersistUTest :  public CxxTest::TestSuite
 {
     private:
         AtomSpace *_as;
-        DHTPersistSCM *_pm;
+        CogPersistSCM *_pm;
         std::string uri;
         std::string boot;
-        DHTAtomStorage *astore;
+        CogStorage *astore;
 
 #define NTHREADS 6
 #define NHACK 10
@@ -91,7 +91,7 @@ MultiPersistUTest:: MultiPersistUTest(void)
 
     // Create a singe DHT node that will act as
     // as the repo for the duration of the test.
-    astore = new DHTAtomStorage("dht://:4555/");
+    astore = new CogStorage("dht://:4555/");
     if (!astore->connected())
     {
         logger().error("DeleteUTest: cannot setup a DHT node");
@@ -122,7 +122,7 @@ MultiPersistUTest:: MultiPersistUTest(void)
 void MultiPersistUTest::setUp(void)
 {
     _as = new AtomSpace();
-    _pm = new DHTPersistSCM(_as);
+    _pm = new CogPersistSCM(_as);
     _pm->do_open(uri);
     _pm->do_bootstrap(boot);
 }

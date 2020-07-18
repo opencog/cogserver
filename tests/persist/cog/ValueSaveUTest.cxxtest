@@ -1,5 +1,5 @@
 /*
- * tests/persist/dht/ValueSaveUTest.cxxtest
+ * tests/persist/cog/ValueSaveUTest.cxxtest
  *
  * Test of save and restore of generic values.
  * Ported from tests/persist/sql/multi-driver/ValueSaveUTest.cxxtest
@@ -24,7 +24,7 @@
 
 #include <opencog/atoms/truthvalue/SimpleTruthValue.h>
 
-#include <opencog/persist/dht/DHTAtomStorage.h>
+#include <opencog/persist/cog-storage/CogStorage.h>
 
 #include <opencog/util/Logger.h>
 
@@ -35,7 +35,7 @@ class ValueSaveUTest :  public CxxTest::TestSuite
 	private:
 		std::string uri;
 		std::string boot;
-		DHTAtomStorage *astore;
+		CogStorage *astore;
 
 	public:
 
@@ -49,7 +49,7 @@ class ValueSaveUTest :  public CxxTest::TestSuite
 
 			// Create a singe DHT node that will act as
 			// as the repo for the duration of the test.
-			astore = new DHTAtomStorage("dht://:4555/");
+			astore = new CogStorage("dht://:4555/");
 			if (!astore->connected())
 			{
 				logger().error("ValueSaveUTest: cannot setup a DHT node");
@@ -92,7 +92,7 @@ void ValueSaveUTest::tearDown(void) {}
  */
 void ValueSaveUTest::test_single_atom_save()
 {
-	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	CogStorage *store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -158,7 +158,7 @@ void ValueSaveUTest::check_one(ValuePtr pap, bool fetchkey)
 
 	// ------
 	// First, save the value
-	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	CogStorage *store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -182,7 +182,7 @@ void ValueSaveUTest::check_one(ValuePtr pap, bool fetchkey)
 
 	// ---------------------------------
 	// Now, fetch the value and compare.
-	store = new DHTAtomStorage(uri);
+	store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -207,7 +207,7 @@ void ValueSaveUTest::check_one(ValuePtr pap, bool fetchkey)
 
 void ValueSaveUTest::test_save_restore(bool fkey)
 {
-	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	CogStorage *store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -260,7 +260,7 @@ void ValueSaveUTest::test_save_restore(bool fkey)
 // as well.  This tests the fetching of nodes.
 void ValueSaveUTest::test_load_by_type()
 {
-	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	CogStorage *store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -321,7 +321,7 @@ void ValueSaveUTest::test_load_by_type()
 	// --------------------
 	// Start it up again.
 
-	store = new DHTAtomStorage(uri);
+	store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -380,7 +380,7 @@ void ValueSaveUTest::test_load_by_type()
 // be fetched.
 void ValueSaveUTest::test_link_by_type()
 {
-	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	CogStorage *store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -469,7 +469,7 @@ void ValueSaveUTest::test_link_by_type()
 	// --------------------
 	// Start it up again.
 
-	store = new DHTAtomStorage(uri);
+	store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -586,7 +586,7 @@ void ValueSaveUTest::test_link_by_type()
 // as well, but only on the incoming set!
 void ValueSaveUTest::test_incoming()
 {
-	DHTAtomStorage *store = new DHTAtomStorage(uri);
+	CogStorage *store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
@@ -675,7 +675,7 @@ void ValueSaveUTest::test_incoming()
 	// --------------------
 	// Start it up again.
 
-	store = new DHTAtomStorage(uri);
+	store = new CogStorage(uri);
 	store->dht_bootstrap(boot);
 	TS_ASSERT(store->connected())
 
