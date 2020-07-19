@@ -8,6 +8,10 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+
 #include <boost/asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -72,6 +76,14 @@ void NetworkServer::listen(void)
 
         boost::asio::ip::tcp::no_delay ndly(true);
         sock->set_option(ndly);
+
+        int fd = sock->native_handle();
+        // We are going to be sending oceans of tiny packets,
+        // and we want the fastest-possible responses.
+        int flags = 1;
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(flags));
+        flags = 1;
+        setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &flags, sizeof(flags));
 
         // The total number of concurrently open sockets is managed by
         // keeping a count in ConsoleSocket, and blocking when there are
