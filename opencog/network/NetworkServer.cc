@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+#include <boost/asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
 #include <opencog/network/ConsoleSocket.h>
 
@@ -68,6 +69,9 @@ void NetworkServer::listen(void)
         // end of ServerSocket::handle_connection().
         boost::asio::ip::tcp::socket* sock = new boost::asio::ip::tcp::socket(_io_service);
         _acceptor.accept(*sock);
+
+        boost::asio::ip::tcp::no_delay ndly(true);
+        sock->set_option(ndly);
 
         // The total number of concurrently open sockets is managed by
         // keeping a count in ConsoleSocket, and blocking when there are
