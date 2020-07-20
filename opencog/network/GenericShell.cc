@@ -530,6 +530,8 @@ void GenericShell::poll_loop(void)
 	_init_done = true;
 
 	// Poll for output from the evaluator, and send back results.
+	int slide = 0;
+	int sleep = 1;
 	while (not self_destruct)
 	{
 		poll_and_send();
@@ -539,8 +541,38 @@ void GenericShell::poll_loop(void)
 		// might have started some long-running thread/agent that
 		// is continuing to print, and we want to forward those
 		// prints to the user. (Its pointless to poll faster or
-		// slower than this...)
-		if (_eval_done) usleep(10000);
+		// slower than this... except ...)
+		// ... except ...
+		// However, just after finishing, there might be another
+		// command in the queue, which toggles the flag right back
+		// to not-done state. So go check for that immediately.
+		// And then gracefully back off.
+		//
+		// FIXME ... the correct solution here is probably to use
+		// a second condition variable, which waakes up when a new
+		// command arrives and is started.
+		if (not _eval_done)
+		{
+			slide = 0;
+			sleep = 1;
+		}
+		else
+		{
+			slide ++;
+#define RETRY 4
+			if (RETRY < slide)
+			{
+				usleep(sleep);
+				sleep *= 2;
+// log_2(8192)==13 is 8 milliseconds.
+#define LOG_2_TEN_K 13
+				if (RETRY + LOG_2_TEN_K < slide)
+				{
+					slide = RETRY;
+					sleep = 1;
+				}
+			}
+		}
 	}
 
 	// It's also possible that another thread reaches the dtor
