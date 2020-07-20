@@ -211,7 +211,7 @@ void GenericShell::user_interrupt()
 	// the shell user.
 	while (not evalque.is_empty()) evalque.value_pop();
 
-	// Work around timing window, where queue was just now emptyied,
+	// Work around timing window, where queue was just now emptied,
 	// but the scheme evaluator has not yet started... and so the
 	// command that is to be interrupted hasn't even to begun to
 	// execute, when we go to interrupt it.
@@ -383,7 +383,7 @@ void GenericShell::line_discipline(const std::string &expr)
 }
 
 /* ============================================================== */
-// The problem being adressed here is that the shell destructor
+// The problem being addressed here is that the shell destructor
 // can start running (because the socket was closed) before the
 // evaluator has even started running. This is not really a
 // problem for this class; however, if a derived class
