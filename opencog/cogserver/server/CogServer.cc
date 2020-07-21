@@ -54,31 +54,19 @@ void CogServer::enableNetworkServer(int port)
 
 void CogServer::disableNetworkServer()
 {
-    stop();
-    if (_networkServer)
-    {
-        delete _networkServer;
-        _networkServer = nullptr;
-    }
+    // No-op for backwards-compat. Actual cleanup performed on
+    // main-loop exit.  See notes there about thread races.
 }
 
 void CogServer::stop()
 {
-    // Prevent the Network server from accepting any more connections,
-    // and from queing any more Requests. I think. This might be racey.
-    if (_networkServer) _networkServer->stop();
-
     _running = false;
-
-    // Drain whatever is left in the queue.
-    while (0 < getRequestQueueSize())
-        processRequests();
 }
 
 void CogServer::serverLoop()
 {
     logger().info("Starting CogServer loop.");
-    while(_running)
+    while (_running)
     {
         while (0 < getRequestQueueSize())
             runLoopStep();
@@ -89,8 +77,20 @@ void CogServer::serverLoop()
         usleep(20000);
     }
 
-    // No way to process requests. Stop accepting network connections.
-    disableNetworkServer();
+    // Prevent the Network server from accepting any more connections,
+    // and from queing any more Requests. I think. This might be racey.
+    _networkServer->stop();
+
+    // Drain whatever is left in the queue.
+    while (0 < getRequestQueueSize())
+        processRequests();
+
+    // We need to clean up in the same thread where we are looping;
+    // doing this in other threads, e.g. the thread that calls stop()
+    // or the thread that calls disableNetworkServer() will lead to
+    // races.
+    delete _networkServer;
+    _networkServer = nullptr;
 }
 
 void CogServer::runLoopStep(void)
