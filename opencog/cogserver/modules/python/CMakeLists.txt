@@ -18,6 +18,7 @@ TARGET_LINK_LIBRARIES(PythonModule
 	server
 	agents
 	agent_finder
+	PythonEval
 	${ATOMSPACE_LIBRARIES}
 	${PYTHON_LIBRARIES}
 )
