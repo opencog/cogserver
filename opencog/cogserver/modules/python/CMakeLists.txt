@@ -8,7 +8,7 @@ INCLUDE_DIRECTORIES(
    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-ADD_LIBRARY (PythonModule SHARED
+ADD_LIBRARY (PythonModule MODULE
 	PythonModule.cc 
 	PyMindAgent.cc
 	PyRequest.cc
@@ -16,7 +16,6 @@ ADD_LIBRARY (PythonModule SHARED
 
 TARGET_LINK_LIBRARIES(PythonModule
 	server
-	agents
 	agent_finder
 	PythonEval
 	${ATOMSPACE_LIBRARIES}

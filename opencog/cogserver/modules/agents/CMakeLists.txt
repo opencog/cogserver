@@ -1,5 +1,5 @@
 
-ADD_LIBRARY (agents SHARED
+ADD_LIBRARY (agents MODULE
 	AgentsModule
 	Agent
 	AgentRunnerBase
