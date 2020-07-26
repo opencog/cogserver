@@ -7,8 +7,6 @@
 #include <opencog/cython/PyIncludeWrapper.h>
 #include <opencog/cython/PythonEval.h>
 
-#include <boost/filesystem/operations.hpp>
-
 #include <opencog/util/Config.h>
 #include <opencog/util/misc.h>
 #include <opencog/atomspace/AtomSpace.h>
