@@ -1,5 +1,5 @@
 
-ADD_LIBRARY (builtinreqs SHARED
+ADD_LIBRARY (builtinreqs MODULE
 	BuiltinRequestsModule
 	LoadModuleRequest
 	ListRequest

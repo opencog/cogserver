@@ -9,6 +9,7 @@ ADD_LIBRARY (network SHARED
 
 TARGET_LINK_LIBRARIES(network
 	${COGUTIL_LIBRARY}
+	${Boost_SYSTEM_LIBRARY}
 )
 
 # XXX What does this do? What is the point of this?
