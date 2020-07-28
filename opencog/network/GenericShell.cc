@@ -583,7 +583,7 @@ void GenericShell::poll_loop(void)
 	// time, here.
 	do
 	{
-		usleep(10000);
+		usleep(1);
 		poll_and_send();
 	}
 	while (not _eval_done);
