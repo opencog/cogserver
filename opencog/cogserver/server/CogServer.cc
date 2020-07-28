@@ -41,13 +41,19 @@ CogServer::CogServer(AtomSpace* as) :
 {
 }
 
-void CogServer::enableNetworkServer(int port)
+/// Open the given port number for network service.
+/// Allow at most `max_open_socks` concurrent connections.
+/// Setting this larger than 10 or 20 will usually lead to
+/// poor performance, and setting it larger than 140 will
+/// require changing the unix ulimit on max open file descriptors.
+void CogServer::enableNetworkServer(int port, int max_open_socks)
 {
     if (_networkServer) return;
     _networkServer = new NetworkServer(config().get_int("SERVER_PORT", port));
 
+    ConsoleSocket::set_max_open_sockets(max_open_socks);
     auto make_console = [](void)->ConsoleSocket*
-	     { return new ServerConsole(); };
+            { return new ServerConsole(); };
     _networkServer->run(make_console);
     _running = true;
 }

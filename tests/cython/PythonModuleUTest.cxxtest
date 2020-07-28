@@ -60,10 +60,10 @@ public:
     void setUp() {
         // set cycle duration to a smaller value so that this test do not take too long.
         config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
+        config().set("MODULES", "agents/libagents.so");
+        cogserver().loadModules();
         config().set("MODULES", "opencog/cogserver/modules/python/libPythonModule.so");
 
-        cogserver().loadModules();
-        config().set("MODULES", "agents/libagents.so");
         cogserver().loadModules();
     }
 
