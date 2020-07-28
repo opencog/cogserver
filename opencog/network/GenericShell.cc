@@ -549,7 +549,7 @@ void GenericShell::poll_loop(void)
 		// And then gracefully back off.
 		//
 		// FIXME ... the correct solution here is probably to use
-		// a second condition variable, which waakes up when a new
+		// a second condition variable, which wakes up when a new
 		// command arrives and is started.
 		if (not _eval_done)
 		{
