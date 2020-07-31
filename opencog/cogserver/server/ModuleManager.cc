@@ -303,7 +303,9 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
         modlist =
             "libbuiltinreqs.so, "
             "libscheme-shell.so, "
+            "libsexpr-shell.so, "
             "libpy-shell.so";
+
     std::vector<std::string> modules;
     tokenize(modlist, std::back_inserter(modules), ", ");
     bool load_failure = false;
