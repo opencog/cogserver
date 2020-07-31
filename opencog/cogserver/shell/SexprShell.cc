@@ -34,6 +34,7 @@ SexprShell::SexprShell(void)
 	abort_prompt = "";
 	pending_prompt = "";
 
+	show_prompt = false;
 }
 
 SexprShell::~SexprShell()
