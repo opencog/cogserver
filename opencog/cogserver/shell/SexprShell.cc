@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <opencog/persist/sexpr/Commands.h>
+#include <opencog/persist/sexpr/SexprEval.h>
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 
@@ -34,20 +34,15 @@ SexprShell::SexprShell(void)
 	abort_prompt = "";
 	pending_prompt = "";
 
-	// (&cogserver().getAtomSpace());
 }
 
 SexprShell::~SexprShell()
 {
-	// We must stall until after the evaluator has finished
-	// evaluating. (XXX Why?)
-	while_not_done();
 }
 
 GenericEval* SexprShell::get_evaluator(void)
 {
-	printf("hello world\n");
-	return nullptr;
+	return SexprEval::get_evaluator(&cogserver().getAtomSpace());
 }
 
 /* ===================== END OF FILE ============================ */
