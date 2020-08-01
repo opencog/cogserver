@@ -39,6 +39,18 @@ TARGET_LINK_LIBRARIES(scheme-shell
 	${COGUTIL_LIBRARY}
 )
 
+ADD_LIBRARY (sexpr-shell SHARED
+	SexprShell
+	SexprShellModule
+)
+
+TARGET_LINK_LIBRARIES(sexpr-shell
+	network
+	server
+	${ATOMSPACE_LIBRARY}
+	${COGUTIL_LIBRARY}
+)
+
 IF (HAVE_CYTHON)
 	INSTALL (TARGETS py-shell
 		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")

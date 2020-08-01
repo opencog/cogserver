@@ -470,7 +470,7 @@ void GenericShell::eval_loop(void)
 	evalque.cancel_reset();
 
 	// Let the polling thread die first. If we don't do this, it will
-	// interfer with the manual polling below.
+	// interfere with the manual polling below.
 	pollthr->join();
 	delete pollthr;
 	pollthr = nullptr;
