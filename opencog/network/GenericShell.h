@@ -81,8 +81,8 @@ class GenericShell
 		void poll_loop();
 		void poll_and_send();
 		bool _eval_done;
-		std::condition_variable _cv;
-		std::mutex _mtx;
+		std::condition_variable _eval_cv;
+		std::mutex _eval_mtx;
 		GenericEval* _evaluator;
 		void start_eval();
 		void finish_eval();

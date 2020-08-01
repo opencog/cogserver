@@ -394,22 +394,22 @@ void GenericShell::line_discipline(const std::string &expr)
 void GenericShell::start_eval()
 {
 	OC_ASSERT(_eval_done, "Bad evaluator flag state!");
-	std::unique_lock<std::mutex> lck(_mtx);
+	std::unique_lock<std::mutex> lck(_eval_mtx);
 	_eval_done = false;
 }
 
 void GenericShell::finish_eval()
 {
 	// Repeated control-C will send us here with _eval_done already set..
-	std::unique_lock<std::mutex> lck(_mtx);
+	std::unique_lock<std::mutex> lck(_eval_mtx);
 	_eval_done = true;
-	_cv.notify_all();
+	_eval_cv.notify_all();
 }
 
 void GenericShell::while_not_done()
 {
-	std::unique_lock<std::mutex> lck(_mtx);
-	while (not _eval_done) _cv.wait(lck);
+	std::unique_lock<std::mutex> lck(_eval_mtx);
+	while (not _eval_done) _eval_cv.wait(lck);
 }
 
 /* ============================================================== */
