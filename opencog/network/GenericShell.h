@@ -77,12 +77,16 @@ class GenericShell
 		virtual void line_discipline(const std::string &expr);
 
 		// Concurrency handling
+		std::condition_variable _poll_cv;
+		std::mutex _poll_mtx;
+		void wake_poll();
 		void eval_loop();
 		void poll_loop();
 		void poll_and_send();
-		bool _eval_done;
+
 		std::condition_variable _eval_cv;
 		std::mutex _eval_mtx;
+		bool _eval_done;
 		GenericEval* _evaluator;
 		void start_eval();
 		void finish_eval();
