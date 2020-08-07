@@ -20,6 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <chrono>
 #include <mutex>
 #include <thread>
 
@@ -394,22 +395,24 @@ void GenericShell::line_discipline(const std::string &expr)
 void GenericShell::start_eval()
 {
 	OC_ASSERT(_eval_done, "Bad evaluator flag state!");
-	std::unique_lock<std::mutex> lck(_mtx);
+	std::unique_lock<std::mutex> lck(_eval_mtx);
 	_eval_done = false;
 }
 
 void GenericShell::finish_eval()
 {
-	// Repeated control-C will send us here with _eval_done already set..
-	std::unique_lock<std::mutex> lck(_mtx);
-	_eval_done = true;
-	_cv.notify_all();
+	{
+		// Repeated control-C will send us here with _eval_done already set..
+		std::unique_lock<std::mutex> lck(_eval_mtx);
+		_eval_done = true;
+		_eval_cv.notify_all();
+	}
 }
 
 void GenericShell::while_not_done()
 {
-	std::unique_lock<std::mutex> lck(_mtx);
-	while (not _eval_done) _cv.wait(lck);
+	std::unique_lock<std::mutex> lck(_eval_mtx);
+	while (not _eval_done) _eval_cv.wait(lck);
 }
 
 /* ============================================================== */
@@ -447,14 +450,18 @@ void GenericShell::eval_loop(void)
 			// has finished. Failure to do this can result in
 			// weird crashes in the SchemeEval class.
 			while_not_done();
+			wake_poll();
 
 			// Note that this pop will stall until the queue
 			// becomes non-empty.
 			evalque.pop(in);
 			logger().debug("[GenericShell] start eval of '%s'", in.c_str());
+
+			wake_poll();
 			start_eval();
 			_evaluator->begin_eval();
 			_evaluator->eval_expr(in);
+			wake_poll();
 		}
 		catch (const concurrent_queue<std::string>::Canceled& ex)
 		{
@@ -470,7 +477,7 @@ void GenericShell::eval_loop(void)
 	evalque.cancel_reset();
 
 	// Let the polling thread die first. If we don't do this, it will
-	// interfer with the manual polling below.
+	// interfere with the manual polling below.
 	pollthr->join();
 	delete pollthr;
 	pollthr = nullptr;
@@ -525,15 +532,24 @@ void GenericShell::poll_and_send(void)
 		socket->Send(retstr);
 }
 
+void GenericShell::wake_poll(void)
+{
+	std::unique_lock<std::mutex> lck(_poll_mtx);
+	_poll_cv.notify_all();
+}
+
 void GenericShell::poll_loop(void)
 {
 	_init_done = true;
 
+	std::unique_lock<std::mutex> lock(_poll_mtx);
+
 	// Poll for output from the evaluator, and send back results.
-	int slide = 0;
-	int sleep = 1;
 	while (not self_destruct)
 	{
+		// That's right, call this twice in a row.
+		// This avoids a stall in the _poll_cv below.
+		poll_and_send();
 		poll_and_send();
 
 		// Continue polling, about 100 times per second, even if
@@ -543,37 +559,14 @@ void GenericShell::poll_loop(void)
 		// prints to the user. (Its pointless to poll faster or
 		// slower than this... except ...)
 		// ... except ...
-		// However, just after finishing, there might be another
-		// command in the queue, which toggles the flag right back
-		// to not-done state. So go check for that immediately.
-		// And then gracefully back off.
+		// Just after finishing, there might be another command in
+		// the queue, and so we want to respond to that, as soon as
+		// it seems to be done.
 		//
-		// FIXME ... the correct solution here is probably to use
-		// a second condition variable, which waakes up when a new
-		// command arrives and is started.
-		if (not _eval_done)
-		{
-			slide = 0;
-			sleep = 1;
-		}
-		else
-		{
-			slide ++;
-#define RETRY 4
-			if (RETRY < slide)
-			{
-				usleep(sleep);
-				sleep *= 2;
-// log_2(8192)==13 is 8 milliseconds.
-#define LOG_2_TEN_K 13
-				if (RETRY + LOG_2_TEN_K < slide)
-				{
-					slide = RETRY;
-					sleep = 1;
-				}
-			}
-		}
+		using namespace std::chrono_literals;
+		_poll_cv.wait_for(lock, 10ms);
 	}
+	lock.unlock();
 
 	// It's also possible that another thread reaches the dtor
 	// (setting self_destruct == true) shortly after an evaluation
@@ -583,7 +576,7 @@ void GenericShell::poll_loop(void)
 	// time, here.
 	do
 	{
-		usleep(10000);
+		usleep(1);
 		poll_and_send();
 	}
 	while (not _eval_done);
