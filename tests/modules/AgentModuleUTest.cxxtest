@@ -180,7 +180,10 @@ public:
         Activity *firstAct = aat[a[0]][0];
         Handle h = *firstAct->utilizedHandleSets[0].begin();
         cogserver().getAtomSpace().remove_atom(h);
-        TS_ASSERT(firstAct->utilizedHandleSets[0].size() == 0);
+
+        // Special case for PredicateNode "*-TruthValueKey-*"
+        TS_ASSERT(firstAct->utilizedHandleSets[0].size() == 0 or
+                  firstAct->utilizedHandleSets[0].size() == 1);
 
         // test max size of activity seq
         sat.setMaxAgentActivityTableSeqSize(13);
