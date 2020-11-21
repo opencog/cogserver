@@ -55,7 +55,7 @@ python command line.
 * From bash, just start the process:
   `$ build/opencog/cogserver/server/cogserver`
 
-* From guile: `(use-modules (opencopg cogserver)) (start-cogserver)`
+* From guile: `(use-modules (opencog cogserver)) (start-cogserver)`
 
 * From python: `import opencog.cogserver` and then
    `??? start_cogserver() ???` (where's the documentation for this?)
