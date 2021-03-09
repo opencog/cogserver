@@ -81,7 +81,7 @@ void gargleblast(int tid, int reps)
 
 		if (20 <= i)
 		{
-			sprintf(buf, "echo '(cog-delete (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
+			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
 			std::string delo = cmd_exec(buf);
 
 #define CUR_DEL_SZ 178
