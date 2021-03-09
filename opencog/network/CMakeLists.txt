@@ -12,7 +12,8 @@ TARGET_LINK_LIBRARIES(network
 	${Boost_SYSTEM_LIBRARY}
 )
 
-# XXX What does this do? What is the point of this?
+# The EXPORT is needed to autogenerate CMake boilerplate files in the
+# lib directory that lets other packages FIND_PACKAGE(CogServer)
 INSTALL (TARGETS network
 	EXPORT CogServerTargets
 	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
