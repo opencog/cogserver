@@ -20,7 +20,7 @@ poking around and performing general maintenance on long-running
 OpenCog or AtomSpace processes (e.g. robot control, large
 batch-job processing or long-running data-mining servers.)
 
-Having a netowrk command line is notable: by default, Python
+Having a network command line is notable: by default, Python
 does not allow multiple users to access it at the same time.
 As to scheme/guile, there is an ice-9 REPL server, but the
 CogServer is an order of magnitude faster, lower latency/higher
@@ -66,8 +66,8 @@ can be done as many times as desired; all shells share the same
 AtomSpace, and the system is fully multi-threaded/thread-safe.
 
 The `rlwrap` utility simply adds arrow-key support, so that up-arrow
-provides a command history, and left-right arrow allows inplace editing.
-Note that `telnet` does not provde any password protection!  It is
+provides a command history, and left-right arrow allows in-place editing.
+Note that `telnet` does not provide any password protection!  It is
 fully networked, so you can telnet from other hosts. The default port
 number `17001` can be changed; see the documentation.
 
