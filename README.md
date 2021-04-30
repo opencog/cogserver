@@ -73,7 +73,7 @@ number `17001` can be changed; see the documentation.
 
 Building and Running
 --------------------
-The CogServer is build exactly the same way that all other OpenCog
+The CogServer is built exactly the same way that all other OpenCog
 components are built:
 ```
 clone https://github.com/opencog/cogserver
@@ -89,32 +89,21 @@ wiki](http://wiki.opencog.org/wikihome/index.php/Building_OpenCog).
 
 Prerequisites
 -------------
-To build and run the CogServer, the packages listed below are required.
-With a few exceptions, most Linux distributions will provide these
-packages. Users of Ubuntu may use the dependency installer from the
-`/opencog/octool` repository.  Users of any version of Linux may
-use the Dockerfile to quickly build a container in which OpenCog will
-be built and run.
-
-###### cogutil
-> Common OpenCog C++ utilities
-> http://github.com/opencog/cogutil
-> It uses exactly the same build procedure as this package. Be sure
-  to `sudo make install` at the end.
+To build and run the CogServer, you need to install the AtomSpace first.
 
 ###### AtomSpace
-> OpenCog AtomSpace database and reasoning engine
+> OpenCog AtomSpace database
 > http://github.com/opencog/atomspace
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
 
 Unit tests
 ----------
-To build and run the unit tests, from the `./build` directory enter
-(after building opencog as above):
+To build and run the unit tests, just say
 ```
     make test
 ```
+from the `./build` directory.
 
 Architecture
 ------------
