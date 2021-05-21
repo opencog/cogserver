@@ -20,7 +20,7 @@ poking around and performing general maintenance on long-running
 OpenCog or AtomSpace processes (e.g. robot control, large
 batch-job processing or long-running data-mining servers.)
 
-Having a netowrk command line is notable: by default, Python
+Having a network command line is notable: by default, Python
 does not allow multiple users to access it at the same time.
 As to scheme/guile, there is an ice-9 REPL server, but the
 CogServer is an order of magnitude faster, lower latency/higher
@@ -66,14 +66,14 @@ can be done as many times as desired; all shells share the same
 AtomSpace, and the system is fully multi-threaded/thread-safe.
 
 The `rlwrap` utility simply adds arrow-key support, so that up-arrow
-provides a command history, and left-right arrow allows inplace editing.
-Note that `telnet` does not provde any password protection!  It is
+provides a command history, and left-right arrow allows in-place editing.
+Note that `telnet` does not provide any password protection!  It is
 fully networked, so you can telnet from other hosts. The default port
 number `17001` can be changed; see the documentation.
 
 Building and Running
 --------------------
-The CogServer is build exactly the same way that all other OpenCog
+The CogServer is built exactly the same way that all other OpenCog
 components are built:
 ```
 clone https://github.com/opencog/cogserver
@@ -89,32 +89,21 @@ wiki](http://wiki.opencog.org/wikihome/index.php/Building_OpenCog).
 
 Prerequisites
 -------------
-To build and run the CogServer, the packages listed below are required.
-With a few exceptions, most Linux distributions will provide these
-packages. Users of Ubuntu may use the dependency installer from the
-`/opencog/octool` repository.  Users of any version of Linux may
-use the Dockerfile to quickly build a container in which OpenCog will
-be built and run.
-
-###### cogutil
-> Common OpenCog C++ utilities
-> http://github.com/opencog/cogutil
-> It uses exactly the same build procedure as this package. Be sure
-  to `sudo make install` at the end.
+To build and run the CogServer, you need to install the AtomSpace first.
 
 ###### AtomSpace
-> OpenCog AtomSpace database and reasoning engine
+> OpenCog AtomSpace database
 > http://github.com/opencog/atomspace
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
 
 Unit tests
 ----------
-To build and run the unit tests, from the `./build` directory enter
-(after building opencog as above):
+To build and run the unit tests, just say
 ```
     make test
 ```
+from the `./build` directory.
 
 Architecture
 ------------
