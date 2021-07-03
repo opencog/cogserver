@@ -106,7 +106,7 @@ void CogServerSCM::init()
 extern "C" {
 void opencog_cogserver_init(void)
 {
-    static CogServerSCM cogserver;
+    static CogServerSCM cogserver_bindings;
 }
 };
 
@@ -142,6 +142,13 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     return rc;
 }
 
+
+namespace opencog
+{
+    // The singleton instance.
+    extern CogServer* serverInstance;
+};
+
 std::string CogServerSCM::stop_server(void)
 {
     static std::string rc;
@@ -156,6 +163,7 @@ std::string CogServerSCM::stop_server(void)
     delete main_loop;
     delete srvr;
     srvr = NULL;
+    serverInstance = nullptr;
 
     rc = "Stopped CogServer";
     return rc;

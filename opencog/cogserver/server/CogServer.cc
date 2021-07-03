@@ -117,8 +117,18 @@ void CogServer::runLoopStep(void)
 
 // =============================================================
 // Singleton instance stuff.
+//
+// I don't really like singleton instances very much. There are some
+// interesting use cases where one might want to run multipel
+// cogservers. However, at this time, too much of the code (???)
+// assumes a singleton instance, so we leave this for now. XXX FIXME.
 
-static CogServer* serverInstance = nullptr;
+// The guile module needs to be able to delete this singleton.
+// So put it where the guile module can find it.
+namespace opencog
+{
+    CogServer* serverInstance = nullptr;
+};
 
 CogServer& opencog::cogserver(AtomSpace* as)
 {
