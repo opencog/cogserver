@@ -119,17 +119,16 @@ std::string CogServerSCM::start_server(AtomSpace* as,
                                        const std::string& cfg)
 {
     static std::string rc;
+
     // Singleton instance. Maybe we should throw, here?
     if (srvr) { rc = "CogServer already running!"; return rc; }
 
-    // The default config file is installed from
-    // $SRCDIR/lib/cogserver.conf and is copied to
-    // /usr/local/etc/cogserver.conf
-    // by default. Use it if we can; it has sane file paths in it.
+    // Use the logfile, if specified.
     if (0 < cfg.size())
+    {
         config().load(cfg.c_str(), true);
-    else
-        config().load("cogserver.conf", true);
+        port = config().get_int("SERVER_PORT", port);
+    }
 
     srvr = &cogserver(as);
 
@@ -137,7 +136,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     srvr->loadModules();
 
     // Enable the network server and run the server's main loop
-    srvr->enableNetworkServer();
+    srvr->enableNetworkServer(port);
     main_loop = new std::thread(&CogServer::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;

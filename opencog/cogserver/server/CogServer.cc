@@ -12,7 +12,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
 #include <opencog/util/platform.h>
@@ -49,7 +48,7 @@ CogServer::CogServer(AtomSpace* as) :
 void CogServer::enableNetworkServer(int port, int max_open_socks)
 {
     if (_networkServer) return;
-    _networkServer = new NetworkServer(config().get_int("SERVER_PORT", port));
+    _networkServer = new NetworkServer(port);
 
     ConsoleSocket::set_max_open_sockets(max_open_socks);
     auto make_console = [](void)->ConsoleSocket*
