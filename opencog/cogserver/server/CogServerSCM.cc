@@ -39,7 +39,8 @@ private:
     static void init_in_module(void*);
     void init(void);
 
-    std::string start_server(AtomSpace*, const std::string&);
+    std::string start_server(AtomSpace*, int, const std::string&,
+                             const std::string&, const std::string&);
     std::string stop_server(void);
 
     CogServer* srvr = NULL;
@@ -112,6 +113,9 @@ void opencog_cogserver_init(void)
 // --------------------------------------------------------------
 
 std::string CogServerSCM::start_server(AtomSpace* as,
+                                       int port,
+                                       const std::string& logfile,
+                                       const std::string& loglevel,
                                        const std::string& cfg)
 {
     static std::string rc;
