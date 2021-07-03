@@ -114,8 +114,8 @@ void opencog_cogserver_init(void)
 
 std::string CogServerSCM::start_server(AtomSpace* as,
                                        int port,
-                                       const std::string& logfile,
-                                       const std::string& loglevel,
+                                       const std::string& prompt,
+                                       const std::string& scmprompt,
                                        const std::string& cfg)
 {
     static std::string rc;
@@ -123,12 +123,16 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     // Singleton instance. Maybe we should throw, here?
     if (srvr) { rc = "CogServer already running!"; return rc; }
 
-    // Use the logfile, if specified.
+    // Use the config file, if specified.
     if (0 < cfg.size())
     {
         config().load(cfg.c_str(), true);
         port = config().get_int("SERVER_PORT", port);
     }
+
+    // Pass parameters non-locally.
+    config().set("ANSI_PROMPT", prompt);
+    config().set("ANSI_SCM_PROMPT", scmprompt);
 
     srvr = &cogserver(as);
 
