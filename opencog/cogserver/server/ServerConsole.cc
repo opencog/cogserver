@@ -22,16 +22,14 @@ std::string ServerConsole::_prompt;
 
 ServerConsole::ServerConsole(void)
 {
-    if (0 == _prompt.size()) {
-        if (nullptr == &config()) {
-            _prompt = "[0;32mopencog[1;32m> [0m";
-        } else {
-            // Prompt with ANSI color codes, if possible.
-            if (config().get_bool("ANSI_ENABLED", true))
-                _prompt = config().get("ANSI_PROMPT", "[0;32mopencog[1;32m> [0m");
-            else
-                _prompt = config().get("PROMPT", "opencog> ");
-        }
+    if (nullptr == &config()) {
+        _prompt = "[0;32mopencog[1;32m> [0m";
+    } else {
+        // Prompt with ANSI color codes, if possible.
+        if (config().get_bool("ANSI_ENABLED", true))
+            _prompt = config().get("ANSI_PROMPT", "[0;32mopencog[1;32m> [0m");
+        else
+            _prompt = config().get("PROMPT", "opencog> ");
     }
 }
 

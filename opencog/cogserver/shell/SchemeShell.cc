@@ -35,18 +35,16 @@ std::string SchemeShell::_prompt;
 
 SchemeShell::SchemeShell(void)
 {
-	if (0 == _prompt.size()) {
-		_prompt = "[0;34mguile[1;34m> [0m";
+	_prompt = "[0;34mguile[1;34m> [0m";
 
-		// Avoid crash in cogserver dtor.
-		if (nullptr != &config())
-		{
-			// Prompt with ANSI color codes, if possible.
-			if (config().get_bool("ANSI_ENABLED", true))
-				_prompt = config().get("ANSI_SCM_PROMPT", "[0;34mguile[1;34m> [0m");
-			else
-				_prompt = config().get("SCM_PROMPT", "guile> ");
-		}
+	// Avoid crash in cogserver dtor.
+	if (nullptr != &config())
+	{
+		// Prompt with ANSI color codes, if possible.
+		if (config().get_bool("ANSI_ENABLED", true))
+			_prompt = config().get("ANSI_SCM_PROMPT", "[0;34mguile[1;34m> [0m");
+		else
+			_prompt = config().get("SCM_PROMPT", "guile> ");
 	}
 
 	normal_prompt = _prompt;
