@@ -70,6 +70,27 @@ void ServerSocket::SetCloseAndDelete()
     try
     {
         _socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+
+        // OK, so there is some boost bug here. This line of code
+        // crashes, and I can't figure out how to make it not crash.
+        // So, it we start a cogserver, telnet into it, stop the
+        // cogserver, then exit telnet, it will crash deep inside of
+        // boost (in the close() below.) This may be related to the
+        // fact that we sent a thread-cancel to boost, because it kept
+        // hanging in shutdown. But I could not prevent the  hang
+        // without the cancel ... so, I dunno. Boost ASIO seems awfully
+        // buggy to me ... its forced us into this stunningly complex
+        // design, and ... I don't know how to fix it.
+        //
+        // If we don't close the socket, then it crashes in the same
+        // place in the destructor. If we don't call the destructor,
+        // then memory leaks. The actual problem appears to be racey,
+        // because sometimes, it does not crash. However, when it
+        // doesn't crash in the close() below, it will crash later
+        // with memory corruption.
+        //
+        // The long-term solution is to rewrite this code to not use
+        // asio. But that is just a bit more than a weekend project.
         _socket->close();
     }
     catch (const boost::system::system_error& e)
