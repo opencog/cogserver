@@ -75,19 +75,26 @@ void ServerSocket::SetCloseAndDelete()
         // crashes, and I can't figure out how to make it not crash.
         // So, it we start a cogserver, telnet into it, stop the
         // cogserver, then exit telnet, it will crash deep inside of
-        // boost (in the close() below.) This may be related to the
-        // fact that we sent a thread-cancel to boost, because it kept
-        // hanging in shutdown. But I could not prevent the  hang
-        // without the cancel ... so, I dunno. Boost ASIO seems awfully
-        // buggy to me ... its forced us into this stunningly complex
-        // design, and ... I don't know how to fix it.
+        // boost (in the `close()` below.) I think it crashes because
+        // boost is accessing freed memory. That is, by this point,
+        // we have called `NetworkServer::stop()` which calls
+        // `boost::asio::io_service::stop()` which probably frees
+        // something. Of course, we only wanted to stop boost from
+        // listening, and not to stop it from servicing sockets. So
+        // anyway, it frees stuff, and then does a use-after-free.
+        //
+        // Why do I think this? Because, on rare occasions, it does not
+        // crash in the `close()` below. It crashes later, in `malloc()`
+        // with a corrupted free list. Which tells me boost is doing
+        // use-after-free.
+        //
+        // Boost ASIO seems awfully buggy to me ... its forced us into
+        // this stunningly complex design, and ... I don't know how to
+        // (easily) fix it.
         //
         // If we don't close the socket, then it crashes in the same
         // place in the destructor. If we don't call the destructor,
-        // then memory leaks. The actual problem appears to be racey,
-        // because sometimes, it does not crash. However, when it
-        // doesn't crash in the close() below, it will crash later
-        // with memory corruption.
+        // then memory leaks.
         //
         // The long-term solution is to rewrite this code to not use
         // asio. But that is just a bit more than a weekend project.
