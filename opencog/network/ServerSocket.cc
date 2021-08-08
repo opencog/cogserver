@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+#include <sys/prctl.h>
 #include <mutex>
 
 #include <opencog/util/Logger.h>
@@ -161,6 +162,7 @@ void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
 
 void ServerSocket::handle_connection(void)
 {
+    prctl(PR_SET_NAME, "cogserv:connect", 0, 0, 0);
     logger().debug("ServerSocket::handle_connection()");
     OnConnection();
     boost::asio::streambuf b;
