@@ -20,6 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <sys/prctl.h>
+
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -422,6 +424,7 @@ void GenericShell::while_not_done()
 /// it is impossible to queue OOB interrupts.)
 void GenericShell::eval_loop(void)
 {
+	prctl(PR_SET_NAME, "cogserv:eval", 0, 0, 0);
 	logger().debug("[GenericShell] enter eval loop");
 	OC_ASSERT(nullptr == _evaluator, "Bad evaluator state!");
 
@@ -541,6 +544,7 @@ void GenericShell::wake_poll(void)
 void GenericShell::poll_loop(void)
 {
 	_init_done = true;
+	prctl(PR_SET_NAME, "cogserv:poll", 0, 0, 0);
 
 	std::unique_lock<std::mutex> lock(_poll_mtx);
 

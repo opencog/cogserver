@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#include <sys/prctl.h>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
@@ -58,6 +59,7 @@ void NetworkServer::stop()
 
 void NetworkServer::listen(void)
 {
+    prctl(PR_SET_NAME, "cogserv:listen", 0, 0, 0);
     printf("Listening on port %d\n", _port);
     while (_running)
     {

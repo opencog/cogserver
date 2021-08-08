@@ -11,6 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/prctl.h>
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
@@ -70,6 +71,7 @@ void CogServer::stop()
 
 void CogServer::serverLoop()
 {
+    prctl(PR_SET_NAME, "cogserv:loop", 0, 0, 0);
     logger().info("Starting CogServer loop.");
     while (_running)
     {
