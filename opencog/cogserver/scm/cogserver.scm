@@ -32,13 +32,13 @@
   Start the cogserver, optionally specifying a port, logfile, telnet
   prompt and telnet scheme prompt (or any combination of these). If any
   are missing, default values will be used. The defaults are as shown.
-  Additinal logging options can be found in the (opencog logger) module.
+  Additional logging options can be found in the (opencog logger) module.
 
   The prompts may be ANSI colorized prompts. The ANSI escape sequence
   uses the ESC char, which is written as \\x1b in guile.
 
   Alternately, a config file can be specified. If a config file is
-  given, as well as the abbove paramters, then the above parameters take
+  given, as well as the above parameters, then the above parameters take
   precedence.  The use of a config file is deprecated.
 
   To stop the cogserver, just say stop-cogserver.
