@@ -75,7 +75,7 @@ void gargleblast(int tid, int reps)
 		TS_ASSERT_LESS_THAN_EQUALS(reso.size(), CUR_MSG_SZ+1);
 		if (reso.size() < CUR_MSG_SZ or (CUR_MSG_SZ+1) < reso.size())
 			printf("Error: Create rep %d of %d in thread %d failed\n"
-			       "\tGot: %lu >>>%s<<<\n",
+			       "\tGot: %zu >>>%s<<<\n",
 			       i, reps, tid, reso.size(), reso.c_str());
 		usleep(50000);
 
