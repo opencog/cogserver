@@ -9,7 +9,7 @@ ADD_LIBRARY (network SHARED
 
 TARGET_LINK_LIBRARIES(network
 	${COGUTIL_LIBRARY}
-	${Boost_SYSTEM_LIBRARY}
+	# ${Boost_SYSTEM_LIBRARY}
 )
 
 # The EXPORT is needed to autogenerate CMake boilerplate files in the
