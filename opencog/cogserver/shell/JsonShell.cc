@@ -1,7 +1,7 @@
 /*
  * JsonShell.cc
  *
- * Simple scheme shell
+ * Simple JSON shell
  * Copyright (c) 2008 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <opencog/persist/sexpr/JsonEval.h>
+#include <opencog/persist/json/JsonEval.h>
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 

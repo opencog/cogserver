@@ -1,7 +1,7 @@
 /*
  * JsonShell.h
  *
- * Simple s-expression shell
+ * Simple JSON shell
  * Copyright (c) 2008, 2013, 2020, 2021 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
