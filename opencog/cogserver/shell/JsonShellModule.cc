@@ -83,7 +83,6 @@ JsonShellModule::shelloutRequest::execute(void)
 		std::string &arg = _parameters.front();
 		if (arg == "quiet" || arg == "hush") hush = true;
 		sh->hush_prompt(hush);
-		sh->hush_output(hush);
 
 		if (hush) { send(""); return true; }
 	}

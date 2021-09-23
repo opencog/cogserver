@@ -32,9 +32,9 @@ JsonShell::JsonShell(void)
 {
 	normal_prompt = "json> ";
 	abort_prompt = "json> ";
-	pending_prompt = "";
+	pending_prompt = "... ";
 
-	show_prompt = false;
+	show_prompt = true;
 }
 
 JsonShell::~JsonShell()
