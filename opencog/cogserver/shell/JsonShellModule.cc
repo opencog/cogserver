@@ -51,13 +51,15 @@ JsonShellModule::shelloutRequest::info(void)
 {
 	static const RequestClassInfo _cci("json",
 		"Enter the JSON shell",
-		"Usage: json\n\n"
+		"Usage: json [hush] [quiet]\n\n"
 		"Enter the JSON/Javascript interpreter shell. This shell provides\n"
 		"a very minimal Javascript shell, with just enough functions to get\n"
 		"Atoms and Values from an AtomSpace.\n\n"
 		"It is used to provide a basic AtomSpace WebApp network server.\n"
 		"Example usage: `AtomSpace.getAtoms(\"Node\", true)` will return all\n"
 		"Nodes in the AtomSpace.\n\n"
+		"By default, this prints a prompt. To get a shell without a prompt,\n"
+		"say `json hush` or `json quiet`\n"
 		"To exit the shell, send a ^D (ctrl-D) or a single . on a line by itself.\n",
 		true, false);
 	return _cci;
@@ -75,7 +77,21 @@ JsonShellModule::shelloutRequest::execute(void)
 	JsonShell *sh = new JsonShell();
 	sh->set_socket(con);
 
-	send("");
+	if (!_parameters.empty())
+	{
+		bool hush = false;
+		std::string &arg = _parameters.front();
+		if (arg == "quiet" || arg == "hush") hush = true;
+		sh->hush_prompt(hush);
+		sh->hush_output(hush);
+
+		if (hush) { send(""); return true; }
+	}
+
+	std::string rv =
+		"Entering JSON shell; use ^D or a single . on a "
+		"line by itself to exit.\n" + sh->get_prompt();
+	send(rv);
 	return true;
 }
 
