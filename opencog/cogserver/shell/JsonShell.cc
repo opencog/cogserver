@@ -30,8 +30,8 @@ using namespace opencog;
 
 JsonShell::JsonShell(void)
 {
-	normal_prompt = "";
-	abort_prompt = "";
+	normal_prompt = "json> ";
+	abort_prompt = "json> ";
 	pending_prompt = "";
 
 	show_prompt = false;
