@@ -53,9 +53,12 @@ JsonShellModule::shelloutRequest::info(void)
 		"Enter the JSON shell",
 		"Usage: json\n\n"
 		"Enter the JSON/Javascript interpreter shell. This shell provides\n"
-		"a very minimal Javascript shell, with just enough commands\n"
-		"to getAtoms and Values from an AtomSpace.\n\n"
-		"It is used to provide a basic AtomSpace WebApp network server.\n",
+		"a very minimal Javascript shell, with just enough functions to get\n"
+		"Atoms and Values from an AtomSpace.\n\n"
+		"It is used to provide a basic AtomSpace WebApp network server.\n"
+		"Example usage: `AtomSpace.getAtoms(\"Node\", true)` will return all\n"
+		"Nodes in the AtomSpace.\n\n"
+		"To exit the shell, send a ^D (ctrl-D) or a single . on a line by itself.\n",
 		true, false);
 	return _cci;
 }
