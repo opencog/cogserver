@@ -70,3 +70,7 @@ ENDIF (HAVE_CYTHON)
 
 INSTALL (TARGETS scheme-shell
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+INSTALL (TARGETS sexpr-shell
+	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+INSTALL (TARGETS json-shell
+	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")

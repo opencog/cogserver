@@ -304,6 +304,7 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
             "libbuiltinreqs.so, "
             "libscheme-shell.so, "
             "libsexpr-shell.so, "
+            "libjson-shell.so, "
             "libpy-shell.so";
 
     std::vector<std::string> modules;
