@@ -105,9 +105,9 @@ bool ListRequest::execute()
             }, NODE);
 
     } else if (type != NOTYPE) { // filter by type
-        as.get_handles_by_type(std::back_inserter(_handles), type, subtypes);
+        as.get_handles_by_type(_handles, type, subtypes);
     } else {
-        as.get_handles_by_type(back_inserter(_handles), ATOM, true);
+        as.get_handles_by_type(_handles, ATOM, true);
     }
 
     // Remove the bottom handles
