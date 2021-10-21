@@ -34,7 +34,14 @@ CogServer::~CogServer()
     logger().debug("[CogServer] exit destructor");
 }
 
-CogServer::CogServer(AtomSpace* as) :
+CogServer::CogServer(void) :
+    BaseServer(),
+    _networkServer(nullptr),
+    _running(false)
+{
+}
+
+CogServer::CogServer(AtomSpacePtr as) :
     BaseServer(as),
     _networkServer(nullptr),
     _running(false)
@@ -132,7 +139,15 @@ namespace opencog
     CogServer* serverInstance = nullptr;
 };
 
-CogServer& opencog::cogserver(AtomSpace* as)
+CogServer& opencog::cogserver(void)
+{
+    if (nullptr == serverInstance)
+        serverInstance = new CogServer();
+
+    return *serverInstance;
+}
+
+CogServer& opencog::cogserver(AtomSpacePtr as)
 {
     if (nullptr == serverInstance)
         serverInstance = new CogServer(as);
