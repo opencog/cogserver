@@ -57,8 +57,10 @@ protected:
 
     /** Protected; singleton instance! Bad things happen when there is
      * more than one. Alas. */
-    CogServer(AtomSpace* = nullptr);
-friend CogServer& cogserver(AtomSpace*);
+    CogServer(void);
+    CogServer(AtomSpacePtr);
+friend CogServer& cogserver(void);
+friend CogServer& cogserver(AtomSpacePtr);
 
 public:
     /** CogServer's destructor. Disables the network server and
@@ -104,7 +106,8 @@ public:
 }; // class
 
 // Singleton instance of the cogserver
-CogServer& cogserver(AtomSpace* = nullptr);
+CogServer& cogserver(void);
+CogServer& cogserver(AtomSpacePtr);
 
 // Only cython needs this.
 inline AtomSpace& cython_server_atomspace(void)

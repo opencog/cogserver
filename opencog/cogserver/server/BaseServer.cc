@@ -14,13 +14,21 @@
 using namespace opencog;
 
 // The user might want to tell us about an existing AtomSpace.
-BaseServer::BaseServer(AtomSpace* as)
+BaseServer::BaseServer(void)
 {
-    if (nullptr == as) {
-        _atomSpace = new AtomSpace();
+    _atomSpace = createAtomSpace();
+    _private_as = _atomSpace;
+}
+
+BaseServer::BaseServer(AtomSpacePtr as)
+{
+    if (nullptr == as)
+    {
+        _atomSpace = createAtomSpace();
         _private_as = _atomSpace;
     }
-    else {
+    else
+    {
         _atomSpace = as;
         _private_as = nullptr;
     }
@@ -29,7 +37,5 @@ BaseServer::BaseServer(AtomSpace* as)
 BaseServer::~BaseServer()
 {
     _atomSpace = nullptr;
-
-    if (_private_as)
-        delete _private_as;
+    _private_as = nullptr;
 }

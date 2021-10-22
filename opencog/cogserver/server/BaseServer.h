@@ -20,14 +20,15 @@ namespace opencog
 class BaseServer
 {
 protected:
-    AtomSpace* _private_as;
-    AtomSpace* _atomSpace;
+    AtomSpacePtr _private_as;
+    AtomSpacePtr _atomSpace;
 
 public:
     /** Returns the atomspace instance. */
-    AtomSpace& getAtomSpace() { return *_atomSpace; }
+    AtomSpace& getAtomSpace() { return *_atomSpace.get(); }
 
-    BaseServer(AtomSpace* = nullptr);
+    BaseServer(void);
+    BaseServer(AtomSpacePtr);
     virtual ~BaseServer();
 }; // class
 
