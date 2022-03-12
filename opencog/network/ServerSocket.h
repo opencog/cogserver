@@ -39,6 +39,10 @@ protected:
      */
     virtual void OnLine (const std::string&) = 0;
 
+    /**
+     * Report human-readable stats for this socket.
+     */
+    virtual std::string connection_stats(void);
 public:
     ServerSocket(void);
     virtual ~ServerSocket();
@@ -55,6 +59,14 @@ public:
      * Close this socket
      */
     void SetCloseAndDelete(void);
+
+
+    /**
+     * Return a human-readable table of socket statistics.
+     * Used for monitoring the server state.
+     * Loops over all active sockets.
+     */
+    static std::string display_stats(void);
 }; // class
 
 /** @}*/

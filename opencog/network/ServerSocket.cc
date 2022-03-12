@@ -35,6 +35,25 @@ static void rem_sock(ServerSocket* ss)
     _sock_list.erase(ss);
 }
 
+std::string ServerSocket::display_stats(void)
+{
+    std::string rc;
+    std::lock_guard<std::mutex> lock(_sock_lock);
+
+    for (ServerSocket* ss : _sock_list)
+    {
+        rc += ss->connection_stats() + "\n";
+    }
+
+    return rc;
+}
+
+std::string ServerSocket::connection_stats(void)
+{
+    std::string rc;
+    return rc;
+}
+
 // -------------------------
 
 ServerSocket::ServerSocket(void) :
