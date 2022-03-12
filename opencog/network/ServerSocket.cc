@@ -9,6 +9,7 @@
 
 #include <sys/prctl.h>
 #include <mutex>
+#include <set>
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
@@ -16,9 +17,30 @@
 
 using namespace opencog;
 
+// -------------------------
+// Infrastrucure for printing connection stats
+//
+static std::mutex _sock_lock;
+static std::set<ServerSocket*> _sock_list;
+
+static void add_sock(ServerSocket* ss)
+{
+    std::lock_guard<std::mutex> lock(_sock_lock);
+    _sock_list.insert(ss);
+}
+
+static void rem_sock(ServerSocket* ss)
+{
+    std::lock_guard<std::mutex> lock(_sock_lock);
+    _sock_list.erase(ss);
+}
+
+// -------------------------
+
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
+	add_sock(this);
 }
 
 ServerSocket::~ServerSocket()
@@ -28,6 +50,7 @@ ServerSocket::~ServerSocket()
     SetCloseAndDelete();
     delete _socket;
     _socket = nullptr;
+	rem_sock(this);
 }
 
 void ServerSocket::Send(const std::string& cmd)
@@ -159,6 +182,8 @@ void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
     if (_socket) delete _socket;
     _socket = sock;
 }
+
+// -------------------------
 
 void ServerSocket::handle_connection(void)
 {
