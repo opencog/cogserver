@@ -19,7 +19,7 @@
 
 using namespace opencog;
 
-// -------------------------
+// ==================================================================
 // Infrastrucure for printing connection stats
 //
 static std::mutex _sock_lock;
@@ -58,7 +58,7 @@ std::string ServerSocket::display_stats(void)
 
 std::string ServerSocket::connection_header(void)
 {
-    return "DATE             THREAD ";
+    return "DATE             THREAD STATE";
 }
 
 std::string ServerSocket::connection_stats(void)
@@ -70,23 +70,25 @@ std::string ServerSocket::connection_stats(void)
     strftime(buff, 20, "%d %b %H:%M:%S", &tm);
 
     // Thread ID as shown by `ps -eLf`
-    char bf[40];
-    pid_t tid = gettid();
-    snprintf(bf, 40, "%s %8d", buff, tid);
+    char bf[60];
+    snprintf(bf, 60, "%s %8d %s", buff, _tid, _status);
     return bf;
 }
 
-// -------------------------
+// ==================================================================
 
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
     _start_time = time(nullptr);
+    _tid = 0;
+    _status = "start";
     add_sock(this);
 }
 
 ServerSocket::~ServerSocket()
 {
+    _status = "close";
     logger().debug("ServerSocket::~ServerSocket()");
 
     SetCloseAndDelete();
@@ -225,14 +227,16 @@ void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
     _socket = sock;
 }
 
-// -------------------------
+// ==================================================================
 
 void ServerSocket::handle_connection(void)
 {
     prctl(PR_SET_NAME, "cogserv:connect", 0, 0, 0);
+    _tid = gettid();
     logger().debug("ServerSocket::handle_connection()");
     OnConnection();
     boost::asio::streambuf b;
+    _status = " run ";
     while (true)
     {
         try
@@ -290,3 +294,5 @@ void ServerSocket::handle_connection(void)
     // must be thought of as the normal sync point for completion.
     delete this;
 }
+
+// ==================================================================
