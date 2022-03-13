@@ -82,3 +82,20 @@ void ConsoleSocket::SetShell(GenericShell *g)
 {
     _shell = g;
 }
+
+// ==================================================================
+
+std::string ConsoleSocket::connection_header(void)
+{
+    return ServerSocket::connection_header() + " SHEL";
+}
+
+std::string ConsoleSocket::connection_stats(void)
+{
+    std::string rc = ServerSocket::connection_stats() + " ";
+    if (_shell) rc += _shell->_name;
+    else rc += "cogs";
+    return rc;
+}
+
+// ==================================================================

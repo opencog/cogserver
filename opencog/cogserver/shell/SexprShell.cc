@@ -35,6 +35,7 @@ SexprShell::SexprShell(void)
 	pending_prompt = "";
 
 	show_prompt = false;
+	_name = "sexp";
 }
 
 SexprShell::~SexprShell()

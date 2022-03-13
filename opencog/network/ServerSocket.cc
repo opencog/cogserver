@@ -58,7 +58,7 @@ std::string ServerSocket::display_stats(void)
 
 std::string ServerSocket::connection_header(void)
 {
-    return "DATE             THREAD STATE";
+    return "DATE             THREAD  STATE";
 }
 
 std::string ServerSocket::connection_stats(void)

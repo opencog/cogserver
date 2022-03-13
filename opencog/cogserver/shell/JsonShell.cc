@@ -35,6 +35,7 @@ JsonShell::JsonShell(void)
 	pending_prompt = "... ";
 
 	show_prompt = true;
+	_name = "json";
 }
 
 JsonShell::~JsonShell()
