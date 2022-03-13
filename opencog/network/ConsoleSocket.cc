@@ -87,18 +87,25 @@ void ConsoleSocket::SetShell(GenericShell *g)
 
 std::string ConsoleSocket::connection_header(void)
 {
-    return ServerSocket::connection_header() + " U SHEL";
+    return ServerSocket::connection_header() + " U SHEL QZ E PENDG";
 }
 
 std::string ConsoleSocket::connection_stats(void)
 {
-    char buf[10];
-    snprintf(buf, 10, " %1d ", get_use_count());
+    char buf[40];
+    snprintf(buf, 40, " %1d ", get_use_count());
 
     std::string rc = ServerSocket::connection_stats() + buf;
 
-    if (_shell) rc += _shell->_name;
-    else rc += "cogs";
+    if (_shell)
+    {
+        rc += _shell->_name;
+        snprintf(buf, 40, " %2zd %c %5zd",
+            _shell->queued(), _shell->eval_done()?'F':'T',
+            _shell->pending());
+        rc += buf;
+    }
+    else rc += "cogs           ";
 
     return rc;
 }

@@ -131,13 +131,13 @@ std::string NetworkServer::display_stats(void)
 
     std::string rc = "-----\n";
     rc += nbuf;
-    rc += "    Up since ";
+    rc += " ---- Up since: ";
     rc += sbuf;
     rc += "\n";
 
     char buff[80];
-    snprintf(buff, 80, "running: %d  port: %d\n",
-        _running, _port);
+    snprintf(buff, 80, "Status: %s  Port: %d\n",
+        _running?"running":"halted", _port);
 
     rc += buff;
 

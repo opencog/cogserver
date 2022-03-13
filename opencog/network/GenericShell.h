@@ -110,7 +110,11 @@ class GenericShell
 		virtual void hush_output(bool);
 		virtual void hush_prompt(bool);
 
+		// Monitor statistics
 		const char* _name;
+		bool eval_done() const { return _eval_done; }
+		size_t pending() const { return _pending_output.size(); }
+		size_t queued() const { return evalque.size(); }
 };
 
 /** @}*/
