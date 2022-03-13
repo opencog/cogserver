@@ -51,8 +51,9 @@ protected:
     void listen();
     ConsoleSocket* (*_getConsole)(void);
 
-    /** misc stats */
+    /** monitoring stats */
     time_t _start_time;
+    size_t _nconnections;
 
 public:
 

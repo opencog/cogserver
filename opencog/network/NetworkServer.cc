@@ -32,6 +32,7 @@ NetworkServer::NetworkServer(unsigned short port) :
 {
     logger().debug("[NetworkServer] constructor");
     _start_time = time(nullptr);
+    _nconnections = 0;
 }
 
 NetworkServer::~NetworkServer()
@@ -79,6 +80,7 @@ void NetworkServer::listen(void)
         // end of ServerSocket::handle_connection().
         boost::asio::ip::tcp::socket* sock = new boost::asio::ip::tcp::socket(_io_service);
         _acceptor.accept(*sock);
+        _nconnections++;
 
         boost::asio::ip::tcp::no_delay ndly(true);
         sock->set_option(ndly);
@@ -131,13 +133,13 @@ std::string NetworkServer::display_stats(void)
 
     std::string rc = "-----\n";
     rc += nbuf;
-    rc += " ---- Up since: ";
+    rc += " ---- up-since: ";
     rc += sbuf;
     rc += "\n";
 
     char buff[80];
-    snprintf(buff, 80, "Status: %s  Port: %d\n",
-        _running?"running":"halted", _port);
+    snprintf(buff, 80, "status: %s  tot-connects: %zd  listen-port: %d\n",
+        _running?"running":"halted", _nconnections, _port);
 
     rc += buff;
 
