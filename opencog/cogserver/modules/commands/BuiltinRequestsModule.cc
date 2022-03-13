@@ -171,6 +171,8 @@ std::string BuiltinRequestsModule::do_stats(Request *req, std::list<std::string>
     }
     oss << "Process num-open-fds = " << nfd << "\n";
 
+    oss << ServerSocket::display_stats();
+
     return oss.str();
 }
 

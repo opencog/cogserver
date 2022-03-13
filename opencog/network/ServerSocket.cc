@@ -8,6 +8,7 @@
  */
 
 #include <sys/prctl.h>
+#include <sys/types.h>
 #include <time.h>
 #include <mutex>
 #include <set>
@@ -57,16 +58,22 @@ std::string ServerSocket::display_stats(void)
 
 std::string ServerSocket::connection_header(void)
 {
-    return "DATE           ";
+    return "DATE             THREAD ";
 }
 
 std::string ServerSocket::connection_stats(void)
 {
+    // Start date
     struct tm tm;
     gmtime_r(&_start_time, &tm);
-    char buff[80];
-    strftime(buff, 80, "%d %b %H:%M:%S ", &tm);
-    return buff;
+    char buff[20];
+    strftime(buff, 20, "%d %b %H:%M:%S", &tm);
+
+    // Thread ID as shown by `ps -eLf`
+    char bf[40];
+    pid_t tid = gettid();
+    snprintf(bf, 40, "%s %8d", buff, tid);
+    return bf;
 }
 
 // -------------------------
