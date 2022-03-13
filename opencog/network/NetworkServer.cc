@@ -8,10 +8,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <time.h>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -127,12 +129,14 @@ std::string NetworkServer::display_stats(void)
     gmtime_r(&now, &tm);
     strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
-    std::string rc = nbuf;
+    std::string rc = "-----\n";
+    rc += nbuf;
     rc += "    Up since ";
     rc += sbuf;
+    rc += "\n";
 
     char buff[80];
-    snprintf(buff, 80, "rnning: %d  port: %d\n",
+    snprintf(buff, 80, "running: %d  port: %d\n",
         _running, _port);
 
     rc += buff;
@@ -157,11 +161,19 @@ std::string NetworkServer::display_stats(void)
     int sec = clk / CLOCKS_PER_SEC;
     clock_t rem = clk - sec * CLOCKS_PER_SEC;
     int msec = (1000 * rem) / CLOCKS_PER_SEC;
+
+    struct rusage rus;
+    getrusage(RUSAGE_SELF, &rus);
+
     snprintf(buff, 80,
-        "cpu-usage: %d%03d secs\n", sec, msec);
+        "cpu: %d.%03d secs  maxrss: %ld kB  majflt: %ld inblk: %ld outblk: %ld\n",
+        sec, msec, rus.ru_maxrss, rus.ru_majflt,
+        rus.ru_inblock, rus.ru_oublock);
+    rc += buff;
 
     rc += "\n";
     rc += ServerSocket::display_stats();
+    rc += "\n";
 
     return rc;
 }
