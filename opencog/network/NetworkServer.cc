@@ -166,9 +166,15 @@ std::string NetworkServer::display_stats(void)
     getrusage(RUSAGE_SELF, &rus);
 
     snprintf(buff, 80,
-        "cpu: %d.%03d secs  maxrss: %ld KB  majflt: %ld inblk: %ld outblk: %ld\n",
-        sec, msec, rus.ru_maxrss, rus.ru_majflt,
-        rus.ru_inblock, rus.ru_oublock);
+        "cpu: %d.%03d secs  user: %ld.%03ld  sys: %ld.%03ld\n",
+        sec, msec,
+        rus.ru_utime.tv_sec, rus.ru_utime.tv_usec / 1000,
+        rus.ru_stime.tv_sec, rus.ru_stime.tv_usec / 1000);
+    rc += buff;
+
+    snprintf(buff, 80,
+        "maxrss: %ld KB  majflt: %ld  inblk: %ld  outblk: %ld\n",
+        rus.ru_maxrss, rus.ru_majflt, rus.ru_inblock, rus.ru_oublock);
     rc += buff;
 
     rc += "\n";
