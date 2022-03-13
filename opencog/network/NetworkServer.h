@@ -53,6 +53,7 @@ protected:
 
     /** monitoring stats */
     time_t _start_time;
+    time_t _last_connect;
     size_t _nconnections;
 
 public:
