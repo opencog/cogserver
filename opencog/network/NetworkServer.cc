@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <sys/prctl.h>
+#include <time.h>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
@@ -28,6 +29,7 @@ NetworkServer::NetworkServer(unsigned short port) :
         boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 {
     logger().debug("[NetworkServer] constructor");
+    _start_time = time(nullptr);
 }
 
 NetworkServer::~NetworkServer()
@@ -115,7 +117,18 @@ void NetworkServer::run(ConsoleSocket* (*handler)(void))
 
 std::string NetworkServer::display_stats(void)
 {
-    return ServerSocket::display_stats();
+    char tbuf[30];
+    ctime_r(&_start_time, tbuf);
+
+    char buf[80];
+    snprintf(buf, 80, "Started: %s  Running: %d Port: %d\n",
+        tbuf, _running, _port);
+
+    std::string rc = buf;
+
+    rc += ServerSocket::display_stats();
+
+    return rc;
 }
 
 // ==================================================================

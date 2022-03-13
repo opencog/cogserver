@@ -51,6 +51,9 @@ protected:
     void listen();
     ConsoleSocket* (*_getConsole)(void);
 
+    /** misc stats */
+    time_t _start_time;
+
 public:
 
     /**
@@ -64,7 +67,8 @@ public:
     void run(ConsoleSocket* (*)(void));
     void stop();
 
-    static std::string display_stats(void);
+    /** Print network stats in human-readable tabular form */
+    std::string display_stats(void);
 }; // class
 
 /** @}*/

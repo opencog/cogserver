@@ -124,6 +124,11 @@ void CogServer::runLoopStep(void)
     }
 }
 
+std::string CogServer::display_stats(void)
+{
+    return _networkServer->display_stats();
+}
+
 // =============================================================
 // Singleton instance stuff.
 //

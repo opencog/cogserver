@@ -154,7 +154,7 @@ std::string BuiltinRequestsModule::do_h(Request *req, std::list<std::string> arg
 // Print general info about server.
 std::string BuiltinRequestsModule::do_stats(Request *req, std::list<std::string> args)
 {
-    return NetworkServer::display_stats();
+    return _cogserver.display_stats();
 }
 
 // ====================================================================
