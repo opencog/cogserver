@@ -64,7 +64,6 @@ public:
      */
     void SetCloseAndDelete(void);
 
-
     /**
      * Return a human-readable table of socket statistics.
      * Used for monitoring the server state.

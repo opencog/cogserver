@@ -154,26 +154,7 @@ std::string BuiltinRequestsModule::do_h(Request *req, std::list<std::string> arg
 // Print general info about server.
 std::string BuiltinRequestsModule::do_stats(Request *req, std::list<std::string> args)
 {
-    std::ostringstream oss;
-    ServerConsole* con = req->get_console();
-
-    oss << "Console use-count = " << con->get_use_count() << "\n";
-    oss << "Console max-open-sockets = " << con->get_max_open_sockets() << "\n";
-    oss << "Console curr-open-sockets = " << con->get_num_open_sockets() << "\n";
-
-    // count open file descs
-    int nfd = 0;
-    for (int j=0; j<4096; j++) {
-       int fd = dup(j);
-       if (fd < 0) continue;
-       close(fd);
-       nfd++;
-    }
-    oss << "Process num-open-fds = " << nfd << "\n";
-
-    oss << ServerSocket::display_stats();
-
-    return oss.str();
+    return NetworkServer::display_stats();
 }
 
 // ====================================================================

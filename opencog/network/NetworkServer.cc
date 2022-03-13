@@ -110,3 +110,12 @@ void NetworkServer::run(ConsoleSocket* (*handler)(void))
 
     _listener_thread = new std::thread(&NetworkServer::listen, this);
 }
+
+// ==================================================================
+
+std::string NetworkServer::display_stats(void)
+{
+    return ServerSocket::display_stats();
+}
+
+// ==================================================================

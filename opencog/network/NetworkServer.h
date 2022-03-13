@@ -64,6 +64,7 @@ public:
     void run(ConsoleSocket* (*)(void));
     void stop();
 
+    static std::string display_stats(void);
 }; // class
 
 /** @}*/
