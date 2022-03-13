@@ -218,7 +218,7 @@ void ServerConsole::SendResult(const std::string& res)
 
 std::string ServerConsole::connection_header(void)
 {
-    return ConsoleSocket::connection_header() + " NUMLINES LAST-ACTIVITY";
+    return ConsoleSocket::connection_header() + " NLINE LAST-ACTIVITY";
 }
 
 std::string ServerConsole::connection_stats(void)
@@ -232,7 +232,7 @@ std::string ServerConsole::connection_stats(void)
     strftime(buff, 20, "%d %b %H:%M:%S", &tm);
 
     char bf[60];
-    snprintf(bf, 60, " %8zd %s", _line_count, buff);
+    snprintf(bf, 60, " %5zd %s", _line_count, buff);
 
     return rc + bf;
 }

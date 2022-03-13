@@ -166,7 +166,7 @@ std::string NetworkServer::display_stats(void)
     getrusage(RUSAGE_SELF, &rus);
 
     snprintf(buff, 80,
-        "cpu: %d.%03d secs  maxrss: %ld kB  majflt: %ld inblk: %ld outblk: %ld\n",
+        "cpu: %d.%03d secs  maxrss: %ld KB  majflt: %ld inblk: %ld outblk: %ld\n",
         sec, msec, rus.ru_maxrss, rus.ru_majflt,
         rus.ru_inblock, rus.ru_oublock);
     rc += buff;
