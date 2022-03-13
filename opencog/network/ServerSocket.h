@@ -42,6 +42,8 @@ protected:
     /**
      * Report human-readable stats for this socket.
      */
+    time_t _start_time;
+    virtual std::string connection_header(void);
     virtual std::string connection_stats(void);
 public:
     ServerSocket(void);

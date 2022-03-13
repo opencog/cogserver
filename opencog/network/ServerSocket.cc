@@ -8,6 +8,7 @@
  */
 
 #include <sys/prctl.h>
+#include <time.h>
 #include <mutex>
 #include <set>
 
@@ -40,18 +41,32 @@ std::string ServerSocket::display_stats(void)
     std::string rc;
     std::lock_guard<std::mutex> lock(_sock_lock);
 
+    bool hdr = false;
     for (ServerSocket* ss : _sock_list)
     {
+        if (not hdr)
+        {
+            rc += ss->connection_header() + "\n";
+            hdr = true;
+        }
         rc += ss->connection_stats() + "\n";
     }
 
     return rc;
 }
 
+std::string ServerSocket::connection_header(void)
+{
+    return "DATE           ";
+}
+
 std::string ServerSocket::connection_stats(void)
 {
-    std::string rc;
-    return rc;
+    struct tm tm;
+    gmtime_r(&_start_time, &tm);
+    char buff[80];
+    strftime(buff, 80, "%d %b %H:%M:%S ", &tm);
+    return buff;
 }
 
 // -------------------------
@@ -59,7 +74,8 @@ std::string ServerSocket::connection_stats(void)
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
-	add_sock(this);
+    _start_time = time(nullptr);
+    add_sock(this);
 }
 
 ServerSocket::~ServerSocket()
@@ -69,7 +85,7 @@ ServerSocket::~ServerSocket()
     SetCloseAndDelete();
     delete _socket;
     _socket = nullptr;
-	rem_sock(this);
+    rem_sock(this);
 }
 
 void ServerSocket::Send(const std::string& cmd)
