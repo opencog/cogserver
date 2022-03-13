@@ -142,8 +142,8 @@ std::string NetworkServer::display_stats(void)
     gmtime_r(&_last_connect, &tm);
     strftime(nbuf, 40, "%d %b %H:%M:%S", &tm);
 
-    char buff[80];
-    snprintf(buff, 80, "status: %s  last: %s  tot-cnct: %4zd  port: %d\n",
+    char buff[132];
+    snprintf(buff, 132, "status: %s  last: %s  tot-cnct: %4zd  port: %d\n",
         _running?"running":"halted", nbuf, _nconnections, _port);
 
     rc += buff;
