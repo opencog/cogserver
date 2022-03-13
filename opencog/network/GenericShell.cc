@@ -76,7 +76,8 @@ GenericShell::GenericShell(void) :
     show_prompt(true),
     self_destruct(false),
     _eval_done(true),
-    _evaluator(nullptr)
+    _evaluator(nullptr),
+    _name("gnrc")
 {}
 
 GenericShell::~GenericShell()

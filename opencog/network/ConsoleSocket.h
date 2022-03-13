@@ -81,6 +81,9 @@ protected:
      */
     void OnLine(const std::string&) = 0;
 
+    /** Status printing */
+    virtual std::string connection_header(void);
+    virtual std::string connection_stats(void);
 public:
     /**
      * Ctor. Defines the socket's mime-type as 'text/plain' and then

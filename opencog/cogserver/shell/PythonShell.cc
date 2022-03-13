@@ -41,6 +41,7 @@ PythonShell::PythonShell()
     normal_prompt = "py> ";
     pending_prompt = "... ";
     abort_prompt += normal_prompt;
+    _name = "pyth";
     evaluator = NULL;
 }
 

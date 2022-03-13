@@ -103,6 +103,10 @@ public:
     /** Return the logger */
     Logger &logger(void) { return opencog::logger(); }
 
+
+    /** Print human-readable stats about the cogserver */
+    std::string display_stats(void);
+
 }; // class
 
 // Singleton instance of the cogserver

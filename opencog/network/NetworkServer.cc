@@ -8,10 +8,13 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <time.h>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
@@ -28,6 +31,7 @@ NetworkServer::NetworkServer(unsigned short port) :
         boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 {
     logger().debug("[NetworkServer] constructor");
+    _start_time = time(nullptr);
 }
 
 NetworkServer::~NetworkServer()
@@ -110,3 +114,74 @@ void NetworkServer::run(ConsoleSocket* (*handler)(void))
 
     _listener_thread = new std::thread(&NetworkServer::listen, this);
 }
+
+// ==================================================================
+
+std::string NetworkServer::display_stats(void)
+{
+    struct tm tm;
+    char sbuf[40];
+    gmtime_r(&_start_time, &tm);
+    strftime(sbuf, 40, "%d %b %H:%M:%S %Y", &tm);
+
+    char nbuf[40];
+    time_t now = time(nullptr);
+    gmtime_r(&now, &tm);
+    strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
+
+    std::string rc = "-----\n";
+    rc += nbuf;
+    rc += "    Up since ";
+    rc += sbuf;
+    rc += "\n";
+
+    char buff[80];
+    snprintf(buff, 80, "running: %d  port: %d\n",
+        _running, _port);
+
+    rc += buff;
+
+    // count open file descs
+    int nfd = 0;
+    for (int j=0; j<4096; j++) {
+       int fd = dup(j);
+       if (fd < 0) continue;
+       close(fd);
+       nfd++;
+    }
+
+    snprintf(buff, 80,
+        "max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d\n",
+        ConsoleSocket::get_max_open_sockets(),
+        ConsoleSocket::get_num_open_sockets(),
+        nfd);
+    rc += buff;
+
+    clock_t clk = clock();
+    int sec = clk / CLOCKS_PER_SEC;
+    clock_t rem = clk - sec * CLOCKS_PER_SEC;
+    int msec = (1000 * rem) / CLOCKS_PER_SEC;
+
+    struct rusage rus;
+    getrusage(RUSAGE_SELF, &rus);
+
+    snprintf(buff, 80,
+        "cpu: %d.%03d secs  user: %ld.%03ld  sys: %ld.%03ld\n",
+        sec, msec,
+        rus.ru_utime.tv_sec, rus.ru_utime.tv_usec / 1000,
+        rus.ru_stime.tv_sec, rus.ru_stime.tv_usec / 1000);
+    rc += buff;
+
+    snprintf(buff, 80,
+        "maxrss: %ld KB  majflt: %ld  inblk: %ld  outblk: %ld\n",
+        rus.ru_maxrss, rus.ru_majflt, rus.ru_inblock, rus.ru_oublock);
+    rc += buff;
+
+    rc += "\n";
+    rc += ServerSocket::display_stats();
+    rc += "\n";
+
+    return rc;
+}
+
+// ==================================================================

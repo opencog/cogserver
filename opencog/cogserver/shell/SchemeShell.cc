@@ -50,6 +50,7 @@ SchemeShell::SchemeShell(void)
 	normal_prompt = _prompt;
 	abort_prompt = _prompt;
 	pending_prompt = "... ";
+	_name = " scm";
 
 	// Set the inital atomspace for this thread.
 	SchemeEval::set_scheme_as(&cogserver().getAtomSpace());

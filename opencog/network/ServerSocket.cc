@@ -8,7 +8,10 @@
  */
 
 #include <sys/prctl.h>
+#include <sys/types.h>
+#include <time.h>
 #include <mutex>
+#include <set>
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
@@ -16,18 +19,82 @@
 
 using namespace opencog;
 
+// ==================================================================
+// Infrastrucure for printing connection stats
+//
+static std::mutex _sock_lock;
+static std::set<ServerSocket*> _sock_list;
+
+static void add_sock(ServerSocket* ss)
+{
+    std::lock_guard<std::mutex> lock(_sock_lock);
+    _sock_list.insert(ss);
+}
+
+static void rem_sock(ServerSocket* ss)
+{
+    std::lock_guard<std::mutex> lock(_sock_lock);
+    _sock_list.erase(ss);
+}
+
+std::string ServerSocket::display_stats(void)
+{
+    std::string rc;
+    std::lock_guard<std::mutex> lock(_sock_lock);
+
+    bool hdr = false;
+    for (ServerSocket* ss : _sock_list)
+    {
+        if (not hdr)
+        {
+            rc += ss->connection_header() + "\n";
+            hdr = true;
+        }
+        rc += ss->connection_stats() + "\n";
+    }
+
+    return rc;
+}
+
+std::string ServerSocket::connection_header(void)
+{
+    return "DATE             THREAD  STATE";
+}
+
+std::string ServerSocket::connection_stats(void)
+{
+    // Start date
+    struct tm tm;
+    gmtime_r(&_start_time, &tm);
+    char buff[20];
+    strftime(buff, 20, "%d %b %H:%M:%S", &tm);
+
+    // Thread ID as shown by `ps -eLf`
+    char bf[60];
+    snprintf(bf, 60, "%s %8d %s", buff, _tid, _status);
+    return bf;
+}
+
+// ==================================================================
+
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
+    _start_time = time(nullptr);
+    _tid = 0;
+    _status = "start";
+    add_sock(this);
 }
 
 ServerSocket::~ServerSocket()
 {
+    _status = "close";
     logger().debug("ServerSocket::~ServerSocket()");
 
     SetCloseAndDelete();
     delete _socket;
     _socket = nullptr;
+    rem_sock(this);
 }
 
 void ServerSocket::Send(const std::string& cmd)
@@ -160,9 +227,12 @@ void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
     _socket = sock;
 }
 
+// ==================================================================
+
 void ServerSocket::handle_connection(void)
 {
     prctl(PR_SET_NAME, "cogserv:connect", 0, 0, 0);
+    _tid = gettid();
     logger().debug("ServerSocket::handle_connection()");
     OnConnection();
     boost::asio::streambuf b;
@@ -170,6 +240,7 @@ void ServerSocket::handle_connection(void)
     {
         try
         {
+            _status = "iwait";
             boost::asio::read_until(*_socket, b, match_eol_or_escape);
             std::istream is(&b);
             std::string line;
@@ -177,6 +248,7 @@ void ServerSocket::handle_connection(void)
             if (not line.empty() and line[line.length()-1] == '\r') {
                 line.erase(line.end()-1);
             }
+            _status = " run ";
             OnLine(line);
         }
         catch (const boost::system::system_error& e)
@@ -223,3 +295,5 @@ void ServerSocket::handle_connection(void)
     // must be thought of as the normal sync point for completion.
     delete this;
 }
+
+// ==================================================================

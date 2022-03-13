@@ -109,6 +109,8 @@ class GenericShell
 		virtual const std::string& get_prompt(void);
 		virtual void hush_output(bool);
 		virtual void hush_prompt(bool);
+
+		const char* _name;
 };
 
 /** @}*/
