@@ -133,12 +133,12 @@ std::string NetworkServer::display_stats(void)
 
     std::string rc = "-----\n";
     rc += nbuf;
-    rc += " ---- up-since: ";
+    rc += " UTC ---- up-since: ";
     rc += sbuf;
     rc += "\n";
 
     char buff[80];
-    snprintf(buff, 80, "status: %s  tot-connects: %zd  listen-port: %d\n",
+    snprintf(buff, 80, "status: %s  tot-connects: %4zd  listen-port: %d\n",
         _running?"running":"halted", _nconnections, _port);
 
     rc += buff;
