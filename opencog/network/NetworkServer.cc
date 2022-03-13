@@ -126,6 +126,22 @@ std::string NetworkServer::display_stats(void)
 
     std::string rc = buf;
 
+    // count open file descs
+    int nfd = 0;
+    for (int j=0; j<4096; j++) {
+       int fd = dup(j);
+       if (fd < 0) continue;
+       close(fd);
+       nfd++;
+    }
+
+    snprintf(buf, 80,
+        "max-open-socks=%d   cur-open-socks=%d   num-open-fds=%d\n",
+        ConsoleSocket::get_max_open_sockets(),
+        ConsoleSocket::get_num_open_sockets(),
+        nfd);
+    rc += buf;
+
     rc += ServerSocket::display_stats();
 
     return rc;
