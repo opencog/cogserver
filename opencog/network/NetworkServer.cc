@@ -117,14 +117,25 @@ void NetworkServer::run(ConsoleSocket* (*handler)(void))
 
 std::string NetworkServer::display_stats(void)
 {
-    char tbuf[30];
-    ctime_r(&_start_time, tbuf);
+    struct tm tm;
+    char sbuf[40];
+    gmtime_r(&_start_time, &tm);
+    strftime(sbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
-    char buf[80];
-    snprintf(buf, 80, "Started: %s  Running: %d Port: %d\n",
-        tbuf, _running, _port);
+    char nbuf[40];
+    time_t now = time(nullptr);
+    gmtime_r(&now, &tm);
+    strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
-    std::string rc = buf;
+    std::string rc = nbuf;
+    rc += "    Up since ";
+    rc += sbuf;
+
+    char buff[80];
+    snprintf(buff, 80, "rnning: %d  port: %d\n",
+        _running, _port);
+
+    rc += buff;
 
     // count open file descs
     int nfd = 0;
@@ -135,13 +146,21 @@ std::string NetworkServer::display_stats(void)
        nfd++;
     }
 
-    snprintf(buf, 80,
-        "max-open-socks=%d   cur-open-socks=%d   num-open-fds=%d\n",
+    snprintf(buff, 80,
+        "max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d\n",
         ConsoleSocket::get_max_open_sockets(),
         ConsoleSocket::get_num_open_sockets(),
         nfd);
-    rc += buf;
+    rc += buff;
 
+    clock_t clk = clock();
+    int sec = clk / CLOCKS_PER_SEC;
+    clock_t rem = clk - sec * CLOCKS_PER_SEC;
+    int msec = (1000 * rem) / CLOCKS_PER_SEC;
+    snprintf(buff, 80,
+        "cpu-usage: %d%03d secs\n", sec, msec);
+
+    rc += "\n";
     rc += ServerSocket::display_stats();
 
     return rc;
