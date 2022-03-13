@@ -236,11 +236,11 @@ void ServerSocket::handle_connection(void)
     logger().debug("ServerSocket::handle_connection()");
     OnConnection();
     boost::asio::streambuf b;
-    _status = " run ";
     while (true)
     {
         try
         {
+            _status = "iwait";
             boost::asio::read_until(*_socket, b, match_eol_or_escape);
             std::istream is(&b);
             std::string line;
@@ -248,6 +248,7 @@ void ServerSocket::handle_connection(void)
             if (not line.empty() and line[line.length()-1] == '\r') {
                 line.erase(line.end()-1);
             }
+            _status = " run ";
             OnLine(line);
         }
         catch (const boost::system::system_error& e)
