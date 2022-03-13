@@ -42,8 +42,18 @@ std::string ServerSocket::display_stats(void)
     std::string rc;
     std::lock_guard<std::mutex> lock(_sock_lock);
 
-    bool hdr = false;
+    // Make a copy, and sort it.
+    std::vector<ServerSocket*> sov;
     for (ServerSocket* ss : _sock_list)
+        sov.push_back(ss);
+
+    std::sort (sov.begin(), sov.end(),
+        [](ServerSocket* sa, ServerSocket* sb) -> bool
+        { return sa->_start_time < sb->_start_time; });
+
+    // Print the sorted list; use the first to print a header.
+    bool hdr = false;
+    for (ServerSocket* ss : sov)
     {
         if (not hdr)
         {
