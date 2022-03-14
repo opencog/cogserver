@@ -83,7 +83,31 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "h", do_h,
 
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, "stats", do_stats,
        "Print some diagnostic statistics about the server.",
-       "Usage: stats\n\n",
+       "Usage: stats\n\n"
+       "The current date in UTC is printed, followed by:\n"
+       "  up-since: the date when the server was started.\n"
+       "  last: the date when the most recent connection was opened.\n"
+       "  tot-cnct: grand total number of network connections opened.\n"
+       "  cur-open-socks: number of currently open connections.\n"
+       "  num-open-fds: number of open file descriptors.\n"
+       "  cpu: number of CPU seconds used by server.\n"
+       "  maxrss: resident set size, in KB. Taken from `getrusage`.\n"
+       "\n"
+       "The table shows a list of the currently open connections.\n"
+       "The table header has the following form:\n"
+       "DATE   THREAD  STATE U SHEL QZ E PENDG NLINE LAST-ACTIVITY\n"
+       "The columns are:\n"
+       "  DATE -- when the connection was opened.\n"
+       "  THREAD -- the Linux thread-id, as printed by `ps -eLf`\n"
+       "  STATE -- several states possible; `iwait` means witing for input.\n"
+       "  U -- use count. The number of active handlers for the socekt.\n"
+       "  SHEL -- the current shell processor for the socket.\n"
+       "  QZ -- size of he pending request queue.\n"
+       "  E -- `T` if the shell evaluator is running, else `F`.\n"
+       "  PENDG -- number of bytes of output that have not been sent.\n"
+       "  NLINE -- number of newlines received by the shell.\n"
+       "  LAST-ACTIVITY -- the last time anything was received.\n"
+       "\n",
        false, false)
 
 public:
