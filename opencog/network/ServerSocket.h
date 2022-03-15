@@ -70,6 +70,9 @@ public:
      * Loops over all active sockets.
      */
     static std::string display_stats(void);
+
+    /** Attempt top close half-open sockets, if any. */
+    static void half_ping(void);
 }; // class
 
 /** @}*/

@@ -66,6 +66,21 @@ std::string ServerSocket::display_stats(void)
     return rc;
 }
 
+// Send a sigle blank character to each socket.
+// If the socket is only half-open, this should result
+// in the socket closing fully.  If the socket is fully
+// open, then the remote end will receive a blank space.
+// Since we are running a UTF-8 character protocol, this
+// should be harmless.
+void ServerSocket::half_ping(void)
+{
+    std::lock_guard<std::mutex> lock(_sock_lock);
+
+    for (ServerSocket* ss : _sock_list)
+        ss->Send(" ");
+}
+
+
 std::string ServerSocket::connection_header(void)
 {
     return "DATE             THREAD  STATE";
