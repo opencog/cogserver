@@ -87,8 +87,8 @@ half_ping();
 // It's slightly cleaner.
 void ServerSocket::half_ping(void)
 {
-    static char buf[2] = " ";
-    // static char buf[2] = {0x16, 0x0};
+    // static char buf[2] = " ";
+    static char buf[2] = {0x16, 0x0};
 
     std::lock_guard<std::mutex> lock(_sock_lock);
 

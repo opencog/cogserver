@@ -75,10 +75,11 @@ void gargleblast(int tid, int reps)
 		// blank spaces. We are going to ignore those spaces entirely.
 		int nch = 0;
 		for (size_t i=0; i<reso.size(); i++)
-			if (' ' != reso[i]) nch++;
+			// if (' ' != reso[i]) nch++;
+			if (0x16 != reso[i]) nch++;
 
-// #define CUR_MSG_SZ 265  // Size with blak spaces
-#define CUR_MSG_SZ 235     // Size without blank spaces.
+#define CUR_MSG_SZ 265  // Size without synchronous idle.
+// #define CUR_MSG_SZ 235     // Size without blank spaces.
 		// size_t msgsz = reso.size();
 		size_t msgsz = nch;
 		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, msgsz);
@@ -98,10 +99,11 @@ void gargleblast(int tid, int reps)
 			// Ignore them by noot counting them.
 			int nch = 0;
 			for (size_t i=0; i<delo.size(); i++)
-				if (' ' != delo[i]) nch++;
+				// if (' ' != delo[i]) nch++;
+				if (0x16 != delo[i]) nch++;
 
-// #define CUR_DEL_SZ 178    // Size with blank spaces
-#define CUR_DEL_SZ 160       // Size without blank spaces
+#define CUR_DEL_SZ 178    // Size without synchronous idle
+// #define CUR_DEL_SZ 160       // Size without blank spaces
 			// size_t msgsz = delo.size();
 			size_t msgsz = nch;
 			TS_ASSERT_LESS_THAN_EQUALS(CUR_DEL_SZ, msgsz);
