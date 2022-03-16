@@ -22,6 +22,12 @@ using namespace opencog;
 // ==================================================================
 // Infrastrucure for printing connection stats
 //
+static char START[6] = "start";
+static char IWAIT[6] = "iwait";
+static char DTOR [6] = "dtor ";
+static char RUN  [6] = " run ";
+static char CLOSE[6] = "close";
+
 static std::mutex _sock_lock;
 static std::set<ServerSocket*> _sock_list;
 
@@ -70,23 +76,29 @@ half_ping();
     return rc;
 }
 
-// Send a sigle blank character to each socket.
+// Send a single blank character to each socket.
 // If the socket is only half-open, this should result
 // in the socket closing fully.  If the socket is fully
 // open, then the remote end will receive a blank space.
 // Since we are running a UTF-8 character protocol, this
 // should be harmless. Another possibility is to send
-// hex 0x16 ASCII SYN synchronous idle, but I think this
-// will confuse most current users of the cogserver.
+// hex 0x16 ASCII SYN synchronous idle. Will this confuse
+// any users of the cogserver? I dunno.  Lets go for SYN.
+// It's slightly cleaner.
 void ServerSocket::half_ping(void)
 {
+    static char buf[2] = " ";
+    // static char buf[2] = {0x16, 0x0};
+
     std::lock_guard<std::mutex> lock(_sock_lock);
 
     for (ServerSocket* ss : _sock_list)
     {
-        // XXX FIXME ... there is a race, where the socket
-        // is closed, but not yet a null pointer.
-        if (ss->_socket) ss->Send(" ");
+        // There is some risk of a race here, if the socket
+        // closes in between the time we test the status, and
+        // the time that we send. Seems unlikely to break in
+        // the real world. But still, XXX FIXME
+        if (ss->_status == IWAIT) ss->Send(buf);
     }
 }
 
@@ -117,13 +129,13 @@ ServerSocket::ServerSocket(void) :
 {
     _start_time = time(nullptr);
     _tid = 0;
-    _status = "start";
+    _status = START;
     add_sock(this);
 }
 
 ServerSocket::~ServerSocket()
 {
-    _status = "dtor ";
+    _status = DTOR;
     logger().debug("ServerSocket::~ServerSocket()");
 
     SetCloseAndDelete();
@@ -275,7 +287,7 @@ void ServerSocket::handle_connection(void)
     {
         try
         {
-            _status = "iwait";
+            _status = IWAIT;
             boost::asio::read_until(*_socket, b, match_eol_or_escape);
             std::istream is(&b);
             std::string line;
@@ -283,7 +295,7 @@ void ServerSocket::handle_connection(void)
             if (not line.empty() and line[line.length()-1] == '\r') {
                 line.erase(line.end()-1);
             }
-            _status = " run ";
+            _status = RUN;
             OnLine(line);
         }
         catch (const boost::system::system_error& e)
@@ -300,7 +312,7 @@ void ServerSocket::handle_connection(void)
         }
     }
 
-    _status = "close";
+    _status = CLOSE;
 
     // If the data sent to us is not new-line terminated, then
     // there may still be some bytes sitting in the buffer. Get
