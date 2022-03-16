@@ -83,7 +83,9 @@ void ServerSocket::half_ping(void)
     std::lock_guard<std::mutex> lock(_sock_lock);
 
     for (ServerSocket* ss : _sock_list)
-        ss->Send(" ");
+    {
+        if (ss->_socket) ss->Send(" ");
+    }
 }
 
 
