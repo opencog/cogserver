@@ -70,10 +70,20 @@ void gargleblast(int tid, int reps)
 		//
 		// Hmm. Seems that sometimes some trailing newline gets cut,
 		// and so the reply might be short by one byte. Seems harmless.
-#define CUR_MSG_SZ 265
-		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, reso.size());
-		TS_ASSERT_LESS_THAN_EQUALS(reso.size(), CUR_MSG_SZ+1);
-		if (reso.size() < CUR_MSG_SZ or (CUR_MSG_SZ+1) < reso.size())
+		//
+		// The new half-open-detection code will transmit spurious
+		// blank spaces. We are going to ignore those spaces entirely.
+		int nch = 0;
+		for (size_t i=0; i<reso.size(); i++)
+			if (' ' != reso[i]) nch++;
+
+// #define CUR_MSG_SZ 265  // Size with blak spaces
+#define CUR_MSG_SZ 235     // Size without blank spaces.
+		// size_t msgsz = reso.size();
+		size_t msgsz = nch;
+		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, msgsz);
+		TS_ASSERT_LESS_THAN_EQUALS(msgsz, CUR_MSG_SZ+1);
+		if (msgsz < CUR_MSG_SZ or (CUR_MSG_SZ+1) < msgsz)
 			printf("Error: Create rep %d of %d in thread %d failed\n"
 			       "\tGot: %zu >>>%s<<<\n",
 			       i, reps, tid, reso.size(), reso.c_str());
@@ -84,10 +94,19 @@ void gargleblast(int tid, int reps)
 			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
 			std::string delo = cmd_exec(buf);
 
-#define CUR_DEL_SZ 178
-			TS_ASSERT_LESS_THAN_EQUALS(CUR_DEL_SZ, delo.size());
-			TS_ASSERT_LESS_THAN_EQUALS(delo.size(), CUR_DEL_SZ+1);
-			if (delo.size() < CUR_DEL_SZ or (CUR_DEL_SZ+1) < delo.size())
+			// The new half-open detection code sends blanks.
+			// Ignore them by noot counting them.
+			int nch = 0;
+			for (size_t i=0; i<delo.size(); i++)
+				if (' ' != delo[i]) nch++;
+
+// #define CUR_DEL_SZ 178    // Size with blank spaces
+#define CUR_DEL_SZ 160       // Size without blank spaces
+			// size_t msgsz = delo.size();
+			size_t msgsz = nch;
+			TS_ASSERT_LESS_THAN_EQUALS(CUR_DEL_SZ, msgsz);
+			TS_ASSERT_LESS_THAN_EQUALS(msgsz, CUR_DEL_SZ+1);
+			if (msgsz < CUR_DEL_SZ or (CUR_DEL_SZ+1) < msgsz)
 				printf("Error: Delete rep %d of %d in thread %d failed\n"
 				       "\tGot: %zu >>>%s<<<\n",
 				       i, reps, tid, delo.size(), delo.c_str());
