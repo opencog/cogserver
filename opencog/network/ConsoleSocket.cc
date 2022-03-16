@@ -41,6 +41,11 @@ ConsoleSocket::ConsoleSocket(void)
     // Block here, if there are too many concurrently-open sockets.
     std::unique_lock<std::mutex> lck(_max_mtx);
     _num_open_sockets++;
+
+    // If we are just below the max limit, send a half-ping in an
+    // attempt to force any half-open connections to close.
+    if (_max_open_sockets <= _num_open_sockets)
+        half_ping();
     while (_max_open_sockets < _num_open_sockets) _max_cv.wait(lck);
 }
 

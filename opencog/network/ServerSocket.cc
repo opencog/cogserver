@@ -39,6 +39,10 @@ static void rem_sock(ServerSocket* ss)
 
 std::string ServerSocket::display_stats(void)
 {
+// Temp hack. Send a half-ping, in an attempt to close
+// dead connections.
+half_ping();
+
     std::string rc;
     std::lock_guard<std::mutex> lock(_sock_lock);
 
@@ -71,7 +75,9 @@ std::string ServerSocket::display_stats(void)
 // in the socket closing fully.  If the socket is fully
 // open, then the remote end will receive a blank space.
 // Since we are running a UTF-8 character protocol, this
-// should be harmless.
+// should be harmless. Another possibility is to send
+// hex 0x16 ASCII SYN synchronous idle, but I think this
+// will confuse most current users of the cogserver.
 void ServerSocket::half_ping(void)
 {
     std::lock_guard<std::mutex> lock(_sock_lock);
