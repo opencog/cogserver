@@ -32,6 +32,7 @@ unsigned int ConsoleSocket::_max_open_sockets = 10;
 volatile unsigned int ConsoleSocket::_num_open_sockets = 0;
 std::mutex ConsoleSocket::_max_mtx;
 std::condition_variable ConsoleSocket::_max_cv;
+size_t ConsoleSocket::_num_open_stalls = 0;
 
 ConsoleSocket::ConsoleSocket(void)
 {
@@ -46,6 +47,11 @@ ConsoleSocket::ConsoleSocket(void)
     // attempt to force any half-open connections to close.
     if (_max_open_sockets <= _num_open_sockets)
         half_ping();
+
+    // Report how often we stall bexcause we hit the max.
+    if (_max_open_sockets < _num_open_sockets)
+        _num_open_stalls ++;
+
     while (_max_open_sockets < _num_open_sockets) _max_cv.wait(lck);
 }
 

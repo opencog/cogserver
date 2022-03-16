@@ -157,11 +157,12 @@ std::string NetworkServer::display_stats(void)
        nfd++;
     }
 
-    snprintf(buff, 80,
-        "max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d\n",
+    snprintf(buff, 132,
+        "max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d  stalls: %zd\n",
         ConsoleSocket::get_max_open_sockets(),
         ConsoleSocket::get_num_open_sockets(),
-        nfd);
+        nfd,
+        ConsoleSocket::get_num_open_stalls());
     rc += buff;
 
     clock_t clk = clock();

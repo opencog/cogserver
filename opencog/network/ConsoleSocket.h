@@ -67,6 +67,9 @@ private:
     static std::mutex _max_mtx;
     static std::condition_variable _max_cv;
 
+    // A count of the number of times the max condition was reached.
+    static size_t _num_open_stalls;
+
 protected:
     GenericShell *_shell;
 
@@ -108,6 +111,7 @@ public:
     static void set_max_open_sockets(unsigned int m) { _max_open_sockets = m; }
     static unsigned int get_max_open_sockets() { return _max_open_sockets; }
     static unsigned int get_num_open_sockets() { return _num_open_sockets; }
+    static size_t get_num_open_stalls() { return _num_open_stalls; }
 }; // class
 
 /** @}*/
