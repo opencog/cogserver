@@ -84,6 +84,8 @@ void ServerSocket::half_ping(void)
 
     for (ServerSocket* ss : _sock_list)
     {
+        // XXX FIXME ... there is a race, where the socket
+        // is closed, but not yet a null pointer.
         if (ss->_socket) ss->Send(" ");
     }
 }
@@ -121,7 +123,7 @@ ServerSocket::ServerSocket(void) :
 
 ServerSocket::~ServerSocket()
 {
-    _status = "close";
+    _status = "dtor ";
     logger().debug("ServerSocket::~ServerSocket()");
 
     SetCloseAndDelete();
@@ -297,6 +299,8 @@ void ServerSocket::handle_connection(void)
             }
         }
     }
+
+    _status = "close";
 
     // If the data sent to us is not new-line terminated, then
     // there may still be some bytes sitting in the buffer. Get
