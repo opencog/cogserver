@@ -106,7 +106,7 @@ void ServerSocket::half_ping(void)
 
 std::string ServerSocket::connection_header(void)
 {
-    return "DATE             THREAD  STATE NLINE  LAST-ACTIVITY ";
+    return "OPEN-DATE        THREAD  STATE NLINE  LAST-ACTIVITY ";
 }
 
 std::string ServerSocket::connection_stats(void)
