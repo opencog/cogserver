@@ -33,8 +33,6 @@ ServerConsole::ServerConsole(void)
         else
             _prompt = config().get("PROMPT", "opencog> ");
     }
-    _last_activity = time(nullptr);
-    _line_count = 0;
 }
 
 ServerConsole::~ServerConsole()
@@ -102,9 +100,6 @@ void ServerConsole::sendPrompt()
 
 void ServerConsole::OnLine(const std::string& line)
 {
-    _last_activity = time(nullptr);
-    _line_count++;
-
     // If a shell processor has been designated, then defer all
     // processing to the shell.  In particular, avoid as much overhead
     // as possible, since the shell needs to be able to handle a
@@ -212,29 +207,6 @@ void ServerConsole::Exit()
 void ServerConsole::SendResult(const std::string& res)
 {
     Send(res);
-}
-
-// ==================================================================
-
-std::string ServerConsole::connection_header(void)
-{
-    return ConsoleSocket::connection_header() + " NLINE LAST-ACTIVITY";
-}
-
-std::string ServerConsole::connection_stats(void)
-{
-    std::string rc = ConsoleSocket::connection_stats();
-
-    // Most recent activity
-    struct tm tm;
-    gmtime_r(&_last_activity, &tm);
-    char buff[20];
-    strftime(buff, 20, "%d %b %H:%M:%S", &tm);
-
-    char bf[60];
-    snprintf(bf, 60, " %5zd %s", _line_count, buff);
-
-    return rc + bf;
 }
 
 // ==================================================================

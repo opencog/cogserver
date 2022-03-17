@@ -64,12 +64,6 @@ protected:
      */
     void OnLine(const std::string&);
 
-    /** Report table of human-readable statistics */
-    time_t _last_activity;
-    size_t _line_count;
-    virtual std::string connection_header(void);
-    virtual std::string connection_stats(void);
-
 public:
     /**
      * Ctor. Defines the socket's mime-type as 'text/plain' and then

@@ -45,6 +45,9 @@ protected:
     time_t _start_time;
     pid_t _tid;    // OS-dependent thread ID.
     const char* _status; // "start" or "run" or "close"
+    time_t _last_activity;
+    size_t _line_count;
+
     virtual std::string connection_header(void);
     virtual std::string connection_stats(void);
 public:

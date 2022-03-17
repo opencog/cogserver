@@ -105,20 +105,28 @@ void ServerSocket::half_ping(void)
 
 std::string ServerSocket::connection_header(void)
 {
-    return "DATE             THREAD  STATE";
+    return "DATE             THREAD  STATE NLINE LAST-ACTIVITY";
 }
 
 std::string ServerSocket::connection_stats(void)
 {
-    // Start date
     struct tm tm;
+
+    // Start date
+    char sbuff[20];
     gmtime_r(&_start_time, &tm);
-    char buff[20];
-    strftime(buff, 20, "%d %b %H:%M:%S", &tm);
+    strftime(sbuff, 20, "%d %b %H:%M:%S", &tm);
+
+    // Most recent activity
+    char abuff[20];
+    gmtime_r(&_last_activity, &tm);
+    strftime(abuff, 20, "%d %b %H:%M:%S", &tm);
 
     // Thread ID as shown by `ps -eLf`
-    char bf[60];
-    snprintf(bf, 60, "%s %8d %s", buff, _tid, _status);
+    char bf[132];
+    snprintf(bf, 132, "%s %8d %s %5zd %s",
+        sbuff, _tid, _status, _line_count, abuff);
+
     return bf;
 }
 
@@ -128,8 +136,10 @@ ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
     _start_time = time(nullptr);
+    _last_activity = _start_time;
     _tid = 0;
     _status = START;
+    _line_count = 0;
     add_sock(this);
 }
 
@@ -295,6 +305,9 @@ void ServerSocket::handle_connection(void)
             if (not line.empty() and line[line.length()-1] == '\r') {
                 line.erase(line.end()-1);
             }
+
+            _last_activity = time(nullptr);
+            _line_count++;
             _status = RUN;
             OnLine(line);
         }
