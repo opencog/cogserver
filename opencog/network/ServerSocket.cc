@@ -87,25 +87,26 @@ half_ping();
 // It's slightly cleaner.
 void ServerSocket::half_ping(void)
 {
-    // static char buf[2] = " ";
-    static char buf[2] = {0x16, 0x0};
+    // static const char buf[2] = " ";
+    static const char buf[2] = {0x16, 0x0};
 
     std::lock_guard<std::mutex> lock(_sock_lock);
+    time_t now = time(nullptr);
 
     for (ServerSocket* ss : _sock_list)
     {
-        // There is some risk of a race here, if the socket
-        // closes in between the time we test the status, and
-        // the time that we send. Seems unlikely to break in
-        // the real world. But still, XXX FIXME
-        if (ss->_status == IWAIT) ss->Send(buf);
+        // If the socket is waiting on input, and has been idle
+        // for more than ten seconds, then ping it to see if it
+        // is still alive.
+        if (ss->_status == IWAIT and
+            now - ss->_last_activity > 10) ss->Send(buf);
     }
 }
 
 
 std::string ServerSocket::connection_header(void)
 {
-    return "DATE             THREAD  STATE NLINE LAST-ACTIVITY";
+    return "DATE             THREAD  STATE NLINE  LAST-ACTIVITY ";
 }
 
 std::string ServerSocket::connection_stats(void)
@@ -325,6 +326,7 @@ void ServerSocket::handle_connection(void)
         }
     }
 
+    _last_activity = time(nullptr);
     _status = CLOSE;
 
     // If the data sent to us is not new-line terminated, then
