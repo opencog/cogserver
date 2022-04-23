@@ -63,6 +63,7 @@ void CogServer::enableNetworkServer(int port, int max_open_socks)
             { return new ServerConsole(); };
     _networkServer->run(make_console);
     _running = true;
+    logger().info("Network server running on port %d", port);
 }
 
 void CogServer::disableNetworkServer()
