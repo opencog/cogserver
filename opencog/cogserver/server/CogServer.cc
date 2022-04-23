@@ -106,6 +106,9 @@ void CogServer::serverLoop()
     // races.
     delete _networkServer;
     _networkServer = nullptr;
+
+    logger().info("Stopped CogServer");
+    logger().flush();
 }
 
 void CogServer::runLoopStep(void)

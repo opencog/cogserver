@@ -42,9 +42,16 @@ SexprShell::~SexprShell()
 {
 }
 
+/// Maintain a singleton instance for the sexpr evaluator;
+/// It is stateful, and we must respect that state
 GenericEval* SexprShell::get_evaluator(void)
 {
-	return SexprEval::get_evaluator(&cogserver().getAtomSpace());
+	static GenericEval* singleton = nullptr;
+	if (singleton) return singleton;
+
+	AtomSpacePtr asp(AtomSpaceCast(&cogserver().getAtomSpace()));
+	singleton = new SexprEval(asp);
+	return singleton;
 }
 
 /* ===================== END OF FILE ============================ */
