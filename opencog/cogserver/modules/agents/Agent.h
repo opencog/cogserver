@@ -134,10 +134,10 @@ protected:
     std::vector<UnorderedHandleSet> _utilizedHandleSets;
     mutable std::mutex _handleSetMutex;
 
-    /** called by AtomTable via a callback when an atom is removed. */
-    void atomRemoved(const AtomPtr&);
-
 public:
+
+    /** Called when an atom is removed. */
+    void atomRemoved(const AtomPtr&);
 
     /**
      * Return the agent's logger object

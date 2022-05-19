@@ -47,15 +47,12 @@ void SystemActivityTable::init(CogServer *cogServer)
 {
     logger().debug("[SystemActivityTable] init");
     _cogServer = cogServer;
-    _conn = cogServer->getAtomSpace().atomRemovedSignal().connect(
-            std::bind(&SystemActivityTable::atomRemoved, this, _1));
 }
 
 void SystemActivityTable::halt()
 {
     logger().debug("[SystemActivityTable] halt");
     clearActivity();
-    _cogServer->getAtomSpace().atomRemovedSignal().disconnect(_conn);
 }
 
 void SystemActivityTable::setMaxAgentActivityTableSeqSize(size_t n)
@@ -77,22 +74,6 @@ void SystemActivityTable::trimActivitySeq(ActivitySeq &seq, size_t max)
     for (size_t n = max; n < seq.size(); n++)
         delete seq[n];
     seq.resize(max);
-}
-
-void SystemActivityTable::atomRemoved(AtomPtr atom)
-{
-    Handle h = atom->get_handle();
-    std::lock_guard<std::mutex> lock(_activityTableMutex);
-    for (AgentActivityTable::iterator it  = _agentActivityTable.begin();
-                                      it != _agentActivityTable.end(); ++it) {
-        ActivitySeq &seq = it->second;
-        for (size_t n = 0; n < seq.size(); n++) {
-            Activity *a = seq[n];
-            for (size_t i = 0; i < a->utilizedHandleSets.size(); i++) {
-                a->utilizedHandleSets[i].erase(h);
-            }
-        }
-    }
 }
 
 void SystemActivityTable::logActivity(AgentPtr agent,
