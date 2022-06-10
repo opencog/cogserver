@@ -57,7 +57,8 @@ JsonShellModule::shelloutRequest::info(void)
 		"Atoms and Values from an AtomSpace.\n\n"
 		"It is used to provide a basic AtomSpace WebApp network server.\n"
 		"Example usage: `AtomSpace.getAtoms(\"Node\", true)` will return all\n"
-		"Nodes in the AtomSpace.\n\n"
+		"Nodes in the AtomSpace. For more info, see the README.md file at\n"
+		"https://github.com/opencog/atomspace/tree/master/opencog/persist/json\n\n"
 		"By default, this prints a prompt. To get a shell without a prompt,\n"
 		"say `json hush` or `json quiet`\n"
 		"To exit the shell, send a ^D (ctrl-D) or a single . on a line by itself.\n",
