@@ -64,7 +64,10 @@ SchemeShellModule::shelloutRequest::info(void)
 		"interactive scheme shell, based on the GNU Guile extension language.\n\n"
 		"If 'hush' or 'quiet' is specified after the command, then the prompt\n"
 		"will not be returned.  This is nice when catting large scripts using\n"
-		"netcat, as it avoids printing garbage when the scripts work well.\n",
+		"netcat, as it avoids printing garbage when the scripts work well.\n\n"
+		"Use either a ^D (ctrl-D) or a single . on a line by itself to exit\n"
+		"the shell. A ^C (ctrl-C) can be used to kill long-running or\n"
+		"unresponsive scheme functions.\n",
 		true, false);
 	return _cci;
 }
