@@ -19,7 +19,6 @@ INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 # Perform tests in component-dependency order, as much as possible.
 IF (CXXTEST_FOUND)
 
-	ADD_SUBDIRECTORY (modules)
 	IF (HAVE_CYTHON)
 		ADD_SUBDIRECTORY (cython)
 	ENDIF (HAVE_CYTHON)
