@@ -56,11 +56,12 @@ SexprShellModule::shelloutRequest::info(void)
 		"a very minimal s-expression shell, with just enough commands\n"
 		"to interpret Atomese strings and move Atoms and Values between\n"
 		"AtomSpaces.\n\n"
-		"It is used to provide the basic AtomSpace network server.\n"
-		"It is not intended for manual use! The commands are processed by\n"
-		"`atomspace-git/opencog/persist/sexpr/Commands.cc` -- see that\n"
-		"file for details. Example usage: `(cog-get-atoms 'Node #t)` will\n"
-		"return a list of all Nodes in the AtomSpace.\n\n"
+		"It is used to provide the basic AtomSpace network server.  It is\n"
+		"not intended for manual use!  There is minimal error reporting\n"
+		"and user-accessible help.  The commands are processed by\n"
+		"https://github.com/opencog/atomspace/tree/master/opencog/persist/sexpr/Commands.cc\n"
+		"See that file for details. Example usage: `(cog-get-atoms 'Node #t)`\n"
+		"will return a list of all Nodes in the AtomSpace.\n\n"
 		"Use either a ^D (ctrl-D) or a single . on a line by itself to exit\n"
 		"the shell.\n",
 		true, false);
