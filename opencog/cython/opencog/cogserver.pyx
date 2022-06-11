@@ -1,4 +1,3 @@
-include "agent.pyx"
 include "request.pyx"
 
 from opencog.cogserver cimport cython_server_atomspace

@@ -51,25 +51,6 @@ ext = Extension(
     )
 
 # This extension stuff should use info from CMake somehow...
-helper_ext = Extension(
-    "agent_finder",                 # name of extension
-    define_macros = [('MAJOR_VERSION', '0'),
-                     ('MINOR_VERSION', '1')],
-    sources=["agent_finder.pyx"],     # filename of our Cython source
-    language="c++",              # this causes Cython to create C++ source
-
-    include_dirs=[".", # needed to find local pyx/pxd files
-        "/usr/local/include", # For local includes
-        "/opt/local/include" # For MacPorts
-        ],
-    libraries=["stdc++",
-        "boost_system-mt","boost_thread-mt", # boost dependencies
-        ],
-    library_dirs=[
-        "/opt/local/lib", # For MacPorts
-        ]
-    )
-
 setup(name = 'pyopencog',
     description = 'Python Cogserver',
     author = 'Joel Pitt',
@@ -83,5 +64,5 @@ setup(name = 'pyopencog',
         "License :: OSI Approved :: GNU Affero General Public License v3",
     ],
     cmdclass = {'build_ext': build_ext},
-    ext_modules = [ext, helper_ext]
+    ext_modules = [ext]
     )

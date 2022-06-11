@@ -47,8 +47,8 @@ ENDIF (HAVE_ATOMSPACE)
 ############################ cogserver #########################
 CYTHON_ADD_MODULE_PYX(cogserver
 	"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
-	"request.pyx" "agent.pyx" "agent_finder_types.h"
-	"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
+	"request.pyx"
+	"../../cogserver/server/Request.h"
 )
 
 list(APPEND ADDITIONAL_MAKE_CLEAN_FILES "cogserver.cpp")
@@ -70,33 +70,4 @@ SET_TARGET_PROPERTIES(cogserver_cython PROPERTIES
 	OUTPUT_NAME cogserver)
 
 INSTALL (TARGETS cogserver_cython
-	DESTINATION "${PYTHON_DEST}")
-
-####################### agent finder ########################
-CYTHON_ADD_MODULE_PYX(agent_finder
-	"${ATOMSPACE_INCLUDE_DIR}/opencog/cython/opencog/atomspace.pxd"
-	"cogserver.pxd"
-	"../../cogserver/modules/agents/Agent.h" "../../cogserver/server/Request.h"
-)
-
-list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
-	"agent_finder.cpp" "agent_finder_api.h")
-
-# utility library for PythonModule
-ADD_LIBRARY(agent_finder SHARED
-	agent_finder.cpp
-)
-
-TARGET_LINK_LIBRARIES(agent_finder
-	${ATOMSPACE_LIBRARIES}
-	${PYTHON_LIBRARIES}
-	# ${Boost_THREAD_LIBRARY}
-	# ${Boost_SYSTEM_LIBRARY}
-)
-
-SET_TARGET_PROPERTIES(agent_finder PROPERTIES
-	PREFIX ""
-	OUTPUT_NAME agent_finder)
-
-INSTALL (TARGETS agent_finder
 	DESTINATION "${PYTHON_DEST}")

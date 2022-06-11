@@ -31,24 +31,6 @@ cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
 # know how to do that with Cython
 ctypedef short stim_t
 
-cdef extern from "opencog/cogserver/modules/agents/Agent.h" namespace "opencog":
-    cdef cppclass cAgent "opencog::Agent":
-        int frequency()
-        void setFrequency(int f)
-        string to_string()
-        # HandleSeqSeq getUtilizedHandleSets
-        void resetUtilizedHandleSets()
-
-        stim_t stimulateAtom(cHandle h, stim_t amount)
-        stim_t stimulateAtom(cHandleSeq hs, stim_t amount)
-        void removeAtomStimulus(cHandle h)
-        stim_t resetStimulus()
-        stim_t getTotalStimulus()
-        stim_t getAtomStimulus(cHandle h)
-
-cdef class MindAgent:
-    cdef cAgent *c_obj
-
 cdef extern from "opencog/cogserver/server/Request.h" namespace "opencog":
     cdef cppclass cRequest "opencog::Request":
         void send(string s)
