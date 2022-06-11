@@ -1,5 +1,4 @@
 
-# ADD_SUBDIRECTORY(agents)
 ADD_SUBDIRECTORY(commands)
 
 IF (HAVE_CYTHON)

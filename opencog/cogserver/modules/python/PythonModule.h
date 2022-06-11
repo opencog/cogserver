@@ -1,5 +1,4 @@
-// Enables support for loading MindAgents and CogServer requests written in
-// Python
+// Enables support for loading CogServer requests written in Python
 //
 #ifndef _OPENCOG_PYTHON_MODULE_H
 #define _OPENCOG_PYTHON_MODULE_H
@@ -8,8 +7,6 @@
 
 #include <string>
 
-#include <opencog/cogserver/modules/agents/Agent.h>
-#include <opencog/cogserver/modules/agents/Scheduler.h>
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
@@ -19,29 +16,6 @@
 
 namespace opencog
 {
-
-class PythonAgentFactory : public AbstractFactory<Agent>
-{
-    // Store the name of the python module and class so that we can instantiate
-    // them
-    std::string _pySrcModuleName;
-    std::string _pyClassName;
-    ClassInfo* _ci;
-public:
-    explicit PythonAgentFactory(std::string& module, std::string& clazz)
-      : AbstractFactory<Agent>()
-    {
-        _pySrcModuleName = module;
-        _pyClassName = clazz;
-        _ci = new ClassInfo("opencog::PyMindAgent(" + module + "." + clazz + ")");
-    }
-    virtual ~PythonAgentFactory()
-    {
-        delete _ci;
-    }
-    virtual Agent* create(CogServer&) const;
-    virtual const ClassInfo& info() const { return *_ci; }
-};
 
 class PythonRequestFactory : public AbstractFactory<Request>
 {
@@ -73,26 +47,21 @@ public:
 class PythonModule : public Module
 {
     DECLARE_CMD_REQUEST(PythonModule, "loadpy", do_load_py,
-       "Load commands and MindAgents from a python module",
+       "Load commands from a python module",
        "Usage: load_py file_name\n\n"
-       "Load commands and MindAgents, written in python, from a file."
+       "Load commands, written in python, from a file."
        "After loading, commands will appear in the list of available "
        "commands (use 'h' to list).  Commands must be implemented as "
-       "python modules, inheritiing from the class opencog.cogserver.Request. "
-       "Likewise, mind agents must inherit from opencog.cogserver.MindAgent. "
-       "The loaded agents can be viewed with the 'agents-list' command.",
+       "python modules, inheriting from the class opencog.cogserver.Request. ",
        false, false);
 
 private:
 
-    std::vector<std::string> _agentNames;
     std::vector<std::string> _requestNames;
-    std::vector<PythonAgentFactory*> _agentFactories;
     std::vector<PythonRequestFactory*> _requestFactories;
 
     bool preloadModules();
-    bool unregisterAgentsAndRequests();
-    Scheduler* _scheduler;
+    bool unregisterRequests();
 public:
 
     virtual const ClassInfo& classinfo() const { return info(); }

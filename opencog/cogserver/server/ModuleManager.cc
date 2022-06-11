@@ -278,7 +278,6 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
         // be handled by the config file or test environment...
         // not hard coded.
         // Give priority search order to the build directories
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/agents");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");

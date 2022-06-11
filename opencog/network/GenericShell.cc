@@ -559,8 +559,8 @@ void GenericShell::poll_loop(void)
 
 		// Continue polling, about 100 times per second, even if
 		// evaluation of the the previous expr is completed. It
-		// might have started some long-running thread/agent that
-		// is continuing to print, and we want to forward those
+		// might have started some long-running thread that is
+		// continuing to print, and we want to forward those
 		// prints to the user. (Its pointless to poll faster or
 		// slower than this... except ...)
 		// ... except ...

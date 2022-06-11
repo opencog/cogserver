@@ -10,18 +10,15 @@ INCLUDE_DIRECTORIES(
 
 ADD_LIBRARY (PythonModule MODULE
 	PythonModule.cc 
-	PyMindAgent.cc
 	PyRequest.cc
 )
 
 TARGET_LINK_LIBRARIES(PythonModule
 	server
-	agent_finder
 	PythonEval
 	${ATOMSPACE_LIBRARIES}
 	${PYTHON_LIBRARIES}
 )
-ADD_DEPENDENCIES(PythonModule agent_finder)
 
 INSTALL (TARGETS PythonModule DESTINATION
 	"lib${LIB_DIR_SUFFIX}/opencog/modules")

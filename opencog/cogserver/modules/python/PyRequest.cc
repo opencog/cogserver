@@ -2,10 +2,6 @@
 
 #include <opencog/cogserver/server/CogServer.h>
 
-#include <opencog/cogserver/modules/agents/Agent.h>
-#include <opencog/cython/opencog/agent_finder_types.h>
-#include <opencog/cython/opencog/agent_finder_api.h>
-
 using namespace opencog;
 
 static bool module_initialized = false;
@@ -26,10 +22,10 @@ PyRequest::PyRequest(CogServer& cs,
     // If you don't then you get a crash when you call an api function.
     if (!module_initialized)
     {
-        import_opencog__agent_finder();
         module_initialized = true;
     }
     
+#if DEAD_CODE
     // Call out to our helper module written in cython  NOTE: Cython api calls
     // defined "with gil" can be called without grabbing the GIL manually.
     _pyrequest = instantiate_request(moduleName, className, this);
@@ -40,6 +36,7 @@ PyRequest::PyRequest(CogServer& cs,
     else
         logger().info() << "Created python request "
                         << _moduleName << "." << _className;
+#endif
 }
 
 PyRequest::~PyRequest()
@@ -53,6 +50,7 @@ PyRequest::~PyRequest()
 
 bool PyRequest::execute()
 {
+#if DEAD_CODE
     std::string result = run_request(_pyrequest, _parameters,
                                     &_cogserver.getAtomSpace());
     // errors only with result is not empty... && duplicate
@@ -65,6 +63,7 @@ bool PyRequest::execute()
         return false;
     }
     _last_result = result;
+#endif
     return true;
 }
 

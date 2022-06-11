@@ -27,9 +27,8 @@ namespace opencog
  * server's network server.
  *
  * The network server runs on its own thread (thus freeing the server's
- * main loop to deal with requests and agents only). It may be
- * enabled/disabled at will so that a server may run in networkless
- * mode if desired.
+ * main loop to deal with requests only). It may be enabled/disabled at
+ * will so that a server may run in networkless mode if desired.
  *
  * The network server supports only one server socket. Client applications
  * should use the 'start' methodr to start listening to a port.

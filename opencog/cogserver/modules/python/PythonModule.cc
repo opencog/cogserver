@@ -10,14 +10,9 @@
 #include <opencog/util/Config.h>
 #include <opencog/util/misc.h>
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/modules/agents/AgentsModule.h>
 
-#include "PyMindAgent.h"
 #include "PyRequest.h"
 #include "PythonModule.h"
-
-#include <opencog/cython/opencog/agent_finder_types.h>
-#include <opencog/cython/opencog/agent_finder_api.h>
 
 using std::vector;
 using std::string;
@@ -28,18 +23,6 @@ using namespace opencog;
 #define DPRINTF(...)
 
 DECLARE_MODULE(PythonModule);
-
-Agent* PythonAgentFactory::create(CogServer& cs) const
-{
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-
-    logger().info() << "Creating python agent " << _pySrcModuleName << "." << _pyClassName;
-    PyMindAgent* pma = new PyMindAgent(cs, _pySrcModuleName, _pyClassName);
-
-    PyGILState_Release(gstate);
-    return pma;
-}
 
 Request* PythonRequestFactory::create(CogServer& cs) const
 {
@@ -57,17 +40,6 @@ Request* PythonRequestFactory::create(CogServer& cs) const
 
 PythonModule::PythonModule(CogServer& cs) : Module(cs)
 {
-	_scheduler = nullptr;
-
-	// Hack to load the agents module, which this module depends on.
-	std::string save = config().get("MODULES");
-	config().set("MODULES", "agents/libagents.so");
-	cs.loadModules();
-	config().set("MODULES", save);
-
-	Module* amod = cs.getModule("opencog::AgentsModule");
-	AgentsModule* agmod = (AgentsModule*) amod;
-	_scheduler = &agmod->get_scheduler();
 }
 
 static bool already_loaded = false;
@@ -79,10 +51,9 @@ PythonModule::~PythonModule()
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
-    unregisterAgentsAndRequests();
+    unregisterRequests();
     do_load_py_unregister();
 
-    for (PythonAgentFactory* af : _agentFactories) delete af;
     for (PythonRequestFactory* rf : _requestFactories) delete rf;
 
     already_loaded = false;
@@ -90,13 +61,9 @@ PythonModule::~PythonModule()
     PyGILState_Release(gstate);
 }
 
-bool PythonModule::unregisterAgentsAndRequests()
+bool PythonModule::unregisterRequests()
 {
     // Requires GIL
-    for (std::string s : _agentNames) {
-        DPRINTF("Deleting all instances of %s\n", s.c_str());
-        if (_scheduler) _scheduler->unregisterAgent(s);
-    }
     for (std::string s : _requestNames) {
         DPRINTF("Unregistering requests of id %s\n", s.c_str());
         _cogserver.unregisterRequest(s);
@@ -128,24 +95,6 @@ void PythonModule::init()
     // avoid the error print, and let them know who we are.
     PyRun_SimpleString("import sys; sys.argv='cogserver'\n");
 
-    // NOTE: Even though the Cython docs do not say that you need to call this
-    // more than once, you need to call the import functions in each separate
-    // shared library that accesses Cython defined api. If you don't then you
-    // get a crash when you call an api function.
-    import_opencog__agent_finder();
-
-    // The import_opencog__agent_finder() call above sets the
-    // load_req_agent_module() function pointer if the cython module
-    // load succeeded. But the function pointer will be NULL if the
-    // opencopg.agent_finder cython module failed to load. Avert
-    // a hard-to-debug crash on null-pointer-deref, and replace
-    // it by a hard-to-debug error message.
-    if (NULL == load_req_agent_module) {
-        PyErr_Print();
-        logger().error("PythonModule::%s Failed to load the "
-                       "opencog.agent_finder module", __FUNCTION__);
-    }
-
     if (config().has("PYTHON_PRELOAD")) preloadModules();
     do_load_py_register();
 
@@ -172,10 +121,8 @@ bool PythonModule::preloadModules()
 /// loadpy command)
 ///
 /// It is expected that the file contains a python module. The module
-/// should implement either a mind-agent, or it should contain a 'request'
-/// (shell command, written in python). Mind agents must inherit from
-/// the python class opencog.cogserver.MindAgent, while requests/commnds
-/// must inherit from opencog.cogserver.Request
+/// should contain a 'request' (shell command, written in python).
+/// Requests/commnds must inherit from opencog.cogserver.Request
 //
 std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args)
 {
@@ -189,47 +136,9 @@ std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args
         moduleName.replace(moduleName.size()-3,3,"");
     }
 
-    // Avoid a null-pointer deref crash at the next step.
-    if (NULL == load_req_agent_module) {
-        return "Error: The opencog.agent_finder module is not loaded; "
-               "Cannot load other python modules as a result.";
-    }
-
-    requests_and_agents_t thingsInModule = load_req_agent_module(moduleName);
-    if (thingsInModule.err_string.size() > 0) {
-        return thingsInModule.err_string;
-    }
-
-    // If there are agents, load them.
-    if (thingsInModule.agents.size() > 0) {
-        bool first = true;
-        oss << "Python MindAgents found: ";
-        for (std::string s : thingsInModule.agents) {
-            if (!first) {
-                oss << ", ";
-                first = false;
-            }
-
-            // Register agent with cogserver using dotted name:
-            // module.AgentName
-            std::string dottedName = moduleName + "." + s;
-
-            // register the agent with a custom factory that knows how to
-            // instantiate new Python MindAgents
-            PythonAgentFactory* afact = new PythonAgentFactory(moduleName,s);
-            _agentFactories.push_back(afact);
-            _scheduler->registerAgent(dottedName, afact);
-
-            // save a list of Python agents that we've added to the CogServer
-            _agentNames.push_back(dottedName);
-            oss << s;
-        }
-        oss << "." << std::endl;
-    } else {
-        oss << "No subclasses of opencog.cogserver.MindAgent found.\n";
-    }
-
-    // Now load the commands/requests, if any.
+#if DEAD_CODE
+    // Load the commands/requests, if any.
+    requests_t thingsInModule = load_req_module(moduleName);
     if (thingsInModule.requests.size() > 0) {
         bool first = true;
         oss << "Python Requests found: ";
@@ -243,12 +152,12 @@ std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args
             // Register request with cogserver using dotted name:
             // module.RequestName
             std::string dottedName = moduleName + "." + s;
-            // register the agent with a custom factory that knows how to
+            // register a custom factory that knows how to
             PythonRequestFactory* fact =
                 new PythonRequestFactory(moduleName, s, short_desc, long_desc, is_shell);
             _requestFactories.push_back(fact);
             _cogserver.registerRequest(dottedName, fact);
-            // save a list of Python agents that we've added to the CogServer
+            // save a list of Python requests that we've added to the CogServer
             _requestNames.push_back(dottedName);
 
             if (!first) { oss << ", "; first = false; }
@@ -258,8 +167,9 @@ std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args
     } else {
         oss << "No subclasses of opencog.cogserver.Request found.\n";
     }
+#endif
 
-    // Return info on what requests and mindagents were found
+    // Return info on what requests were found
     // This gets printed out to the user at the shell prompt.
     return oss.str();
 }
