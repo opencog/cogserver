@@ -34,16 +34,16 @@ TopShell::TopShell(void)
 	show_prompt = true;
 	_name = "top ";
 
-	_refresh = 3;
+	_refresh = 3.0;
+	_top_eval = nullptr;
 }
 
 TopShell::~TopShell()
 {
 }
 
-void TopShell::set_interval(int refresh)
+void TopShell::set_interval(double refresh)
 {
-	_top_eval = nullptr;
 	_refresh = refresh;
 }
 
@@ -63,6 +63,7 @@ void TopShell::line_discipline(const std::string& expr)
 GenericEval* TopShell::get_evaluator(void)
 {
 	_top_eval = TopEval::get_evaluator();
+	_top_eval->set_interval(_refresh);
 	return _top_eval;
 }
 

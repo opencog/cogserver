@@ -43,7 +43,7 @@ class TopEval : public GenericEval
 	private:
 		std::mutex _sleep_mtx;
 		std::condition_variable _sleeper;
-		int _refresh;
+		double _refresh;
 		bool _started;
 		bool _done;
 
@@ -59,6 +59,7 @@ class TopEval : public GenericEval
 		virtual void interrupt(void);
 
 		void cmd();
+		void set_interval(double);
 
 		static TopEval* get_evaluator();
 };

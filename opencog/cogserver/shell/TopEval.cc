@@ -32,7 +32,7 @@ TopEval::TopEval()
 {
 	_started = false;
 	_done = false;
-	_refresh = 3;
+	_refresh = 3.0;
 }
 
 TopEval::~TopEval()
@@ -59,7 +59,7 @@ std::string TopEval::poll_result()
 	if (_started)
 	{
 		std::unique_lock<std::mutex> lck(_sleep_mtx);
-		_sleeper.wait_for(lck, _refresh * 1s);
+		_sleeper.wait_for(lck, ((int) (1000 * _refresh)) * 1ms);
 	}
 	else
 	{
@@ -80,6 +80,15 @@ void TopEval::begin_eval()
 	_done = false;
 }
 
+/* ============================================================== */
+
+void TopEval::set_interval(double secs)
+{
+	_refresh = secs;
+}
+
+/* ============================================================== */
+
 // When the user types something while top is running, this gets called.
 // This will halt the polling loop, and allow the user input to be
 // processed.
@@ -88,8 +97,6 @@ void TopEval::cmd()
 	_done = true;
 	_sleeper.notify_all();
 }
-
-/* ============================================================== */
 
 /**
  * interrupt() - convert user's control-C at keyboard into exception.

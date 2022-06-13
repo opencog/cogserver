@@ -74,7 +74,7 @@ TopShellModule::shelloutRequest::execute(void)
 	if (!_parameters.empty())
 	{
 		std::string &arg = _parameters.front();
-		int refresh = atoi(arg.c_str());
+		double refresh = atof(arg.c_str());
 		sh->set_interval(refresh);
 	}
 

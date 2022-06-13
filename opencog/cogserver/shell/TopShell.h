@@ -37,7 +37,7 @@ class TopShell : public GenericShell
 {
 	private:
 		TopEval* _top_eval;
-		int _refresh;
+		double _refresh;
 
 	protected:
 		virtual void user_interrupt();
@@ -48,7 +48,7 @@ class TopShell : public GenericShell
 		virtual ~TopShell();
 		virtual GenericEval* get_evaluator(void);
 
-		void set_interval(int);
+		void set_interval(double);
 };
 
 /** @}*/
