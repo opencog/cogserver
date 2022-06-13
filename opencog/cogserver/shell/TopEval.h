@@ -43,6 +43,7 @@ class TopEval : public GenericEval
 		bool _started;
 		bool _done;
 		TopEval();
+		void init();
 
 	public:
 		virtual ~TopEval();

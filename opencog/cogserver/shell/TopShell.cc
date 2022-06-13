@@ -46,6 +46,13 @@ void TopShell::set_interval(int refresh)
 	_refresh = refresh;
 }
 
+// When user types in ctrl-C, just exit the shell.
+void TopShell::user_interrupt()
+{
+	self_destruct = true;
+	GenericShell::user_interrupt();
+}
+
 GenericEval* TopShell::get_evaluator(void)
 {
 	return TopEval::get_evaluator();

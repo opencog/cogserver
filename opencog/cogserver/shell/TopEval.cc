@@ -29,13 +29,18 @@ using namespace opencog;
 TopEval::TopEval()
 	: GenericEval()
 {
-	_started = false;
-	_done = false;
-	_refresh = 3;
+	init();
 }
 
 TopEval::~TopEval()
 {
+}
+
+void TopEval::init()
+{
+	_started = false;
+	_done = false;
+	_refresh = 3;
 }
 
 /* ============================================================== */
@@ -83,6 +88,7 @@ TopEval* TopEval::get_evaluator()
 {
 	static TopEval* evaluator = new TopEval();
 
+	evaluator->init();
 printf("duuuude return evaluator\n");
 	return evaluator;
 }

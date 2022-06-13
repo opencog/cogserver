@@ -92,7 +92,7 @@ class GenericShell
 		void finish_eval();
 		void while_not_done();
 
-		void user_interrupt();
+		virtual void user_interrupt();
 
 		// Output handling.
 		virtual void put_output(const std::string&);
