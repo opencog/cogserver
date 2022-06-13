@@ -92,6 +92,9 @@ ConsoleSocket::~ConsoleSocket()
 void ConsoleSocket::SetShell(GenericShell *g)
 {
     _shell = g;
+
+	// Push out a new prompt, when the shell closes.
+	if (nullptr == g) OnLine("");
 }
 
 // ==================================================================
