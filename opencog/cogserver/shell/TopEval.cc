@@ -29,6 +29,8 @@ using namespace opencog;
 TopEval::TopEval()
 	: GenericEval()
 {
+	_started = false;
+	_done = false;
 	_refresh = 3;
 }
 
@@ -42,15 +44,16 @@ TopEval::~TopEval()
  */
 void TopEval::eval_expr(const std::string &expr)
 {
-printf("duuude eval %s\n", expr.c_str());
+printf("duuude eval >>%s<<\n", expr.c_str());
 }
 
 std::string TopEval::poll_result()
 {
-printf("duuude poll err=%d\n", _caught_error);
 	if (_done) return "";
 
-	sleep(_refresh);
+	if (_started) sleep(_refresh);
+	else _started = true;
+
 	std::string ret = "\u001B[2Jx-- yo ";
 static int cnt = 0;
 cnt++;
@@ -73,7 +76,6 @@ void TopEval::interrupt(void)
 {
 	_done = true;
 	_caught_error = true;
-	_error_string = "Caught interrupt!";
 printf("duuude git interrupts\n");
 }
 
@@ -81,6 +83,7 @@ TopEval* TopEval::get_evaluator()
 {
 	static TopEval* evaluator = new TopEval();
 
+printf("duuuude return evaluator\n");
 	return evaluator;
 }
 

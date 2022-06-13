@@ -78,6 +78,8 @@ TopShellModule::shelloutRequest::execute(void)
 		sh->set_interval(refresh);
 	}
 
+	sh->eval("foo");
+
 	return true;
 }
 
