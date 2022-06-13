@@ -23,8 +23,9 @@ is useful in several different ways:
   monitoring status, and poking around and performing general
   maintenance on long-running servers.
 
-* A network command line: by default, Python does not allow multiple
-  users to access it at the same time.  As to scheme/guile, there is
+* A network command line. Ordinary Python does not allow multiple
+  users to access it at the same time. With the CogServer, multiple
+  Python users can use it simultaneously. As to scheme/guile, there is
   an ice-9 REPL server, but the CogServer is an order of magnitude
   faster, lower latency/higher throughput, and infinitely more stable;
   its free of lockups, hangs and crashes.
@@ -45,6 +46,9 @@ is useful in several different ways:
   transfer API to local disk, 3rd-party databases and network. The
   CogServer implements this API, thus allowing multiple AtomSpaces
   distributed on the network to share data.
+
+* The `stats` command provides a `top`-like command for viewing who is
+  conected to the Cogserver, and what they are doing.
 
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
