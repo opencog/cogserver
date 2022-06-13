@@ -47,8 +47,16 @@ TopEval::~TopEval()
  */
 void TopEval::eval_expr(const std::string &expr)
 {
+	if (0 == expr.size()) return;
+	if (0 == expr.compare("\n")) return;
+
+	// On startup, the initial message sent is "foo".
+	// This is in TopShellModule();
+	if (0 == expr.compare("foo\n")) return;
+
 	// Right now, we don't have any built-in commands ...
 	// if we did, they'd be handled here.
+	_msg = "Unknown top command >>" + expr;
 }
 
 std::string TopEval::poll_result()
@@ -72,6 +80,12 @@ std::string TopEval::poll_result()
 	// Send the telnet clear-screen command.
 	ret += "\u001B[2J";
 	ret += cogserver().display_stats();
+
+	if (0 < _msg.size())
+	{
+		ret += _msg;
+		_msg = "";
+	}
 	return ret;
 }
 
@@ -95,6 +109,7 @@ void TopEval::set_interval(double secs)
 void TopEval::cmd()
 {
 	_done = true;
+	_started = false;
 	_sleeper.notify_all();
 }
 

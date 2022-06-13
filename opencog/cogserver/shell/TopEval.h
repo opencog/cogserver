@@ -46,6 +46,7 @@ class TopEval : public GenericEval
 		double _refresh;
 		bool _started;
 		bool _done;
+		std::string _msg;
 
 		TopEval();
 
