@@ -32,9 +32,11 @@ namespace opencog {
  *  @{
  */
 
+class TopEval;
 class TopShell : public GenericShell
 {
 	private:
+		TopEval* _top_eval;
 		int _refresh;
 
 	protected:

@@ -43,6 +43,7 @@ TopShell::~TopShell()
 
 void TopShell::set_interval(int refresh)
 {
+	_top_eval = nullptr;
 	_refresh = refresh;
 }
 
@@ -52,8 +53,6 @@ void TopShell::user_interrupt()
 	self_destruct = true;
 	GenericShell::user_interrupt();
 }
-
-static TopEval* _top_eval = nullptr;
 
 void TopShell::line_discipline(const std::string& expr)
 {
