@@ -301,6 +301,7 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
         // Defaults: search the build dirs first, then the install dirs.
         modlist =
             "libbuiltinreqs.so, "
+            "libtop-shell.so, "
             "libscheme-shell.so, "
             "libsexpr-shell.so, "
             "libjson-shell.so, "
