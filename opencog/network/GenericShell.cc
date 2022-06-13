@@ -378,7 +378,6 @@ void GenericShell::line_discipline(const std::string &expr)
 		return;
 	}
 
-printf("duuude line discs %s\n", expr.c_str());
 	/*
 	 * The newline was cut by the request subsystem. Re-insert it;
 	 * otherwise, comments within procedures will have the effect of
@@ -456,13 +455,11 @@ void GenericShell::eval_loop(void)
 			// weird crashes in the SchemeEval class.
 			while_not_done();
 			wake_poll();
-printf("duuude generic postpoll 1 evdon=%d\n", _eval_done);
 
 			// Note that this pop will stall until the queue
 			// becomes non-empty.
 			evalque.pop(in);
 			logger().debug("[GenericShell] start eval of '%s'", in.c_str());
-printf("duuude generic postpop evdon=%d in=%s\n", _eval_done, in.c_str());
 
 			wake_poll();
 			start_eval();

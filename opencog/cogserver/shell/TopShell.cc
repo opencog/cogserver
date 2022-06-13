@@ -28,11 +28,11 @@ using namespace opencog;
 TopShell::TopShell(void)
 {
 	normal_prompt = "top> ";
-	abort_prompt = "top> ";
-	pending_prompt = "... ";
+	abort_prompt = "";
+	pending_prompt = "";
 
 	show_prompt = true;
-	_name = "top";
+	_name = "top ";
 
 	_refresh = 3;
 }
