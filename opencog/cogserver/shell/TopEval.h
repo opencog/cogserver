@@ -23,6 +23,8 @@
 #ifndef _OPENCOG_TOP_EVAL_H
 #define _OPENCOG_TOP_EVAL_H
 
+#include <condition_variable>
+#include <mutex>
 #include <string>
 #include <opencog/eval/GenericEval.h>
 
@@ -39,11 +41,13 @@ namespace opencog {
 class TopEval : public GenericEval
 {
 	private:
+		std::mutex _sleep_mtx;
+		std::condition_variable _sleeper;
 		int _refresh;
 		bool _started;
 		bool _done;
+
 		TopEval();
-		void init();
 
 	public:
 		virtual ~TopEval();

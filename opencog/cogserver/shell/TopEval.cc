@@ -21,26 +21,22 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <unistd.h>
+#include <chrono>
 #include "TopEval.h"
 
 using namespace opencog;
+using namespace std::chrono_literals;
 
 TopEval::TopEval()
 	: GenericEval()
 {
-	init();
+	_started = false;
+	_done = false;
+	_refresh = 3;
 }
 
 TopEval::~TopEval()
 {
-}
-
-void TopEval::init()
-{
-	_started = false;
-	_done = false;
-	_refresh = 3;
 }
 
 /* ============================================================== */
@@ -56,7 +52,11 @@ std::string TopEval::poll_result()
 {
 	if (_done) return "";
 
-	if (_started) sleep(_refresh);
+	if (_started)
+	{
+		std::unique_lock<std::mutex> lck(_sleep_mtx);
+		_sleeper.wait_for(lck, _refresh * 1s);
+	}
 	else _started = true;
 
 	std::string ret = "\u001B[2Jx-- yo ";
@@ -91,6 +91,7 @@ void TopEval::interrupt(void)
 {
 	_done = true;
 	_caught_error = true;
+	_sleeper.notify_all();
 printf("duuude git interrupts\n");
 }
 
