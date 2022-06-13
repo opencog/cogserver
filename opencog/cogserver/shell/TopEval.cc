@@ -60,7 +60,7 @@ std::string TopEval::poll_result()
 	else _started = true;
 
 	std::string ret = "\u001B[2Jx-- yo ";
-static int cnt = 0;
+static thread_local int cnt = 0;
 cnt++;
 ret += std::to_string(cnt);
 	ret += "\n";
@@ -73,9 +73,11 @@ printf("duuude begin eval\n");
 	_done = false;
 }
 
+// When the user types something while top is rinning, this gets called.
+// This will halt the polling loop, and allow the user input to be
+// processed.
 void TopEval::cmd()
 {
-printf("duuude got cmd\n");
 	_done = true;
 }
 
@@ -94,10 +96,15 @@ printf("duuude git interrupts\n");
 
 TopEval* TopEval::get_evaluator()
 {
-	static TopEval* evaluator = new TopEval();
+	static thread_local TopEval* evaluator = new TopEval();
 
-	evaluator->init();
-printf("duuuude return evaluator\n");
+	// The eval_dtor runs when this thread is destroyed.
+	class eval_dtor {
+		public:
+		~eval_dtor() { delete evaluator; }
+	};
+	static thread_local eval_dtor killer;
+
 	return evaluator;
 }
 
