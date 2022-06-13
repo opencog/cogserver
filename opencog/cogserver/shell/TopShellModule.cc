@@ -53,7 +53,7 @@ TopShellModule::shelloutRequest::info(void)
 		"Print server stats continuously",
 		"Usage: top [<seconds>]\n\n"
 		"Show live server usage statistics. These are refreshed periodically,\n"
-		"ever 3 seconds by default, if the <seconds> parameter is not given.\n"
+		"every 3 seconds by default, if the <seconds> parameter is not given.\n"
 		"To exit, just hit ^C (ctrl-C).\n",
 		true, false);
 	return _cci;

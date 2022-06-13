@@ -119,6 +119,7 @@ void TopEval::cmd()
 void TopEval::interrupt(void)
 {
 	_done = true;
+	_started = false;
 	_caught_error = true;
 	_sleeper.notify_all();
 }
