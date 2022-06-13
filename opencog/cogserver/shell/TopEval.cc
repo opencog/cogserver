@@ -22,6 +22,8 @@
  */
 
 #include <chrono>
+
+#include <opencog/cogserver/server/CogServer.h>
 #include "TopEval.h"
 
 using namespace opencog;
@@ -67,11 +69,9 @@ std::string TopEval::poll_result()
 		ret = "\n";
 	}
 
-	ret += "\u001B[2Jx-- yo ";
-static thread_local int cnt = 0;
-cnt++;
-ret += std::to_string(cnt);
-	ret += "\n";
+	// Send the telnet clear-screen command.
+	ret += "\u001B[2J";
+	ret += cogserver().display_stats();
 	return ret;
 }
 
