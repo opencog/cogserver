@@ -70,7 +70,15 @@ ret += std::to_string(cnt);
 void TopEval::begin_eval()
 {
 printf("duuude begin eval\n");
+	_done = false;
 }
+
+void TopEval::cmd()
+{
+printf("duuude got cmd\n");
+	_done = true;
+}
+
 
 /* ============================================================== */
 

@@ -54,6 +54,8 @@ class TopEval : public GenericEval
 
 		virtual void interrupt(void);
 
+		void cmd();
+
 		static TopEval* get_evaluator();
 };
 

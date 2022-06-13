@@ -37,12 +37,14 @@ class TopShell : public GenericShell
 	private:
 		int _refresh;
 
+	protected:
+		virtual void user_interrupt();
+		virtual void line_discipline(const std::string&);
+
 	public:
 		TopShell(void);
 		virtual ~TopShell();
 		virtual GenericEval* get_evaluator(void);
-
-		virtual void user_interrupt();
 
 		void set_interval(int);
 };

@@ -53,9 +53,18 @@ void TopShell::user_interrupt()
 	GenericShell::user_interrupt();
 }
 
+static TopEval* _top_eval = nullptr;
+
+void TopShell::line_discipline(const std::string& expr)
+{
+	_top_eval->cmd();
+	GenericShell::line_discipline(expr);
+}
+
 GenericEval* TopShell::get_evaluator(void)
 {
-	return TopEval::get_evaluator();
+	_top_eval = TopEval::get_evaluator();
+	return _top_eval;
 }
 
 /* ===================== END OF FILE ============================ */
