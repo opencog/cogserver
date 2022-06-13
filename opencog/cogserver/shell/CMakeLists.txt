@@ -64,6 +64,7 @@ TARGET_LINK_LIBRARIES(json-shell
 )
 
 ADD_LIBRARY (top-shell SHARED
+	TopEval
 	TopShell
 	TopShellModule
 )

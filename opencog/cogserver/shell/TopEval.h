@@ -1,8 +1,8 @@
 /*
- * TopShell.cc
+ * TopEval.h
  *
- * Simple server statistics shell
- * Copyright (c) 2008 Linas Vepstas <linas@linas.org>
+ * A simple server-stats evaluator
+ * Copyright (c) 2008, 2013, 2014, 2020, 2021, 2022 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License v3 as
@@ -20,35 +20,41 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "TopEval.h"
-#include "TopShell.h"
+#ifndef _OPENCOG_TOP_EVAL_H
+#define _OPENCOG_TOP_EVAL_H
 
-using namespace opencog;
+#include <string>
+#include <opencog/eval/GenericEval.h>
 
-TopShell::TopShell(void)
+/**
+ * The TopEval class implements a very simple API for reporting server
+ * stats.
+ */
+
+namespace opencog {
+/** \addtogroup grp_server
+ *  @{
+ */
+
+class TopEval : public GenericEval
 {
-	normal_prompt = "top> ";
-	abort_prompt = "top> ";
-	pending_prompt = "... ";
+	private:
+		int _refresh;
+		TopEval();
 
-	show_prompt = true;
-	_name = "top";
+	public:
+		virtual ~TopEval();
 
-	_refresh = 3;
+		virtual void begin_eval(void);
+		virtual void eval_expr(const std::string&);
+		virtual std::string poll_result(void);
+
+		virtual void interrupt(void);
+
+		static TopEval* get_evaluator();
+};
+
+/** @}*/
 }
 
-TopShell::~TopShell()
-{
-}
-
-void TopShell::set_interval(int refresh)
-{
-	_refresh = refresh;
-}
-
-GenericEval* TopShell::get_evaluator(void)
-{
-	return TopEval::get_evaluator();
-}
-
-/* ===================== END OF FILE ============================ */
+#endif // _OPENCOG_TOP_EVAL_H

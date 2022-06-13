@@ -1,0 +1,79 @@
+/**
+ * TopEval.cc
+ *
+ * Report cogserver stats.
+ *
+ * Copyright (c) 2008, 2014, 2015, 2020, 2021, 2022 Linas Vepstas
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License v3 as
+ * published by the Free Software Foundation and including the exceptions
+ * at http://opencog.org/wiki/Licenses
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program; if not, write to:
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+#include <unistd.h>
+#include "TopEval.h"
+
+using namespace opencog;
+
+TopEval::TopEval()
+	: GenericEval()
+{
+	_refresh = 3;
+}
+
+TopEval::~TopEval()
+{
+}
+
+/* ============================================================== */
+/**
+ * Evaluate an basic Javascript/JSON commands.
+ */
+void TopEval::eval_expr(const std::string &expr)
+{
+printf("duuude eval %s\n", expr.c_str());
+}
+
+std::string TopEval::poll_result()
+{
+printf("duuude poll\n");
+	sleep(_refresh);
+	std::string ret = "\a\fyo\n";
+	return ret;
+}
+
+void TopEval::begin_eval()
+{
+printf("duuude begin eval\n");
+}
+
+/* ============================================================== */
+
+/**
+ * interrupt() - convert user's control-C at keyboard into exception.
+ */
+void TopEval::interrupt(void)
+{
+	_caught_error = true;
+	_error_string = "Caught interrupt!";
+}
+
+TopEval* TopEval::get_evaluator()
+{
+	static TopEval* evaluator = new TopEval();
+
+	return evaluator;
+}
+
+/* ===================== END OF FILE ======================== */
