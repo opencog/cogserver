@@ -63,6 +63,20 @@ TARGET_LINK_LIBRARIES(json-shell
 	${COGUTIL_LIBRARY}
 )
 
+ADD_LIBRARY (top-shell SHARED
+	TopShell
+	TopShellModule
+)
+
+TARGET_LINK_LIBRARIES(top-shell
+	network
+	server
+	${ATOMSPACE_LIBRARY}
+	${COGUTIL_LIBRARY}
+)
+
+# ---------------------- install targets
+
 IF (HAVE_CYTHON)
 	INSTALL (TARGETS py-shell
 		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
@@ -73,4 +87,6 @@ INSTALL (TARGETS scheme-shell
 INSTALL (TARGETS sexpr-shell
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
 INSTALL (TARGETS json-shell
+	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+INSTALL (TARGETS top-shell
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
