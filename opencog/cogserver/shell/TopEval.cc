@@ -47,9 +47,15 @@ printf("duuude eval %s\n", expr.c_str());
 
 std::string TopEval::poll_result()
 {
-printf("duuude poll\n");
+printf("duuude poll err=%d\n", _caught_error);
+	if (_done) return "";
+
 	sleep(_refresh);
-	std::string ret = "\a\fyo\n";
+	std::string ret = "\u001B[2Jx-- yo ";
+static int cnt = 0;
+cnt++;
+ret += std::to_string(cnt);
+	ret += "\n";
 	return ret;
 }
 
@@ -65,8 +71,10 @@ printf("duuude begin eval\n");
  */
 void TopEval::interrupt(void)
 {
+	_done = true;
 	_caught_error = true;
 	_error_string = "Caught interrupt!";
+printf("duuude git interrupts\n");
 }
 
 TopEval* TopEval::get_evaluator()

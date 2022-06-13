@@ -40,6 +40,7 @@ class TopEval : public GenericEval
 {
 	private:
 		int _refresh;
+		bool _done;
 		TopEval();
 
 	public:
