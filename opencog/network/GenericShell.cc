@@ -467,6 +467,13 @@ void GenericShell::eval_loop(void)
 			_evaluator->eval_expr(in);
 			wake_poll();
 		}
+		catch (const RuntimeException& ex)
+		{
+			/* Python throws these on user syntax errors.*/
+			/* Python sometimes deadlocks. Don't know why. */
+			_eval_done = true;
+			_poll_mtx.unlock();
+		}
 		catch (const concurrent_queue<std::string>::Canceled& ex)
 		{
 			break;
