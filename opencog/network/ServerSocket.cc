@@ -142,7 +142,8 @@ bool ServerSocket::kill(pid_t tid)
     {
         if (tid == ss->_tid)
         {
-            pthread_cancel(ss->_pth);
+            ss->SetCloseAndDelete();
+            // pthread_cancel(ss->_pth);
             return true;
         }
     }
