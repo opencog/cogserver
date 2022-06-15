@@ -27,6 +27,7 @@ static char IWAIT[6] = "iwait";
 static char DTOR [6] = "dtor ";
 static char RUN  [6] = " run ";
 static char CLOSE[6] = "close";
+static char DOWN [6] = "down ";
 
 static std::mutex _sock_lock;
 static std::set<ServerSocket*> _sock_list;
@@ -251,9 +252,10 @@ void ServerSocket::SetCloseAndDelete()
         if (e.code() != boost::asio::error::not_connected and
             e.code() != boost::asio::error::bad_descriptor)
         {
-            logger().error("ServerSocket::handle_connection(): Error closing socket: %s", e.what());
+            logger().error("ServerSocket::SetCloseAndDelete(): Error closing socket: %s", e.what());
         }
     }
+    _status = DOWN;
 }
 
 typedef boost::asio::buffers_iterator<
