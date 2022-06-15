@@ -103,7 +103,6 @@ void ServerSocket::half_ping(void)
     }
 }
 
-
 std::string ServerSocket::connection_header(void)
 {
     return "OPEN-DATE        THREAD  STATE NLINE  LAST-ACTIVITY ";
@@ -133,12 +132,32 @@ std::string ServerSocket::connection_stats(void)
 
 // ==================================================================
 
+/// Kill the indicated thread id.
+// TODO: should use std::jthread, once c++20 is widely available.
+bool ServerSocket::kill(pid_t tid)
+{
+    std::lock_guard<std::mutex> lock(_sock_lock);
+
+    for (ServerSocket* ss : _sock_list)
+    {
+        if (tid == ss->_tid)
+        {
+            pthread_cancel(ss->_pth);
+            return true;
+        }
+    }
+    return false;
+}
+
+// ==================================================================
+
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
     _tid = 0;
+    _pth = 0;
     _status = START;
     _line_count = 0;
     add_sock(this);
@@ -291,6 +310,7 @@ void ServerSocket::handle_connection(void)
 {
     prctl(PR_SET_NAME, "cogserv:connect", 0, 0, 0);
     _tid = gettid();
+    _pth = pthread_self();
     logger().debug("ServerSocket::handle_connection()");
     OnConnection();
     boost::asio::streambuf b;

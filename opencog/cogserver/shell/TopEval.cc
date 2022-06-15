@@ -54,6 +54,31 @@ void TopEval::eval_expr(const std::string &expr)
 	// This is in TopShellModule();
 	if (0 == expr.compare("foo\n")) return;
 
+	if ('h' == expr[0])
+	{
+		_msg = "Available commands: kill";
+		return;
+	}
+
+	// Kill a thread
+	if ('k' == expr[0])
+	{
+		size_t pos = expr.find_first_of(" ");
+		if (std::string::npos == pos)
+		{
+			_msg = "Usage: kill <thread-id>";
+			return;
+		}
+
+		size_t tid = std::atoi(expr.substr(pos).c_str());
+		bool rc = ServerSocket::kill(tid);
+		if (rc)
+			_msg = "Killed thread " + std::to_string(tid);
+		else
+			_msg = "No such thread " + std::to_string(tid);
+		return;
+	}
+
 	// Right now, we don't have any built-in commands ...
 	// if we did, they'd be handled here.
 	_msg = "Unknown top command >>" + expr;

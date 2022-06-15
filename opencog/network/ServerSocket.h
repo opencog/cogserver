@@ -9,6 +9,7 @@
 #ifndef _OPENCOG_SERVER_SOCKET_H
 #define _OPENCOG_SERVER_SOCKET_H
 
+#include <pthread.h>
 #include <boost/asio.hpp>
 
 namespace opencog
@@ -44,6 +45,7 @@ protected:
      */
     time_t _start_time;
     pid_t _tid;    // OS-dependent thread ID.
+    pthread_t _pth;
     const char* _status; // "start" or "run" or "close"
     time_t _last_activity;
     size_t _line_count;
@@ -76,6 +78,10 @@ public:
 
     /** Attempt top close half-open sockets, if any. */
     static void half_ping(void);
+
+    /** Attempt to kill the indicated thread. */
+    static bool kill(pid_t);
+
 }; // class
 
 /** @}*/
