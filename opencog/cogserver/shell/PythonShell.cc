@@ -62,16 +62,20 @@ GenericEval* PythonShell::get_evaluator(void)
 
 void PythonShell::eval(const std::string &expr)
 {
+printf("duuude py self=%d eval >>%s<<\n", self_destruct, expr.c_str());
     bool selfie = self_destruct;
     self_destruct = false;
     GenericShell::eval(expr);
+printf("duuude post pyeval self=%d\n", self_destruct);
     if (selfie) {
         // Eval an empty string as a end-of-file marker. This is needed
         // to flush pending input in the python shell, as otherwise,
         // there is no way to know that no more python input will
         // arrive!
+printf("duuude pret self dowingnau\n");
         GenericShell::eval("");
         self_destruct = true;
+printf("duuude set self sstru\n");
     }
 }
 

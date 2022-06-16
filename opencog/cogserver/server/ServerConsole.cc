@@ -100,6 +100,7 @@ void ServerConsole::sendPrompt()
 
 void ServerConsole::OnLine(const std::string& line)
 {
+printf("dddue enter online sh=%p line=%s\n", _shell, line.c_str());
     // If a shell processor has been designated, then defer all
     // processing to the shell.  In particular, avoid as much overhead
     // as possible, since the shell needs to be able to handle a
@@ -107,6 +108,7 @@ void ServerConsole::OnLine(const std::string& line)
     // possible.
     if (_shell) {
         _shell->eval(line);
+printf("duuude ret from shell eval\n");
         return;
     }
 
@@ -131,6 +133,7 @@ void ServerConsole::OnLine(const std::string& line)
         }
     }
 
+printf("duude commandy stuff line=%s<<\n", line.c_str());
     logger().debug("[ServerConsole] OnLine [%s]", line.c_str());
 
     // Parse command line
@@ -140,6 +143,7 @@ void ServerConsole::OnLine(const std::string& line)
     if (params.empty()) {
         // return on empty/blank line
         sendPrompt();
+printf("duuude in server concolse prompt and return tid=%d\n", gettid());
         return;
     }
 
@@ -171,6 +175,7 @@ void ServerConsole::OnLine(const std::string& line)
     request->setParameters(params);
     bool is_shell = request->isShell();
 
+printf("duude in cmannd\n");
     // Add the command to the processing queue.
     // Caution: after the pushRequest, the request might be executed
     // and then deleted in a different thread. It must NOT be accessed
@@ -186,8 +191,10 @@ void ServerConsole::OnLine(const std::string& line)
         // shell mode before handling any additional input from the
         // socket (since all subsequent input will be for the new shell,
         // not for the cogserver command processor).
+printf("duude in pcess\n");
         cs.processRequests();
     }
+printf("duude retrfrom online\n");
 }
 
 void ServerConsole::OnRequestComplete()

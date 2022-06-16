@@ -93,8 +93,10 @@ void ConsoleSocket::SetShell(GenericShell *g)
 {
     _shell = g;
 
+printf("duude set shel push prompt\n");
 	// Push out a new prompt, when the shell closes.
 	if (nullptr == g) OnLine("");
+printf("duude set shel post push prompt\n");
 }
 
 // ==================================================================

@@ -84,20 +84,25 @@ GenericShell::~GenericShell()
 {
 	self_destruct = true;
 
+printf("duuuude generic shell dtor tid=%d\n", gettid());
 	// It can happen that we already cancelled (e.g. control-D)
 	try { evalque.cancel(); }
 	catch (const std::exception& ex) {}
 
+printf("duuuude generic shell dtor evalthr=%p\n", evalthr);
 	if (evalthr)
 	{
 		logger().debug("[GenericShell] dtor, wait for eval thread 0x%x.",
 		               evalthr->native_handle());
+printf("duuuude generic shell dtor wait to join\n");
 		evalthr->join();
+printf("duuuude generic shell dtor done join\n");
 		logger().debug("[GenericShell] dtor, joined eval thread");
 
 		delete evalthr;
 		evalthr = nullptr;
 	}
+printf("duuuude generic shell dtor done\n");
 	logger().debug("[GenericShell] dtor finished.");
 }
 
@@ -178,6 +183,7 @@ static GenericShell* _redirector = nullptr;
 //
 void GenericShell::eval(const std::string &expr)
 {
+printf("duuude enter generic shell eval expr=%s\n", expr.c_str());
 	assert (not self_destruct);
 	// First time through, initialize the evaluator.  We can't do this
 	// in the ctor, since we can't get the evaluator until after the
@@ -195,12 +201,15 @@ void GenericShell::eval(const std::string &expr)
 	// Queue up the expr, where it will be evaluated in another thread.
 	line_discipline(expr);
 
+printf("duuude post lin disc generic shell self=%d\n", self_destruct);
 	// The user is exiting the shell. No one will ever call a method on
 	// this instance ever again. So stop hogging space, and self-destruct.
 	// We have to do this here; there is no other opportunity to call dtor.
 	if (self_destruct)
 	{
+printf("duuude generic shell pres set sehelll tid=%d\n", gettid());
 		socket->SetShell(nullptr);
+printf("duuude generic shell deleteind self tid=%d\n", gettid());
 		delete this;
 	}
 }
@@ -414,8 +423,14 @@ void GenericShell::finish_eval()
 
 void GenericShell::while_not_done()
 {
+printf("duuuude eval_loop while not done prelock tid=%d\n", gettid());
 	std::unique_lock<std::mutex> lck(_eval_mtx);
-	while (not _eval_done) _eval_cv.wait(lck);
+printf("duuuude eval_loop while not done got lock and will wait done=%d tid=%d\n", _eval_done, gettid());
+	while (not _eval_done) {
+printf("duuuude eval_loop while not done loop top\n");
+          _eval_cv.wait(lck);
+}
+printf("duuuude eval_loop done waiting  tid=%d\n", gettid());
 }
 
 /* ============================================================== */
@@ -425,6 +440,7 @@ void GenericShell::while_not_done()
 /// it is impossible to queue OOB interrupts.)
 void GenericShell::eval_loop(void)
 {
+printf("duuude enter eval_loop\n");
 	prctl(PR_SET_NAME, "cogserv:eval", 0, 0, 0);
 	logger().debug("[GenericShell] enter eval loop");
 	OC_ASSERT(nullptr == _evaluator, "Bad evaluator state!");
@@ -450,16 +466,20 @@ void GenericShell::eval_loop(void)
 	{
 		try
 		{
+printf("duuude eval_loop toppp tid=%d\n", gettid());
 			// Do not begin the next queued expr until the last
 			// has finished. Failure to do this can result in
 			// weird crashes in the SchemeEval class.
 			while_not_done();
+printf("duuude eval_loop post not done\n");
 			wake_poll();
 
+printf("duuude eval_loop pre pop\n");
 			// Note that this pop will stall until the queue
 			// becomes non-empty.
 			evalque.pop(in);
 			logger().debug("[GenericShell] start eval of '%s'", in.c_str());
+printf("duuude eval_loop post pop in=%s<<\n", in.c_str());
 
 			wake_poll();
 			start_eval();
@@ -469,34 +489,44 @@ void GenericShell::eval_loop(void)
 		}
 		catch (const RuntimeException& ex)
 		{
-			/* Python throws these on user syntax errors.*/
-			/* Python sometimes deadlocks. Don't know why. */
+printf("duuude python except in tid=%d\n", gettid());
+printf("duuude python except=%s\n", ex.get_message());
+			/* Ignore. Python throws these on error.*/
 			_eval_done = true;
 			_poll_mtx.unlock();
 		}
 		catch (const concurrent_queue<std::string>::Canceled& ex)
 		{
+printf("duuude cncled wueue\n");
 			break;
 		}
+printf("duuude eval loop selfi=%d\n", self_destruct);
 	} while (not self_destruct);
 
 	// If we are here, then we can safely assume that the socket has
 	// been closed, that the dtor for this instance has been called.
 	// However, there may still be some remaining, unfinished work
 	// in the command queue; drain the queue, before shutting down.
+printf("duuude eval_loop cacnleing now tid=%d\n", gettid());
 	assert(self_destruct);
 	evalque.cancel_reset();
 
+	_poll_mtx.unlock();
+
 	// Let the polling thread die first. If we don't do this, it will
 	// interfere with the manual polling below.
+printf("duuude eval_loop will wait for poll thread (me is tid=%d\n", gettid());
 	pollthr->join();
+printf("duuude eval_loop poll thread has joined (me is tid=%d\n", gettid());
 	delete pollthr;
 	pollthr = nullptr;
 
+printf("duuude eval_loop gonna do final drain tid=%d\n", gettid());
 	// Nothing more will be queued, so we can safely loop over remainder
 	// of the queue, without any additional need for locking/waiting.
 	while (0 < evalque.size())
 	{
+printf("duuude eval_loop drain tid=%d\n", gettid());
 		// As mentioned before, do not begin the next queued expr until
 		// the last has finished. Failure to do this results in crashes.
 		poll_and_send();
@@ -538,15 +568,24 @@ void GenericShell::eval_loop(void)
 
 void GenericShell::poll_and_send(void)
 {
+printf("duuude oooooooooo enter pol and send at tid=%d\n", gettid());
 	std::string retstr(poll_output());
+printf("duuude oooooo maybe output\n");
 	if (0 < retstr.size())
 		socket->Send(retstr);
 }
 
 void GenericShell::wake_poll(void)
 {
+printf("duuuuude ---- enter wake poll tid=%d\n", gettid());
+bool tlo = _poll_mtx.try_lock();
+if (tlo) _poll_mtx.unlock();
+printf("duuuuude ---- wake poll was unlocked? %d\n", tlo);
+
 	std::unique_lock<std::mutex> lck(_poll_mtx);
+printf("duuuuude ---- wake poll got the lock\n");
 	_poll_cv.notify_all();
+printf("duuuuude ---- wake poll done notifyiung pollers\n");
 }
 
 void GenericShell::poll_loop(void)
@@ -554,15 +593,20 @@ void GenericShell::poll_loop(void)
 	_init_done = true;
 	prctl(PR_SET_NAME, "cogserv:poll", 0, 0, 0);
 
+printf("duuuuude poll loooooooooop grap the mutex tid=%d\n", gettid());
 	std::unique_lock<std::mutex> lock(_poll_mtx);
+printf("duuuuude poll loooooooooop did grap the mutex at tid=%d\n", gettid());
 
 	// Poll for output from the evaluator, and send back results.
 	while (not self_destruct)
 	{
+printf("duuuuude poll loooooooooop spin in tid=%d\n", gettid());
 		// That's right, call this twice in a row.
 		// This avoids a stall in the _poll_cv below.
 		poll_and_send();
+printf("duuuuude poll loooooooooop spin 1=%d\n", gettid());
 		poll_and_send();
+printf("duuuuude poll loooooooooop spin 2=%d\n", gettid());
 
 		// Continue polling, about 100 times per second, even if
 		// evaluation of the the previous expr is completed. It
@@ -580,6 +624,7 @@ void GenericShell::poll_loop(void)
 	}
 	lock.unlock();
 
+printf("duuuuude poll loooooooooop finally evaldone=%d tid=%d\n", _eval_done, gettid());
 	// It's also possible that another thread reaches the dtor
 	// (setting self_destruct == true) shortly after an evaluation
 	// has just finished. It may then exit the loop above without
@@ -592,6 +637,7 @@ void GenericShell::poll_loop(void)
 		poll_and_send();
 	}
 	while (not _eval_done);
+printf("duuuuude poll loooooooooop bye tid=%d\n", gettid());
 }
 
 void GenericShell::thread_init(void)
@@ -603,13 +649,21 @@ void GenericShell::thread_init(void)
 
 void GenericShell::put_output(const std::string& s)
 {
+printf("duuude oooooooooooooooooooooooo in put_output pre pending mutex tid=%d\n", gettid());
 	std::lock_guard<std::mutex> lock(_pending_mtx);
+printf("duuude oooooooooooooooooooooooo in put_output post pending mutex\n");
 	_pending_output += s;
 }
 
 std::string GenericShell::get_output()
 {
+printf("duuude ooooooooooooooooo in get_output pre pending mutex tid=%d\n", gettid());
+bool unlo= _pending_mtx.try_lock();
+if (unlo) _pending_mtx.unlock();
+printf("duuude ooooooooooooooooo in get_output mutex was unlocked=%d\n", unlo);
+
 	std::lock_guard<std::mutex> lock(_pending_mtx);
+printf("duuude oooooooooooooooo in get_output post pending mutex\n");
 	std::string result = _pending_output;
 	_pending_output.clear();
 	return result;
@@ -619,6 +673,8 @@ std::string GenericShell::poll_output()
 {
 	// If there's pending output, return that.
 	std::string pend(get_output());
+if (0 < pend.size())
+printf("duuuude oooo got out=%s\n", pend.c_str());
 	if (0 < pend.size()) return pend;
 
 	// If we are here, there's no pending output. Does the evaluator
@@ -626,10 +682,14 @@ std::string GenericShell::poll_output()
 	// will block, if the evaluator is not done. Note that we must
 	// do the get_output() again, else ctrl-C's will not be returned
 	// in proper order to a telnet connection.
+printf("duuuude oooo pre eval poll tid=%d\n", gettid());
 	std::string result(_evaluator->poll_result());
+if (0 < result.size())
+printf("duuuude oooo eval result out=%s\n", result.c_str());
 	if (0 < result.size())
 		return get_output() + result;
 
+printf("duuuude oooo poooooost gonnna sent promptsl\n");
 	// If we are here, the evaluator is done. Return shell prompts.
 	if (_eval_done) return "";
 	finish_eval();

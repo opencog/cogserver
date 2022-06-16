@@ -333,7 +333,9 @@ void ServerSocket::handle_connection(void)
             _last_activity = time(nullptr);
             _line_count++;
             _status = RUN;
+printf("duuude sserver csock preline tid=%d\n", gettid());
             OnLine(line);
+printf("duuude sserver csock postli\n");
         }
         catch (const boost::system::system_error& e)
         {
