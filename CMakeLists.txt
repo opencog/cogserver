@@ -270,7 +270,7 @@ FIND_PACKAGE(Doxygen)
 # ===================================================================
 # Show a summary of what we found, what we will do.
 
-SUMMARY_ADD("CogServer" "CogServer network and job server" HAVE_SERVER)
+SUMMARY_ADD("CogServer" "CogServer network server" HAVE_SERVER)
 SUMMARY_ADD("Cython bindings" "Cython (python) bindings" HAVE_CYTHON)
 SUMMARY_ADD("Doxygen" "Code documentation" DOXYGEN_FOUND)
 SUMMARY_ADD("Python tests" "Python bindings nose tests" HAVE_NOSETESTS)
