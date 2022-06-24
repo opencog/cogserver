@@ -23,8 +23,6 @@
 #ifndef _OPENCOG_SEXPR_SHELL_MODULE_H
 #define _OPENCOG_SEXPR_SHELL_MODULE_H
 
-#include <string>
-
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/CogServer.h>
 

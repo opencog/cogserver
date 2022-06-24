@@ -25,8 +25,6 @@
 #ifndef _OPENCOG_SCHEME_SHELL_MODULE_H
 #define _OPENCOG_SCHEME_SHELL_MODULE_H
 
-#include <string>
-
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/CogServer.h>
 

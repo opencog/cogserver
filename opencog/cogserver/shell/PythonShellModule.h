@@ -35,8 +35,6 @@
 #ifndef PYTHONSHELLMODULE_H
 #define PYTHONSHELLMODULE_H
 
-#include <string>
-
 #include <opencog/cogserver/shell/PythonShell.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/CogServer.h>
