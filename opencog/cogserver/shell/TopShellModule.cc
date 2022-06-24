@@ -22,13 +22,16 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/server/Module.h>
+#include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "TopShell.h"
-#include "TopShellModule.h"
 
 using namespace opencog;
 
+DEFINE_SHELL_MODULE(TopShellModule);
 DECLARE_MODULE(TopShellModule);
 
 TopShellModule::TopShellModule(CogServer& cs) : Module(cs)

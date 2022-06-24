@@ -66,8 +66,8 @@ class MODNAME : public Module {                                       \
         };                                                            \
         Factory<shelloutRequest, Request> shelloutFactory;            \
     public:                                                           \
-        MODNAME (CogServer&);                                         \
-        virtual ~##MODNAME ();                                        \
+        MODNAME(CogServer&);                                          \
+        virtual ~MODNAME();                                           \
         static const char *id(void);                                  \
         virtual void init(void);                                      \
 }; }

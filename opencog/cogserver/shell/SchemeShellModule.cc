@@ -25,13 +25,16 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/guile/SchemeEval.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/server/Module.h>
+#include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "SchemeShell.h"
-#include "SchemeShellModule.h"
 
 using namespace opencog;
 
+DEFINE_SHELL_MODULE(SchemeShellModule);
 DECLARE_MODULE(SchemeShellModule);
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)
