@@ -11,7 +11,6 @@
 
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
-#include <opencog/cogserver/modules/commands/ListRequest.h>
 #include <opencog/cogserver/modules/commands/LoadModuleRequest.h>
 #include <opencog/cogserver/modules/commands/ShutdownRequest.h>
 #include <opencog/cogserver/modules/commands/UnloadModuleRequest.h>
@@ -31,7 +30,6 @@ class BuiltinRequestsModule : public Module
 
 private:
 
-    Factory<ListRequest, Request>         listFactory;
     Factory<ShutdownRequest, Request>     shutdownFactory;
     Factory<LoadModuleRequest, Request>   loadmoduleFactory;
     Factory<UnloadModuleRequest, Request> unloadmoduleFactory;
