@@ -18,3 +18,15 @@ bool ListModulesRequest::execute()
     send(moduleList);
     return true;
 }
+
+const RequestClassInfo&
+ListModulesRequest::info(void)
+{
+    static const RequestClassInfo _cci(
+        "listmodules",
+        "List the currently loaded modules",
+        "Usage: listmodules\n\n"
+        "List modules currently loaded into the cogserver. "
+    );
+    return _cci;
+}

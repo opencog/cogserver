@@ -18,19 +18,9 @@ namespace opencog
 class ListModulesRequest : public Request
 {
 public:
-
-    static inline const RequestClassInfo& info() {
-        static const RequestClassInfo _cci(
-            "listmodules",
-            "List the currently loaded modules",
-            "Usage: listmodules\n\n"
-            "List modules currently loaded into the cogserver. "
-        );
-        return _cci;
-    }
-
     ListModulesRequest(CogServer&);
     virtual ~ListModulesRequest();
+    static const RequestClassInfo& info(void);
     virtual bool execute(void);
     virtual bool isShell(void) {return info().is_shell;}
 };
