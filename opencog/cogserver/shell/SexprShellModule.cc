@@ -22,13 +22,16 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/server/Module.h>
+#include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "SexprShell.h"
-#include "SexprShellModule.h"
 
 using namespace opencog;
 
+DEFINE_SHELL_MODULE(SexprShellModule);
 DECLARE_MODULE(SexprShellModule);
 
 SexprShellModule::SexprShellModule(CogServer& cs) : Module(cs)

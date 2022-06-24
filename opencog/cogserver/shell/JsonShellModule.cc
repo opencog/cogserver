@@ -22,13 +22,16 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/server/Module.h>
+#include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "JsonShell.h"
-#include "JsonShellModule.h"
 
 using namespace opencog;
 
+DEFINE_SHELL_MODULE(JsonShellModule);
 DECLARE_MODULE(JsonShellModule);
 
 JsonShellModule::JsonShellModule(CogServer& cs) : Module(cs)
