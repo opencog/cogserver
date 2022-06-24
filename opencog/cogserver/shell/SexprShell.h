@@ -23,8 +23,6 @@
 #ifndef _OPENCOG_SEXPR_SHELL_H
 #define _OPENCOG_SEXPR_SHELL_H
 
-#include <string>
-
 #include <opencog/network/GenericShell.h>
 
 namespace opencog {
