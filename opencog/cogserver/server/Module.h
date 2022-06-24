@@ -2,12 +2,14 @@
  * opencog/cogserver/server/Module.h
  *
  * Copyright (C) 2008, 2011 OpenCog Foundation
- * Copyright (C) 2008, 2013 Linas Vepstas <linasvepstas@gmail.com>
+ * Copyright (C) 2008, 2013, 2022 Linas Vepstas <linasvepstas@gmail.com>
  *
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * The Cogserver Module system is deprecated; users are encouraged to
- * explore writing guile (scheme) or python modules instead.
+ * Modules are used by by the CogServer as a way of redirecting socket
+ * I/O to a line-oriented API that allows module creators to respond to
+ * input.  All the details of managing the socket are abstracted away
+ * from the module author.
  */
 
 #include <string>
@@ -24,7 +26,7 @@ namespace opencog
 /**
  * DECLARE_MODULE -- Declare a new module, called MODNAME
  * This macro implements the various routines to allow the module
- * system to work. 
+ * system to work. See below for example use.
  */
 #define DECLARE_MODULE(MODNAME)                                       \
     /* load/unload functions for the Module interface */              \
@@ -40,6 +42,35 @@ namespace opencog
     inline const char * MODNAME::id(void) {                           \
         return "opencog::" #MODNAME;                                  \
     }
+
+
+/**
+ * DEFINE_SHELL_MODULE -- Declare a new C++ Module class, suitable
+ * for providing a network shell. Network shells can respond to inputs
+ * coming over a network TCP/IP socket. All the details of socket
+ * handling are abstracted away.
+ */
+#define DEFINE_SHELL_MODULE(MODNAME)                                  \
+namespace opencog {                                                   \
+                                                                      \
+class MODNAME : public Module {                                       \
+    private:                                                          \
+        class shelloutRequest : public Request                        \
+        {                                                             \
+            public:                                                   \
+                static const RequestClassInfo& info(void);            \
+                shelloutRequest(CogServer& cs) : Request(cs) {};      \
+                virtual ~shelloutRequest() {};                        \
+                virtual bool execute(void);                           \
+                virtual bool isShell(void) { return true; }           \
+        };                                                            \
+        Factory<shelloutRequest, Request> shelloutFactory;            \
+    public:                                                           \
+        MODNAME (CogServer&);                                         \
+        virtual ~##MODNAME ();                                        \
+        static const char *id(void);                                  \
+        virtual void init(void);                                      \
+}; }
 
 /**
  * This class defines the base abstract class that should be extended
