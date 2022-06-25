@@ -30,6 +30,7 @@ using namespace opencog;
 ModuleManager::ModuleManager(void)
 {
     // Give priority search order to the build directories.
+    // Do NOT search these, if working from installed path!
     std::string exe = get_exe_dir();
     if (0 == exe.compare(0, sizeof(PROJECT_BINARY_DIR)-1, PROJECT_BINARY_DIR))
     {
@@ -314,7 +315,21 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 bool ModuleManager::loadModule(const std::string& path,
                                CogServer& cs)
 {
-	return loadAbsPath(path, cs);
+    if (0 == path.size()) return false;
+    if ('/' == path[0])
+        return loadAbsPath(path, cs);
+
+    // Loop over the different possible module paths.
+    bool rc = false;
+    for (const std::string& module_path : module_paths) {
+        boost::filesystem::path modulePath(module_path);
+        modulePath /= path;
+        if (boost::filesystem::exists(modulePath)) {
+            rc = loadModule(modulePath.string(), cs);
+            if (rc) break;
+        }
+    }
+    return rc;
 }
 
 void ModuleManager::loadModules(CogServer& cs)
@@ -337,20 +352,8 @@ void ModuleManager::loadModules(CogServer& cs)
     tokenize(modlist, std::back_inserter(modules), ", ");
     bool load_failure = false;
     for (const std::string& module : modules) {
-        bool rc = false;
-        if (not module_paths.empty()) {
-            for (const std::string& module_path : module_paths) {
-                boost::filesystem::path modulePath(module_path);
-                modulePath /= module;
-                if (boost::filesystem::exists(modulePath)) {
-                    rc = loadModule(modulePath.string(), cs);
-                    if (rc) break;
-                }
-            }
-        } else {
-            rc = loadModule(module, cs);
-        }
-        if (!rc)
+        bool rc = loadModule(module, cs);
+        if (not rc)
         {
             logger().warn("Failed to load module %s", module.c_str());
             load_failure = true;
