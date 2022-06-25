@@ -1,7 +1,7 @@
 
 ADD_LIBRARY (builtinreqs MODULE
 	BuiltinRequestsModule
-	ListModulesRequest
+	ModuleManagement
 	LoadModuleRequest
 	ShutdownRequest
 	UnloadModuleRequest
