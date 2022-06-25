@@ -66,7 +66,7 @@ public:
 
     virtual const ClassInfo& classinfo() const { return info(); }
     static const ClassInfo& info() {
-        static const ClassInfo _ci("opencog::PythonModule");
+        static const ClassInfo _ci("PythonModule");
         return _ci;
     }
     static inline const char* id();

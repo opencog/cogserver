@@ -175,10 +175,10 @@ bool ModuleManager::loadModule(const std::string& path,
     // Store two entries in the module map:
     //    1: filename => <struct module data>
     //    2: moduleid => <struct module data>
-    // we rely on the assumption that no module id will match the filename of
-    // another module (and vice-versa). This is probably reasonable since most
-    // module filenames should have a .dll or .so suffix, and module ids should
-    // (by convention) be prefixed with its class namespace (i.e., "opencog::")
+    // We rely on the assumption that no module id will match the
+    // filename of another module (and vice-versa). This is probably
+    // reasonable since most module filenames should have a .dll or
+    // .dylib or .so suffix.
     std::string i = module_id;
     std::string f = get_filename(path);
     std::string p = get_filepath(path);

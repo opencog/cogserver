@@ -140,7 +140,7 @@ class ServerConsole;
                                                                       \
               mod_type* mod =                                         \
                   static_cast<mod_type *>(_cogserver.getModule(       \
-                       "opencog::" #mod_type));                       \
+                                          #mod_type));                \
                                                                       \
               std::string rs = mod->do_cmd(this, _parameters);        \
               send(rs);                                               \
