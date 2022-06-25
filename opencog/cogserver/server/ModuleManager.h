@@ -62,6 +62,8 @@ protected:
      * function pointers, etc). Takes the module's id */
     ModuleData getModuleData(const std::string& id);
 
+    /** filepath must be an absolute path, i.e. start with a slash. */
+    bool loadAbsPath(const std::string& filepath, CogServer&);
 public:
 
     /** ModuleManager's constructor. */

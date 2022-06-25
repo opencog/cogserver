@@ -87,7 +87,7 @@ static std::string get_filepath(const std::string& fullpath)
     return fullpath;
 }
 
-bool ModuleManager::loadModule(const std::string& path,
+bool ModuleManager::loadAbsPath(const std::string& path,
                                CogServer& cs)
 {
     std::string fi = get_filename(path);
@@ -299,6 +299,12 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 }
 
 // ====================================================================
+
+bool ModuleManager::loadModule(const std::string& path,
+                               CogServer& cs)
+{
+	return loadAbsPath(path, cs);
+}
 
 void ModuleManager::loadModules(CogServer& cs)
 {
