@@ -14,7 +14,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 
-#include <boost/filesystem/operations.hpp>
+#include <filesystem>
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
@@ -322,9 +322,9 @@ bool ModuleManager::loadModule(const std::string& path,
     // Loop over the different possible module paths.
     bool rc = false;
     for (const std::string& module_path : module_paths) {
-        boost::filesystem::path modulePath(module_path);
+        std::filesystem::path modulePath(module_path);
         modulePath /= path;
-        if (boost::filesystem::exists(modulePath)) {
+        if (std::filesystem::exists(modulePath)) {
             rc = loadModule(modulePath.string(), cs);
             if (rc) break;
         }
