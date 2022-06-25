@@ -16,13 +16,53 @@ using namespace opencog;
 // ====================================================================
 
 const RequestClassInfo&
+ConfigModuleRequest::info(void)
+{
+    static const RequestClassInfo _cci(
+        "config",
+        "Config a loaded module",
+        "Usage: config <module> <config-string>\n\n"
+        "Config the indicated module. The module can be specified\n"
+        "either as the shared-lib filename, or as the module id\n"
+    );
+    return _cci;
+}
+
+bool ConfigModuleRequest::execute()
+{
+    logger().debug("[ConfigModuleRequest] execute");
+    std::ostringstream oss;
+    if (_parameters.empty()) {
+        oss << "invalid syntax: config <module> <config-string>" << std::endl;
+        send(oss.str());
+        return false;
+    }
+#if LATER
+    std::string& filename = _parameters.front();
+    if (_cogserver.configModule(filename)) {
+        oss << "done" << std::endl;
+        send(oss.str());
+        return true;
+    } else {
+        oss << "Unable to config module \"" << filename
+            << "\". Check the server logs for details." << std::endl;
+        send(oss.str());
+        return false;
+    }
+#endif
+return false;
+}
+
+// ====================================================================
+
+const RequestClassInfo&
 ListModulesRequest::info(void)
 {
     static const RequestClassInfo _cci(
-        "listmodules",
-        "List the currently loaded modules",
-        "Usage: listmodules\n\n"
-        "List modules currently loaded into the cogserver. "
+        "list",
+        "List the currently loaded cogserver modules",
+        "Usage: list\n\n"
+        "List modules currently loaded into the cogserver.\n"
     );
     return _cci;
 }
@@ -40,10 +80,11 @@ const RequestClassInfo&
 LoadModuleRequest::info()
 {
     static const RequestClassInfo _cci(
-        "loadmodule",
-        "Load an opencog module",
-        "Usage: loadmodule <module>\n\n"
-        "Load the named opencog module"
+        "load",
+        "Load a cogserver module",
+        "Usage: load <module>\n\n"
+        "Load the named cogserver module. The module name must be\n"
+        "specified as the shared-library filename."
     );
     return _cci;
 }
@@ -53,7 +94,7 @@ bool LoadModuleRequest::execute()
     logger().debug("[LoadModuleRequest] execute");
     std::ostringstream oss;
     if (_parameters.empty()) {
-        oss << "invalid syntax: loadmodule <filename>" << std::endl;
+        oss << "invalid syntax: load <filename>" << std::endl;
         send(oss.str());
         return false;
     }
@@ -64,7 +105,8 @@ bool LoadModuleRequest::execute()
         send(oss.str());
         return true;
     } else {
-        oss << "Unable to load module \"" << filename << "\". Check the server logs for details." << std::endl;
+        oss << "Unable to load module \"" << filename
+            << "\". Check the server logs for details." << std::endl;
         send(oss.str());
         return false;
     }
@@ -76,10 +118,11 @@ const RequestClassInfo&
 UnloadModuleRequest::info(void)
 {
     static const RequestClassInfo _cci(
-        "unloadmodule",
+        "unload",
         "Unload an opencog module",
         "Usage: unload <module>\n\n"
-        "Unload the indicated module."
+        "Unload the indicated module. The module can be specified\n"
+        "either as the shared-lib filename, or as the module id\n"
     );
     return _cci;
 }
@@ -89,7 +132,7 @@ bool UnloadModuleRequest::execute()
     logger().debug("[UnloadModuleRequest] execute");
     std::ostringstream oss;
     if (_parameters.empty()) {
-        oss << "invalid syntax: unloadmodule [<filename> | <module id>]" << std::endl;
+        oss << "invalid syntax: unload <filename> | <module id>" << std::endl;
         send(oss.str());
         return false;
     }
@@ -99,7 +142,8 @@ bool UnloadModuleRequest::execute()
         send(oss.str());
         return true;
     } else {
-        oss << "Unable to unload module \"" << filename << "\". Check the server logs for details." << std::endl;
+        oss << "Unable to unload module \"" << filename
+            << "\". Check the server logs for details." << std::endl;
         send(oss.str());
         return false;
     }
