@@ -19,8 +19,8 @@ namespace opencog                                                     \
 {                                                                     \
 class REQUESTNAME : public Request {                                  \
 public:                                                               \
-    REQUESTNAME(CogServer&);                                          \
-    virtual ~REQUESTNAME();                                           \
+    REQUESTNAME(CogServer& cs) : Request(cs) {};                      \
+    virtual ~REQUESTNAME() {};                                        \
     static const RequestClassInfo& info(void);                        \
     virtual bool execute(void);                                       \
     virtual bool isShell(void) {return info().is_shell;}              \
@@ -34,8 +34,6 @@ DEFINE_REQUEST(UnloadModuleRequest)
 using namespace opencog;
 
 // ====================================================================
-ListModulesRequest::ListModulesRequest(CogServer& cs) : Request(cs) {}
-ListModulesRequest::~ListModulesRequest() {}
 
 const RequestClassInfo&
 ListModulesRequest::info(void)
@@ -57,8 +55,6 @@ bool ListModulesRequest::execute()
 }
 
 // ====================================================================
-LoadModuleRequest::LoadModuleRequest(CogServer& cs) : Request(cs) {}
-LoadModuleRequest::~LoadModuleRequest() {}
 
 const RequestClassInfo&
 LoadModuleRequest::info()
@@ -95,8 +91,6 @@ bool LoadModuleRequest::execute()
 }
 
 // ====================================================================
-UnloadModuleRequest::UnloadModuleRequest(CogServer& cs) : Request(cs) {}
-UnloadModuleRequest::~UnloadModuleRequest() {}
 
 const RequestClassInfo&
 UnloadModuleRequest::info(void)
