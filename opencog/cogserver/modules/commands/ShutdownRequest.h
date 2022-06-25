@@ -9,9 +9,6 @@
 #ifndef _OPENCOG_SHUTDOWN_REQUEST_H
 #define _OPENCOG_SHUTDOWN_REQUEST_H
 
-#include <vector>
-#include <string>
-
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/RequestClassInfo.h>
 
@@ -23,21 +20,10 @@ namespace opencog
 
 class ShutdownRequest : public Request
 {
-
 public:
-
-    static inline const RequestClassInfo& info() {
-        static const RequestClassInfo _cci(
-            "shutdown",
-            "Shut down the cogserver",
-            "Usage: shutdown\n\n"
-            "Halt the cogserver in an  orderly fashion"
-        );
-        return _cci;
-    }
-
     ShutdownRequest(CogServer&);
     virtual ~ShutdownRequest();
+    static const RequestClassInfo& info();
     virtual bool execute(void);
     virtual bool isShell(void) {return info().is_shell;}
 };

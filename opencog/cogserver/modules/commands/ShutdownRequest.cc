@@ -6,8 +6,6 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include <sstream>
-
 #include <opencog/util/oc_assert.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/ServerConsole.h>
@@ -16,12 +14,19 @@
 
 using namespace opencog;
 
-ShutdownRequest::ShutdownRequest(CogServer& cs) : Request(cs)
-{
-}
+ShutdownRequest::ShutdownRequest(CogServer& cs) : Request(cs) {}
+ShutdownRequest::~ShutdownRequest() {}
 
-ShutdownRequest::~ShutdownRequest()
+const RequestClassInfo&
+ShutdownRequest::info(void)
 {
+    static const RequestClassInfo _cci(
+        "shutdown",
+        "Shut down the cogserver",
+        "Usage: shutdown\n\n"
+        "Halt the cogserver in an  orderly fashion"
+    );
+    return _cci;
 }
 
 bool ShutdownRequest::execute()
