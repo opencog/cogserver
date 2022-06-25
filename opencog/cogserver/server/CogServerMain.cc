@@ -68,7 +68,7 @@ static void usage(const char* progname)
         << " [-p port] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
         << "If multiple config files are specified, then these are\n"
         << "loaded sequentially, with the values in later files\n"
-        << "overwriting the earlier ones. -D Options override\n"
+        << "overwriting the earlier ones. -D Option values override\n"
         << "the options in config files."
         << std::endl;
 }
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
        setlocale(LC_CTYPE, "en_US.UTF-8");
     }
 
-    static const char *optString = "c:D:h:p";
+    static const char *optString = "cp:D:h";
     int c = 0;
     std::vector<std::string> configFiles;
     std::vector<std::pair<std::string, std::string>> configPairs;
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 
     // Each specific option
     for (const auto& optionPair : configPairs) {
-        //cerr << optionPair.first << " = " << optionPair.second << endl;
+        // std::cerr << optionPair.first << " = " << optionPair.second << std::endl;
         config().set(optionPair.first, optionPair.second);
     }
 
