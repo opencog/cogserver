@@ -88,7 +88,10 @@ SexprShellModule::shelloutRequest::info(void)
 		"See that file for details. Example usage: `(cog-get-atoms 'Node #t)`\n"
 		"will return a list of all Nodes in the AtomSpace.\n\n"
 		"Use either a ^D (ctrl-D) or a single . on a line by itself to exit\n"
-		"the shell.\n",
+		"the shell.\n\n"
+		"Proxies can be configured with the `config` command. For example,\n"
+		"    config SexprShellModule libwthru-proxy.so\n"
+		"will enable the WriteThruProxy for the sexpr shell.\n",
 		true, false);
 	return _cci;
 }
