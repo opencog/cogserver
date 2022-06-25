@@ -46,11 +46,10 @@
 #include <opencog/cogserver/server/CogServer.h>
 
 using namespace opencog;
-using namespace std;
 
 static const char* DEFAULT_CONFIG_FILENAME = "cogserver.conf";
 static const char* DEFAULT_CONFIG_ALT_FILENAME = "opencog.conf";
-static const char* DEFAULT_CONFIG_PATHS[] = 
+static const char* DEFAULT_CONFIG_PATHS[] =
 {
     // Search order for the config file:
     ".",         // First, we look in the current directory,
@@ -66,10 +65,12 @@ static const char* DEFAULT_CONFIG_PATHS[] =
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-              << " [[-c <config-file>]..] [[-DOPTION=\"VALUE\"]..]\n\n"
-              << "Each config file is loaded sequentially, with the values in\n"
-              << "later files overwriting earlier. Then each singular option overrides\n" 
-              << "options in config files." << std::endl;
+        << " [-p port] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
+        << "If multiple config files are specified, then these are\n"
+        << "loaded sequentially, with the values in later files\n"
+        << "overwriting the earlier ones. -D Options override\n"
+        << "the options in config files."
+        << std::endl;
 }
 
 // Catch and report sigsegv
@@ -85,12 +86,12 @@ void sighand(int sig)
 
 int main(int argc, char *argv[])
 {
-    // Get the locale from the environment... 
+    // Get the locale from the environment...
     // Perhaps we should someday get it from the config file ???
     setlocale(LC_ALL, "");
 
     // Check to make sure the current locale is UTF8; if its not,
-    // then force-set this to the english utf8 locale 
+    // then force-set this to the english utf8 locale
     const char * codeset = nl_langinfo(CODESET);
     if (!strstr(codeset, "UTF") && !strstr(codeset, "utf"))
     {
@@ -100,11 +101,11 @@ int main(int argc, char *argv[])
        setlocale(LC_CTYPE, "en_US.UTF-8");
     }
 
-    static const char *optString = "c:D:h";
+    static const char *optString = "c:D:h:p";
     int c = 0;
-    vector<string> configFiles;
-    vector< pair<string,string> > configPairs;
-    string progname = argv[0];
+    std::vector<std::string> configFiles;
+    std::vector<std::pair<std::string, std::string>> configPairs;
+    std::string progname = argv[0];
 
     // parse command line
     while (true) {
@@ -117,21 +118,25 @@ int main(int argc, char *argv[])
         } else if (c == 'D') {
             // override all previous options, e.g.
             // -DLOG_TO_STDOUT=TRUE
-            string text = optarg; 
-            string value, optionName;
-            vector<std::string> strs;
+            std::string text = optarg;
+            std::vector<std::string> strs;
             boost::split(strs, text, boost::is_any_of("=:"));
-            optionName = strs[0];
+            std::string optionName = strs[0];
+            std::string value;
             if (strs.size() > 2) {
                 // merge end tokens if more than one separator found
                 for (uint i = 1; i < strs.size(); i++)
                     value += strs[i];
             } else if (strs.size() == 1) {
-                std::cerr << "No value given for option " << strs[0] << endl;
+                std::cerr << "No value given for option "
+                          << strs[0] << std::endl;
             } else {
                 value = strs[1];
             }
-            configPairs.push_back( pair<string,string>(optionName, value) );
+            configPairs.push_back({optionName, value});
+        } else if (c == 'p') {
+            std::string value = optarg;
+            configPairs.push_back({"SERVER_PORT", value});
         } else {
             // unknown option (or help)
             usage(progname.c_str());
@@ -150,7 +155,8 @@ int main(int argc, char *argv[])
             boost::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
             configPath /= DEFAULT_CONFIG_FILENAME;
             if (boost::filesystem::exists(configPath)) {
-                cerr << "Using default config at " << configPath.string() << endl;
+                std::cerr << "Using default config at "
+                          << configPath.string() << std::endl;
                 configFiles.push_back(configPath.string());
 
                 // Use the *first* config file found! We don't want to
@@ -171,7 +177,8 @@ int main(int argc, char *argv[])
             boost::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
             configPath /= DEFAULT_CONFIG_ALT_FILENAME;
             if (boost::filesystem::exists(configPath)) {
-                cerr << "Using default config at " << configPath.string() << endl;
+                std::cerr << "Using default config at "
+                          << configPath.string() << std::endl;
                 configFiles.push_back(configPath.string());
 
                 // Use the *first* config file found! We don't want to
@@ -187,12 +194,12 @@ int main(int argc, char *argv[])
 
     config().reset();
     if (configFiles.size() == 0) {
-        cerr << "No config files could be found!" << endl;
+        std::cerr << "No config files could be found!" << std::endl;
         exit(-1);
     }
 
     // Each config file sequentially overwrites the next
-    for (const string& configFile : configFiles) {
+    for (const std::string& configFile : configFiles) {
         try {
             config().load(configFile.c_str(), false);
             break;
@@ -216,7 +223,7 @@ int main(int argc, char *argv[])
     signal(SIGABRT, sighand);
     signal(SIGTRAP, sighand);
     signal(SIGQUIT, sighand);
-    
+
     CogServer& cogserve = cogserver();
 
     // Load modules specified in config
