@@ -47,7 +47,8 @@ ENDIF (CMAKE_BUILD_TYPE STREQUAL "")
 MESSAGE(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 ADD_DEFINITIONS(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-                -DPROJECT_BINARY_DIR="${CMAKE_BINARY_DIR}")
+                -DPROJECT_BINARY_DIR="${CMAKE_BINARY_DIR}"
+                -DPROJECT_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}")
 
 # ===============================================================
 # Check for existance of various required, optional packages.
