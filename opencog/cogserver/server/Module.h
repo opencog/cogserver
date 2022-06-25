@@ -29,7 +29,7 @@ namespace opencog
 #define DECLARE_MODULE(MODNAME)                                       \
     /* load/unload functions for the Module interface */              \
     extern "C" const char* opencog_module_id(void) {                  \
-       return "opencog::" #MODNAME;                                   \
+       return #MODNAME;                                               \
     }                                                                 \
     extern "C" Module * opencog_module_load(CogServer& cogserver) {   \
        return new MODNAME(cogserver);                                 \
@@ -41,7 +41,7 @@ namespace opencog
        return m->config(s);                                           \
     }                                                                 \
     inline const char * MODNAME::id(void) {                           \
-        return "opencog::" #MODNAME;                                  \
+        return #MODNAME;                                              \
     }
 
 /**

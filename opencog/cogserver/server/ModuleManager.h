@@ -47,6 +47,7 @@ protected:
         Module*                 module;
         std::string             id;
         std::string             filename;
+        std::string             dirpath;
         Module::LoadFunction*   loadFunction;
         Module::UnloadFunction* unloadFunction;
         Module::ConfigFunction* configFunction;
