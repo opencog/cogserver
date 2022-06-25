@@ -14,7 +14,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 
-#include <boost/filesystem/operations.hpp>
+#include <filesystem>
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
@@ -29,6 +29,18 @@ using namespace opencog;
 
 ModuleManager::ModuleManager(void)
 {
+    // Give priority search order to the build directories.
+    // Do NOT search these, if working from installed path!
+    std::string exe = get_exe_dir();
+    if (0 == exe.compare(0, sizeof(PROJECT_BINARY_DIR)-1, PROJECT_BINARY_DIR))
+    {
+
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    }
+    module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
 }
 
 ModuleManager::~ModuleManager()
@@ -87,7 +99,7 @@ static std::string get_filepath(const std::string& fullpath)
     return fullpath;
 }
 
-bool ModuleManager::loadModule(const std::string& path,
+bool ModuleManager::loadAbsPath(const std::string& path,
                                CogServer& cs)
 {
     std::string fi = get_filename(path);
@@ -300,31 +312,28 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 
 // ====================================================================
 
-void ModuleManager::loadModules(std::vector<std::string> module_paths,
-                                CogServer& cs)
+bool ModuleManager::loadModule(const std::string& path,
+                               CogServer& cs)
 {
-    if (module_paths.empty())
-    {
-        // XXX FIXME This hack allows an installed cogserver to
-        // inadvertantly load from a fixed build path. This should
-        // be handled by the config file or test environment...
-        // not hard coded.
-        // Give priority search order to the build directories
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/server/");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    if (0 == path.size()) return false;
+    if ('/' == path[0])
+        return loadAbsPath(path, cs);
 
-        // If not found at above locations, search the install paths
-        for (auto p : get_module_paths())
-        {
-            module_paths.push_back(p);
-            module_paths.push_back(p + "/opencog");
-            module_paths.push_back(p + "/opencog/modules");
+    // Loop over the different possible module paths.
+    bool rc = false;
+    for (const std::string& module_path : module_paths) {
+        std::filesystem::path modulePath(module_path);
+        modulePath /= path;
+        if (std::filesystem::exists(modulePath)) {
+            rc = loadModule(modulePath.string(), cs);
+            if (rc) break;
         }
     }
+    return rc;
+}
 
+void ModuleManager::loadModules(CogServer& cs)
+{
     // Load modules specified in the config file
     std::string modlist;
     if (config().has("MODULES"))
@@ -343,20 +352,8 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
     tokenize(modlist, std::back_inserter(modules), ", ");
     bool load_failure = false;
     for (const std::string& module : modules) {
-        bool rc = false;
-        if (not module_paths.empty()) {
-            for (const std::string& module_path : module_paths) {
-                boost::filesystem::path modulePath(module_path);
-                modulePath /= module;
-                if (boost::filesystem::exists(modulePath)) {
-                    rc = loadModule(modulePath.string(), cs);
-                    if (rc) break;
-                }
-            }
-        } else {
-            rc = loadModule(module, cs);
-        }
-        if (!rc)
+        bool rc = loadModule(module, cs);
+        if (not rc)
         {
             logger().warn("Failed to load module %s", module.c_str());
             load_failure = true;
