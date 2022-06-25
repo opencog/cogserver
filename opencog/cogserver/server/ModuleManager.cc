@@ -280,16 +280,11 @@ bool ModuleManager::configModule(const std::string& moduleId,
 
 ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& moduleId)
 {
-    // The module file identifier does NOT include the file path!
-    std::string f = moduleId;
-    size_t path_sep = f.rfind(PATH_SEP);
-    if (path_sep != std::string::npos)
-        f.erase(0, path_sep+1);
-
+    std::string f = get_fiolename(moduleId);
     ModuleMap::const_iterator it = modules.find(f);
     if (it == modules.end()) {
-        logger().info("[ModuleManager::getModuleData] module \"%s\" was not found.", f.c_str());
-        static ModuleData nulldata = {NULL, "", "", NULL, NULL, NULL, NULL};
+        logger().info("[ModuleManager] module \"%s\" was not found.", f.c_str());
+        static ModuleData nulldata = {NULL, "", "", "", NULL, NULL, NULL, NULL};
         return nulldata;
     }
     return it->second;
