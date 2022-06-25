@@ -37,9 +37,9 @@ bool ConfigModuleRequest::execute()
         send(oss.str());
         return false;
     }
-    std::string& filename = _parameters.front();
+    std::string filename = _parameters.front();
     _parameters.pop_front();
-    std::string& cfg = _parameters.front();
+    std::string cfg = _parameters.front();
     if (_cogserver.configModule(filename, cfg)) {
         oss << "done" << std::endl;
         send(oss.str());
