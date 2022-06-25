@@ -103,12 +103,21 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
 
     PythonEval& eval = PythonEval::instance();
     eval.begin_eval();
-    eval.eval_expr(expr);
-    out = eval.poll_result();
-    // May not be necessary since an error message and backtrace are provided.
-//	if (eval.eval_error()) {
-//		out += "An error occurred\n";
-//	}
+
+    out = "";
+    // The current python evaluator is fond of throwing errors.
+    try {
+        eval.eval_expr(expr);
+    } catch (const RuntimeException& ex) {
+        out += ex.what();
+        out += "\n";
+    }
+
+    out += eval.poll_result();
+
+    // if (eval.eval_error()) {
+    //     out += "An error occurred\n";
+    // }
     if (eval.input_pending()) {
         out += "Invalid Python expression: missing something";
     }
@@ -118,4 +127,4 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
 }
 
 }
- #endif
+#endif
