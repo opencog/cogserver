@@ -40,6 +40,8 @@ class MODNAME : public Module {                                       \
         static const char *id(void);                                  \
         virtual void init(void);                                      \
         virtual bool config(const char *);                            \
-}; }
+};                                                                    \
+std::string MODNAME::_config_setting;                                 \
+}
 
 #endif // _OPENCOG_SHELL_MODULE_H

@@ -50,8 +50,6 @@ SexprShellModule::~SexprShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
-std::string SexprShellModule::_config_setting;
-
 bool SexprShellModule::config(const char* cfg)
 {
 	// Just record the config setting for now.
