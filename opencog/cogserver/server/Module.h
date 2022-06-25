@@ -39,6 +39,9 @@ namespace opencog
     extern "C" void opencog_module_unload(Module* m) {                \
        delete m;                                                      \
     }                                                                 \
+    extern "C" bool opencog_module_config(Module* m, const char* s) { \
+       return m->config(s);                                           \
+    }                                                                 \
     inline const char * MODNAME::id(void) {                           \
         return "opencog::" #MODNAME;                                  \
     }
@@ -70,6 +73,7 @@ class MODNAME : public Module {                                       \
         virtual ~MODNAME();                                           \
         static const char *id(void);                                  \
         virtual void init(void);                                      \
+        virtual bool config(const char *);                            \
 }; }
 
 /**
@@ -155,6 +159,7 @@ public:
     Module(CogServer& cs) : _cogserver(cs) {}
     virtual ~Module() {}
     virtual void init() = 0;
+    virtual bool config(const char *) = 0;
 
 protected: 
     // Keep a copy of the server we were created with. This is needed

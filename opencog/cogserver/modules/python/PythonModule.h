@@ -73,7 +73,8 @@ public:
 
     PythonModule(CogServer&);
     ~PythonModule();
-    void init();
+    void init(void);
+    bool config(const char *) { return false; }
 
 }; // class
 

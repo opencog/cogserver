@@ -143,14 +143,13 @@ bool ModuleManager::loadModule(const std::string& filename,
         return false;
     }
 
-    // Optional
     Module::ConfigFunction* config_func =
         (Module::ConfigFunction*) dlsym(dynLibrary, Module::config_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
-        config_func = nullptr;
-        logger().info("Unable to find symbol \"opencog_module_config\": %s",
+        logger().error("Unable to find symbol \"opencog_module_config\": %s",
                        dlsymError);
+        return false;
     }
 
     // Load and init module
@@ -261,18 +260,12 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 bool ModuleManager::configModule(const std::string& moduleId,
                                  const std::string& cfg)
 {
-printf("duuude allo >>%s<< >>%s<<\n", moduleId.c_str(), cfg.c_str());
     ModuleData mdata = getModuleData(moduleId);
 printf("duuude yessd >>%s<< >>%s<< and %p\n", moduleId.c_str(),
 cfg.c_str(), mdata.configFunction);
 
     // If the module isn't found ...
     if (nullptr == mdata.module) return false;
-
-    if (nullptr == mdata.configFunction) {
-        logger().info("[ModuleManager::configModule] module \"%s\" does not have a config function.", mdata.id.c_str());
-        return false;
-    }
 
     // Invoke the module's config function.
     bool rc = (*mdata.configFunction)(mdata.module, cfg.c_str());

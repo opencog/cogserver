@@ -112,6 +112,7 @@ public:
     BuiltinRequestsModule(CogServer&);
     virtual ~BuiltinRequestsModule();
     virtual void init();
+    virtual bool config(const char *) { return false; }
 
 }; // class
 
