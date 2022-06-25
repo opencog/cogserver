@@ -114,11 +114,10 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
     }
 
     out += eval.poll_result();
-    // May not be necessary since an error message and backtrace are provided.
-    // Well, not today. Seems to be screwed up...!?
-//	if (eval.eval_error()) {
-//		out += "An error occurred\n";
-//	}
+
+    // if (eval.eval_error()) {
+    //     out += "An error occurred\n";
+    // }
     if (eval.input_pending()) {
         out += "Invalid Python expression: missing something";
     }
@@ -128,4 +127,4 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
 }
 
 }
- #endif
+#endif
