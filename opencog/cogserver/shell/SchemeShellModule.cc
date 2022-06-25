@@ -31,6 +31,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "SchemeShell.h"
+#include "ShellModule.h"
 
 using namespace opencog;
 

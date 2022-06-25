@@ -28,6 +28,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "JsonShell.h"
+#include "ShellModule.h"
 
 using namespace opencog;
 

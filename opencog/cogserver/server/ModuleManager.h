@@ -13,6 +13,7 @@
 #define _OPENCOG_MODULE_MANAGER_H
 
 #include <map>
+#include <string>
 #include <vector>
 
 #include <opencog/cogserver/server/Module.h>
