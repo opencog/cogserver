@@ -198,7 +198,7 @@ bool ModuleManager::loadModule(const std::string& path,
 std::string ModuleManager::listModules()
 {
     std::string rv =
-        "      ID           Library         Path\n";
+        "   Module Name            Library            Directory Path\n";
     for (const auto& modpr : modules)
     {
         // The list holds both lib.so's, and names.
@@ -208,8 +208,8 @@ std::string ModuleManager::listModules()
             continue;
 
         ModuleData mdata = modpr.second;
-        char buff[120];
-        snprintf(buff, 120, "%s %s %s\n", mdata.id.c_str(),
+        char buff[512];
+        snprintf(buff, 512, "%-22s %-20s  %s\n", mdata.id.c_str(),
                  mdata.filename.c_str(), mdata.dirpath.c_str());
         rv += buff;
     }
