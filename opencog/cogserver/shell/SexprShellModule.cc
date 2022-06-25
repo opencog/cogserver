@@ -26,6 +26,7 @@
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/persist/sexpr/SexprEval.h>
 
 #include "SexprShell.h"
 #include "ShellModule.h"
@@ -105,11 +106,18 @@ SexprShellModule::shelloutRequest::execute(void)
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	printf("sexpr shell config setting is %s\n", _config_setting.c_str());
+	Module *ext = _cogserver.getModule(_config_setting);
+	printf("sexpr shell config: %p %s\n", ext, _config_setting.c_str());
 
 	SexprShell *sh = new SexprShell();
-	sh->set_socket(con);
+	if (ext)
+	{
+		GenericEval* gev = sh->get_evaluator();
+		SexprEval* sev = dynamic_cast<SexprEval*>(gev);
+		OC_ASSERT(sev, "Invalid SexprEval object");
+	}
 
+	sh->set_socket(con);
 	send("");
 	return true;
 }
