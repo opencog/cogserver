@@ -197,38 +197,24 @@ bool ModuleManager::loadModule(const std::string& path,
 
 std::string ModuleManager::listModules()
 {
-    // Prepare a stream to collect the module information.
-    std::ostringstream oss;
-
-    // Prepare iterators to process the ModuleMap.
-    ModuleMap::iterator startIterator = modules.begin();
-    ModuleMap::iterator endIterator = modules.end();
-
-    // Loop through the ModuleMap
-    for(; startIterator != endIterator; ++startIterator)
+    std::string rv =
+        "      ID           Library         Path\n";
+    for (const auto& modpr : modules)
     {
-        // Get the module_id from the item
-        std::string module_id = startIterator->first;
-        ModuleData moduleData = startIterator->second;
+        // The list holds both lib.so's, and names.
+        // Loop only over the so's.
+        const std::string& module_id = modpr.first;
+        if (module_id.find(".so", 0) == std::string::npos)
+            continue;
 
-        // Only list the names, not the filenames.
-        if (module_id.find(".so", 0) != std::string::npos)
-        {
-            // Add the module_id to our stream
-            oss
-            // << "ModuleID: " << module_id
-            << "Filename: " << moduleData.filename
-            << ", ID: " << moduleData.id
-            // << ", Load function: " << moduleData.loadFunction
-            // << ", Module: " << moduleData.module
-            // << ", Unload function: " << moduleData.unloadFunction
-            << std::endl;
-        }
-
+        ModuleData mdata = modpr.second;
+        char buff[120];
+        snprintf(buff, 120, "%s %s %s\n", mdata.id.c_str(),
+                 mdata.filename.c_str(), mdata.dirpath.c_str());
+        rv += buff;
     }
 
-    // Return the contents of the stream
-    return oss.str();
+    return rv;
 }
 
 // ====================================================================
