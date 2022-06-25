@@ -98,46 +98,13 @@ void ServerConsole::sendPrompt()
         Send(_prompt);
 }
 
-void ServerConsole::OnLine(const std::string& line)
+
+/// Parse command line. Quotes are stripped.
+/// XXX escaped quotes are not handled correctly. FIXME.
+/// This passes over quotes embeded in the middle strings.
+/// And that OK, because what the heck did you want to happen?
+static std::list<std::string> simple_tokenize(const std::string& line)
 {
-    // If a shell processor has been designated, then defer all
-    // processing to the shell.  In particular, avoid as much overhead
-    // as possible, since the shell needs to be able to handle a
-    // high-speed data feed with as little getting in the way as
-    // possible.
-    if (_shell) {
-        _shell->eval(line);
-        return;
-    }
-
-    // Hmm. Looks like most telnet agents respond with an
-    // IAC WONT CHARSET IAC DONT CHARSET
-    // Any case, just ignore CHARSET RFC 2066 negotiation
-    if (IAC == (line[0] & 0xff) and CHARSET == (line[2] & 0xff)) {
-        return;
-    }
-
-    // If the command starts with an open-paren, or a semi-colon, assume
-    // its a scheme command. Pop into the scheme shell, and try again.
-    if (line[0] == '(' or line[0] == ';')
-    {
-        OnLine("scm");
-
-        // Re-issue the command, but only if we sucessfully got a shell.
-        // (We might not get a shell if scheme is not installed.)
-        if (_shell) {
-            OnLine(line);
-            return;
-        }
-    }
-
-    logger().debug("[ServerConsole] OnLine [%s]", line.c_str());
-
-    // Parse command line. Quotes are stripped.
-    // tokenize(line, std::back_inserter(params), " \t\v\f");
-    // XXX escaped quotes are not handled correctly. FIXME.
-    // This passes over quotes embeded in the middle strings.
-    // And that OK, because what the heck did you want to happen?
     std::list<std::string> params;
     size_t pos = 0;
     size_t len = line.size();
@@ -175,7 +142,49 @@ void ServerConsole::OnLine(const std::string& line)
             continue;
         }
     }
-    // logger().debug("params.size(): %d", params.size());
+    return params;
+}
+
+void ServerConsole::OnLine(const std::string& line)
+{
+    // If a shell processor has been designated, then defer all
+    // processing to the shell.  In particular, avoid as much overhead
+    // as possible, since the shell needs to be able to handle a
+    // high-speed data feed with as little getting in the way as
+    // possible.
+    if (_shell) {
+        _shell->eval(line);
+        return;
+    }
+
+    // Hmm. Looks like most telnet agents respond with an
+    // IAC WONT CHARSET IAC DONT CHARSET
+    // Any case, just ignore CHARSET RFC 2066 negotiation
+    if (IAC == (line[0] & 0xff) and CHARSET == (line[2] & 0xff)) {
+        return;
+    }
+
+    // If the command starts with an open-paren, or a semi-colon, assume
+    // its a scheme command. Pop into the scheme shell, and try again.
+    if (line[0] == '(' or line[0] == ';')
+    {
+        OnLine("scm");
+
+        // Re-issue the command, but only if we sucessfully got a shell.
+        // (We might not get a shell if scheme is not installed.)
+        if (_shell) {
+            OnLine(line);
+            return;
+        }
+    }
+
+    logger().debug("[ServerConsole] OnLine [%s]", line.c_str());
+
+    // Parse command line. Quotes are stripped.
+    // tokenize(line, std::back_inserter(params), " \t\v\f");
+    std::list<std::string> params = simple_tokenize(line);
+
+    logger().debug("params.size(): %d", params.size());
     if (params.empty()) {
         // return on empty/blank line
         sendPrompt();
