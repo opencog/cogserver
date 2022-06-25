@@ -224,6 +224,9 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 {
     ModuleData mdata = getModuleData(moduleId);
 
+    // Unable to find the module!
+    if (nullptr == mdata.module) return false;
+
     // Cache filename, id and handle; we'll need these in just a moment.
     std::string filename = mdata.filename;
     std::string id       = mdata.id;
