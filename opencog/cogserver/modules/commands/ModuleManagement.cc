@@ -43,14 +43,12 @@ bool ConfigModuleRequest::execute()
         oss << "done" << std::endl;
         send(oss.str());
         return true;
-    } else {
-        oss << "Unable to config module \"" << filename
-            << "\". Check the server logs for details." << std::endl;
-        send(oss.str());
-        return false;
     }
+    oss << "Unable to config module \"" << filename
+        << "\". Check the server logs for details." << std::endl;
+    send(oss.str());
 #endif
-return false;
+    return false;
 }
 
 // ====================================================================
@@ -104,12 +102,11 @@ bool LoadModuleRequest::execute()
         oss << "done" << std::endl;
         send(oss.str());
         return true;
-    } else {
-        oss << "Unable to load module \"" << filename
-            << "\". Check the server logs for details." << std::endl;
-        send(oss.str());
-        return false;
     }
+    oss << "Unable to load module \"" << filename
+        << "\". Check the server logs for details." << std::endl;
+    send(oss.str());
+    return false;
 }
 
 // ====================================================================
@@ -141,12 +138,11 @@ bool UnloadModuleRequest::execute()
         oss << "done" << std::endl;
         send(oss.str());
         return true;
-    } else {
-        oss << "Unable to unload module \"" << filename
-            << "\". Check the server logs for details." << std::endl;
-        send(oss.str());
-        return false;
     }
+    oss << "Unable to unload module \"" << filename
+        << "\". Check the server logs for details." << std::endl;
+    send(oss.str());
+    return false;
 }
 
 // ====================================================================
