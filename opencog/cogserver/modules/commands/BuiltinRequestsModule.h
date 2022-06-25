@@ -9,12 +9,11 @@
 #ifndef _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 #define _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 
+#include <opencog/cogserver/modules/commands/ShutdownRequest.h>
+#include <opencog/cogserver/modules/commands/ModuleManagement.h>
+#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
-#include <opencog/cogserver/modules/commands/ShutdownRequest.h>
-
-#include <opencog/util/Logger.h>
-#include <opencog/cogserver/server/CogServer.h>
 
 namespace opencog
 {
@@ -27,12 +26,11 @@ class BuiltinRequestsModule : public Module
 
 private:
 
-/*
-    Factory<ShutdownRequest, Request>     shutdownFactory;
+    Factory<ListModulesRequest, Request>  listmodulesFactory;
     Factory<LoadModuleRequest, Request>   loadmoduleFactory;
     Factory<UnloadModuleRequest, Request> unloadmoduleFactory;
-    Factory<ListModulesRequest, Request>  listmodulesFactory;
-*/
+
+    Factory<ShutdownRequest, Request>     shutdownFactory;
 
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, "exit", do_exit,
        "Close the shell connection",
