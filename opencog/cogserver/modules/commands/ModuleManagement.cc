@@ -32,7 +32,7 @@ bool ConfigModuleRequest::execute()
 {
     logger().debug("[ConfigModuleRequest] execute");
     std::ostringstream oss;
-    if (_parameters.empty()) {
+    if (2 != _parameters.size()) {
         oss << "invalid syntax: config <module> <config-string>" << std::endl;
         send(oss.str());
         return false;

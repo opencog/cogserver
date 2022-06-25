@@ -27,6 +27,10 @@
 
 using namespace opencog;
 
+ModuleManager::ModuleManager(void)
+{
+}
+
 ModuleManager::~ModuleManager()
 {
     logger().debug("[ModuleManager] enter destructor");
@@ -61,9 +65,7 @@ ModuleManager::~ModuleManager()
     logger().debug("[ModuleManager] exit destructor");
 }
 
-ModuleManager::ModuleManager(void)
-{
-}
+// ====================================================================
 
 bool ModuleManager::loadModule(const std::string& filename,
                                CogServer& cs)
@@ -167,6 +169,8 @@ bool ModuleManager::loadModule(const std::string& filename,
     return true;
 }
 
+// ====================================================================
+
 std::string ModuleManager::listModules()
 {
     // Prepare a stream to collect the module information
@@ -203,20 +207,11 @@ std::string ModuleManager::listModules()
     return oss.str();
 }
 
+// ====================================================================
+
 bool ModuleManager::unloadModule(const std::string& moduleId)
 {
-    // The module file identifier does NOT include the file path!
-    std::string f = moduleId;
-    size_t path_sep = f.rfind(PATH_SEP);
-    if (path_sep != std::string::npos)
-        f.erase(0, path_sep+1);
-    logger().info("[ModuleManager] unloadModule(%s)", f.c_str());
-    ModuleMap::const_iterator it = modules.find(f);
-    if (it == modules.end()) {
-        logger().info("[ModuleManager::unloadModule] module \"%s\" is not loaded.", f.c_str());
-        return false;
-    }
-    ModuleData mdata = it->second;
+    ModuleData mdata = getModuleData(moduleId);
 
     // cache filename, id and handle
     std::string filename = mdata.filename;
@@ -226,8 +221,8 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
     // invoke the module's unload function
     (*mdata.unloadFunction)(mdata.module);
 
-    // erase the map entries (one with the filename as key, and one with the module
-    // id as key
+    // erase the map entries (one with the filename as key,
+    // and one with the module id as key
     modules.erase(filename);
     modules.erase(id);
 
@@ -238,60 +233,33 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
     if (dlclose(handle) != 0) {
         const char* dlsymError = dlerror();
         if (dlsymError) {
-            logger().warn("Unable to unload module \"%s\": %s", filename.c_str(), dlsymError);
+            logger().warn("Unable to unload module \"%s\": %s",
+                           filename.c_str(), dlsymError);
             return false;
         }
     }
 
     return true;
 }
+
+// ====================================================================
 
 bool ModuleManager::configModule(const std::string& moduleId,
                                  const std::string& cfg)
 {
 printf("duuude allo >>%s<< >>%s<<\n", moduleId.c_str(), cfg.c_str());
+
+    ModuleData mdata = getModuleData(moduleId);
+
 #if LATER
-    // The module file identifier does NOT include the file path!
-    std::string f = moduleId;
-    size_t path_sep = f.rfind(PATH_SEP);
-    if (path_sep != std::string::npos)
-        f.erase(0, path_sep+1);
-    logger().info("[ModuleManager] unloadModule(%s)", f.c_str());
-    ModuleMap::const_iterator it = modules.find(f);
-    if (it == modules.end()) {
-        logger().info("[ModuleManager::unloadModule] module \"%s\" is not loaded.", f.c_str());
-        return false;
-    }
-    ModuleData mdata = it->second;
-
-    // cache filename, id and handle
-    std::string filename = mdata.filename;
-    std::string id       = mdata.id;
-    void*       handle   = mdata.handle;
-
     // invoke the module's unload function
-    (*mdata.unloadFunction)(mdata.module);
-
-    // erase the map entries (one with the filename as key, and one with the module
-    // id as key
-    modules.erase(filename);
-    modules.erase(id);
-
-    // unload dynamically loadable library
-    logger().info("Unloading module \"%s\"", filename.c_str());
-
-    dlerror(); // reset error
-    if (dlclose(handle) != 0) {
-        const char* dlsymError = dlerror();
-        if (dlsymError) {
-            logger().warn("Unable to unload module \"%s\": %s", filename.c_str(), dlsymError);
-            return false;
-        }
-    }
+    (*mdata.configFunction)(mdata.module);
 #endif
 
     return true;
 }
+
+// ====================================================================
 
 ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& moduleId)
 {
@@ -314,6 +282,8 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 {
     return getModuleData(moduleId).module;
 }
+
+// ====================================================================
 
 void ModuleManager::loadModules(std::vector<std::string> module_paths,
                                 CogServer& cs)
@@ -382,3 +352,6 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
             logger().warn("Searched for module at %s", p.c_str());
     }
 }
+
+// ========================= END OF FILE ==============================
+// ====================================================================
