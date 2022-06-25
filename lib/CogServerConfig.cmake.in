@@ -2,13 +2,13 @@
 
 include("@CMAKE_INSTALL_PREFIX@/lib/cmake/CogServer/CogServerTargets.cmake")
 
-# libagents.so is in the modules directory
+# libscheme-shell.so is in the modules directory
 link_directories(
 	"@CMAKE_INSTALL_PREFIX@/lib@LIB_DIR_SUFFIX@/opencog/"
 	"@CMAKE_INSTALL_PREFIX@/lib@LIB_DIR_SUFFIX@/opencog/modules"
 )
 set(COGSERVER_LIBRARIES
-	agents
+	network
 	server
 )
 
