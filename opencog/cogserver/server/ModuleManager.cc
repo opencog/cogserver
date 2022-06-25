@@ -67,16 +67,22 @@ ModuleManager::~ModuleManager()
 
 // ====================================================================
 
-bool ModuleManager::loadModule(const std::string& filename,
-                               CogServer& cs)
+/// If `filepath` contains directory slashes, return only
+/// the fragment of the string after the last slash.
+static std::string get_filename(const std::string& filepath)
 {
-// TODO FIXME I guess this needs to be different for windows.
 #define PATH_SEP '/'
-    // The module file identifier does NOT include the file path!
-    std::string fi = filename;
+    std::string fi = filepath;
     size_t path_sep = fi.rfind(PATH_SEP);
     if (path_sep != std::string::npos)
         fi.erase(0, path_sep+1);
+    return fi;
+}
+
+bool ModuleManager::loadModule(const std::string& path,
+                               CogServer& cs)
+{
+    std::string fi = get_filename(path);
     if (modules.find(fi) !=  modules.end()) {
         logger().info("Module \"%s\" is already loaded.", fi.c_str());
         return true;
@@ -85,52 +91,55 @@ bool ModuleManager::loadModule(const std::string& filename,
     // reset error
     dlerror();
 
-    logger().info("Loading module \"%s\"", filename.c_str());
+    logger().info("Loading module \"%s\"", path.c_str());
 #ifdef __APPLE__
-    // Tell dyld to search runpath
+    // Tell dyld to search runpath.
     std::string withRPath("@rpath/");
-    withRPath += filename;
+    withRPath += path;
     // Check to see if so extension is specified, replace with .dylib if it is.
     if (withRPath.substr(withRPath.size()-3,3) == ".so") {
         withRPath.replace(withRPath.size()-3,3,".dylib");
     }
     void *dynLibrary = dlopen(withRPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
 #else
-    void *dynLibrary = dlopen(filename.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    void *dynLibrary = dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL);
 #endif
     const char* dlsymError = dlerror();
     if ((dynLibrary == NULL) || (dlsymError)) {
         // This is almost surely due to a user configuration error.
         // User errors are always logged as warnings.
-        logger().warn("Unable to load module \"%s\": %s", filename.c_str(), dlsymError);
+        logger().warn("Unable to load module \"%s\": %s",
+                       path.c_str(), dlsymError);
         return false;
     }
 
-    // reset error
+    // Reset error state.
     dlerror();
 
-    // search for id function
+    // Search for id function.
     Module::IdFunction* id_func =
         (Module::IdFunction*) dlsym(dynLibrary, Module::id_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
-        logger().error("Unable to find symbol \"opencog_module_id\": %s (module %s)", dlsymError, filename.c_str());
+        logger().error("Unable to find symbol \"%s\": %s (module %s)",
+                        Module::id_function_name(), dlsymError, path.c_str());
         return false;
     }
 
-    // get and check module id
+    // Get and check module id.
     const char *module_id = (*id_func)();
     if (module_id == NULL) {
-        logger().warn("Invalid module id (module \"%s\")", filename.c_str());
+        logger().warn("Invalid module id (module \"%s\")", path.c_str());
         return false;
     }
 
-    // Search for 'load', 'unload' and 'config' symbols
+    // Search for 'load', 'unload' and 'config' symbols.
     Module::LoadFunction* load_func =
         (Module::LoadFunction*) dlsym(dynLibrary, Module::load_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
-        logger().error("Unable to find symbol \"opencog_module_load\": %s", dlsymError);
+        logger().error("Unable to find symbol \"%s\": %s",
+                       Module::load_function_name(), dlsymError);
         return false;
     }
 
@@ -138,8 +147,8 @@ bool ModuleManager::loadModule(const std::string& filename,
         (Module::UnloadFunction*) dlsym(dynLibrary, Module::unload_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
-        logger().error("Unable to find symbol \"opencog_module_unload\": %s",
-                       dlsymError);
+        logger().error("Unable to find symbol \"%s\": %s",
+                       Module::unload_function_name(), dlsymError);
         return false;
     }
 
@@ -147,15 +156,15 @@ bool ModuleManager::loadModule(const std::string& filename,
         (Module::ConfigFunction*) dlsym(dynLibrary, Module::config_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
-        logger().error("Unable to find symbol \"opencog_module_config\": %s",
-                       dlsymError);
+        logger().error("Unable to find symbol \"%s\": %s",
+                       Module::config_function_name(), dlsymError);
         return false;
     }
 
     // Load and init module
     Module* module = (Module*) (*load_func)(cs);
 
-    // store two entries in the module map:
+    // Store two entries in the module map:
     //    1: filename => <struct module data>
     //    2: moduleid => <struct module data>
     // we rely on the assumption that no module id will match the filename of
@@ -163,11 +172,7 @@ bool ModuleManager::loadModule(const std::string& filename,
     // module filenames should have a .dll or .so suffix, and module ids should
     // (by convention) be prefixed with its class namespace (i.e., "opencog::")
     std::string i = module_id;
-    std::string f = filename;
-    // The filename does NOT include the file path!
-    path_sep = f.rfind(PATH_SEP);
-    if (path_sep != std::string::npos)
-        f.erase(0, path_sep+1);
+    std::string f = get_filename(path);
     ModuleData mdata = {module, i, f, load_func, unload_func,
                         config_func, dynLibrary};
     modules[i] = mdata;
@@ -183,10 +188,10 @@ bool ModuleManager::loadModule(const std::string& filename,
 
 std::string ModuleManager::listModules()
 {
-    // Prepare a stream to collect the module information
+    // Prepare a stream to collect the module information.
     std::ostringstream oss;
 
-    // Prepare iterators to process the ModuleMap
+    // Prepare iterators to process the ModuleMap.
     ModuleMap::iterator startIterator = modules.begin();
     ModuleMap::iterator endIterator = modules.end();
 
