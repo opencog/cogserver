@@ -49,6 +49,11 @@ TopShellModule::~TopShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
+bool TopShellModule::config(const char*)
+{
+	return false;
+}
+
 const RequestClassInfo&
 TopShellModule::shelloutRequest::info(void)
 {

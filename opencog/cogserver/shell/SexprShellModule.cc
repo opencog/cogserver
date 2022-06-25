@@ -49,6 +49,12 @@ SexprShellModule::~SexprShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
+bool SexprShellModule::config(const char* cfg)
+{
+printf("duuuude got sfg=%s\n", cfg);
+	return true;
+}
+
 const RequestClassInfo&
 SexprShellModule::shelloutRequest::info(void)
 {
