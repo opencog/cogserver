@@ -69,14 +69,22 @@ ModuleManager::~ModuleManager()
 
 /// If `filepath` contains directory slashes, return only
 /// the fragment of the string after the last slash.
-static std::string get_filename(const std::string& filepath)
+static std::string get_filename(const std::string& fullpath)
 {
 #define PATH_SEP '/'
-    std::string fi = filepath;
-    size_t path_sep = fi.rfind(PATH_SEP);
+    size_t path_sep = fullpath.rfind(PATH_SEP);
     if (path_sep != std::string::npos)
-        fi.erase(0, path_sep+1);
-    return fi;
+        return fullpath.substr(path_sep+1);
+    return fullpath;
+}
+
+/// Get the directory portion of the fullpath.
+static std::string get_filepath(const std::string& fullpath)
+{
+    size_t path_sep = fullpath.rfind(PATH_SEP);
+    if (path_sep != std::string::npos)
+        return fullpath.substr(0, path_sep);
+    return fullpath;
 }
 
 bool ModuleManager::loadModule(const std::string& path,
@@ -173,7 +181,8 @@ bool ModuleManager::loadModule(const std::string& path,
     // (by convention) be prefixed with its class namespace (i.e., "opencog::")
     std::string i = module_id;
     std::string f = get_filename(path);
-    ModuleData mdata = {module, i, f, load_func, unload_func,
+    std::string p = get_filepath(path);
+    ModuleData mdata = {module, i, f, p, load_func, unload_func,
                         config_func, dynLibrary};
     modules[i] = mdata;
     modules[f] = mdata;
@@ -280,7 +289,7 @@ bool ModuleManager::configModule(const std::string& moduleId,
 
 ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& moduleId)
 {
-    std::string f = get_fiolename(moduleId);
+    std::string f = get_filename(moduleId);
     ModuleMap::const_iterator it = modules.find(f);
     if (it == modules.end()) {
         logger().info("[ModuleManager] module \"%s\" was not found.", f.c_str());
