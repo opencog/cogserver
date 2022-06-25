@@ -82,7 +82,8 @@ LoadModuleRequest::info()
         "Load a cogserver module",
         "Usage: load <module>\n\n"
         "Load the named cogserver module. The module name must be\n"
-        "specified as the shared-library filename."
+        "specified as the shared-library filename. The full directory\n"
+        "path, starting with a leading slash, must be provided!\n"
     );
     return _cci;
 }

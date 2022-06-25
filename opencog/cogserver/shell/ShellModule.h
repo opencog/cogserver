@@ -9,7 +9,8 @@
 #ifndef _OPENCOG_SHELL_MODULE_H
 #define _OPENCOG_SHELL_MODULE_H
 
-#include <opencog/network/GenericShell.h>
+#include <string>
+#include <opencog/cogserver/server/Module.h>
 
 /**
  * DEFINE_SHELL_MODULE -- Declare a new C++ Module class, suitable
@@ -32,7 +33,7 @@ class MODNAME : public Module {                                       \
                 virtual bool isShell(void) { return true; }           \
         };                                                            \
         Factory<shelloutRequest, Request> shelloutFactory;            \
-        GenericShell* shell;                                         \
+        static std::string _config_setting;                           \
     public:                                                           \
         MODNAME(CogServer&);                                          \
         virtual ~MODNAME();                                           \

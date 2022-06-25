@@ -50,9 +50,14 @@ SexprShellModule::~SexprShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
+std::string SexprShellModule::_config_setting;
+
 bool SexprShellModule::config(const char* cfg)
 {
-printf("duuuude got sfg=%s\n", cfg);
+	// Just record the config setting for now.
+	// We should check it for valid syntax, and return false if it is
+	// bad. ... but not ready for that, yet.
+	_config_setting = cfg;
 	return true;
 }
 
@@ -86,6 +91,8 @@ SexprShellModule::shelloutRequest::execute(void)
 {
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
+
+	printf("sexpr shell config setting is %s\n", _config_setting.c_str());
 
 	SexprShell *sh = new SexprShell();
 	sh->set_socket(con);
