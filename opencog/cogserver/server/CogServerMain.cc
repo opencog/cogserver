@@ -30,12 +30,12 @@
 #include <signal.h>
 #include <string.h>
 
+#include <filesystem>
 #include <string>
 #include <thread>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem/operations.hpp>
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
@@ -153,9 +153,9 @@ int main(int argc, char *argv[])
     if (configFiles.size() == 0) {
         // search for configuration file on default locations
         for (int i = 0; DEFAULT_CONFIG_PATHS[i] != NULL; ++i) {
-            boost::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
+            std::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
             configPath /= DEFAULT_CONFIG_FILENAME;
-            if (boost::filesystem::exists(configPath)) {
+            if (std::filesystem::exists(configPath)) {
                 std::cerr << "Using default config at "
                           << configPath.string() << std::endl;
                 configFiles.push_back(configPath.string());
@@ -175,9 +175,9 @@ int main(int argc, char *argv[])
     if (configFiles.size() == 0) {
         // search for configuration file on default locations
         for (int i = 0; DEFAULT_CONFIG_PATHS[i] != NULL; ++i) {
-            boost::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
+            std::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
             configPath /= DEFAULT_CONFIG_ALT_FILENAME;
-            if (boost::filesystem::exists(configPath)) {
+            if (std::filesystem::exists(configPath)) {
                 std::cerr << "Using default config at "
                           << configPath.string() << std::endl;
                 configFiles.push_back(configPath.string());

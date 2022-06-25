@@ -47,7 +47,8 @@ ENDIF (CMAKE_BUILD_TYPE STREQUAL "")
 MESSAGE(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 ADD_DEFINITIONS(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-                -DPROJECT_BINARY_DIR="${CMAKE_BINARY_DIR}")
+                -DPROJECT_BINARY_DIR="${CMAKE_BINARY_DIR}"
+                -DPROJECT_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}")
 
 # ===============================================================
 # Check for existance of various required, optional packages.
@@ -95,7 +96,7 @@ SET(Boost_USE_MULTITHREADED ON)
 SET(MIN_BOOST 1.46)
 
 # Required boost packages
-FIND_PACKAGE(Boost ${MIN_BOOST} COMPONENTS filesystem system REQUIRED)
+FIND_PACKAGE(Boost ${MIN_BOOST} COMPONENTS system REQUIRED)
 
 IF(Boost_FOUND)
 	SET(Boost_FOUND_SAVE 1)
@@ -250,7 +251,6 @@ SET(CPACK_PACKAGE_EXECUTABLES "cogserver" "The OpenCog Network Server")
 SET(DEPENDENCY_LIST
 	"guile-2.2-dev (>= 2.2.2)"
 	"python3-dev (>= 3.6.7)"
-	"libboost-thread-dev (>= ${MIN_BOOST})"
 	"libstdc++6 (>= 4.7)"
 	"libcogutil-dev (>= 2.0.2)"
 	"atomspace-dev (>= 5.0.3)"

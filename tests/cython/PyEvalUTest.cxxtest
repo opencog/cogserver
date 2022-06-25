@@ -34,12 +34,7 @@ public:
     {
         logger().set_level(Logger::DEBUG);
         logger().set_print_to_stdout_flag(true);
-
-        // Set cycle duration to a smaller value so that this test does not take too long.
-        config().set("SERVER_CYCLE_DURATION", "10");  // in milliseconds
-
-        // This path is relative to the build diretory, not the install dir...
-        config().set("MODULES", "opencog/cogserver/shell/libpy-shell.so");
+        config().set("MODULES", "libpy-shell.so");
         cogserver().loadModules();
     }
 
