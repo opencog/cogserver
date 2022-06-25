@@ -52,6 +52,13 @@ SexprShellModule::~SexprShellModule()
 
 bool SexprShellModule::config(const char* cfg)
 {
+	Module *ext = _cogserver.getModule(cfg);
+	if (nullptr == ext)
+	{
+		logger().info("[SexprShell] unable to find proxy module %s", cfg);
+		return false;
+	}
+
 	// Just record the config setting for now.
 	// We should check it for valid syntax, and return false if it is
 	// bad. ... but not ready for that, yet.
