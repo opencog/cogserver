@@ -261,8 +261,6 @@ bool ModuleManager::configModule(const std::string& moduleId,
                                  const std::string& cfg)
 {
     ModuleData mdata = getModuleData(moduleId);
-printf("duuude yessd >>%s<< >>%s<< and %p\n", moduleId.c_str(),
-cfg.c_str(), mdata.configFunction);
 
     // If the module isn't found ...
     if (nullptr == mdata.module) return false;
