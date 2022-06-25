@@ -133,10 +133,49 @@ void ServerConsole::OnLine(const std::string& line)
 
     logger().debug("[ServerConsole] OnLine [%s]", line.c_str());
 
-    // Parse command line
+    // Parse command line. Quotes are stripped.
+    // tokenize(line, std::back_inserter(params), " \t\v\f");
+    // XXX escaped quotes are not handled correctly. FIXME.
+    // This passes over quotes embeded in the middle strings.
+    // And that OK, because what the heck did you want to happen?
     std::list<std::string> params;
-    tokenize(line, std::back_inserter(params), " \t\v\f");
-    logger().debug("params.size(): %d", params.size());
+    size_t pos = 0;
+    size_t len = line.size();
+    while (pos<len) {
+        // Gather up everything until the next quote.
+        if ('\"' == line[pos]) {
+            std::string buff;
+            pos++; // skip over opening quote
+            while ('\"' != line[pos] and pos < len) {
+               buff.push_back(line[pos]);
+               pos++;
+            }
+            pos++; // skip over closing quote
+            params.push_back(buff);
+            if (len <= pos) break;
+            continue;
+        }
+
+        // Gather up everything until the next blank space.
+        if (' ' != line[pos]) {
+            std::string buff;
+            while (' ' != line[pos] and pos < len) {
+               buff.push_back(line[pos]);
+               pos++;
+            }
+            params.push_back(buff);
+            if (len <= pos) break;
+            continue;
+        }
+
+        // Skip over blank spaces.
+        if (' ' == line[pos]) {
+            while (' ' == line[pos] and pos < len) pos++;
+            if (len <= pos) break;
+            continue;
+        }
+    }
+    // logger().debug("params.size(): %d", params.size());
     if (params.empty()) {
         // return on empty/blank line
         sendPrompt();
