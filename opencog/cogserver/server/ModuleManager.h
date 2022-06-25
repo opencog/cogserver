@@ -56,13 +56,17 @@ protected:
     typedef std::map<const std::string, ModuleData> ModuleMap;
     ModuleMap modules;
 
+    /** Retrieves the module's meta-data (id, filename, load/unload
+     * function pointers, etc). Takes the module's id */
+    ModuleData getModuleData(const std::string& id);
+
 public:
 
     /** ModuleManager's constructor. */
     ModuleManager(void);
 
     /** ModuleManager's destructor. Unloads all modules. */
-    ~ModuleManager(void);
+    ~ModuleManager();
 
     /** Loads a dynamic library/module. Takes the filename of the
      *  library (.so or .dylib or .dll). On Linux/Unix, the filename may
@@ -85,10 +89,6 @@ public:
     /** Lists the modules that are currently loaded. */
     std::string listModules();
 
-    /** Retrieves the module's meta-data (id, filename, load/unload
-     * function pointers, etc). Takes the module's id */
-    ModuleData getModuleData(const std::string& id);
-
     /** Retrieves the module's instance. Takes the module's id */
     Module* getModule(const std::string& id);
 
@@ -97,7 +97,7 @@ public:
         instead, which is why it is passed as copy instead of const
         ref. */
     void loadModules(std::vector<std::string> module_paths,
-                             CogServer&);
+                     CogServer&);
     void loadModules(CogServer& cs) {
         loadModules(std::vector<std::string>(), cs);
     }

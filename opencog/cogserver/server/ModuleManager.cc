@@ -258,15 +258,23 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 bool ModuleManager::configModule(const std::string& moduleId,
                                  const std::string& cfg)
 {
+printf("duuude allo >>%s<< >>%s<<\n", moduleId.c_str(), cfg.c_str());
     ModuleData mdata = getModuleData(moduleId);
-printf("duuude allo >>%s<< >>%s<< and %p\n", moduleId.c_str(),
+printf("duuude yessd >>%s<< >>%s<< and %p\n", moduleId.c_str(),
 cfg.c_str(), mdata.configFunction);
 
-    // Invoke the module's config function.
-    if (mdata.configFunction)
-        (*mdata.configFunction)(mdata.module, cfg.c_str());
+    // If the module isn't found ...
+    if (nullptr == mdata.module) return false;
 
-    return true;
+    if (nullptr == mdata.configFunction) {
+        logger().info("[ModuleManager::configModule] module \"%s\" does not have a config function.", mdata.id.c_str());
+        return false;
+    }
+
+    // Invoke the module's config function.
+    bool rc = (*mdata.configFunction)(mdata.module, cfg.c_str());
+
+    return rc;
 }
 
 // ====================================================================
@@ -282,7 +290,7 @@ ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& module
     ModuleMap::const_iterator it = modules.find(f);
     if (it == modules.end()) {
         logger().info("[ModuleManager::getModuleData] module \"%s\" was not found.", f.c_str());
-        ModuleData nulldata = {NULL, "", "", NULL, NULL, NULL, NULL};
+        static ModuleData nulldata = {NULL, "", "", NULL, NULL, NULL, NULL};
         return nulldata;
     }
     return it->second;
