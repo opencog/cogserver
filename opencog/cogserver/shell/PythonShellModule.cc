@@ -103,9 +103,17 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
 
     PythonEval& eval = PythonEval::instance();
     eval.begin_eval();
-    eval.eval_expr(expr);
+
+    // The current python evaluator is fond of throwing errors.
+    try {
+        eval.eval_expr(expr);
+    } catch (const RuntimeException& ex) {
+        out += ex.what();
+    }
+
     out = eval.poll_result();
     // May not be necessary since an error message and backtrace are provided.
+    // Well, not today. Seems to be screwed up...!?
 //	if (eval.eval_error()) {
 //		out += "An error occurred\n";
 //	}
