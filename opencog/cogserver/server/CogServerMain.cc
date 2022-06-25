@@ -101,6 +101,8 @@ int main(int argc, char *argv[])
        setlocale(LC_CTYPE, "en_US.UTF-8");
     }
 
+    int port = 17001;
+
     static const char *optString = "cp:D:h";
     int c = 0;
     std::vector<std::string> configFiles;
@@ -135,8 +137,7 @@ int main(int argc, char *argv[])
             }
             configPairs.push_back({optionName, value});
         } else if (c == 'p') {
-            std::string value = optarg;
-            configPairs.push_back({"SERVER_PORT", value});
+            port = atoi(optarg);
         } else {
             // unknown option (or help)
             usage(progname.c_str());
@@ -230,7 +231,7 @@ int main(int argc, char *argv[])
     cogserve.loadModules();
 
     // enable the network server and run the server's main loop
-    cogserve.enableNetworkServer();
+    cogserve.enableNetworkServer(port);
     cogserve.serverLoop();
     exit(0);
 }
