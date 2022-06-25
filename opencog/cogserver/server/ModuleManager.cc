@@ -111,7 +111,7 @@ bool ModuleManager::loadModule(const std::string& filename,
 
     // search for id function
     Module::IdFunction* id_func =
-	    (Module::IdFunction*) dlsym(dynLibrary, Module::id_function_name());
+        (Module::IdFunction*) dlsym(dynLibrary, Module::id_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
         logger().error("Unable to find symbol \"opencog_module_id\": %s (module %s)", dlsymError, filename.c_str());
@@ -125,9 +125,9 @@ bool ModuleManager::loadModule(const std::string& filename,
         return false;
     }
 
-    // search for 'load' & 'unload' symbols
+    // Search for 'load', 'unload' and 'config' symbols
     Module::LoadFunction* load_func =
-	    (Module::LoadFunction*) dlsym(dynLibrary, Module::load_function_name());
+        (Module::LoadFunction*) dlsym(dynLibrary, Module::load_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
         logger().error("Unable to find symbol \"opencog_module_load\": %s", dlsymError);
@@ -135,7 +135,7 @@ bool ModuleManager::loadModule(const std::string& filename,
     }
 
     Module::UnloadFunction* unload_func =
-	    (Module::UnloadFunction*) dlsym(dynLibrary, Module::unload_function_name());
+        (Module::UnloadFunction*) dlsym(dynLibrary, Module::unload_function_name());
     dlsymError = dlerror();
     if (dlsymError) {
         logger().error("Unable to find symbol \"opencog_module_unload\": %s",
@@ -143,7 +143,17 @@ bool ModuleManager::loadModule(const std::string& filename,
         return false;
     }
 
-    // load and init module
+    // Optional
+    Module::ConfigFunction* config_func =
+        (Module::ConfigFunction*) dlsym(dynLibrary, Module::config_function_name());
+    dlsymError = dlerror();
+    if (dlsymError) {
+        config_func = nullptr;
+        logger().info("Unable to find symbol \"opencog_module_config\": %s",
+                       dlsymError);
+    }
+
+    // Load and init module
     Module* module = (Module*) (*load_func)(cs);
 
     // store two entries in the module map:
@@ -159,7 +169,8 @@ bool ModuleManager::loadModule(const std::string& filename,
     path_sep = f.rfind(PATH_SEP);
     if (path_sep != std::string::npos)
         f.erase(0, path_sep+1);
-    ModuleData mdata = {module, i, f, load_func, unload_func, dynLibrary};
+    ModuleData mdata = {module, i, f, load_func, unload_func,
+                        config_func, dynLibrary};
     modules[i] = mdata;
     modules[f] = mdata;
 
@@ -213,12 +224,12 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 {
     ModuleData mdata = getModuleData(moduleId);
 
-    // cache filename, id and handle
+    // Cache filename, id and handle; we'll need these in just a moment.
     std::string filename = mdata.filename;
     std::string id       = mdata.id;
     void*       handle   = mdata.handle;
 
-    // invoke the module's unload function
+    // Invoke the module's unload function.
     (*mdata.unloadFunction)(mdata.module);
 
     // erase the map entries (one with the filename as key,
@@ -226,10 +237,10 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
     modules.erase(filename);
     modules.erase(id);
 
-    // unload dynamically loadable library
+    // Unload dynamically loadable library.
     logger().info("Unloading module \"%s\"", filename.c_str());
 
-    dlerror(); // reset error
+    dlerror(); // Reset error state.
     if (dlclose(handle) != 0) {
         const char* dlsymError = dlerror();
         if (dlsymError) {
@@ -247,14 +258,13 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 bool ModuleManager::configModule(const std::string& moduleId,
                                  const std::string& cfg)
 {
-printf("duuude allo >>%s<< >>%s<<\n", moduleId.c_str(), cfg.c_str());
-
     ModuleData mdata = getModuleData(moduleId);
+printf("duuude allo >>%s<< >>%s<< and %p\n", moduleId.c_str(),
+cfg.c_str(), mdata.configFunction);
 
-#if LATER
-    // invoke the module's unload function
-    (*mdata.configFunction)(mdata.module);
-#endif
+    // Invoke the module's config function.
+    if (mdata.configFunction)
+        (*mdata.configFunction)(mdata.module, cfg.c_str());
 
     return true;
 }
@@ -272,7 +282,7 @@ ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& module
     ModuleMap::const_iterator it = modules.find(f);
     if (it == modules.end()) {
         logger().info("[ModuleManager::getModuleData] module \"%s\" was not found.", f.c_str());
-        ModuleData nulldata = {NULL, "", "", NULL, NULL, NULL};
+        ModuleData nulldata = {NULL, "", "", NULL, NULL, NULL, NULL};
         return nulldata;
     }
     return it->second;
@@ -344,7 +354,7 @@ void ModuleManager::loadModules(std::vector<std::string> module_paths,
         if (!rc)
         {
             logger().warn("Failed to load module %s", module.c_str());
-				load_failure = true;
+            load_failure = true;
         }
     }
     if (load_failure) {

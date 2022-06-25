@@ -48,6 +48,7 @@ protected:
         std::string             filename;
         Module::LoadFunction*   loadFunction;
         Module::UnloadFunction* unloadFunction;
+        Module::ConfigFunction* configFunction;
         void*                   handle;
     } ModuleData;
 

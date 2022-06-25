@@ -141,10 +141,16 @@ public:
         static const char* s = "opencog_module_unload";
         return s;
     }
+    static const char* config_function_name(void)
+    {
+        static const char* s = "opencog_module_config";
+        return s;
+    }
 
     typedef const char* IdFunction    (void);
     typedef Module*     LoadFunction  (CogServer&);
     typedef void        UnloadFunction(Module*);
+    typedef bool        ConfigFunction(Module*, const char*);
 
     Module(CogServer& cs) : _cogserver(cs) {}
     virtual ~Module() {}
