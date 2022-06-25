@@ -29,6 +29,7 @@ public:                                                               \
 
 DEFINE_REQUEST(ListModulesRequest)
 DEFINE_REQUEST(LoadModuleRequest)
+DEFINE_REQUEST(UnloadModuleRequest)
 
 using namespace opencog;
 
@@ -92,3 +93,42 @@ bool LoadModuleRequest::execute()
         return false;
     }
 }
+
+// ====================================================================
+UnloadModuleRequest::UnloadModuleRequest(CogServer& cs) : Request(cs) {}
+UnloadModuleRequest::~UnloadModuleRequest() {}
+
+const RequestClassInfo&
+UnloadModuleRequest::info(void)
+{
+    static const RequestClassInfo _cci(
+        "unloadmodule",
+        "Unload an opencog module",
+        "Usage: unload <module>\n\n"
+        "Unload the indicated module."
+    );
+    return _cci;
+}
+
+bool UnloadModuleRequest::execute()
+{
+    logger().debug("[UnloadModuleRequest] execute");
+    std::ostringstream oss;
+    if (_parameters.empty()) {
+        oss << "invalid syntax: unloadmodule [<filename> | <module id>]" << std::endl;
+        send(oss.str());
+        return false;
+    }
+    std::string& filename = _parameters.front();
+    if (_cogserver.unloadModule(filename)) {
+        oss << "done" << std::endl;
+        send(oss.str());
+        return true;
+    } else {
+        oss << "Unable to unload module \"" << filename << "\". Check the server logs for details." << std::endl;
+        send(oss.str());
+        return false;
+    }
+}
+
+// ====================================================================
