@@ -89,20 +89,13 @@ public:
     bool configModule(const std::string& id, const std::string& cfg);
 
     /** Lists the modules that are currently loaded. */
-    std::string listModules();
+    std::string listModules(void);
 
     /** Retrieves the module's instance. Takes the module's id */
     Module* getModule(const std::string& id);
 
-    /** Load all modules specified in configuration file. If
-        module_paths is empty then DEFAULT_MODULE_PATHS is used
-        instead, which is why it is passed as copy instead of const
-        ref. */
-    void loadModules(std::vector<std::string> module_paths,
-                     CogServer&);
-    void loadModules(CogServer& cs) {
-        loadModules(std::vector<std::string>(), cs);
-    }
+    /** Load all default modules. */
+    void loadModules(CogServer&);
 
 }; // class
 

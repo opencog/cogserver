@@ -300,30 +300,20 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 
 // ====================================================================
 
-void ModuleManager::loadModules(std::vector<std::string> module_paths,
-                                CogServer& cs)
+void ModuleManager::loadModules(CogServer& cs)
 {
-    if (module_paths.empty())
-    {
-        // XXX FIXME This hack allows an installed cogserver to
-        // inadvertantly load from a fixed build path. This should
-        // be handled by the config file or test environment...
-        // not hard coded.
-        // Give priority search order to the build directories
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/server/");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    std::vector<std::string> module_paths;
 
-        // If not found at above locations, search the install paths
-        for (auto p : get_module_paths())
-        {
-            module_paths.push_back(p);
-            module_paths.push_back(p + "/opencog");
-            module_paths.push_back(p + "/opencog/modules");
-        }
-    }
+    // XXX FIXME This hack allows an installed cogserver to
+    // inadvertantly load from a fixed build path. This should
+    // be handled by the config file or test environment...
+    // not hard coded.
+    // Give priority search order to the build directories
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
 
     // Load modules specified in the config file
     std::string modlist;
