@@ -29,15 +29,16 @@ using namespace opencog;
 
 ModuleManager::ModuleManager(void)
 {
-    // XXX FIXME This hack allows an installed cogserver to
-    // inadvertantly load from a fixed build path. This should
-    // be handled by the config file or test environment...
-    // not hard coded.
-    // Give priority search order to the build directories
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    // Give priority search order to the build directories.
+    std::string exe = get_exe_dir();
+    if (0 == exe.compare(0, sizeof(PROJECT_BINARY_DIR)-1, PROJECT_BINARY_DIR))
+    {
+
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
+        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    }
     module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
 }
 
