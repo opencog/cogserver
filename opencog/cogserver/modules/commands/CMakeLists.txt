@@ -2,7 +2,6 @@
 ADD_LIBRARY (builtinreqs MODULE
 	BuiltinRequestsModule
 	ModuleManagement
-	LoadModuleRequest
 	ShutdownRequest
 	UnloadModuleRequest
 )

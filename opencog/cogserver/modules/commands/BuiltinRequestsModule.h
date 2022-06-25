@@ -11,10 +11,7 @@
 
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
-#include <opencog/cogserver/modules/commands/LoadModuleRequest.h>
 #include <opencog/cogserver/modules/commands/ShutdownRequest.h>
-#include <opencog/cogserver/modules/commands/UnloadModuleRequest.h>
-#include <opencog/cogserver/modules/commands/ListModulesRequest.h>
 
 #include <opencog/util/Logger.h>
 #include <opencog/cogserver/server/CogServer.h>
@@ -30,10 +27,12 @@ class BuiltinRequestsModule : public Module
 
 private:
 
+/*
     Factory<ShutdownRequest, Request>     shutdownFactory;
     Factory<LoadModuleRequest, Request>   loadmoduleFactory;
     Factory<UnloadModuleRequest, Request> unloadmoduleFactory;
     Factory<ListModulesRequest, Request>  listmodulesFactory;
+*/
 
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, "exit", do_exit,
        "Close the shell connection",
