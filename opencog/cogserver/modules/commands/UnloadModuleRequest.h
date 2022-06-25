@@ -23,21 +23,10 @@ namespace opencog
 
 class UnloadModuleRequest : public Request
 {
-
 public:
-
-    static inline const RequestClassInfo& info() {
-        static const RequestClassInfo _cci(
-            "unloadmodule",
-            "Unload an opencog module",
-            "Usage: unload <module>\n\n" 
-            "Unload the indicated module."
-        );
-        return _cci;
-    }
-
     UnloadModuleRequest(CogServer&);
     virtual ~UnloadModuleRequest();
+    static const RequestClassInfo& info(void);
     virtual bool execute(void);
     virtual bool isShell(void) {return info().is_shell;}
 };

@@ -1,23 +1,10 @@
-#include "ListModulesRequest.h"
 #include <opencog/cogserver/server/CogServer.h>
+#include "ListModulesRequest.h"
 
 using namespace opencog;
 
-ListModulesRequest::ListModulesRequest(CogServer& cs) : Request(cs)
-{
-}
-
-ListModulesRequest::~ListModulesRequest()
-{
-    logger().debug("[ListModulesRequest] destructor");
-}
-
-bool ListModulesRequest::execute()
-{
-    std::string moduleList = _cogserver.listModules();
-    send(moduleList);
-    return true;
-}
+ListModulesRequest::ListModulesRequest(CogServer& cs) : Request(cs) {}
+ListModulesRequest::~ListModulesRequest() {}
 
 const RequestClassInfo&
 ListModulesRequest::info(void)
@@ -30,3 +17,11 @@ ListModulesRequest::info(void)
     );
     return _cci;
 }
+
+bool ListModulesRequest::execute()
+{
+    std::string moduleList = _cogserver.listModules();
+    send(moduleList);
+    return true;
+}
+

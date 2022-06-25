@@ -16,12 +16,19 @@
 
 using namespace opencog;
 
-ShutdownRequest::ShutdownRequest(CogServer& cs) : Request(cs)
-{
-}
+ShutdownRequest::ShutdownRequest(CogServer& cs) : Request(cs) {}
+ShutdownRequest::~ShutdownRequest() {}
 
-ShutdownRequest::~ShutdownRequest()
+const RequestClassInfo&
+ShutdownRequest::info(void)
 {
+    static const RequestClassInfo _cci(
+        "shutdown",
+        "Shut down the cogserver",
+        "Usage: shutdown\n\n"
+        "Halt the cogserver in an  orderly fashion"
+    );
+    return _cci;
 }
 
 bool ShutdownRequest::execute()

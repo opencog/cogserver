@@ -25,19 +25,9 @@ class LoadModuleRequest : public Request
 {
 
 public:
-
-    static inline const RequestClassInfo& info() {
-        static const RequestClassInfo _cci(
-            "loadmodule",
-            "Load an opencog module",
-            "Usage: loadmodule <module>\n\n"
-            "Load the named opencog module"
-        );
-        return _cci;
-    }
-
     LoadModuleRequest(CogServer&);
     virtual ~LoadModuleRequest();
+    static const RequestClassInfo& info();
     virtual bool execute(void);
     virtual bool isShell(void) {return info().is_shell;}
 };

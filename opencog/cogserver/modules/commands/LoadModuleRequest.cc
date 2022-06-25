@@ -6,23 +6,27 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include "LoadModuleRequest.h"
-
-#include <vector>
 #include <sstream>
 
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/util/Logger.h>
-#include <opencog/util/exceptions.h>
+
+#include "LoadModuleRequest.h"
 
 using namespace opencog;
 
-LoadModuleRequest::LoadModuleRequest(CogServer& cs) : Request(cs)
-{
-}
+LoadModuleRequest::LoadModuleRequest(CogServer& cs) : Request(cs) {}
+LoadModuleRequest::~LoadModuleRequest() {}
 
-LoadModuleRequest::~LoadModuleRequest()
+const RequestClassInfo&
+LoadModuleRequest::info()
 {
+    static const RequestClassInfo _cci(
+        "loadmodule",
+        "Load an opencog module",
+        "Usage: loadmodule <module>\n\n"
+        "Load the named opencog module"
+    );
+    return _cci;
 }
 
 bool LoadModuleRequest::execute()

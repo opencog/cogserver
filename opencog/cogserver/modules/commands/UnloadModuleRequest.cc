@@ -6,23 +6,27 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include "UnloadModuleRequest.h"
-
 #include <vector>
 #include <sstream>
 
+#include "UnloadModuleRequest.h"
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/util/Logger.h>
-#include <opencog/util/exceptions.h>
 
 using namespace opencog;
 
-UnloadModuleRequest::UnloadModuleRequest(CogServer& cs) : Request(cs)
-{
-}
+UnloadModuleRequest::UnloadModuleRequest(CogServer& cs) : Request(cs) {}
+UnloadModuleRequest::~UnloadModuleRequest() {}
 
-UnloadModuleRequest::~UnloadModuleRequest()
+const RequestClassInfo&
+UnloadModuleRequest::info(void)
 {
+    static const RequestClassInfo _cci(
+        "unloadmodule",
+        "Unload an opencog module",
+        "Usage: unload <module>\n\n"
+        "Unload the indicated module."
+    );
+    return _cci;
 }
 
 bool UnloadModuleRequest::execute()
