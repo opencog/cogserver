@@ -23,7 +23,16 @@ ConfigModuleRequest::info(void)
         "Config a loaded module",
         "Usage: config <module> <config-string>\n\n"
         "Config the indicated module. The module can be specified\n"
-        "either as the shared-lib filename, or as the module id\n"
+        "either as the shared-lib filename, or as the module id.\n"
+        "Both of these are shown by the `list` command.\n\n"
+        "The configuration string is passed to those modules that\n"
+        "support configuration, and is interpreted in a way that is\n"
+        "specific to that module. Most modules do not need (or support)\n"
+        "configuration.\n\n"
+        "The `sexpr` module uses configuration strings to set up proxy\n"
+        "modes. In the write-through proxy mode, data sent to the\n"
+        "cogserver can be forwarded to other servers, or written to\n"
+        "local disk storage.\n"
     );
     return _cci;
 }
@@ -120,7 +129,8 @@ UnloadModuleRequest::info(void)
         "Unload an opencog module",
         "Usage: unload <module>\n\n"
         "Unload the indicated module. The module can be specified\n"
-        "either as the shared-lib filename, or as the module id\n"
+        "either as the shared-lib filename, or as the module id.\n"
+        "Both of these are shown by the `list` command.\n"
     );
     return _cci;
 }
