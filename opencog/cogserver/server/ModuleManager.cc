@@ -246,6 +246,53 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
     return true;
 }
 
+bool ModuleManager::configModule(const std::string& moduleId,
+                                 const std::string& cfg)
+{
+printf("duuude allo >>%s<< >>%s<<\n", moduleId.c_str(), cfg.c_str());
+#if LATER
+    // The module file identifier does NOT include the file path!
+    std::string f = moduleId;
+    size_t path_sep = f.rfind(PATH_SEP);
+    if (path_sep != std::string::npos)
+        f.erase(0, path_sep+1);
+    logger().info("[ModuleManager] unloadModule(%s)", f.c_str());
+    ModuleMap::const_iterator it = modules.find(f);
+    if (it == modules.end()) {
+        logger().info("[ModuleManager::unloadModule] module \"%s\" is not loaded.", f.c_str());
+        return false;
+    }
+    ModuleData mdata = it->second;
+
+    // cache filename, id and handle
+    std::string filename = mdata.filename;
+    std::string id       = mdata.id;
+    void*       handle   = mdata.handle;
+
+    // invoke the module's unload function
+    (*mdata.unloadFunction)(mdata.module);
+
+    // erase the map entries (one with the filename as key, and one with the module
+    // id as key
+    modules.erase(filename);
+    modules.erase(id);
+
+    // unload dynamically loadable library
+    logger().info("Unloading module \"%s\"", filename.c_str());
+
+    dlerror(); // reset error
+    if (dlclose(handle) != 0) {
+        const char* dlsymError = dlerror();
+        if (dlsymError) {
+            logger().warn("Unable to unload module \"%s\": %s", filename.c_str(), dlsymError);
+            return false;
+        }
+    }
+#endif
+
+    return true;
+}
+
 ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& moduleId)
 {
     // The module file identifier does NOT include the file path!

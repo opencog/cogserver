@@ -37,9 +37,10 @@ bool ConfigModuleRequest::execute()
         send(oss.str());
         return false;
     }
-#if LATER
     std::string& filename = _parameters.front();
-    if (_cogserver.configModule(filename)) {
+    _parameters.pop_front();
+    std::string& cfg = _parameters.front();
+    if (_cogserver.configModule(filename, cfg)) {
         oss << "done" << std::endl;
         send(oss.str());
         return true;
@@ -47,7 +48,6 @@ bool ConfigModuleRequest::execute()
     oss << "Unable to config module \"" << filename
         << "\". Check the server logs for details." << std::endl;
     send(oss.str());
-#endif
     return false;
 }
 
