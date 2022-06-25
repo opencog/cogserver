@@ -62,6 +62,9 @@ protected:
      * function pointers, etc). Takes the module's id */
     ModuleData getModuleData(const std::string& id);
 
+    /** Paths to check, for loading modules */
+    std::vector<std::string> module_paths;
+
     /** filepath must be an absolute path, i.e. start with a slash. */
     bool loadAbsPath(const std::string& filepath, CogServer&);
 public:

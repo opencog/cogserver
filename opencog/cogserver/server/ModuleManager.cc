@@ -29,6 +29,16 @@ using namespace opencog;
 
 ModuleManager::ModuleManager(void)
 {
+    // XXX FIXME This hack allows an installed cogserver to
+    // inadvertantly load from a fixed build path. This should
+    // be handled by the config file or test environment...
+    // not hard coded.
+    // Give priority search order to the build directories
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
+    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+    module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
 }
 
 ModuleManager::~ModuleManager()
@@ -308,19 +318,6 @@ bool ModuleManager::loadModule(const std::string& path,
 
 void ModuleManager::loadModules(CogServer& cs)
 {
-    std::vector<std::string> module_paths;
-
-    // XXX FIXME This hack allows an installed cogserver to
-    // inadvertantly load from a fixed build path. This should
-    // be handled by the config file or test environment...
-    // not hard coded.
-    // Give priority search order to the build directories
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
-    module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
-    module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
-
     // Load modules specified in the config file
     std::string modlist;
     if (config().has("MODULES"))
