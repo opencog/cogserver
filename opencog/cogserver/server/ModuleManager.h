@@ -13,6 +13,7 @@
 #define _OPENCOG_MODULE_MANAGER_H
 
 #include <map>
+#include <string>
 #include <vector>
 
 #include <opencog/cogserver/server/Module.h>
@@ -24,19 +25,18 @@ namespace opencog
  */
 
 /**
- * The Cogserver Module system is deprecated; users are encouraged to
- * explore writing guile (scheme) or python modules instead.
+ * Cogserver modules provide a way for custom C++ code to get to the
+ * network data that the cogserver is receiving, and to generate
+ * output in response. Basically, all the complexities of socket
+ * handling are abstracted away, allowing the module author to work
+ * with data on a line-by-line basis.
  *
- * Module management is responsible for extending the server
- * through the use of dynamically loadable libraries (or modules).
- * Valid modules must extended the class defined in Module.h and be
- * compiled and linked as a shared library. Currently, only Unix DSOs
- * are supported; Win32 DLLs are not. The server API itself provides
- * methods to load, unload and retrieve  modules. The server provides
- * modules with two entry points: the constructor, which is typically
- * invoked by the module's load function; and the 'init' method, which
- * is called after the module has been instantiated and its meta-data 
- * has been filled.
+ * Modules are dynamically loadable shared libraries. Please use the
+ * existing modules as examples for how to create new ones.  Most of
+ * the existing modules are rather simple.
+ *
+ * Currently, only Unix shared libs (DSO's or Dynamically Shared
+ * Objects) are supported; Win32 DLLs are not.
  */
 class ModuleManager
 {
@@ -49,6 +49,7 @@ protected:
         std::string             filename;
         Module::LoadFunction*   loadFunction;
         Module::UnloadFunction* unloadFunction;
+        Module::ConfigFunction* configFunction;
         void*                   handle;
     } ModuleData;
 
@@ -56,13 +57,17 @@ protected:
     typedef std::map<const std::string, ModuleData> ModuleMap;
     ModuleMap modules;
 
+    /** Retrieves the module's meta-data (id, filename, load/unload
+     * function pointers, etc). Takes the module's id */
+    ModuleData getModuleData(const std::string& id);
+
 public:
 
     /** ModuleManager's constructor. */
     ModuleManager(void);
 
     /** ModuleManager's destructor. Unloads all modules. */
-    ~ModuleManager(void);
+    ~ModuleManager();
 
     /** Loads a dynamic library/module. Takes the filename of the
      *  library (.so or .dylib or .dll). On Linux/Unix, the filename may
@@ -76,12 +81,14 @@ public:
      *  more details. */
     bool unloadModule(const std::string& id);
 
+    /** Configure a dynamic library/module. Passes the given
+     * configuration string to the module for processing. Returns
+     * false if configuration failed, else returns true.
+     */
+    bool configModule(const std::string& id, const std::string& cfg);
+
     /** Lists the modules that are currently loaded. */
     std::string listModules();
-
-    /** Retrieves the module's meta-data (id, filename, load/unload
-     * function pointers, etc). Takes the module's id */
-    ModuleData getModuleData(const std::string& id);
 
     /** Retrieves the module's instance. Takes the module's id */
     Module* getModule(const std::string& id);
@@ -91,7 +98,7 @@ public:
         instead, which is why it is passed as copy instead of const
         ref. */
     void loadModules(std::vector<std::string> module_paths,
-                             CogServer&);
+                     CogServer&);
     void loadModules(CogServer& cs) {
         loadModules(std::vector<std::string>(), cs);
     }

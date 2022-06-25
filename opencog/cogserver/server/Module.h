@@ -12,8 +12,6 @@
  * from the module author.
  */
 
-#include <string>
-
 #ifndef _OPENCOG_MODULE_H
 #define _OPENCOG_MODULE_H
 
@@ -39,38 +37,12 @@ namespace opencog
     extern "C" void opencog_module_unload(Module* m) {                \
        delete m;                                                      \
     }                                                                 \
+    extern "C" bool opencog_module_config(Module* m, const char* s) { \
+       return m->config(s);                                           \
+    }                                                                 \
     inline const char * MODNAME::id(void) {                           \
         return "opencog::" #MODNAME;                                  \
     }
-
-
-/**
- * DEFINE_SHELL_MODULE -- Declare a new C++ Module class, suitable
- * for providing a network shell. Network shells can respond to inputs
- * coming over a network TCP/IP socket. All the details of socket
- * handling are abstracted away.
- */
-#define DEFINE_SHELL_MODULE(MODNAME)                                  \
-namespace opencog {                                                   \
-                                                                      \
-class MODNAME : public Module {                                       \
-    private:                                                          \
-        class shelloutRequest : public Request                        \
-        {                                                             \
-            public:                                                   \
-                static const RequestClassInfo& info(void);            \
-                shelloutRequest(CogServer& cs) : Request(cs) {};      \
-                virtual ~shelloutRequest() {};                        \
-                virtual bool execute(void);                           \
-                virtual bool isShell(void) { return true; }           \
-        };                                                            \
-        Factory<shelloutRequest, Request> shelloutFactory;            \
-    public:                                                           \
-        MODNAME(CogServer&);                                          \
-        virtual ~MODNAME();                                           \
-        static const char *id(void);                                  \
-        virtual void init(void);                                      \
-}; }
 
 /**
  * This class defines the base abstract class that should be extended
@@ -141,14 +113,21 @@ public:
         static const char* s = "opencog_module_unload";
         return s;
     }
+    static const char* config_function_name(void)
+    {
+        static const char* s = "opencog_module_config";
+        return s;
+    }
 
     typedef const char* IdFunction    (void);
     typedef Module*     LoadFunction  (CogServer&);
     typedef void        UnloadFunction(Module*);
+    typedef bool        ConfigFunction(Module*, const char*);
 
     Module(CogServer& cs) : _cogserver(cs) {}
     virtual ~Module() {}
     virtual void init() = 0;
+    virtual bool config(const char *) = 0;
 
 protected: 
     // Keep a copy of the server we were created with. This is needed

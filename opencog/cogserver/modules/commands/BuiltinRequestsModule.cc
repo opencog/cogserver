@@ -23,9 +23,10 @@ DECLARE_MODULE(BuiltinRequestsModule)
 BuiltinRequestsModule::BuiltinRequestsModule(CogServer& cs) : Module(cs)
 {
     _cogserver.registerRequest(ShutdownRequest::info().id,     &shutdownFactory);
+    _cogserver.registerRequest(ConfigModuleRequest::info().id, &configmoduleFactory);
+    _cogserver.registerRequest(ListModulesRequest::info().id,  &listmodulesFactory);
     _cogserver.registerRequest(LoadModuleRequest::info().id,   &loadmoduleFactory);
     _cogserver.registerRequest(UnloadModuleRequest::info().id, &unloadmoduleFactory);
-    _cogserver.registerRequest(ListModulesRequest::info().id,  &listmodulesFactory);
 
     do_help_register();
     do_h_register();
@@ -54,9 +55,10 @@ BuiltinRequestsModule::~BuiltinRequestsModule()
     do_stats_unregister();
 
     _cogserver.unregisterRequest(ShutdownRequest::info().id);
+    _cogserver.unregisterRequest(ConfigModuleRequest::info().id);
+    _cogserver.unregisterRequest(ListModulesRequest::info().id);
     _cogserver.unregisterRequest(LoadModuleRequest::info().id);
     _cogserver.unregisterRequest(UnloadModuleRequest::info().id);
-    _cogserver.unregisterRequest(ListModulesRequest::info().id);
 }
 
 void BuiltinRequestsModule::init()

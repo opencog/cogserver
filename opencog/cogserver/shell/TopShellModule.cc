@@ -28,6 +28,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "TopShell.h"
+#include "ShellModule.h"
 
 using namespace opencog;
 
@@ -47,6 +48,11 @@ void TopShellModule::init(void)
 TopShellModule::~TopShellModule()
 {
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
+}
+
+bool TopShellModule::config(const char*)
+{
+	return false;
 }
 
 const RequestClassInfo&

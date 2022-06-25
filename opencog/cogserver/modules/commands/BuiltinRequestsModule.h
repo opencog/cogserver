@@ -26,6 +26,7 @@ class BuiltinRequestsModule : public Module
 
 private:
 
+    Factory<ConfigModuleRequest, Request>  configmoduleFactory;
     Factory<ListModulesRequest, Request>  listmodulesFactory;
     Factory<LoadModuleRequest, Request>   loadmoduleFactory;
     Factory<UnloadModuleRequest, Request> unloadmoduleFactory;
@@ -111,6 +112,7 @@ public:
     BuiltinRequestsModule(CogServer&);
     virtual ~BuiltinRequestsModule();
     virtual void init();
+    virtual bool config(const char *) { return false; }
 
 }; // class
 

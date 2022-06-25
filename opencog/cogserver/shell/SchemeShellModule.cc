@@ -31,6 +31,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "SchemeShell.h"
+#include "ShellModule.h"
 
 using namespace opencog;
 
@@ -53,6 +54,11 @@ void SchemeShellModule::init(void)
 SchemeShellModule::~SchemeShellModule()
 {
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
+}
+
+bool SchemeShellModule::config(const char*)
+{
+	return false;
 }
 
 const RequestClassInfo&

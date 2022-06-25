@@ -28,6 +28,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "SexprShell.h"
+#include "ShellModule.h"
 
 using namespace opencog;
 
@@ -47,6 +48,15 @@ void SexprShellModule::init(void)
 SexprShellModule::~SexprShellModule()
 {
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
+}
+
+bool SexprShellModule::config(const char* cfg)
+{
+	// Just record the config setting for now.
+	// We should check it for valid syntax, and return false if it is
+	// bad. ... but not ready for that, yet.
+	_config_setting = cfg;
+	return true;
 }
 
 const RequestClassInfo&
@@ -79,6 +89,8 @@ SexprShellModule::shelloutRequest::execute(void)
 {
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
+
+	printf("sexpr shell config setting is %s\n", _config_setting.c_str());
 
 	SexprShell *sh = new SexprShell();
 	sh->set_socket(con);

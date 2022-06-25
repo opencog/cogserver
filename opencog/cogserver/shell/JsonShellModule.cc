@@ -28,6 +28,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "JsonShell.h"
+#include "ShellModule.h"
 
 using namespace opencog;
 
@@ -47,6 +48,11 @@ void JsonShellModule::init(void)
 JsonShellModule::~JsonShellModule()
 {
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
+}
+
+bool JsonShellModule::config(const char*)
+{
+	return false;
 }
 
 const RequestClassInfo&
