@@ -6,8 +6,6 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#include <sstream>
-
 #include <opencog/util/oc_assert.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/ServerConsole.h>

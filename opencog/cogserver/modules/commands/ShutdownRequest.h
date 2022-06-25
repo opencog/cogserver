@@ -9,9 +9,6 @@
 #ifndef _OPENCOG_SHUTDOWN_REQUEST_H
 #define _OPENCOG_SHUTDOWN_REQUEST_H
 
-#include <vector>
-#include <string>
-
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/RequestClassInfo.h>
 
