@@ -70,34 +70,35 @@ printf("duuuude proxy install stufffff!! %p\n", sev);
 		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
 }
 
-std::string WriteThruProxy::cog_extract(const std::string& cmd)
+std::string WriteThruProxy::cog_extract(const std::string& arg)
 {
 return "";
-	//return Commands::cog_extract(cmd);
+	//return Commands::cog_extract(arg);
 }
 
-std::string WriteThruProxy::cog_extract_recursive(const std::string& cmd)
+std::string WriteThruProxy::cog_extract_recursive(const std::string& arg)
 {
 return "";
-	//return Commands::cog_extract_recursive(cmd);
+	//return Commands::cog_extract_recursive(arg);
 }
 
-std::string WriteThruProxy::cog_set_value(const std::string& cmd)
+std::string WriteThruProxy::cog_set_value(const std::string& arg)
 {
 return "";
-	//return Commands::cog_set_value(cmd);
+	//return Commands::cog_set_value(arg);
 }
 
-std::string WriteThruProxy::cog_set_values(const std::string& cmd)
+std::string WriteThruProxy::cog_set_values(const std::string& arg)
 {
 return "";
-	//return Commands::cog_set_values(cmd);
+	//return Commands::cog_set_values(arg);
 }
 
-std::string WriteThruProxy::cog_set_tv(const std::string& cmd)
+std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 {
+printf("duuude set tv %s\n", arg.c_str());
 return "";
-	// return Commands::cog_set_tv(cmd);
+	// return Commands::cog_set_tv(arg);
 }
 
 /* ===================== END OF FILE ============================ */
