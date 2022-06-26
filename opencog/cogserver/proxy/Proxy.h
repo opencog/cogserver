@@ -24,6 +24,7 @@
 #define _OPENCOG_PROXY_H
 
 #include <opencog/cogserver/server/Module.h>
+#include <opencog/persist/sexpr/SexprEval.h>
 
 namespace opencog {
 /** \addtogroup grp_server
@@ -36,7 +37,7 @@ class Proxy : public Module
 		Proxy(CogServer& cs) : Module(cs) {};
 		virtual ~Proxy() {};
 
-		virtual void stuff() = 0;
+		virtual void setup(SexprEval*) = 0;
 };
 
 /** @}*/

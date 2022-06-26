@@ -47,9 +47,9 @@ printf("duuuude proxy cfg %s\n", cfg);
 	return false;
 }
 
-void WriteThruProxy::stuff(void)
+void WriteThruProxy::setup(SexprEval* sev)
 {
-printf("duuuude proxy install stufffff!!\n");
+printf("duuuude proxy install stufffff!! %p\n", sev);
 }
 
 /* ===================== END OF FILE ============================ */

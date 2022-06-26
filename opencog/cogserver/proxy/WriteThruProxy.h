@@ -40,7 +40,7 @@ class WriteThruProxy : public Proxy
 		virtual void init(void);
 		virtual bool config(const char*);
 
-		virtual void stuff(void);
+		virtual void setup(SexprEval*);
 };
 
 /** @}*/

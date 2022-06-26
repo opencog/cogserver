@@ -120,6 +120,9 @@ SexprShellModule::shelloutRequest::execute(void)
 		GenericEval* gev = sh->get_evaluator();
 		SexprEval* sev = dynamic_cast<SexprEval*>(gev);
 		OC_ASSERT(sev, "Invalid SexprEval object");
+
+		// Hand the shell over to the proxy for configuration.
+		pxy->setup(sev);
 	}
 
 	sh->set_socket(con);
