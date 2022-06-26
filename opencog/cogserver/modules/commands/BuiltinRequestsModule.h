@@ -64,14 +64,14 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, ".", do_dot,
        false, true)
 
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, "help", do_help,
-       "List the available commands or print the help for a specific command",
+       "List the available commands; print help for a specific command",
        "Usage: help [<command>]\n\n"
        "If no command is specified, then print a menu of commands.\n"
        "Otherwise, print verbose help for the indicated command.\n",
        false, false)
 
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, "h", do_h,
-       "List the available commands or print the help for a specific command",
+       "List the available commands; print help for a specific command",
        "Usage: h [<command>]\n\n"
        "If no command is specified, then print a menu of commands.\n"
        "Otherwise, print verbose help for the indicated command.\n",

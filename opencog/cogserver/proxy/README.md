@@ -157,6 +157,7 @@ Write-Thru Proxy Agent
 ----------------------
 The write-thru proxy agent is (manually) configured as follows:
 ```
+$ rlwrap telnet localhost 17001
 opencog> list
    Module Name           Library            Module Directory Path
    -----------           -------            ---------------------

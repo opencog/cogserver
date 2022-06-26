@@ -60,7 +60,7 @@ private:
         true, false)
 
     DECLARE_CMD_REQUEST(PythonShellModule, "py-eval", do_eval,
-        "Run some python code",
+        "Run a block of python code, and return immediately",
         "Usage: py-eval <python code>\n\n"
         "Evaluate the specified Python code. It does not need to be quoted.",
         false, false)
