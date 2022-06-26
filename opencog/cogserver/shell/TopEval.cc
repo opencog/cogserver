@@ -39,6 +39,7 @@ TopEval::TopEval()
 
 TopEval::~TopEval()
 {
+printf("duuude topeval dtor running\n");
 }
 
 /* ============================================================== */

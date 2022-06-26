@@ -91,6 +91,7 @@ ConsoleSocket::~ConsoleSocket()
 
 void ConsoleSocket::SetShell(GenericShell *g)
 {
+printf("duuude gonna set sell %p\n", g);
     _shell = g;
 
 	// Push out a new prompt, when the shell closes.

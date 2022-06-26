@@ -40,6 +40,7 @@ TopShell::TopShell(void)
 
 TopShell::~TopShell()
 {
+printf("duuude top shel dtor running\n");
 }
 
 void TopShell::set_interval(double refresh)
@@ -50,14 +51,18 @@ void TopShell::set_interval(double refresh)
 // When user types in ctrl-C, just exit the shell.
 void TopShell::user_interrupt()
 {
+printf("duuude top shell caught ctrl -C\n");
 	self_destruct = true;
 	GenericShell::user_interrupt();
+printf("duuude top shell done with ctrl -C\n");
 }
 
 void TopShell::line_discipline(const std::string& expr)
 {
+printf("duuude top shell entr line dics\n");
 	_top_eval->cmd();
 	GenericShell::line_discipline(expr);
+printf("duuude top shell exit line dics\n");
 }
 
 GenericEval* TopShell::get_evaluator(void)

@@ -82,6 +82,7 @@ GenericShell::GenericShell(void) :
 
 GenericShell::~GenericShell()
 {
+printf("duuude generic shell enter dtor\n");
 	self_destruct = true;
 
 	// It can happen that we already cancelled (e.g. control-D)
@@ -200,7 +201,9 @@ void GenericShell::eval(const std::string &expr)
 	// We have to do this here; there is no other opportunity to call dtor.
 	if (self_destruct)
 	{
+printf("duuude generic shell start delf destruct\n");
 		socket->SetShell(nullptr);
+printf("duuude generic shell delete self\n");
 		delete this;
 	}
 }
