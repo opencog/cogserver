@@ -21,6 +21,9 @@
  */
 
 #include <cstdio>
+
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/persist/sexpr/Commands.h>
 #include "WriteThruProxy.h"
 
 using namespace opencog;
@@ -50,6 +53,46 @@ printf("duuuude proxy cfg %s\n", cfg);
 void WriteThruProxy::setup(SexprEval* sev)
 {
 printf("duuuude proxy install stufffff!! %p\n", sev);
+
+	// Dispatc keys.
+#if 0
+	sev->install_handler("cog-extract!", &WriteThruProxy::cog_extract);
+	sev->install_handler("cog-extract-recursive!", &WriteThruProxy::cog_extract_recursive);
+
+	sev->install_handler("cog-set-value!", &WriteThruProxy::cog_set_value);
+	sev->install_handler("cog-set-values!", &WriteThruProxy::cog_set_values);
+	sev->install_handler("cog-set-tv!", &WriteThruProxy::cog_set_tv);
+#endif
+}
+
+std::string WriteThruProxy::cog_extract(const std::string& cmd)
+{
+return "";
+	//return Commands::cog_extract(cmd);
+}
+
+std::string WriteThruProxy::cog_extract_recursive(const std::string& cmd)
+{
+return "";
+	//return Commands::cog_extract_recursive(cmd);
+}
+
+std::string WriteThruProxy::cog_set_value(const std::string& cmd)
+{
+return "";
+	//return Commands::cog_set_value(cmd);
+}
+
+std::string WriteThruProxy::cog_set_values(const std::string& cmd)
+{
+return "";
+	//return Commands::cog_set_values(cmd);
+}
+
+std::string WriteThruProxy::cog_set_tv(const std::string& cmd)
+{
+return "";
+	// return Commands::cog_set_tv(cmd);
 }
 
 /* ===================== END OF FILE ============================ */

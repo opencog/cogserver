@@ -41,6 +41,14 @@ class WriteThruProxy : public Proxy
 		virtual bool config(const char*);
 
 		virtual void setup(SexprEval*);
+
+		/// Methods that implement the interpreted commands
+		std::string cog_extract(const std::string&);
+		std::string cog_extract_recursive(const std::string&);
+
+		std::string cog_set_value(const std::string&);
+		std::string cog_set_values(const std::string&);
+		std::string cog_set_tv(const std::string&);
 };
 
 /** @}*/
