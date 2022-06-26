@@ -1,17 +1,18 @@
-Write-Thru Proxy Agent
-----------------------
+Proxy Agents
+------------
 The code here implements an under-construction, experimental form
 of AtomSpace proxying; that is, of receiving Atoms over the network,
 and passing them onwards to other StorageNodes.
 
 In the standard mode, when a network connection is made to the
 CogServer, the user at the far end of the network connection is working
-with the AtomSpace that this CogServer holds. It is reasonable to ask
-that the CogServer should be attached to storage (say, disk storage),
-so that when an Atom is received, it is also written to disk. But how?
-This general idea is called "proxying", and "proxy agents" are
-responsible to doing whatever needs to be done, when an Atom is received
-by the CogServer.
+with the AtomSpace that this CogServer holds. It is reasonable to want
+to have the CogServer attached to storage (say, disk storage), so that
+when an Atom is received, it is also written to disk.  This general
+idea is called "proxying", and "proxy agents" are responsible to doing
+whatever needs to be done, when a read or write request for an Atom is
+received by the CogServer. The proxy agent passes on those rquests to
+other StorageNodes.
 
 The diagram below shows a typical usage scenario. In this example,
 the Link Grammar parser is reading from the local AtomSpace to which
@@ -43,6 +44,44 @@ read-thru proxy.)
     +-------------+
 ```
 
+Design Choices
+--------------
+How should the above be implemented?  There are several design choices.
+
+* Create a wrapper around the AtomSpace, so that everything going
+  through the AtomSpace goes through the wrapper first. The CogServer
+  is then configured to use this wrapper. The problem with this
+  particular idea is that Atoms can also be accessed directly *e.g.* to
+  get Values or IncomingSets, and so Atoms would need to be wrapped as
+  well. This appears to become a difficult management problem, as it
+  gets hard to figure out what to wrap and unwrap.
+
+* Create processing pipelines, where work requests are placed on a
+  queue, and the worker handlers process those requests. This seems
+  like a good idea, in general, to allow distributed AtomSpace
+  processing.  The AtomSpace does not currently have such a mechanism,
+  and it seems like it should. However, building a generic mechnism
+  of this kind seems like a bigger task than just the proxying
+  requirement above: it risks getting complicated and hevyweight.
+  This is not considered further here (but should be considered
+  elsewhere)
+
+* Capture the Atom read/write requests at the Sexpr shell level. The
+  CogStorageNode uses the sexpr shell to communicate with the CogServer.
+  Everything that the (remote) CogStorageNode sees passes through the
+  sexpr shell.  This shell is "simple": it provides about 16 commands
+  to support this communication. Each command is a UTF8 string, and is
+  easily dispatched to a handler that performs that action.  The default
+  command processor is in
+  [Commands.h](https://github.com/opencog/atomspace/tree/master/opencog/persist/sexpr/Commands.h)
+  in the AtomSpace git repo. Those commands can be intercepted in a very
+  straight-forward way, and alternative actions can be performed when
+  they arrive.
+
+This third design choice is what is made here.
+
+Write-Thru Proxy Agent
+----------------------
 
 ### TODO
 * SpaceFrames need to be handled in the StorageNodes!
