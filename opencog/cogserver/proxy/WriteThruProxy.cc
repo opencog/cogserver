@@ -54,15 +54,20 @@ void WriteThruProxy::setup(SexprEval* sev)
 {
 printf("duuuude proxy install stufffff!! %p\n", sev);
 
-	// Dispatc keys.
-#if 0
-	sev->install_handler("cog-extract!", &WriteThruProxy::cog_extract);
-	sev->install_handler("cog-extract-recursive!", &WriteThruProxy::cog_extract_recursive);
+	using namespace std::placeholders;  // for _1, _2, _3...
 
-	sev->install_handler("cog-set-value!", &WriteThruProxy::cog_set_value);
-	sev->install_handler("cog-set-values!", &WriteThruProxy::cog_set_values);
-	sev->install_handler("cog-set-tv!", &WriteThruProxy::cog_set_tv);
-#endif
+	// Dispatch keys.
+	sev->install_handler("cog-extract!",
+		std::bind(&WriteThruProxy::cog_extract, this, _1));
+	sev->install_handler("cog-extract-recursive!",
+		std::bind(&WriteThruProxy::cog_extract_recursive, this, _1));
+
+	sev->install_handler("cog-set-value!",
+		std::bind(&WriteThruProxy::cog_set_value, this, _1));
+	sev->install_handler("cog-set-values!",
+		std::bind(&WriteThruProxy::cog_set_values, this, _1));
+	sev->install_handler("cog-set-tv!",
+		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
 }
 
 std::string WriteThruProxy::cog_extract(const std::string& cmd)
