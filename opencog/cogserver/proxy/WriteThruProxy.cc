@@ -2,7 +2,7 @@
  * opencog/cogserver/proxy/WriteThruProxy.cc
  *
  * Simple WriteThru shell
- * Copyright (c) 2008, 2020 Linas Vepstas <linas@linas.org>
+ * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License v3 as
@@ -23,6 +23,7 @@
 #include <cstdio>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/base/Atom.h>
 #include <opencog/persist/sexpr/Commands.h>
 #include <opencog/persist/sexpr/Sexpr.h>
 
@@ -35,12 +36,30 @@ DECLARE_MODULE(WriteThruProxy);
 
 WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs)
 {
-printf("duuuude proxy ctor\n");
+printf("duuuude write-thru proxy ctor\n");
 }
 
 void WriteThruProxy::init(void)
 {
-printf("duuuude proxy init\n");
+printf("duuuude write-thru proxy init\n");
+
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	_truth_key = as->get_atom(
+		createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
+
+	// Get all of the StorageNodes to which we will be
+	// forwarding writes.
+	HandleSeq hsns;
+	as->get_handles_by_type(hsns, STORAGE_NODE, true);
+
+	_targets.clear();
+	for (const Handle& hsn : hsns)
+	{
+		StorageNodePtr snp = StorageNodeCast(hsn);
+
+		// TODO: check if the StorageNode is read-only.
+		_targets.push_back(snp);
+	}
 }
 
 WriteThruProxy::~WriteThruProxy()
@@ -49,7 +68,7 @@ WriteThruProxy::~WriteThruProxy()
 
 bool WriteThruProxy::config(const char* cfg)
 {
-printf("duuuude proxy cfg %s\n", cfg);
+printf("duuuude write-thru proxy cfg %s\n", cfg);
 	return false;
 }
 
@@ -120,10 +139,17 @@ printf("duuude set tv %s\n", arg.c_str());
 
 	// Search for optional AtomSpace argument
 	// AtomSpace* as = get_opt_as(arg, pos);
-	AtomSpace*as = &_cogserver.getAtomSpace();
+	AtomSpace* as = &_cogserver.getAtomSpace();
 
 	Handle ha = as->add_atom(h);
 	as->set_truthvalue(ha, TruthValueCast(tv));
+
+	// Loop over all targets, and send them the new truth value.
+	for (const StorageNodePtr& snp : _targets)
+	{
+		snp->store_value(ha, _truth_key);
+	}
+
 	return "()";
 }
 

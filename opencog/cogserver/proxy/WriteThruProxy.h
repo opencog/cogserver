@@ -2,7 +2,7 @@
  * opencog/cogserver/proxy/WriteThruProxy.h
  *
  * Module for starting up s-expression shells
- * Copyright (c) 2008, 2020 Linas Vepstas <linas@linas.org>
+ * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License v3 as
@@ -23,7 +23,10 @@
 #ifndef _OPENCOG_WRITE_THRU_PROXY_H
 #define _OPENCOG_WRITE_THRU_PROXY_H
 
+#include <vector>
+
 #include <opencog/cogserver/proxy/Proxy.h>
+#include <opencog/persist/api/StorageNode.h>
 
 namespace opencog {
 /** \addtogroup grp_server
@@ -32,6 +35,10 @@ namespace opencog {
 
 class WriteThruProxy : public Proxy
 {
+	protected:
+		Handle _truth_key;
+		std::vector<StorageNodePtr> _targets;
+
 	public:
 		WriteThruProxy(CogServer&);
 		virtual ~WriteThruProxy();
