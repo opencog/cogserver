@@ -34,8 +34,9 @@ class Proxy : public Module
 {
 	public:
 		Proxy(CogServer& cs) : Module(cs) {};
+		virtual ~Proxy() {};
 
-		virtual void stuff();
+		virtual void stuff() = 0;
 };
 
 /** @}*/
