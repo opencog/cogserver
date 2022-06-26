@@ -11,7 +11,7 @@ to have the CogServer attached to storage (say, disk storage), so that
 when an Atom is received, it is also written to disk.  This general
 idea is called "proxying", and "proxy agents" are responsible to doing
 whatever needs to be done, when a read or write request for an Atom is
-received by the CogServer. The proxy agent passes on those rquests to
+received by the CogServer. The proxy agent passes on those requests to
 other StorageNodes.
 
 The diagram below shows a typical usage scenario. In this example,
@@ -20,7 +20,7 @@ it is attached. That AtomSpace uses a CogStorageNode to get access
 to the "actual data", residing on the CogServer. However, the CogServer
 itself doesn't "have the data"; its actually on disk (in the
 RocksStorageNode) Thus, any read requests made by the the LG parser
-have to be proxied by the CogServer to the disk storaage (using a
+have to be proxied by the CogServer to the disk storage (using a
 read-thru proxy.)
 ```
                                             +----------------+
@@ -44,6 +44,16 @@ read-thru proxy.)
     +-------------+
 ```
 
+Status
+------
+**Version 0.5**. All the basic infrastructure is in place, and one
+command actually works. Need to:
+
+* Handle the rest of the commands (this should be easy/real easy).
+* Handle the `cog://example.com?whatever` URL's as described below.
+  (pretty easy, too).
+* Create unit tests. Tedious and time-consuming.
+
 Design Choices
 --------------
 How should the above be implemented?  There are several design choices.
@@ -60,9 +70,9 @@ How should the above be implemented?  There are several design choices.
   queue, and the worker handlers process those requests. This seems
   like a good idea, in general, to allow distributed AtomSpace
   processing.  The AtomSpace does not currently have such a mechanism,
-  and it seems like it should. However, building a generic mechnism
+  and it seems like it should. However, building a generic mechanism
   of this kind seems like a bigger task than just the proxying
-  requirement above: it risks getting complicated and hevyweight.
+  requirement above: it risks getting complicated and heavyweight.
   This is not considered further here (but should be considered
   elsewhere)
 
@@ -97,7 +107,7 @@ should coordinate with regards to what kind of proxying should be done.
     side, there is a `libwthru-shell.so` that responds to this.
 
   * Use URL's of the form `cog://example.com?policy=wthru&foo=bar`.
-    The CogStoragenode splits off everything following the `?` and
+    The CogStorageNode splits off everything following the `?` and
     uses that to configure the `sexpr` shell.
 
   * Manual configuration. This is what is being done right now.
@@ -120,7 +130,7 @@ should coordinate with regards to what kind of proxying should be done.
     is coded up (because its easy.)
 
   * To configure the proxy, there are two ways to do this. One is to
-    use the Cogserver `config` command. Yuck.  The other is to use
+    use the CogServer `config` command. Yuck.  The other is to use
     `(use-modules (opencog cogserver))` and pass configuration into
     through that module.  This has the advantage (and disadvantage)
     that only the person setting up the cogserver can configure it.
@@ -149,7 +159,6 @@ WriteThruProxy        libwthru-proxy.so  /usr/local/lib/opencog/modules
 ```
 That's it. After this point, all subsequent `sexpr` invocations will
 pass through the the write-thru proxy.
-
 
 Design Notes
 ------------
