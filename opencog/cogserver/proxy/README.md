@@ -54,6 +54,20 @@ command actually works. Need to:
   (pretty easy, too).
 * Create unit tests. Tedious and time-consuming.
 
+The above is for the basic WriteThru node. Also need:
+
+* A Read-through node, that passes all Atom read requests onwards,
+  e.g. so that one doesn't have to load up the AtomSpace on startup,
+  but instead only as each Atom is requested.
+
+* A caching read-through node, so that read requests hit the disk
+  only the first time, and subequent reads do not go to disk a
+  second time.
+
+All of the above is "easy to do" but tedious and time-consuming.
+See also the TODO list at the bottom, for the more abstract and more
+difficult work items. Those will be hard.
+
 Design Choices
 --------------
 How should the above be implemented?  There are several design choices.
