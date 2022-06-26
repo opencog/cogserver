@@ -67,7 +67,6 @@ INSTALL (FILES
 	Factory.h
 	Module.h
 	ModuleManager.h
-	Proxy.h
 	Request.h
 	RequestClassInfo.h
 	RequestManager.h

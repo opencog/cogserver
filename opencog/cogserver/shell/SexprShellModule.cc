@@ -23,9 +23,9 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
+#include <opencog/cogserver/proxy/Proxy.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
-#include <opencog/cogserver/server/Proxy.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/persist/sexpr/SexprEval.h>

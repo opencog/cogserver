@@ -14,6 +14,7 @@ INSTALL (TARGETS wthru-proxy
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
 
 INSTALL (FILES
+	Proxy.h
 	WriteThruProxy.h
 	DESTINATION "include/opencog/cogserver/proxy/"
 )

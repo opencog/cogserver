@@ -23,7 +23,7 @@
 #ifndef _OPENCOG_WRITE_THRU_PROXY_H
 #define _OPENCOG_WRITE_THRU_PROXY_H
 
-#include <opencog/cogserver/server/Proxy.h>
+#include <opencog/cogserver/proxy/Proxy.h>
 
 namespace opencog {
 /** \addtogroup grp_server
