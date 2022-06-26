@@ -103,6 +103,23 @@ should coordinate with regards to what kind of proxying should be done.
   * Manual configuration. This is what is being done right now.
     See below for details.
 
+* How to configure the proxy itself? Consider a write-thru proxy:
+
+  * There can be a no-configuration mode: on startup, the proxy looks
+    for all open StorageNodes in the AtomSpace, and then always performs
+    writes through those nodes.  Thus, the CogServer user must, prior
+    to using the proxy, create the needed StorageNodes, and open them,
+    and leave them open (for writing.)  As of right now, this is what
+    is coded up (because its easy.)
+
+  * To configure the proxy, there are two ways to do this. One is to
+    use the Cogserver `config` command. Yuck.  The other is to use
+    `(use-modules (opencog cogserver))` and pass configuration into
+    through that module.  This has the advantage (and disadvantage)
+    that only the person setting up the cogserver can configure it.
+
+  * For a configurable write-thru proxy, the config is presumably a
+    list of StorageNode to write to.
 
 
 Write-Thru Proxy Agent
