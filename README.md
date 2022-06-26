@@ -23,39 +23,48 @@ These can be used by multiple users at the same time, all obtaining
 access to the *same* AtomSpace.  This capability is useful in several
 different ways:
 
-* General maintenance on long-running OpenCog or AtomSpace processes
+* **General maintenance** on long-running OpenCog or AtomSpace processes
   (e.g. robot control, large batch-job processing or long-running
   data-mining servers.) This includes running ad-hoc commands,
   monitoring status, and poking around and performing general
   maintenance on long-running servers.
 
-* A network command line. Ordinary Python does not allow multiple
+* **Network command line.** Ordinary Python does not allow multiple
   users to access it at the same time. With the CogServer, multiple
   Python users can use it simultaneously. As to scheme/guile, whereas
   there is an ice-9 REPL server, the CogServer is an order of magnitude
   faster, lower latency/higher throughput, and infinitely more stable;
   its free of lockups, hangs and crashes. It's fast.
 
-* A JSON-style interface, useful for creating JavaScript-powered
+* **JSON-style interface.** This is useful for creating JavaScript-powered
   visualizers and user interfaces. Suitable for people who are more
   comfortable working with JSON.
 
-* An easy and strong way of doing bulk data transfers. In particular,
-  the transfer of millions of Atoms and (Truth)Values as UTF-8
-  (i.e. human-readable) text is easy and efficient. It does not
-  require fiddling with complex binary formats or protocols or the
-  use of protocol libraries or API's. (We're looking at you, HTTP,
-  REST, ZeroMQ, ProtoBuff and friends. You are all very sophisticated,
-  yes, but are hard to use. And sometimes painfully slow.)
+* **Bulk data transfer**. The base "s-expression" encoding of Atoms and
+  (Truth)Values is UTF-8 text string format. It's  human-readable, easy
+  and efficient. It does not require fiddling with complex binary formats
+  or protocols or the use of protocol libraries or API's. (We're looking
+  at you, HTTP, REST, ZeroMQ, ProtoBuff and friends. You are all very
+  sophisticated, yes, but are hard to use. And sometimes painfully slow.)
 
-* Network-distributed processing. The [StorageNode
+* **Network-distributed processing.** The [StorageNode
   API](https://wiki.opencog.org/w/StorageNode) provides a uniform data
   transfer API to local disk, 3rd-party databases and network. The
   CogServer implements this API, thus allowing multiple AtomSpaces
   distributed on the network to share data.
 
+* **Proxy Agents.** The proxy-agent infrastructure allows Atoms arriving
+  on the net (or requests for getting them or changing them) to be
+  forewarded on to either disk storage, or other network nodes.
+  Interacting with storage is particularly useful: the CogServer can
+  not only serve up Atoms to remote clients, but can also save up
+  whatever it is given, and move it to storage (without any manual
+  intervention.)  This is one of the basic building blocks for
+  network-distributed, decentralized processing.
+
 * The `stats` command provides a `top`-like command for viewing who is
   connected to the Cogserver, and what they are doing.
+
 
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
