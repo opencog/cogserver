@@ -1,7 +1,7 @@
 /*
  * opencog/cogserver/proxy/WriteThruProxy.cc
  *
- * Simple WriteThru shell
+ * Simple WriteThru proxy agent
  * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
