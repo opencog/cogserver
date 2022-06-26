@@ -24,6 +24,9 @@
 
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/persist/sexpr/Commands.h>
+#include <opencog/persist/sexpr/Sexpr.h>
+
+#include <opencog/cogserver/server/CogServer.h>
 #include "WriteThruProxy.h"
 
 using namespace opencog;
@@ -50,13 +53,25 @@ printf("duuuude proxy cfg %s\n", cfg);
 	return false;
 }
 
+// TODO:
+// * Need space-frame support!
+
 void WriteThruProxy::setup(SexprEval* sev)
 {
 printf("duuuude proxy install stufffff!! %p\n", sev);
 
+	// Read-only atomspace ... should check earlier!?
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	if (as->get_read_only())
+	{
+		logger().info("Read-only atomspace; no write-through proxying!");
+		return;
+	}
+
 	using namespace std::placeholders;  // for _1, _2, _3...
 
-	// Dispatch keys.
+	// Install dispatch handlers.
+#if 0
 	sev->install_handler("cog-extract!",
 		std::bind(&WriteThruProxy::cog_extract, this, _1));
 	sev->install_handler("cog-extract-recursive!",
@@ -66,6 +81,7 @@ printf("duuuude proxy install stufffff!! %p\n", sev);
 		std::bind(&WriteThruProxy::cog_set_value, this, _1));
 	sev->install_handler("cog-set-values!",
 		std::bind(&WriteThruProxy::cog_set_values, this, _1));
+#endif
 	sev->install_handler("cog-set-tv!",
 		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
 }
@@ -97,8 +113,18 @@ return "";
 std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 {
 printf("duuude set tv %s\n", arg.c_str());
-return "";
-	// return Commands::cog_set_tv(arg);
+	size_t pos = 0;
+	// Handle h = Sexpr::decode_atom(arg, pos, _space_map);
+	Handle h = Sexpr::decode_atom(arg, pos);
+	ValuePtr tv = Sexpr::decode_value(arg, ++pos);
+
+	// Search for optional AtomSpace argument
+	// AtomSpace* as = get_opt_as(arg, pos);
+	AtomSpace*as = &_cogserver.getAtomSpace();
+
+	Handle ha = as->add_atom(h);
+	as->set_truthvalue(ha, TruthValueCast(tv));
+	return "()";
 }
 
 /* ===================== END OF FILE ============================ */
