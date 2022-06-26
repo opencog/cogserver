@@ -57,8 +57,15 @@ printf("duuuude write-thru proxy init\n");
 	{
 		StorageNodePtr snp = StorageNodeCast(hsn);
 
+		// Check to see if the StorageNode is actually open;
+		// We cannot write to nodes that are closed.
+		if (snp->connected())
+		{
+			_targets.push_back(snp);
+printf("duuude will write-thru to %s\n", snp->to_string().c_str());
+		}
+
 		// TODO: check if the StorageNode is read-only.
-		_targets.push_back(snp);
 	}
 }
 
