@@ -1,7 +1,7 @@
 /*
- * opencog/cogserver/proxy/WriteThruProxy.h
+ * opencog/cogserver/server/Proxy.h
  *
- * Module for starting up s-expression shells
+ * Module to provide a common API for all s-expression proxies.
  * Copyright (c) 2008, 2020 Linas Vepstas <linas@linas.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,30 +20,25 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _OPENCOG_WRITE_THRU_PROXY_H
-#define _OPENCOG_WRITE_THRU_PROXY_H
+#ifndef _OPENCOG_PROXY_H
+#define _OPENCOG_PROXY_H
 
-#include <opencog/cogserver/server/Proxy.h>
+#include <opencog/cogserver/server/Module.h>
 
 namespace opencog {
 /** \addtogroup grp_server
  *  @{
  */
 
-class WriteThruProxy : public Proxy
+class Proxy : public Module
 {
 	public:
-		WriteThruProxy(CogServer&);
-		virtual ~WriteThruProxy();
+		Proxy(CogServer& cs) : Module(cs) {};
 
-		static const char *id(void);
-		virtual void init(void);
-		virtual bool config(const char*);
-
-		virtual void stuff(void);
+		virtual void stuff();
 };
 
 /** @}*/
 }
 
-#endif // _OPENCOG_WRITE_THRU_PROXY_H
+#endif // _OPENCOG_PROXY_H
