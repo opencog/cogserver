@@ -9,7 +9,7 @@ The OpenCog CogServer is a network scheme & python command-line
 server for the [OpenCog AtomSpace](https://github.com/opencog/atomspace)
 (hyper-)graph database. It allows network users to run arbitrary python
 and scheme code on the server, and access the AtomSpace over the
-network. The cogserver also provides a pseudo-json interface, as well
+network. The cogserver also provides a pseudo-JSON interface, as well
 as a high-speed data transfer format that is used for building
 network-distributed AtomSpaces. The CogServer is a part of the
 [OpenCog project](https://opencog.org).
@@ -36,7 +36,7 @@ different ways:
   faster, lower latency/higher throughput, and infinitely more stable;
   its free of lockups, hangs and crashes. It's fast.
 
-* A JSON-style interface, useful for creating javascript-powered
+* A JSON-style interface, useful for creating JavaScript-powered
   visualizers and user interfaces. Suitable for people who are more
   comfortable working with JSON.
 
@@ -55,7 +55,7 @@ different ways:
   distributed on the network to share data.
 
 * The `stats` command provides a `top`-like command for viewing who is
-  conected to the Cogserver, and what they are doing.
+  connected to the Cogserver, and what they are doing.
 
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
@@ -131,7 +131,40 @@ Architecture
 ------------
 See also these README's:
 
+* [proxy/README](opencog/cogserver/proxy/README.md)
 * [network/README](opencog/network/README.md)
 * [cogserver/README](opencog/cogserver/server/README.md)
 * [builtin-module/README](opencog/cogserver/modules/commands/README.md)
 * [cython/README](opencog/cython/README.md)
+
+TODO
+----
+There are two major open ToDo items for the CogServer.  These are:
+
+* **Distributed computing.** How to build a distributed computing fabric
+  for AtomSpace data? Work on this question can be found in the
+  [AtomSpace Agents](https://github.com/opencog/atomspace-agents) git
+  repo.
+
+* **Security.** Right now, anyone who has network access can attach to
+  the CogServer, and do anything. There are three different ways to do
+  'anything':
+
+  * The top-level CogServer shell allows arbitrary loadable modules to
+    be loaded.
+  * The python and scheme shells allow the execution of arbitrary python
+    and scheme code, including system calls. This includes file writes.
+  * The sexpr and json shells are "controlled", in that they do NOT
+    allow access to system calls.  However, they do allow arbitrary
+    changes to the made to the AtomSpace, including insertion and
+    deletion of Atoms. The `GroundedPredicateNode` allows for the
+    arbitrary execution of arbitrary scheme and python code.
+
+It's not clear how to introduce security into this model, other than to
+only open network connections to trusted, authorized users. Presumably,
+there are several off-the-shelf solutions for controlling network
+access, but no one has picked a good one. Obviously, exporting the
+CogServer socket via SSH is a good way of controlling access to who
+can use it. But SSH proxying is very low-level, and not admin-friendly.
+Nor particularly user-friendly, either: the user can't just login into
+some website and ask for access.

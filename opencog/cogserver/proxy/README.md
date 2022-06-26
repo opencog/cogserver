@@ -80,6 +80,21 @@ How should the above be implemented?  There are several design choices.
 
 This third design choice is what is made here.
 
+Coordination and Configuration
+------------------------------
+There's a bunch of confusing ideas about how the client and server
+should coordinate with regards to what kind of proxying should be done.
+
+* Should the client be able to tell the CogServer what kind of proxying
+  it wants? How? What if different clients ask the same server for
+  different things?
+
+* Security: Maybe the cogserver should offer one port for configuration
+  (and that port is password-protected, etc.) and different ports for
+  different kinds of data? 
+  
+
+
 Write-Thru Proxy Agent
 ----------------------
 
