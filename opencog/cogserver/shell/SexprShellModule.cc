@@ -22,10 +22,13 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
+
+#include <opencog/cogserver/proxy/Proxy.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/persist/sexpr/SexprEval.h>
 
 #include "SexprShell.h"
 #include "ShellModule.h"
@@ -52,6 +55,18 @@ SexprShellModule::~SexprShellModule()
 
 bool SexprShellModule::config(const char* cfg)
 {
+	// At this time, the cfg is going to be a module name.
+	// Get the module. If we don't have it, then load it.
+	Module *ext = _cogserver.getModule(cfg);
+	if (nullptr == ext) _cogserver.loadModule(cfg);
+
+	ext = _cogserver.getModule(cfg);
+	if (nullptr == ext)
+	{
+		logger().info("[SexprShell] unable to find proxy module %s", cfg);
+		return false;
+	}
+
 	// Just record the config setting for now.
 	// We should check it for valid syntax, and return false if it is
 	// bad. ... but not ready for that, yet.
@@ -76,7 +91,10 @@ SexprShellModule::shelloutRequest::info(void)
 		"See that file for details. Example usage: `(cog-get-atoms 'Node #t)`\n"
 		"will return a list of all Nodes in the AtomSpace.\n\n"
 		"Use either a ^D (ctrl-D) or a single . on a line by itself to exit\n"
-		"the shell.\n",
+		"the shell.\n\n"
+		"Proxies can be configured with the `config` command. For example,\n"
+		"    config SexprShellModule libwthru-proxy.so\n"
+		"will enable the WriteThruProxy for the sexpr shell.\n",
 		true, false);
 	return _cci;
 }
@@ -90,11 +108,24 @@ SexprShellModule::shelloutRequest::execute(void)
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	printf("sexpr shell config setting is %s\n", _config_setting.c_str());
+	Module *ext = _cogserver.getModule(_config_setting);
+	printf("sexpr shell config: %p %s\n", ext, _config_setting.c_str());
 
 	SexprShell *sh = new SexprShell();
-	sh->set_socket(con);
+	if (ext)
+	{
+		Proxy* pxy = dynamic_cast<Proxy*>(ext);
+		OC_ASSERT(pxy, "Invalid Proxy object");
 
+		GenericEval* gev = sh->get_evaluator();
+		SexprEval* sev = dynamic_cast<SexprEval*>(gev);
+		OC_ASSERT(sev, "Invalid SexprEval object");
+
+		// Hand the shell over to the proxy for configuration.
+		pxy->setup(sev);
+	}
+
+	sh->set_socket(con);
 	send("");
 	return true;
 }
