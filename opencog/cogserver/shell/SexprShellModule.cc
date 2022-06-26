@@ -22,6 +22,8 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
+
+#include <opencog/cogserver/proxy/Proxy.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
@@ -112,6 +114,9 @@ SexprShellModule::shelloutRequest::execute(void)
 	SexprShell *sh = new SexprShell();
 	if (ext)
 	{
+		Proxy* pxy = dynamic_cast<Proxy*>(ext);
+		OC_ASSERT(pxy, "Invalid Proxy object");
+
 		GenericEval* gev = sh->get_evaluator();
 		SexprEval* sev = dynamic_cast<SexprEval*>(gev);
 		OC_ASSERT(sev, "Invalid SexprEval object");
