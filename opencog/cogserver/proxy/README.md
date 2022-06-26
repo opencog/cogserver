@@ -89,14 +89,43 @@ should coordinate with regards to what kind of proxying should be done.
   it wants? How? What if different clients ask the same server for
   different things?
 
-* Security: Maybe the cogserver should offer one port for configuration
-  (and that port is password-protected, etc.) and different ports for
-  different kinds of data? 
-  
+* How to expose different proxies? Consider a write-thru proxy `wthru`:
+
+  * Alter `CogStorageNode` to detect URL's of the form
+    `wthru://example.com/xxx` and use that to open a CogServer
+    connection to `wthru` instead of `sexpr`. On the CogServer
+    side, there is a `libwthru-shell.so` that responds to this.
+
+  * Use URL's of the form `cog://example.com?policy=wthru&foo=bar`.
+    The CogStoragenode splits off everything following the `?` and
+    uses that to configure the `sexpr` shell.
+
+  * Manual configuration. This is what is being done right now.
+    See below for details.
+
 
 
 Write-Thru Proxy Agent
 ----------------------
+The write-thru proxy agent is (manually) configured as follows:
+```
+opencog> list
+   Module Name           Library            Module Directory Path
+   -----------           -------            ---------------------
+BuiltinRequestsModule libbuiltinreqs.so  /usr/local/lib/opencog/modules
+SexprShellModule      libsexpr-shell.so  /usr/local/lib/opencog/modules
+...
+
+opencog> config SexprShellModule libwthru-proxy.so
+opencog> list
+   Module Name           Library            Module Directory Path
+   -----------           -------            ---------------------
+WriteThruProxy        libwthru-proxy.so  /usr/local/lib/opencog/modules
+...
+```
+That's it. After this point, all subsequent `sexpr` invocations will
+pass through the the write-thru proxy.
+
 
 ### TODO
 * SpaceFrames need to be handled in the StorageNodes!
@@ -116,17 +145,3 @@ How can the second thing be done?  There are two choices:
 
 * Create a `WriteThruStorageNode` class, which is identical to the
   `CogStorageClass`, except it causes this policy agent to run.
-  Blech.
-
-* Alter `CogStorageNode` to detect URL's of the form
-  `wthru://example.com/xxx` and use that to open a Cogserver connection
-  to `wthru` instead of `sexpr`.  Alternately, the URL could be
-  `cog://example.com?policy=wthru&foo=bar` which is more flexible for
-  future expansion.
-
-The second alternative seems better.
-
-There's yet another possibility: Alter `CogStorageNode` as above, and
-pass the policy to the `sexpr` shell, via commands.  The downside to
-this is that code lives in the AtomSpace git repo, and so we have a
-chicken-n-egg problem in compiling it.
