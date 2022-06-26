@@ -103,6 +103,13 @@ should coordinate with regards to what kind of proxying should be done.
   * Manual configuration. This is what is being done right now.
     See below for details.
 
+  * Create a `WriteThroughStorageNode` that negotiates with the
+    CogServer to do the right thing... This could be as simple as
+    a silly little wrapper around `CogStorageNode`. In principle,
+    this is more powerful, since it gives AtomSpace processes control
+    over the configuration. In practice, using different URL's is
+    acceptable, for now.
+
 * How to configure the proxy itself? Consider a write-thru proxy:
 
   * There can be a no-configuration mode: on startup, the proxy looks
@@ -144,21 +151,32 @@ That's it. After this point, all subsequent `sexpr` invocations will
 pass through the the write-thru proxy.
 
 
-### TODO
-* SpaceFrames need to be handled in the StorageNodes!
-
 Design Notes
 ------------
-To make proxy agents work, the cogserver needs to intercept sexpr
-commands, and do non-default things with them.  There are several
-things that needs to happen.
+Here's how it actually works. It's a bunch of stovepipe code:
 
-* Change the sexpr `Commands.cc` and provide a way of installing
-  alternative handlers. (DONE)
+The file `Commands.cc` allows different command dispatchers to be
+installed. A command dispatcher has the form
 
-* Provide a client with some way of stating what policy should be used.
+```
+    std::string SomeClass:do_whatever(const std::string&)
+```
+which is installed by saying
+```
+    SexprEval* sev = ...
+    sev->install_handler("cog-set-foo",
+        std::bind(&SomeClass:do_whatever, this, _1));
+```
+After installation, whenever a network client sends the string
+`(cog-set-foo stuffs)` the string `stuffs)` will be passed to the
+method `SomeClass:do_whatever`. Then, whatever string is returned,
+that string is sent back to the client. The list of the actual set
+of command strings that are currently in use can be found in the
+`Commands.cc` file.
 
-How can the second thing be done?  There are two choices:
+### TODO
+ * SpaceFrames need to be handled in the StorageNodes!
+ * The support for SpaceFrames by the CogStorageNode is currently
+   incomplete and broken.
 
-* Create a `WriteThruStorageNode` class, which is identical to the
-  `CogStorageClass`, except it causes this policy agent to run.
+-----
