@@ -36,16 +36,11 @@ DECLARE_MODULE(WriteThruProxy);
 
 WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs)
 {
-printf("duuuude write-thru proxy ctor\n");
 }
 
 void WriteThruProxy::init(void)
 {
-printf("duuuude write-thru proxy init\n");
-
 	AtomSpace* as = &_cogserver.getAtomSpace();
-	_truth_key = as->get_atom(
-		createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
 
 	// Get all of the StorageNodes to which we will be
 	// forwarding writes.
@@ -62,10 +57,16 @@ printf("duuuude write-thru proxy init\n");
 		if (snp->connected())
 		{
 			_targets.push_back(snp);
-printf("duuude will write-thru to %s\n", snp->to_string().c_str());
+			logger().info("[Write-Thru Proxy] Will write-thru to %s\n",
+				snp->to_short_string().c_str());
 		}
 
 		// TODO: check if the StorageNode is read-only.
+	}
+
+	if (0 == _targets.size())
+	{
+		logger().info("[Write-Thru Proxy] There aren't any targets to write to!")
 	}
 }
 
@@ -84,8 +85,6 @@ printf("duuuude write-thru proxy cfg %s\n", cfg);
 
 void WriteThruProxy::setup(SexprEval* sev)
 {
-printf("duuuude proxy install stufffff!! %p\n", sev);
-
 	// Read-only atomspace ... should check earlier!?
 	AtomSpace* as = &_cogserver.getAtomSpace();
 	if (as->get_read_only())
@@ -138,8 +137,8 @@ return "";
 
 std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 {
-printf("duuude set tv %s\n", arg.c_str());
 	size_t pos = 0;
+	// XXX FIXME Handle space frames
 	// Handle h = Sexpr::decode_atom(arg, pos, _space_map);
 	Handle h = Sexpr::decode_atom(arg, pos);
 	ValuePtr tv = Sexpr::decode_value(arg, ++pos);
@@ -151,11 +150,14 @@ printf("duuude set tv %s\n", arg.c_str());
 	Handle ha = as->add_atom(h);
 	as->set_truthvalue(ha, TruthValueCast(tv));
 
+	// Make sure we can store truth values!
+	if (nullptr == _truth_key)
+		_truth_key = as->add_atom(
+			createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
+
 	// Loop over all targets, and send them the new truth value.
 	for (const StorageNodePtr& snp : _targets)
-	{
 		snp->store_value(ha, _truth_key);
-	}
 
 	return "()";
 }
