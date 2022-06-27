@@ -65,9 +65,7 @@ void WriteThruProxy::init(void)
 	}
 
 	if (0 == _targets.size())
-	{
-		logger().info("[Write-Thru Proxy] There aren't any targets to write to!")
-	}
+		logger().info("[Write-Thru Proxy] There aren't any targets to write to!");
 }
 
 WriteThruProxy::~WriteThruProxy()
@@ -104,9 +102,9 @@ void WriteThruProxy::setup(SexprEval* sev)
 
 	sev->install_handler("cog-set-value!",
 		std::bind(&WriteThruProxy::cog_set_value, this, _1));
+#endif
 	sev->install_handler("cog-set-values!",
 		std::bind(&WriteThruProxy::cog_set_values, this, _1));
-#endif
 	sev->install_handler("cog-set-tv!",
 		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
 }
@@ -131,8 +129,27 @@ return "";
 
 std::string WriteThruProxy::cog_set_values(const std::string& arg)
 {
-return "";
-	//return Commands::cog_set_values(arg);
+	size_t pos = 0;
+	Handle h = Sexpr::decode_atom(arg, pos /*, _space_map*/ );
+	pos++; // skip past close-paren
+
+	// XXX FIXME Handle space frames
+	// if (_multi_space)
+
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	h = as->add_atom(h);
+	Sexpr::decode_slist(h, arg, pos);
+
+	// Loop over all targets, and store everything.
+	// In principle, we should be selective, and only pass
+	// on the values we were given... this would require
+	// Sexpr::decode_slist to return a list of keys,
+	// and then we'd have to store one key at a time,
+	// which seems inefficient. But still ... XXX FIXME ?
+	for (const StorageNodePtr& snp : _targets)
+		snp->store_atom(h);
+
+	return "()";
 }
 
 std::string WriteThruProxy::cog_set_tv(const std::string& arg)
