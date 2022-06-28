@@ -108,21 +108,25 @@ SexprShellModule::shelloutRequest::execute(void)
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	Module *ext = _cogserver.getModule(_config_setting);
-	printf("sexpr shell config: %p %s\n", ext, _config_setting.c_str());
-
 	SexprShell *sh = new SexprShell();
-	if (ext)
+
+	if (0 < _config_setting.size())
 	{
-		Proxy* pxy = dynamic_cast<Proxy*>(ext);
-		OC_ASSERT(pxy, "Invalid Proxy object");
+		Module *ext = _cogserver.getModule(_config_setting);
+		printf("sexpr shell config: %p %s\n", ext, _config_setting.c_str());
 
-		GenericEval* gev = sh->get_evaluator();
-		SexprEval* sev = dynamic_cast<SexprEval*>(gev);
-		OC_ASSERT(sev, "Invalid SexprEval object");
+		if (ext)
+		{
+			Proxy* pxy = dynamic_cast<Proxy*>(ext);
+			OC_ASSERT(pxy, "Invalid Proxy object");
 
-		// Hand the shell over to the proxy for configuration.
-		pxy->setup(sev);
+			GenericEval* gev = sh->get_evaluator();
+			SexprEval* sev = dynamic_cast<SexprEval*>(gev);
+			OC_ASSERT(sev, "Invalid SexprEval object");
+
+			// Hand the shell over to the proxy for configuration.
+			pxy->setup(sev);
+		}
 	}
 
 	sh->set_socket(con);
