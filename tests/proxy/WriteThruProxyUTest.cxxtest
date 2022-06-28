@@ -21,13 +21,8 @@
  */
 
 #include <thread>
-#include <unistd.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <time.h>
-
-#include <opencog/util/Config.h>
+#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 
 using namespace opencog;
@@ -35,8 +30,9 @@ using namespace opencog;
 class WriteThruProxyUTest :  public CxxTest::TestSuite
 {
 private:
-	CogServer* csrv;
 	std::thread* main_loop;
+	CogServer* csrv;
+	AtomSpace* as;
 
 public:
 
@@ -62,6 +58,7 @@ public:
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
+		as = &csrv->getAtomSpace();
 	}
 
 	void tearDown()
@@ -77,6 +74,60 @@ public:
 
 		int rc = system("echo 'config SexprShellModule libwthru-proxy.so\n' | nc -q 0 localhost 17444");
 		if (rc != 0) printf("Error: config failed\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(use-modules (opencog persist) (opencog persist-rocks))\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot find Rockstorage\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(define sto (RocksStorageNode \"rocks:///tmp/test-cogserver.rdb\"))\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot create storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(cog-open sto)\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot open storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		// The write-through proxy should pass this into RocksDB
+		rc = system("echo 'sexpr\n(cog-set-tv! (Concept \"a\") (stv 0.3 0.4))\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot send s-expression\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(cog-close sto)\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot close storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		printf("After initial write, as=\n%s\n", as->to_string().c_str());
+		// ======================================================
+		rc = system("echo '(cog-atomspace-clear)\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot clear the atomspace\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(define sto (RocksStorageNode \"rocks:///tmp/test-cogserver.rdb\"))\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot create storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(cog-open sto)\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot open storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(load-atomspace)\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot open storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		rc = system("echo '(cog-close sto)\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: cannot close storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		printf("After load, as=\n%s\n", as->to_string().c_str());
+		// ======================================================
+		// The AtomSpace should contain the ConceptNode created above.
+
+		Handle ha = as->get_node(CONCEPT_NODE, "a");
+		TS_ASSERT_DIFFERS(ha.get(), nullptr);
+
+		rc = system("rm -r /tmp/test-cogserver.rdb");
+		if (rc != 0) printf("Error: cannot remove the test DB\n");
 		TS_ASSERT_EQUALS(rc, 0);
 
 		logger().debug("END TEST: %s", __FUNCTION__);
