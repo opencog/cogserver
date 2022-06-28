@@ -46,14 +46,16 @@ read-thru proxy.)
 
 Status
 ------
-**Version 0.9**. All the basic infrastructure is in place, and one
-command actually works. Need to:
+**Version 0.9**. The Write-Through Proxy works. Lightly tested.
+Need to:
 
-* Create unit tests. Tedious and time-consuming.
+* Expand the `WriteThruProxyUnitTest` to test the other four
+  handlers. Also, write unit tests that use the `CogStorageNode`
+  to make sure it works end-to-end.  Tedious and time-consuming.
 
 The above is for the basic WriteThru node. Also need:
 
-* A Read-through node, that passes all Atom read requests onwards,
+* A read-through node, that passes all Atom read requests onwards,
   e.g. so that one doesn't have to load up the AtomSpace on startup,
   but instead only as each Atom is requested.
 

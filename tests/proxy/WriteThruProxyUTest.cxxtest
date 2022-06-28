@@ -68,13 +68,13 @@ public:
 		delete main_loop;
 	}
 
+	// XXX TODO -- test the other four handlers, too.
+
+	// Set basic truth-value setting.
 	void test_set_tv()
 	{
+		int rc;
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
-
-		int rc = system("echo 'config SexprShellModule libwthru-proxy.so\n' | nc -q 0 localhost 17444");
-		if (rc != 0) printf("Error: config failed\n");
-		TS_ASSERT_EQUALS(rc, 0);
 
 		rc = system("echo '(use-modules (opencog persist) (opencog persist-rocks))\n' | nc -q 0 localhost 17444");
 		if (rc != 0) printf("Error: cannot find Rockstorage\n");
@@ -86,6 +86,12 @@ public:
 
 		rc = system("echo '(cog-open sto)\n' | nc -q 0 localhost 17444");
 		if (rc != 0) printf("Error: cannot open storage node\n");
+		TS_ASSERT_EQUALS(rc, 0);
+
+		// First use of the proxy needs to be *after*
+		// the storage nodes have been opened.
+		rc = system("echo 'config SexprShellModule libwthru-proxy.so\n' | nc -q 0 localhost 17444");
+		if (rc != 0) printf("Error: config failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 
 		// The write-through proxy should pass this into RocksDB
@@ -125,6 +131,13 @@ public:
 
 		Handle ha = as->get_node(CONCEPT_NODE, "a");
 		TS_ASSERT_DIFFERS(ha.get(), nullptr);
+
+		TruthValuePtr tvp = ha->getTruthValue();
+		double mean = tvp->get_mean();
+		double conf = tvp->get_confidence();
+
+		TS_ASSERT_LESS_THAN(fabs(mean-0.3), 0.00000001)
+		TS_ASSERT_LESS_THAN(fabs(conf-0.4), 0.00000001)
 
 		rc = system("rm -r /tmp/test-cogserver.rdb");
 		if (rc != 0) printf("Error: cannot remove the test DB\n");
