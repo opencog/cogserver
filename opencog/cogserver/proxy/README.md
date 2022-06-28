@@ -46,11 +46,9 @@ read-thru proxy.)
 
 Status
 ------
-**Version 0.7**. All the basic infrastructure is in place, and one
+**Version 0.9**. All the basic infrastructure is in place, and one
 command actually works. Need to:
 
-* Handle the `cog://example.com?whatever` URL's as described below.
-  (pretty easy, too).
 * Create unit tests. Tedious and time-consuming.
 
 The above is for the basic WriteThru node. Also need:
