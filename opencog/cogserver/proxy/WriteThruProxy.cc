@@ -99,10 +99,10 @@ void WriteThruProxy::setup(SexprEval* sev)
 		std::bind(&WriteThruProxy::cog_extract, this, _1));
 	sev->install_handler("cog-extract-recursive!",
 		std::bind(&WriteThruProxy::cog_extract_recursive, this, _1));
+#endif
 
 	sev->install_handler("cog-set-value!",
 		std::bind(&WriteThruProxy::cog_set_value, this, _1));
-#endif
 	sev->install_handler("cog-set-values!",
 		std::bind(&WriteThruProxy::cog_set_values, this, _1));
 	sev->install_handler("cog-set-tv!",
@@ -123,8 +123,24 @@ return "";
 
 std::string WriteThruProxy::cog_set_value(const std::string& arg)
 {
-return "";
-	//return Commands::cog_set_value(arg);
+	// XXX FIXME Handle space frames
+	size_t pos = 0;
+	Handle atom = Sexpr::decode_atom(arg, pos /* , _space_map */);
+	Handle key = Sexpr::decode_atom(arg, ++pos /* , _space_map */);
+	ValuePtr vp = Sexpr::decode_value(arg, ++pos);
+
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	atom = as->add_atom(atom);
+	key = as->add_atom(key);
+	if (vp)
+		vp = Sexpr::add_atoms(as, vp);
+	as->set_value(atom, key, vp);
+
+	// Loop over all targets, and send them the new value.
+	for (const StorageNodePtr& snp : _targets)
+		snp->store_value(atom, key);
+
+	return "()";
 }
 
 std::string WriteThruProxy::cog_set_values(const std::string& arg)
