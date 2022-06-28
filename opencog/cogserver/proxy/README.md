@@ -46,10 +46,9 @@ read-thru proxy.)
 
 Status
 ------
-**Version 0.5**. All the basic infrastructure is in place, and one
+**Version 0.7**. All the basic infrastructure is in place, and one
 command actually works. Need to:
 
-* Handle the rest of the commands (this should be easy/real easy).
 * Handle the `cog://example.com?whatever` URL's as described below.
   (pretty easy, too).
 * Create unit tests. Tedious and time-consuming.

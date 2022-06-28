@@ -94,12 +94,10 @@ void WriteThruProxy::setup(SexprEval* sev)
 	using namespace std::placeholders;  // for _1, _2, _3...
 
 	// Install dispatch handlers.
-#if 0
 	sev->install_handler("cog-extract!",
 		std::bind(&WriteThruProxy::cog_extract, this, _1));
 	sev->install_handler("cog-extract-recursive!",
 		std::bind(&WriteThruProxy::cog_extract_recursive, this, _1));
-#endif
 
 	sev->install_handler("cog-set-value!",
 		std::bind(&WriteThruProxy::cog_set_value, this, _1));
@@ -109,16 +107,23 @@ void WriteThruProxy::setup(SexprEval* sev)
 		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
 }
 
-std::string WriteThruProxy::cog_extract(const std::string& arg)
+std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
+                                               bool flag)
 {
-return "";
-	//return Commands::cog_extract(arg);
-}
+	// XXX FIXME Handle space frames
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	size_t pos = 0;
+	// Handle h = _base_space->get_atom(Sexpr::decode_atom(arg, pos, _space_map));
+	Handle h = as->get_atom(Sexpr::decode_atom(arg, pos));
+	if (nullptr == h) return "#t";
+	// if (not _base_space->extract_atom(h, flag)) return "#f";
+	if (not as->extract_atom(h, flag)) return "#f";
 
-std::string WriteThruProxy::cog_extract_recursive(const std::string& arg)
-{
-return "";
-	//return Commands::cog_extract_recursive(arg);
+	// Loop over all targets, and extract there as well.
+	for (const StorageNodePtr& snp : _targets)
+		snp->remove_atom(as, h, flag);
+
+	return "#t";
 }
 
 std::string WriteThruProxy::cog_set_value(const std::string& arg)
