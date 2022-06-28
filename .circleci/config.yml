@@ -28,30 +28,21 @@ jobs:
       - run:
           name: Checkout AtomSpace
           command: git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace /ws/atomspace
-      - restore_cache:
-          name: Restore GHC Cache
-          keys:
-            - ghc-{{checksum "/ws/atomspace/opencog/haskell/stack.yaml"}}-{{ arch }}
-      - restore_cache:
-          name: Restore Haskell Deps Cache
-          keys:
-            - haskelldeps-{{checksum "/ws/atomspace/opencog/haskell/stack.yaml"}}-{{checksum "/ws/atomspace/opencog/haskell/opencog-atomspace.cabal"}}-{{ arch }}
       - run:
           name: Install AtomSpace
           command: |
             mkdir -p /ws/atomspace/build
             cd /ws/atomspace/build && cmake .. && make -j2 && make -j2 install
             ldconfig
-      - save_cache:
-          name: Save GHC Cache
-          key: ghc-{{checksum "/ws/atomspace/opencog/haskell/stack.yaml"}}-{{ arch }}
-          paths:
-            - /root/.stack
-      - save_cache:
-          name: Save Haskell Deps Cache
-          key: haskelldeps-{{checksum "/ws/atomspace/opencog/haskell/stack.yaml"}}-{{checksum "/ws/atomspace/opencog/haskell/opencog-atomspace.cabal"}}-{{ arch }}
-          paths:
-            - /ws/atomspace/opencog/haskell/.stack-work
+      - run:
+          name: Checkout RocksStorageNode
+          command: git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-rocks /ws/atomspace-rocks
+      - run:
+          name: Install RocksStorageNode
+          command: |
+            mkdir -p /ws/atomspace-rocks/build
+            cd /ws/atomspace-rocks/build && cmake .. && make -j2 && make -j2 install
+            ldconfig
       - checkout
       - run:
           name: CMake Configure
@@ -77,6 +68,7 @@ jobs:
           paths:
             - cogutil
             - atomspace
+            - atomspace-rocks
             - cogserver
             - ccache
 
@@ -90,14 +82,6 @@ jobs:
     steps:
       - attach_workspace:
           at: /ws/
-      - restore_cache:
-          name: Restore GCH Cache
-          keys:
-            - ghc-{{checksum "/ws/atomspace/opencog/haskell/stack.yaml"}}-{{ arch }}
-      - restore_cache:
-          name: Restore Haskell Deps Cache
-          keys:
-            - haskelldeps-{{checksum "/ws/atomspace/opencog/haskell/stack.yaml"}}-{{checksum "/ws/atomspace/opencog/haskell/opencog-atomspace.cabal"}}-{{ arch }}
       - run:
           name: Install cogutil
           command: cd /ws/cogutil/build && make -j2 install && ldconfig

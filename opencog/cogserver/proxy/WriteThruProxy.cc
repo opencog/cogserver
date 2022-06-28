@@ -36,16 +36,11 @@ DECLARE_MODULE(WriteThruProxy);
 
 WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs)
 {
-printf("duuuude write-thru proxy ctor\n");
 }
 
 void WriteThruProxy::init(void)
 {
-printf("duuuude write-thru proxy init\n");
-
 	AtomSpace* as = &_cogserver.getAtomSpace();
-	_truth_key = as->get_atom(
-		createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
 
 	// Get all of the StorageNodes to which we will be
 	// forwarding writes.
@@ -62,11 +57,15 @@ printf("duuuude write-thru proxy init\n");
 		if (snp->connected())
 		{
 			_targets.push_back(snp);
-printf("duuude will write-thru to %s\n", snp->to_string().c_str());
+			logger().info("[Write-Thru Proxy] Will write-thru to %s\n",
+				snp->to_short_string().c_str());
 		}
 
 		// TODO: check if the StorageNode is read-only.
 	}
+
+	if (0 == _targets.size())
+		logger().info("[Write-Thru Proxy] There aren't any targets to write to!");
 }
 
 WriteThruProxy::~WriteThruProxy()
@@ -84,8 +83,6 @@ printf("duuuude write-thru proxy cfg %s\n", cfg);
 
 void WriteThruProxy::setup(SexprEval* sev)
 {
-printf("duuuude proxy install stufffff!! %p\n", sev);
-
 	// Read-only atomspace ... should check earlier!?
 	AtomSpace* as = &_cogserver.getAtomSpace();
 	if (as->get_read_only())
@@ -97,7 +94,6 @@ printf("duuuude proxy install stufffff!! %p\n", sev);
 	using namespace std::placeholders;  // for _1, _2, _3...
 
 	// Install dispatch handlers.
-#if 0
 	sev->install_handler("cog-extract!",
 		std::bind(&WriteThruProxy::cog_extract, this, _1));
 	sev->install_handler("cog-extract-recursive!",
@@ -107,39 +103,80 @@ printf("duuuude proxy install stufffff!! %p\n", sev);
 		std::bind(&WriteThruProxy::cog_set_value, this, _1));
 	sev->install_handler("cog-set-values!",
 		std::bind(&WriteThruProxy::cog_set_values, this, _1));
-#endif
 	sev->install_handler("cog-set-tv!",
 		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
 }
 
-std::string WriteThruProxy::cog_extract(const std::string& arg)
+std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
+                                               bool flag)
 {
-return "";
-	//return Commands::cog_extract(arg);
-}
+	// XXX FIXME Handle space frames
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	size_t pos = 0;
+	// Handle h = _base_space->get_atom(Sexpr::decode_atom(arg, pos, _space_map));
+	Handle h = as->get_atom(Sexpr::decode_atom(arg, pos));
+	if (nullptr == h) return "#t";
+	// if (not _base_space->extract_atom(h, flag)) return "#f";
+	if (not as->extract_atom(h, flag)) return "#f";
 
-std::string WriteThruProxy::cog_extract_recursive(const std::string& arg)
-{
-return "";
-	//return Commands::cog_extract_recursive(arg);
+	// Loop over all targets, and extract there as well.
+	for (const StorageNodePtr& snp : _targets)
+		snp->remove_atom(as, h, flag);
+
+	return "#t";
 }
 
 std::string WriteThruProxy::cog_set_value(const std::string& arg)
 {
-return "";
-	//return Commands::cog_set_value(arg);
+	// XXX FIXME Handle space frames
+	size_t pos = 0;
+	Handle atom = Sexpr::decode_atom(arg, pos /* , _space_map */);
+	Handle key = Sexpr::decode_atom(arg, ++pos /* , _space_map */);
+	ValuePtr vp = Sexpr::decode_value(arg, ++pos);
+
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	atom = as->add_atom(atom);
+	key = as->add_atom(key);
+	if (vp)
+		vp = Sexpr::add_atoms(as, vp);
+	as->set_value(atom, key, vp);
+
+	// Loop over all targets, and send them the new value.
+	for (const StorageNodePtr& snp : _targets)
+		snp->store_value(atom, key);
+
+	return "()";
 }
 
 std::string WriteThruProxy::cog_set_values(const std::string& arg)
 {
-return "";
-	//return Commands::cog_set_values(arg);
+	size_t pos = 0;
+	Handle h = Sexpr::decode_atom(arg, pos /*, _space_map*/ );
+	pos++; // skip past close-paren
+
+	// XXX FIXME Handle space frames
+	// if (_multi_space)
+
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	h = as->add_atom(h);
+	Sexpr::decode_slist(h, arg, pos);
+
+	// Loop over all targets, and store everything.
+	// In principle, we should be selective, and only pass
+	// on the values we were given... this would require
+	// Sexpr::decode_slist to return a list of keys,
+	// and then we'd have to store one key at a time,
+	// which seems inefficient. But still ... XXX FIXME ?
+	for (const StorageNodePtr& snp : _targets)
+		snp->store_atom(h);
+
+	return "()";
 }
 
 std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 {
-printf("duuude set tv %s\n", arg.c_str());
 	size_t pos = 0;
+	// XXX FIXME Handle space frames
 	// Handle h = Sexpr::decode_atom(arg, pos, _space_map);
 	Handle h = Sexpr::decode_atom(arg, pos);
 	ValuePtr tv = Sexpr::decode_value(arg, ++pos);
@@ -151,11 +188,14 @@ printf("duuude set tv %s\n", arg.c_str());
 	Handle ha = as->add_atom(h);
 	as->set_truthvalue(ha, TruthValueCast(tv));
 
+	// Make sure we can store truth values!
+	if (nullptr == _truth_key)
+		_truth_key = as->add_atom(
+			createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
+
 	// Loop over all targets, and send them the new truth value.
 	for (const StorageNodePtr& snp : _targets)
-	{
 		snp->store_value(ha, _truth_key);
-	}
 
 	return "()";
 }
