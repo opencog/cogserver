@@ -105,6 +105,8 @@ void WriteThruProxy::setup(SexprEval* sev)
 		std::bind(&WriteThruProxy::cog_set_values, this, _1));
 	sev->install_handler("cog-set-tv!",
 		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
+	sev->install_handler("cog-update-value!",
+		std::bind(&WriteThruProxy::cog_update_value, this, _1));
 }
 
 std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
@@ -196,6 +198,32 @@ std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 	// Loop over all targets, and send them the new truth value.
 	for (const StorageNodePtr& snp : _targets)
 		snp->store_value(ha, _truth_key);
+
+	return "()";
+}
+
+std::string WriteThruProxy::cog_update_value(const std::string& arg)
+{
+	size_t pos = 0;
+	Handle atom = Sexpr::decode_atom(arg, pos /* , _space_map */);
+	Handle key = Sexpr::decode_atom(arg, ++pos /* , _space_map */);
+	ValuePtr delta = Sexpr::decode_value(arg, ++pos);
+
+	// Search for optional AtomSpace argument
+	// AtomSpace* as = get_opt_as(arg, pos);
+	AtomSpace* as = &_cogserver.getAtomSpace();
+	atom = as->add_atom(atom);
+	key = as->add_atom(key);
+
+	if (not nameserver().isA(delta->get_type(), FLOAT_VALUE))
+		return "()";
+
+	FloatValuePtr fvp = FloatValueCast(delta);
+	as->increment_count(atom, key, fvp->value());
+
+	// Loop over all targets, and send them the new truth value.
+	for (const StorageNodePtr& snp : _targets)
+		snp->update_value(atom, key, delta);
 
 	return "()";
 }

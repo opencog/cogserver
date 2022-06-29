@@ -41,6 +41,16 @@ class WriteThruProxy : public Proxy
 
 		std::string cog_extract_helper(const std::string&, bool);
 
+		/// Methods that implement the interpreted commands
+		std::string cog_extract(const std::string& arg)
+			{ return cog_extract_helper(arg, false); }
+		std::string cog_extract_recursive(const std::string& arg)
+			{ return cog_extract_helper(arg, true); }
+		std::string cog_set_value(const std::string&);
+		std::string cog_set_values(const std::string&);
+		std::string cog_set_tv(const std::string&);
+		std::string cog_update_value(const std::string&);
+
 	public:
 		WriteThruProxy(CogServer&);
 		virtual ~WriteThruProxy();
@@ -50,16 +60,6 @@ class WriteThruProxy : public Proxy
 		virtual bool config(const char*);
 
 		virtual void setup(SexprEval*);
-
-		/// Methods that implement the interpreted commands
-		std::string cog_extract(const std::string& arg)
-			{ return cog_extract_helper(arg, false); }
-		std::string cog_extract_recursive(const std::string& arg)
-			{ return cog_extract_helper(arg, true); }
-
-		std::string cog_set_value(const std::string&);
-		std::string cog_set_values(const std::string&);
-		std::string cog_set_tv(const std::string&);
 };
 
 /** @}*/
