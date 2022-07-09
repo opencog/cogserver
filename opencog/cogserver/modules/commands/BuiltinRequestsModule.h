@@ -97,7 +97,7 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "stats", do_stats,
        "The columns are:\n"
        "  OPEN-DATE -- when the connection was opened.\n"
        "  THREAD -- the Linux thread-id, as printed by `ps -eLf`\n"
-       "  STATE -- several states possible; `iwait` means witing for input.\n"
+       "  STATE -- several states possible; `iwait` means waiting for input.\n"
        "  NLINE -- number of newlines received by the shell.\n"
        "  LAST-ACTIVITY -- the last time anything was received.\n"
        "  U -- use count. The number of active handlers for the socket.\n"
