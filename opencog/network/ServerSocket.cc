@@ -46,9 +46,9 @@ static void rem_sock(ServerSocket* ss)
 
 std::string ServerSocket::display_stats(void)
 {
-// Temp hack. Send a half-ping, in an attempt to close
-// dead connections.
-half_ping();
+	// Hack(?) Send a half-ping, in an attempt to close
+	// dead connections.
+	half_ping();
 
     std::string rc;
     std::lock_guard<std::mutex> lock(_sock_lock);
@@ -60,7 +60,9 @@ half_ping();
 
     std::sort (sov.begin(), sov.end(),
         [](ServerSocket* sa, ServerSocket* sb) -> bool
-        { return sa->_start_time < sb->_start_time; });
+        { return sa->_start_time == sb->_start_time ?
+				sa->_tid < sb->_tid :
+				sa->_start_time < sb->_start_time; });
 
     // Print the sorted list; use the first to print a header.
     bool hdr = false;
