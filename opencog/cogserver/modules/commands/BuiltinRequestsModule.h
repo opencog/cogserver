@@ -86,7 +86,7 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "stats", do_stats,
        "  tot-cnct: grand total number of network connections opened.\n"
        "  cur-open-socks: number of currently open connections.\n"
        "  num-open-fds: number of open file descriptors.\n"
-       "  stalls: times that open stalled due to htting max-open-cnt.\n"
+       "  stalls: times that open stalled due to hitting max-open-cnt.\n"
        "  tot-lines: total number of newlines received by all shells.\n"
        "  cpu user sys: number of CPU seconds used by server.\n"
        "  maxrss: resident set size, in KB. Taken from `getrusage`.\n"
