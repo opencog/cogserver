@@ -9,6 +9,7 @@
 #ifndef _OPENCOG_SERVER_SOCKET_H
 #define _OPENCOG_SERVER_SOCKET_H
 
+#include <atomic>
 #include <pthread.h>
 #include <boost/asio.hpp>
 
@@ -82,6 +83,8 @@ public:
     /** Attempt to kill the indicated thread. */
     static bool kill(pid_t);
 
+    /** Total line count, handled by all sockets, ever. */
+    static std::atomic_size_t total_line_count;
 }; // class
 
 /** @}*/

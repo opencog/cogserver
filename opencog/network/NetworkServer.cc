@@ -174,10 +174,11 @@ std::string NetworkServer::display_stats(void)
     getrusage(RUSAGE_SELF, &rus);
 
     snprintf(buff, 80,
-        "cpu: %d.%03d secs  user: %ld.%03ld  sys: %ld.%03ld\n",
+        "cpu: %d.%03d secs  user: %ld.%03ld  sys: %ld.%03ld   tot-lines: %lu\n",
         sec, msec,
         rus.ru_utime.tv_sec, rus.ru_utime.tv_usec / 1000,
-        rus.ru_stime.tv_sec, rus.ru_stime.tv_usec / 1000);
+        rus.ru_stime.tv_sec, rus.ru_stime.tv_usec / 1000,
+        ServerSocket::total_line_count.load());
     rc += buff;
 
     snprintf(buff, 80,

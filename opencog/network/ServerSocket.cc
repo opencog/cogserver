@@ -155,6 +155,8 @@ bool ServerSocket::kill(pid_t tid)
 
 // ==================================================================
 
+std::atomic_size_t ServerSocket::total_line_count(0);
+
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
@@ -334,6 +336,7 @@ void ServerSocket::handle_connection(void)
 
             _last_activity = time(nullptr);
             _line_count++;
+            total_line_count++;
             _status = RUN;
             OnLine(line);
         }
