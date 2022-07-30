@@ -1,10 +1,10 @@
 # ------------------------------------------------------------
 
 ADD_LIBRARY (network SHARED
-	ConsoleSocket
-	GenericShell
-	NetworkServer
-	ServerSocket
+	ConsoleSocket.cc
+	GenericShell.cc
+	NetworkServer.cc
+	ServerSocket.cc
 )
 
 TARGET_LINK_LIBRARIES(network

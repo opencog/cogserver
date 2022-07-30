@@ -1,8 +1,8 @@
 
 ADD_LIBRARY (builtinreqs MODULE
-	BuiltinRequestsModule
-	ModuleManagement
-	ShutdownRequest
+	BuiltinRequestsModule.cc
+	ModuleManagement.cc
+	ShutdownRequest.cc
 )
 
 TARGET_LINK_LIBRARIES(builtinreqs

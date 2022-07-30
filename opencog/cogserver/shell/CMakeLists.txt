@@ -9,8 +9,8 @@ IF (HAVE_CYTHON)
 	)
 
 	ADD_LIBRARY (py-shell SHARED
-		PythonShell
-		PythonShellModule
+		PythonShell.cc
+		PythonShellModule.cc
 	)
 
 	TARGET_LINK_LIBRARIES(py-shell
@@ -26,8 +26,8 @@ IF (HAVE_CYTHON)
 ENDIF (HAVE_CYTHON)
 
 ADD_LIBRARY (scheme-shell SHARED
-	SchemeShell
-	SchemeShellModule
+	SchemeShell.cc
+	SchemeShellModule.cc
 )
 
 TARGET_LINK_LIBRARIES(scheme-shell
@@ -39,8 +39,8 @@ TARGET_LINK_LIBRARIES(scheme-shell
 )
 
 ADD_LIBRARY (sexpr-shell SHARED
-	SexprShell
-	SexprShellModule
+	SexprShell.cc
+	SexprShellModule.cc
 )
 
 TARGET_LINK_LIBRARIES(sexpr-shell
@@ -51,8 +51,8 @@ TARGET_LINK_LIBRARIES(sexpr-shell
 )
 
 ADD_LIBRARY (json-shell SHARED
-	JsonShell
-	JsonShellModule
+	JsonShell.cc
+	JsonShellModule.cc
 )
 
 TARGET_LINK_LIBRARIES(json-shell
@@ -63,9 +63,9 @@ TARGET_LINK_LIBRARIES(json-shell
 )
 
 ADD_LIBRARY (top-shell SHARED
-	TopEval
-	TopShell
-	TopShellModule
+	TopEval.cc
+	TopShell.cc
+	TopShellModule.cc
 )
 
 TARGET_LINK_LIBRARIES(top-shell

@@ -1,12 +1,12 @@
 # ------------------------------------------------------------
 
 ADD_LIBRARY (server SHARED
-	BaseServer
-	CogServer
-	ModuleManager
-	Request
-	RequestManager
-	ServerConsole
+	BaseServer.cc
+	CogServer.cc
+	ModuleManager.cc
+	Request.cc
+	RequestManager.cc
+	ServerConsole.cc
 )
 
 TARGET_LINK_LIBRARIES(server
@@ -23,7 +23,7 @@ IF (HAVE_GUILE)
 	INCLUDE_DIRECTORIES (${GUILE_INCLUDE_DIRS})
 
 	ADD_LIBRARY (guile-cogserver SHARED
-		CogServerSCM
+		CogServerSCM.cc
 	)
 
 	TARGET_LINK_LIBRARIES(guile-cogserver
@@ -40,7 +40,7 @@ ENDIF (HAVE_GUILE)
 # ------------------------------------------------------------
 
 ADD_EXECUTABLE(cogserver
-	CogServerMain
+	CogServerMain.cc
 )
 
 TARGET_LINK_LIBRARIES(cogserver

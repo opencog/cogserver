@@ -1,6 +1,6 @@
 
 ADD_LIBRARY (wthru-proxy SHARED
-	WriteThruProxy
+	WriteThruProxy.cc
 )
 
 TARGET_LINK_LIBRARIES(wthru-proxy

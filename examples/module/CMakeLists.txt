@@ -2,6 +2,6 @@
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 
 ADD_LIBRARY (example_module SHARED
-	ExampleModule
+	ExampleModule.cc
 )
 
