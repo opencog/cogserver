@@ -20,9 +20,17 @@ Why?
 ----
 The idea of a network console server seems to be so generic that you
 might think that there would be dozens of such servers to choose from.
-No such luck: I was unable to find even one  generic network server.
-It seems that no one has ever felt the need to create and publish one,
-as a generic tool. Oh well. So here we are.
+No such luck: back around 2008, I was unable to find even one  generic
+network server.  It seems that no one has ever felt the need to create
+and publish one, as a generic tool. Oh well. So here we are.
+
+Since then ... the world has changed, and now there really are dozens of
+such servers.  The strongest contender (that provides a C++ interface;
+we need C++ to interact with the AtomSpace) is
+[libhv](https://github.com/ithewei/libhv). Most of code here, such as
+`ServerSocket.cc` cuould be ripped out and replaced by `libhv`. But no
+matter: the current code is stable, it works, its fast, it's debugged.
+So no changes are planned.
 
 Operation
 ---------
