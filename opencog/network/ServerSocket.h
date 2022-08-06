@@ -28,8 +28,6 @@ namespace opencog
 class ServerSocket
 {
 private:
-    boost::asio::ip::tcp::socket* _socket;
-
     // A count of the number of concurrent open sockets. This is used
     // to limit the number of connections to the server, so that it
     // doesn't crash with a `accept: Too many open files` error.
@@ -42,15 +40,7 @@ private:
     static size_t _num_open_stalls;
 
 protected:
-    /**
-     * Connection callback: called whenever a new connection arrives
-     */
-    virtual void OnConnection(void) = 0;
-
-    /**
-     * Callback: called when a client has sent us a line of text.
-     */
-    virtual void OnLine (const std::string&) = 0;
+    boost::asio::ip::tcp::socket* _socket;
 
     /**
      * Report human-readable stats for this socket.
@@ -68,8 +58,8 @@ public:
     ServerSocket(void);
     virtual ~ServerSocket();
 
-    void set_connection(boost::asio::ip::tcp::socket*);
-    void handle_connection(void);
+    virtual void set_connection(boost::asio::ip::tcp::socket*);
+    virtual void handle_connection(void) = 0;
 
     /**
      * Sends data to the client
