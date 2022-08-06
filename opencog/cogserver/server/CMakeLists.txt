@@ -7,6 +7,7 @@ ADD_LIBRARY (server SHARED
 	Request.cc
 	RequestManager.cc
 	ServerConsole.cc
+	WebServer.cc
 )
 
 TARGET_LINK_LIBRARIES(server
@@ -70,5 +71,6 @@ INSTALL (FILES
 	Request.h
 	RequestClassInfo.h
 	RequestManager.h
+	WebServer.h
 	DESTINATION "include/opencog/${PROJECT_NAME}/server"
 )

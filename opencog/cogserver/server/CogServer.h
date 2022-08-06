@@ -52,7 +52,8 @@ class CogServer :
     public ModuleManager
 {
 protected:
-    NetworkServer* _networkServer;
+    NetworkServer* _consoleServer;
+    NetworkServer* _webServer;
     bool _running;
 
     /** Protected; singleton instance! Bad things happen when there is
@@ -80,14 +81,18 @@ public:
      *  after the current interaction is finished. */
     virtual void stop(void);
 
-    /** Starts the network server and adds the default command line
-     *  server socket on the port specified by the configuration
+    void set_max_open_sockets(int max_open_socks=10);
+
+    /** Starts the network console server; this provides a command
+     *  line server socket on the port specified by the configuration
      *  parameter SERVER_PORT */
-    virtual void enableNetworkServer(int port=17001,
-                                     int max_open_socks=10);
+    virtual void enableNetworkServer(int port=17001);
+
+    virtual void enableWebServer(int port=18080);
 
     /** Stops the network server and closes all the open server sockets. */
     virtual void disableNetworkServer(void);
+    virtual void disableWebServer(void);
 
     /*** Request API ***/
     Request* createRequest(const std::string& id) {
