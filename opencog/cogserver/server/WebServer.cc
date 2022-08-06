@@ -50,7 +50,6 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 			throw SilentException();
 		}
 		_url = line.substr(4, line.find(" ", 4) - 4);
-printf("duuude _url=>>%s<<\n", _url.c_str());
 		return;
 	}
 
@@ -60,9 +59,21 @@ printf("duuude _url=>>%s<<\n", _url.c_str());
 	}
 	if (not _http_handshake)
 	{
+		static const char* upg = "Upgrade: websocket";
+		if (0 == line.compare(0, strlen(upg), upg))
+			_websock_handshake = true;
 		return;
 	}
 
+	// If we are here, that the full HTTP header was received.
+	// If it wasn't a websocket header, then just print stats.
+	if (not _websock_handshake)
+	{
+		Send (html_stats());
+		throw SilentException();
+	}
+
+	// Check for supported protocols
 	if (0 != _url.compare("/json"))
 	{
 		logger().info("[WebServer] Unsupported request %s", line.c_str());
@@ -75,17 +86,15 @@ printf("duuude _url=>>%s<<\n", _url.c_str());
 		throw SilentException();
 	}
 
-
-	Send (html_stats());
-	throw SilentException();
-/*
-      "HTTP/1.1 101 Switching Protocols\r\n"
-      "Upgrade: websocket\r\n"
-       "Connection: Upgrade\r\n"
-       "\r\n";
+	std::string respose =
+		"HTTP/1.1 101 Switching Protocols\n"
+		"Upgrade: websocket\n"
+		"Connection: Upgrade\n"
+		"\n";
       // Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
       // Sec-WebSocket-Protocol: chat
-*/
+
+	Send(response);
 }
 
 // ==================================================================
