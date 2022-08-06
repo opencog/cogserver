@@ -20,10 +20,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <opencog/persist/json/JsonEval.h>
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 
+#include "WebEval.h"
 #include "WebShell.h"
 
 using namespace opencog;
@@ -44,7 +44,7 @@ WebShell::~WebShell()
 
 GenericEval* WebShell::get_evaluator(void)
 {
-	return JsonEval::get_evaluator(&cogserver().getAtomSpace());
+	return WebEval::get_evaluator(&cogserver().getAtomSpace());
 }
 
 /* ===================== END OF FILE ============================ */
