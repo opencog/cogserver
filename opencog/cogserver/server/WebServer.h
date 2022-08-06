@@ -29,6 +29,7 @@ private:
 	bool _first_line;
 	bool _http_handshake;
 	bool _websock_handshake;
+	std::string _url;
 
 protected:
 	virtual void OnConnection(void);

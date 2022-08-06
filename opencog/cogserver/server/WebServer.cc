@@ -49,27 +49,35 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 				"\r\n");
 			throw SilentException();
 		}
-
-		if (0 != line.compare(4, 6, "/json "))
-		{
-			logger().info("[WebServer] Unsupported request %s", line.c_str());
-			Send("HTTP/1.1 404 Not Found\r\n"
-				"Server: CogServer\r\n"
-				"Content-Type: text/plain\r\n"
-				"\r\n"
-				"404 Not Found\r\n"
-				"Cogserver currently supports only /json\r\n");
-			throw SilentException();
-		}
+		_url = line.substr(4, line.find(" ", 4) - 4);
+printf("duuude _url=>>%s<<\n", _url.c_str());
+		return;
 	}
 
 	if (not _http_handshake and 0 == line.size())
 	{
 		_http_handshake = true;
+	}
+	if (not _http_handshake)
+	{
+		return;
+	}
 
-		Send (html_stats());
+	if (0 != _url.compare("/json"))
+	{
+		logger().info("[WebServer] Unsupported request %s", line.c_str());
+		Send("HTTP/1.1 404 Not Found\r\n"
+			"Server: CogServer\r\n"
+			"Content-Type: text/plain\r\n"
+			"\r\n"
+			"404 Not Found\r\n"
+			"Cogserver currently supports only /json\r\n");
 		throw SilentException();
 	}
+
+
+	Send (html_stats());
+	throw SilentException();
 /*
       "HTTP/1.1 101 Switching Protocols\r\n"
       "Upgrade: websocket\r\n"
