@@ -79,7 +79,7 @@ void CogServer::enableNetworkServer(int port)
 /// Open the given port number for web service.
 void CogServer::enableWebServer(int port)
 {
-#if HAVE_SSL
+#ifdef HAVE_OPENSSL
     if (_webServer) return;
     _webServer = new NetworkServer(port);
 
@@ -89,7 +89,7 @@ void CogServer::enableWebServer(int port)
     _running = true;
     logger().info("Web server running on port %d", port);
 #else
-    printf("CogServer compiled without WebSockets.");
+    printf("CogServer compiled without WebSockets.\n");
     logger().info("CogServer compiled without WebSockets.");
 #endif // HAVE_SSL
 }

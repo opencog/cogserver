@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-#if HAVE_OPENSSL
+#ifdef HAVE_OPENSSL
 
 #include <string>
 #include <openssl/sha.h>
@@ -102,13 +102,10 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 printf("duude webkey=>>%s<<\n", _webkey.c_str());
 	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-#if 0
-
-  const unsigned char str[] = "Original String";
-  unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
-  SHA1(str, sizeof(str) - 1, hash);
-
-#endif
+	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
+	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size() - 1, hash);
+	// XXX TODO convert has to base64
+printf("duuude has=>>%s<<\n", hash);
 
 	std::string response =
 		"HTTP/1.1 101 Switching Protocols\r\n"
