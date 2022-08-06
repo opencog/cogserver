@@ -82,15 +82,35 @@ WebShellModule::shelloutRequest::execute(void)
 	OC_ASSERT(con, "Invalid Request object");
 
 printf("duuude new web shell command\n");
+	if (_parameters.size() != 2)
+	{
+		send("HTTP/1.1 400 Bad Request\r\n");
+		return false;
+	}
+
+	// Server Error
+	if (_parameters.back().compare("HTTP/1.1") != 0)
+	{
+		send("HTTP/1.1 501 Not Implemented\r\n");
+		return false;
+	}
+
+	// We only do json right now.
+	if (_parameters.front().compare("/json") != 0)
+	{
+		send("HTTP/1.1 404 Not Found\r\n");
+		return false;
+	}
+
+	send("HTTP/1.1 200 OK\r\n"
+		"Server: CogServer\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"yooo hoooo\r\n");
+
 	WebShell *sh = new WebShell();
 	sh->set_socket(con);
 	sh->hush_prompt(true);
-	send("yoohoo");
-
-	for (const std::string& param : _parameters)
-	{
-printf("duude params = %s\n", param.c_str());
-	}
 
 	return true;
 }
