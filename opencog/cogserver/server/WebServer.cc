@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+#if HAVE_OPENSSL
+
 #include <string>
 #include <openssl/sha.h>
 
@@ -154,4 +156,5 @@ std::string WebServer::html_stats(void)
 	return response;
 }
 
+#endif // HAVE_OPENSSL
 // ==================================================================

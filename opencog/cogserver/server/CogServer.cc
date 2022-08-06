@@ -79,6 +79,7 @@ void CogServer::enableNetworkServer(int port)
 /// Open the given port number for web service.
 void CogServer::enableWebServer(int port)
 {
+#if HAVE_SSL
     if (_webServer) return;
     _webServer = new NetworkServer(port);
 
@@ -87,6 +88,10 @@ void CogServer::enableWebServer(int port)
     _webServer->run(make_console);
     _running = true;
     logger().info("Web server running on port %d", port);
+#else
+    printf("CogServer compiled without WebSockets.");
+    logger().info("CogServer compiled without WebSockets.");
+#endif // HAVE_SSL
 }
 
 void CogServer::disableNetworkServer()
@@ -132,9 +137,9 @@ void CogServer::serverLoop()
     // doing this in other threads, e.g. the thread that calls stop()
     // or the thread that calls disableNetworkServer() will lead to
     // races.
-    delete _webServer;
+    if (_webServer) delete _webServer;
     _webServer = nullptr;
-    delete _consoleServer;
+    if (_consoleServer) delete _consoleServer;
     _consoleServer = nullptr;
 
     logger().info("Stopped CogServer");
