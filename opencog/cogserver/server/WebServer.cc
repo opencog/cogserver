@@ -22,14 +22,15 @@ using namespace opencog;
 WebServer::WebServer(void) :
 	_first_line(false),
 	_http_handshake(false),
-	_websock_handshake(false)
+	_websock_handshake(false),
+	_websock_open(false)
 {
-printf("duuude web ctor\n");
+printf("duuude web ctor this=%p\n", this);
 }
 
 WebServer::~WebServer()
 {
-printf("duuude web dtor\n");
+printf("duuude web dtor this=%p\n", this);
 }
 
 // ==================================================================
@@ -65,7 +66,14 @@ printf("duude connect\n");
 
 void WebServer::OnLine(const std::string& line)
 {
-printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_str());
+printf("duude line %d %d %d %p >>%s<<\n", _http_handshake,
+_websock_handshake, _websock_open, this, line.c_str());
+if(0x7f < (unsigned int) line[0]) {
+for(size_t i=0; i< line.size(); i++) {
+printf("%x ", (unsigned int) line[i]);
+}
+printf("\n");
+}
 
 	if (not _first_line)
 	{
@@ -102,7 +110,7 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 		return;
 	}
 
-	// If we are here, that the full HTTP header was received.
+	// If we are here, then the full HTTP header was received.
 	// If it wasn't a websocket header, then just print stats.
 	if (not _websock_handshake)
 	{
@@ -125,26 +133,36 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 	}
 #endif
 
-	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	// If we are here, we've received an HTTP header, and it
+	// as a WebSocket header. Do the websocket reply, if we
+	// haven't done so yet.
+	if (not _websock_open)
+	{
+		_websock_open = true;
+		_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
-	memset(hash, 0, SHA_DIGEST_LENGTH);
-	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size(), hash);
-	std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
+		unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
+		memset(hash, 0, SHA_DIGEST_LENGTH);
+		SHA1((const unsigned char*) _webkey.c_str(), _webkey.size(), hash);
+		std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
 
-	std::string response =
-		"HTTP/1.1 101 Switching Protocols\r\n"
-		"Upgrade: websocket\r\n"
-		"Connection: Upgrade\r\n"
-		"Sec-WebSocket-Accept: ";
-	response += b64hash;
-	response +=
-		"\r\n"
-		"\r\n";
-      // Sec-WebSocket-Protocol: chat
+		std::string response =
+			"HTTP/1.1 101 Switching Protocols\r\n"
+			"Upgrade: websocket\r\n"
+			"Connection: Upgrade\r\n"
+			"Sec-WebSocket-Accept: ";
+		response += b64hash;
+		response +=
+			"\r\n"
+			"\r\n";
 
-printf("duuuude respo=%s\n", response.c_str());
-	Send(response);
+printf("duuuude %p websoc response=\n%s\n", this, response.c_str());
+		Send(response);
+		return;
+	}
+printf("duuuude websock %p is bidi\n", this);
+
+	Send("yeah baby\n");
 }
 
 // ==================================================================

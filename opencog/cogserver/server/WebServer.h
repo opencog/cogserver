@@ -27,6 +27,7 @@ private:
 	bool _first_line;
 	bool _http_handshake;
 	bool _websock_handshake;
+	bool _websock_open;
 	std::string _url;
 	std::string _webkey;
 
