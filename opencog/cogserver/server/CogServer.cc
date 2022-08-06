@@ -58,7 +58,7 @@ void CogServer::enableNetworkServer(int port, int max_open_socks)
     if (_networkServer) return;
     _networkServer = new NetworkServer(port);
 
-    ConsoleSocket::set_max_open_sockets(max_open_socks);
+    ServerSocket::set_max_open_sockets(max_open_socks);
     auto make_console = [](void)->ServerSocket*
             { return new ServerConsole(); };
     _networkServer->run(make_console);
