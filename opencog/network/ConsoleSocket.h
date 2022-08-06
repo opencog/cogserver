@@ -65,13 +65,13 @@ protected:
     /**
      * Connection callback: called whenever a new connection arrives
      */
-    virtual void OnConnection(void) = 0;
+    void OnConnection(void) = 0;
 
     /**
      * OnLine callback: called when a newline-terminated line is received
      * from the client.
      */
-    virtual void OnLine(const std::string&) = 0;
+    void OnLine(const std::string&) = 0;
 
     /** Status printing */
     virtual std::string connection_header(void);
@@ -83,8 +83,6 @@ public:
      */
     ConsoleSocket(void);
     ~ConsoleSocket();
-
-    virtual void handle_connection(void);
 
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
     void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }
