@@ -8,8 +8,6 @@
 #ifndef _OPENCOG_WEB_SERVER_H
 #define _OPENCOG_WEB_SERVER_H
 
-#include <condition_variable>
-#include <mutex>
 #include <string>
 
 #include <opencog/network/ServerSocket.h>
@@ -30,6 +28,7 @@ private:
 	bool _http_handshake;
 	bool _websock_handshake;
 	std::string _url;
+	std::string _webkey;
 
 protected:
 	virtual void OnConnection(void);

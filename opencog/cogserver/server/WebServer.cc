@@ -6,6 +6,7 @@
  */
 
 #include <string>
+#include <openssl/sha.h>
 
 #include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
@@ -61,7 +62,15 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 	{
 		static const char* upg = "Upgrade: websocket";
 		if (0 == line.compare(0, strlen(upg), upg))
-			_websock_handshake = true;
+			{ _websock_handshake = true; return; }
+
+		static const char* key = "Sec-WebSocket-Key: ";
+		if (0 == line.compare(0, strlen(key), key))
+			{ _webkey = line.substr(strlen(key)); return; }
+
+		// TODO validate
+		// static const char* org = "Origin: ";
+
 		return;
 	}
 
@@ -73,6 +82,7 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 		throw SilentException();
 	}
 
+#if 0
 	// Check for supported protocols
 	if (0 != _url.compare("/json"))
 	{
@@ -81,16 +91,28 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 			"Server: CogServer\r\n"
 			"Content-Type: text/plain\r\n"
 			"\r\n"
-			"404 Not Found\r\n"
-			"Cogserver currently supports only /json\r\n");
+			"404 Not Found\n"
+			"Cogserver currently supports only /json\n");
 		throw SilentException();
 	}
+#endif
 
-	std::string respose =
-		"HTTP/1.1 101 Switching Protocols\n"
-		"Upgrade: websocket\n"
-		"Connection: Upgrade\n"
-		"\n";
+printf("duude webkey=>>%s<<\n", _webkey.c_str());
+	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+#if 0
+
+  const unsigned char str[] = "Original String";
+  unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
+  SHA1(str, sizeof(str) - 1, hash);
+
+#endif
+
+	std::string response =
+		"HTTP/1.1 101 Switching Protocols\r\n"
+		"Upgrade: websocket\r\n"
+		"Connection: Upgrade\r\n"
+		"\r\n";
       // Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
       // Sec-WebSocket-Protocol: chat
 
