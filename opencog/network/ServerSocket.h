@@ -30,6 +30,17 @@ class ServerSocket
 private:
     boost::asio::ip::tcp::socket* _socket;
 
+    // A count of the number of concurrent open sockets. This is used
+    // to limit the number of connections to the server, so that it
+    // doesn't crash with a `accept: Too many open files` error.
+    static unsigned int _max_open_sockets;
+    static volatile unsigned int _num_open_sockets;
+    static std::mutex _max_mtx;
+    static std::condition_variable _max_cv;
+
+    // A count of the number of times the max condition was reached.
+    static size_t _num_open_stalls;
+
 protected:
     /**
      * Connection callback: called whenever a new connection arrives
@@ -85,6 +96,14 @@ public:
 
     /** Total line count, handled by all sockets, ever. */
     static std::atomic_size_t total_line_count;
+
+    /**
+     * Status reporting API.
+     */
+    static void set_max_open_sockets(unsigned int m) { _max_open_sockets = m; }
+    static unsigned int get_max_open_sockets() { return _max_open_sockets; }
+    static unsigned int get_num_open_sockets() { return _num_open_sockets; }
+    static size_t get_num_open_stalls() { return _num_open_stalls; }
 }; // class
 
 /** @}*/

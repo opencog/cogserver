@@ -23,6 +23,7 @@ using namespace opencog;
 // Infrastrucure for printing connection stats
 //
 static char START[6] = "start";
+static char BLOCK[6] = "block";
 static char IWAIT[6] = "iwait";
 static char DTOR [6] = "dtor ";
 static char RUN  [6] = " run ";
@@ -157,6 +158,24 @@ bool ServerSocket::kill(pid_t tid)
 
 std::atomic_size_t ServerSocket::total_line_count(0);
 
+// _max_open_sockets is the largest number of concurrently open
+// sockets we will allow in the server. Currently set to 60.
+// Note that each SchemeShell (actually, SchemeEval) will open
+// another half-dozen pipes and what-not, so actually, the number
+// of open files will increase by 4 or 6 or so for each network
+// connection. With the default `ulimit -a` of 1024 open files,
+// this should work OK (including open files for the logger, the
+// databases, etc.).
+//
+// July 2019 - change to 10. When it is 60, it just thrashes like
+// crazy, mostly because there are 60 threads thrashing in guile
+// on some lock. And that's pretty pointless...
+unsigned int ServerSocket::_max_open_sockets = 10;
+volatile unsigned int ServerSocket::_num_open_sockets = 0;
+std::mutex ServerSocket::_max_mtx;
+std::condition_variable ServerSocket::_max_cv;
+size_t ServerSocket::_num_open_stalls = 0;
+
 ServerSocket::ServerSocket(void) :
     _socket(nullptr)
 {
@@ -164,9 +183,25 @@ ServerSocket::ServerSocket(void) :
     _last_activity = _start_time;
     _tid = 0;
     _pth = 0;
-    _status = START;
+    _status = BLOCK;
     _line_count = 0;
     add_sock(this);
+
+    // Block here, if there are too many concurrently-open sockets.
+    std::unique_lock<std::mutex> lck(_max_mtx);
+    _num_open_sockets++;
+
+    // If we are just below the max limit, send a half-ping in an
+    // attempt to force any half-open connections to close.
+    if (_max_open_sockets <= _num_open_sockets)
+        half_ping();
+
+    // Report how often we stall because we hit the max.
+    if (_max_open_sockets < _num_open_sockets)
+        _num_open_stalls ++;
+
+    while (_max_open_sockets < _num_open_sockets) _max_cv.wait(lck);
+    _status = START;
 }
 
 ServerSocket::~ServerSocket()
@@ -178,6 +213,13 @@ ServerSocket::~ServerSocket()
     delete _socket;
     _socket = nullptr;
     rem_sock(this);
+
+    // If anyone is waiting for a socket, let them know that
+    // we've freed one up.
+    std::unique_lock<std::mutex> mxlck(_max_mtx);
+    _num_open_sockets--;
+    _max_cv.notify_all();
+    mxlck.unlock();
 }
 
 void ServerSocket::Send(const std::string& cmd)
