@@ -23,7 +23,7 @@ namespace opencog
  */
 
 /**
- * This class implements the ServerSocket that handles the primary
+ * This class implements a ServerSocket that handles the primary
  * interface of the server: the plain text command line.
  *
  * There may be multiple instances of ConsoleSocket to support multiple

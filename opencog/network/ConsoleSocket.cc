@@ -114,7 +114,7 @@ void ConsoleSocket::handle_connection(void)
     prctl(PR_SET_NAME, "cogserv:connect", 0, 0, 0);
     _tid = gettid();
     _pth = pthread_self();
-    logger().debug("ServerSocket::handle_connection()");
+    logger().debug("ConsoleSocket::handle_connection()");
     OnConnection();
     boost::asio::streambuf b;
     while (true)
@@ -145,7 +145,7 @@ void ConsoleSocket::handle_connection(void)
             } else if (e.code() == boost::asio::error::not_connected) {
                 break;
             } else {
-                logger().error("ServerSocket::handle_connection(): Error reading data. Message: %s", e.what());
+                logger().error("ConsoleSocket::handle_connection(): Error reading data. Message: %s", e.what());
             }
         }
     }
@@ -167,7 +167,7 @@ void ConsoleSocket::handle_connection(void)
     if (not line.empty())
         OnLine(line);
 
-    logger().debug("ServerSocket::exiting handle_connection()");
+    logger().debug("ConcoleSocket::exiting handle_connection()");
 
     // In the standard scenario, ConsoleSocket inherits from this, and
     // so deleting this will cause the ConsoleSocket dtor to run. This
