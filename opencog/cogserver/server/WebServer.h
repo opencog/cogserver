@@ -28,6 +28,8 @@ class WebServer : public ServerSocket
 private:
 
 protected:
+	virtual void OnConnection(void);
+	virtual void OnLine (const std::string&);
 
 public:
     WebServer(void);

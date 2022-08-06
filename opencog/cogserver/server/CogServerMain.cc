@@ -65,7 +65,7 @@ static const char* DEFAULT_CONFIG_PATHS[] =
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p port] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
+        << " [-p <console port>] [-w <webserver port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
         << "If multiple config files are specified, then these are\n"
         << "loaded sequentially, with the values in later files\n"
         << "overwriting the earlier ones. -D Option values override\n"
@@ -101,9 +101,10 @@ int main(int argc, char *argv[])
        setlocale(LC_CTYPE, "en_US.UTF-8");
     }
 
-    int port = 17001;
+    int console_port = 17001;
+    int webserver_port = 18080;
 
-    static const char *optString = "cp:D:h";
+    static const char *optString = "cpw:D:h";
     int c = 0;
     std::vector<std::string> configFiles;
     std::vector<std::pair<std::string, std::string>> configPairs;
@@ -137,7 +138,9 @@ int main(int argc, char *argv[])
             }
             configPairs.push_back({optionName, value});
         } else if (c == 'p') {
-            port = atoi(optarg);
+            console_port = atoi(optarg);
+        } else if (c == 'w') {
+            webserver_port = atoi(optarg);
         } else {
             // unknown option (or help)
             usage(progname.c_str());
@@ -231,7 +234,8 @@ int main(int argc, char *argv[])
     cogserve.loadModules();
 
     // enable the network server and run the server's main loop
-    cogserve.enableNetworkServer(port);
+    cogserve.enableNetworkServer(console_port);
+    cogserve.enableWebServer(webserver_port);
     cogserve.serverLoop();
     exit(0);
 }

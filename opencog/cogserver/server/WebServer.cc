@@ -25,4 +25,16 @@ WebServer::~WebServer()
 printf("duuude web dtor\n");
 }
 
+void WebServer::OnConnection(void)
+{
+printf("duude connect\n");
+}
+
+void WebServer::OnLine(const std::string& line)
+{
+printf("duude line >>%s<<\n", line.c_str());
+}
+
+
+
 // ==================================================================
