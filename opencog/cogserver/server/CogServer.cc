@@ -160,10 +160,7 @@ void CogServer::runLoopStep(void)
 
 std::string CogServer::display_stats(void)
 {
-    return
-		_consoleServer->display_stats()
-		+ "\nweb:\n"
-		+ _webServer->display_stats();
+    return _consoleServer->display_stats();
 }
 
 std::string CogServer::stats_legend(void)

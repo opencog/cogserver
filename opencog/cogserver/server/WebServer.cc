@@ -78,11 +78,11 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 			"  <meta charset=\"UTF-8\"></head>"
 			"<body>"
 			"<h2>CogServer Stats</h2>"
-			"<pre>";
+			"<pre>\n";
 		response += cogserver().display_stats();
 		response +=
 			"</pre>"
-			"<h2>StatsLegend</h2>"
+			"<h2>Stats Legend</h2>"
 			"<pre>";
 		response += CogServer::stats_legend();
 		response += "</pre></body></html>";
@@ -104,7 +104,10 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 
 std::string WebServer::connection_stats(void)
 {
-	return "webs           ";
+	std::string rc = ServerSocket::connection_stats();
+	rc += " 1 "; // use_count (fake)
+	rc += "webs           ";
+	return rc;
 }
 
 // ==================================================================
