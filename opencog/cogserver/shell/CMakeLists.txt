@@ -62,6 +62,18 @@ TARGET_LINK_LIBRARIES(json-shell
 	${COGUTIL_LIBRARY}
 )
 
+ADD_LIBRARY (web-shell SHARED
+	WebShell.cc
+	WebShellModule.cc
+)
+
+TARGET_LINK_LIBRARIES(web-shell
+	network
+	server
+	${ATOMSPACE_LIBRARY}
+	${COGUTIL_LIBRARY}
+)
+
 ADD_LIBRARY (top-shell SHARED
 	TopEval.cc
 	TopShell.cc
