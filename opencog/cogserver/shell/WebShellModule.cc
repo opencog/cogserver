@@ -81,18 +81,16 @@ WebShellModule::shelloutRequest::execute(void)
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
+printf("duuude new web shell command\n");
 	WebShell *sh = new WebShell();
 	sh->set_socket(con);
 	sh->hush_prompt(true);
-	send("yoo");
+	send("yoohoo");
 
-#if 0
-	if (!_parameters.empty())
+	for (const std::string& param : _parameters)
 	{
-		std::string &arg = _parameters.front();
-		// if (arg == "quiet" || arg == "hush") hush = true;
+printf("duude params = %s\n", param.c_str());
 	}
-#endif
 
 	return true;
 }

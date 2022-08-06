@@ -29,6 +29,9 @@ using namespace opencog;
 WebEval::WebEval()
 	: GenericEval()
 {
+printf("duude new eval ======================================\n");
+	_recvd_header = false;
+	_sent_header = false;
 }
 
 WebEval::~WebEval()
@@ -41,21 +44,33 @@ WebEval::~WebEval()
  */
 void WebEval::eval_expr(const std::string &expr)
 {
-printf("duuude got >>%s<<\n", expr.c_str());
+printf("duuude got %x %x >>%s<<\n", expr[0], expr[1], expr.c_str());
 	if (0 == expr.size()) return;
-	if (0 == expr.compare("\n")) return;
+	if (0 == expr.compare("\n") or 0 == expr.compare("\r\n"))
+	{
+printf("duuude received already\n");
+		_recvd_header = true;
+		return;
+	}
 
-	// On startup, the initial message sent is "foo".
-	// This is in WebShellModule();
-	if (0 == expr.compare("foo\n")) return;
-
-	// Right now, we don't have any built-in commands ...
-	// if we did, they'd be handled here.
-	// _msg = "Unknown web command >>" + expr;
+	if (0 == expr.compare("json\n")) return;
 }
 
 std::string WebEval::poll_result()
 {
+// printf("enter poll, %d %d\n", _recvd_header, _sent_header);
+	if (_recvd_header and not _sent_header)
+	{
+		_sent_header = true;
+		std::string rply =
+			"HTTP/1.1 101 Switching Protocols\r\n"
+			"Upgrade: websocket\r\n"
+			"Connection: Upgrade\r\n"
+			"\r\n";
+			// Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
+			// Sec-WebSocket-Protocol: chat
+		return rply;
+	}
 	return "";
 }
 

@@ -30,8 +30,8 @@ using namespace opencog;
 
 WebShell::WebShell(void)
 {
-	normal_prompt = "web> ";
-	abort_prompt = "web> ";
+	normal_prompt = "websocket> ";
+	abort_prompt = "websocket> ";
 	pending_prompt = "... ";
 
 	show_prompt = true;

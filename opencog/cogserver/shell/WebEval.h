@@ -41,6 +41,8 @@ class WebEval : public GenericEval
 {
 	private:
 		WebEval();
+		bool _recvd_header;
+		bool _sent_header;
 
 	public:
 		virtual ~WebEval();
