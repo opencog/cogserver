@@ -44,14 +44,21 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 
 		if (0 != line.compare(0, 4, "GET "))
 		{
-			Send("HTTP/1.1 501 Not Implemented\n\n");
+			Send("HTTP/1.1 501 Not Implemented\r\n"
+				"Server: CogServer\r\n"
+				"\r\n");
 			throw SilentException();
 		}
 
 		if (0 != line.compare(4, 6, "/json "))
 		{
-			Send("HTTP/1.1 404 Not Found\n\n");
-			SetCloseAndDelete();
+			logger().info("[WebServer] Unsupported request %s", line.c_str());
+			Send("HTTP/1.1 404 Not Found\r\n"
+				"Server: CogServer\r\n"
+				"Content-Type: text/plain\r\n"
+				"\r\n"
+				"404 Not Found\r\n"
+				"Cogserver currently supports only /json\r\n");
 			throw SilentException();
 		}
 	}
@@ -68,6 +75,7 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 			"yooo hoooo\r\n";
 
 		Send (response);
+throw SilentException();
 		return;
 	}
 /*
@@ -84,7 +92,7 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 
 std::string WebServer::connection_stats(void)
 {
-    return "webs           ";
+	return "webs           ";
 }
 
 // ==================================================================
