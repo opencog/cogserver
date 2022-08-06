@@ -125,16 +125,12 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 	}
 #endif
 
-printf("duuude webkeys=>>%s<<\n", _webkey.c_str());
 	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
-	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size() - 1, hash);
-for (unsigned char c: hash)
-printf("%x ", c);
-printf("\n");
+	memset(hash, 0, SHA_DIGEST_LENGTH);
+	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size(), hash);
 	std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
-printf("duuude has=>>%s<<\n", b64hash.c_str());
 
 	std::string response =
 		"HTTP/1.1 101 Switching Protocols\r\n"
@@ -145,9 +141,9 @@ printf("duuude has=>>%s<<\n", b64hash.c_str());
 	response +=
 		"\r\n"
 		"\r\n";
-      // Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
       // Sec-WebSocket-Protocol: chat
 
+printf("duuuude respo=%s\n", response.c_str());
 	Send(response);
 }
 
