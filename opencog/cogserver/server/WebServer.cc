@@ -70,13 +70,25 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 		std::string response =
 			"HTTP/1.1 200 OK\r\n"
 			"Server: CogServer\r\n"
-			"Content-Type: text/plain\r\n"
+			"Content-Type: text/html\r\n"
 			"\r\n"
-			"yooo hoooo\r\n";
+			"<!DOCTYPE html>"
+			"<html>"
+			"<head><title>CogServer Stats</title>"
+			"  <meta charset=\"UTF-8\"></head>"
+			"<body>"
+			"<h2>CogServer Stats</h2>"
+			"<pre>";
+		response += cogserver().display_stats();
+		response +=
+			"</pre>"
+			"<h2>StatsLegend</h2>"
+			"<pre>";
+		response += CogServer::stats_legend();
+		response += "</pre></body></html>";
 
 		Send (response);
-throw SilentException();
-		return;
+		throw SilentException();
 	}
 /*
       "HTTP/1.1 101 Switching Protocols\r\n"

@@ -112,6 +112,8 @@ public:
     /** Print human-readable stats about the cogserver */
     std::string display_stats(void);
 
+    static std::string stats_legend(void);
+
 }; // class
 
 // Singleton instance of the cogserver
