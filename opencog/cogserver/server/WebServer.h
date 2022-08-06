@@ -35,6 +35,7 @@ protected:
 	virtual void OnLine (const std::string&);
 
 	virtual std::string connection_stats(void);
+	std::string html_stats(void);
 public:
     WebServer(void);
     ~WebServer();

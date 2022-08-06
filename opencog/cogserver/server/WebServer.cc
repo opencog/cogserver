@@ -67,27 +67,7 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 	{
 		_http_handshake = true;
 
-		std::string response =
-			"HTTP/1.1 200 OK\r\n"
-			"Server: CogServer\r\n"
-			"Content-Type: text/html\r\n"
-			"\r\n"
-			"<!DOCTYPE html>"
-			"<html>"
-			"<head><title>CogServer Stats</title>"
-			"  <meta charset=\"UTF-8\"></head>"
-			"<body>"
-			"<h2>CogServer Stats</h2>"
-			"<pre>\n";
-		response += cogserver().display_stats();
-		response +=
-			"</pre>"
-			"<h2>Stats Legend</h2>"
-			"<pre>";
-		response += CogServer::stats_legend();
-		response += "</pre></body></html>";
-
-		Send (response);
+		Send (html_stats());
 		throw SilentException();
 	}
 /*
@@ -108,6 +88,31 @@ std::string WebServer::connection_stats(void)
 	rc += " 1 "; // use_count (fake)
 	rc += "webs           ";
 	return rc;
+}
+
+std::string WebServer::html_stats(void)
+{
+	std::string response =
+		"HTTP/1.1 200 OK\r\n"
+		"Server: CogServer\r\n"
+		"Content-Type: text/html\r\n"
+		"\r\n"
+		"<!DOCTYPE html>"
+		"<html>"
+		"<head><title>CogServer Stats</title>"
+		"  <meta charset=\"UTF-8\"></head>"
+		"<body>"
+		"<h2>CogServer Stats</h2>"
+		"<pre>\n";
+	response += cogserver().display_stats();
+	response +=
+		"</pre>"
+		"<h2>Stats Legend</h2>"
+		"<pre>";
+	response += CogServer::stats_legend();
+	response += "</pre></body></html>";
+
+	return response;
 }
 
 // ==================================================================
