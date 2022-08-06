@@ -13,6 +13,7 @@
 #include <mutex>
 #include <set>
 
+#include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/network/ServerSocket.h>
@@ -393,6 +394,10 @@ void ServerSocket::handle_connection(void)
             } else {
                 logger().error("ServerSocket::handle_connection(): Error reading data. Message: %s", e.what());
             }
+        }
+        catch (const SilentException& e)
+        {
+            break;
         }
     }
 

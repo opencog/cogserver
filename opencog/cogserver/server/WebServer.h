@@ -34,6 +34,7 @@ protected:
 	virtual void OnConnection(void);
 	virtual void OnLine (const std::string&);
 
+	virtual std::string connection_stats(void);
 public:
     WebServer(void);
     ~WebServer();

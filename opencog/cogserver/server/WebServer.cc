@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
 
@@ -44,15 +45,14 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 		if (0 != line.compare(0, 4, "GET "))
 		{
 			Send("HTTP/1.1 501 Not Implemented\n\n");
-			SetCloseAndDelete();
-			return;
+			throw SilentException();
 		}
 
 		if (0 != line.compare(4, 6, "/json "))
 		{
 			Send("HTTP/1.1 404 Not Found\n\n");
 			SetCloseAndDelete();
-			return;
+			throw SilentException();
 		}
 	}
 
@@ -80,6 +80,11 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 */
 }
 
+// ==================================================================
 
+std::string WebServer::connection_stats(void)
+{
+    return "webs           ";
+}
 
 // ==================================================================
