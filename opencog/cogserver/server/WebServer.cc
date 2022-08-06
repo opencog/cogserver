@@ -32,6 +32,32 @@ WebServer::~WebServer()
 printf("duuude web dtor\n");
 }
 
+// ==================================================================
+
+static std::string base64_encode(unsigned char* buf, int len)
+{
+	std::string out;
+
+	unsigned int val = 0;
+	int valb = -6;
+	for (int i=0; i<len; i++)
+	{
+		unsigned char c = buf[i];
+		val = (val << 8) + c;
+		valb += 8;
+		while (valb >= 0)
+		{
+			out.push_back("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[(val>>valb)&0x3F]);
+			valb -= 6;
+		}
+	}
+	if (valb > -6) out.push_back("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[((val<<8)>>(valb+8))&0x3F]);
+	while (out.size()%4) out.push_back('=');
+	return out;
+}
+
+// ==================================================================
+
 void WebServer::OnConnection(void)
 {
 printf("duude connect\n");
@@ -99,18 +125,25 @@ printf("duude line %d %d >>%s<<\n", _http_handshake, _websock_handshake, line.c_
 	}
 #endif
 
-printf("duude webkey=>>%s<<\n", _webkey.c_str());
+printf("duuude webkeys=>>%s<<\n", _webkey.c_str());
 	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
 	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size() - 1, hash);
-	// XXX TODO convert has to base64
-printf("duuude has=>>%s<<\n", hash);
+for (unsigned char c: hash)
+printf("%x ", c);
+printf("\n");
+	std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
+printf("duuude has=>>%s<<\n", b64hash.c_str());
 
 	std::string response =
 		"HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"
 		"Connection: Upgrade\r\n"
+		"Sec-WebSocket-Accept: ";
+	response += b64hash;
+	response +=
+		"\r\n"
 		"\r\n";
       // Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
       // Sec-WebSocket-Protocol: chat
