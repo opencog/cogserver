@@ -60,7 +60,7 @@ WebShellModule::shelloutRequest::info(void)
 {
 	static const RequestClassInfo _cci("GET",
 		"Enter the WebSockets shell",
-		"Usage: GET /foo HTTP/1.1\n\n"
+		"Usage: GET /json HTTP/1.1\n\n"
 		"Enter the WebSockets JSON/Javascript interpreter shell. This shell\n"
 		"provides a very minimal Javascript shell, with just enough functions\n"
 		"to get Atoms and Values from an AtomSpace.\n\n"

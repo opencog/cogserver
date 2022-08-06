@@ -37,10 +37,11 @@ WebEval::~WebEval()
 
 /* ============================================================== */
 /**
- * Evaluate an basic Javascript/JSON commands.
+ * Evaluate HTTP handshake.
  */
 void WebEval::eval_expr(const std::string &expr)
 {
+printf("duuude got >>%s<<\n", expr.c_str());
 	if (0 == expr.size()) return;
 	if (0 == expr.compare("\n")) return;
 
@@ -55,11 +56,12 @@ void WebEval::eval_expr(const std::string &expr)
 
 std::string WebEval::poll_result()
 {
-	return "duude";
+	return "";
 }
 
 void WebEval::begin_eval()
 {
+printf("duuude begin eval\n");
 }
 
 /**

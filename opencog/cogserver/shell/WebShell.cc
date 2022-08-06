@@ -35,7 +35,7 @@ WebShell::WebShell(void)
 	pending_prompt = "... ";
 
 	show_prompt = true;
-	_name = "json";
+	_name = "webs";
 }
 
 WebShell::~WebShell()
