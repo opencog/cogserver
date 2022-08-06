@@ -111,6 +111,14 @@ IF(105100 EQUAL ${Boost_VERSION})
 ENDIF(105100 EQUAL ${Boost_VERSION})
 MESSAGE(STATUS "Boost version ${Boost_VERSION} found.")
 
+FIND_PACKAGE(OpenSSL)
+IF (OPENSSL_FOUND)
+	ADD_DEFINITIONS(-DHAVE_OPENSSL)
+	SET(HAVE_OPENSSL 1)
+ELSE (OPENSSL_FOUND)
+	MESSAGE(STATUS "OpenSSL missing: needed for WebSockets.")
+ENDIF (OPENSSL_FOUND)
+
 # ----------------------------------------------------------
 # Needed for unit tests
 
@@ -261,10 +269,11 @@ FIND_PACKAGE(Doxygen)
 # ===================================================================
 # Show a summary of what we found, what we will do.
 
-SUMMARY_ADD("CogServer" "CogServer network server" HAVE_SERVER)
-SUMMARY_ADD("Cython bindings" "Cython (python) bindings" HAVE_CYTHON)
-SUMMARY_ADD("Doxygen" "Code documentation" DOXYGEN_FOUND)
+SUMMARY_ADD("CogServer"    "CogServer network server" HAVE_SERVER)
+SUMMARY_ADD("WebSockets"   "WebSockets network server" HAVE_OPENSSL)
+SUMMARY_ADD("Cython"       "Cython (python) bindings" HAVE_CYTHON)
+SUMMARY_ADD("Doxygen"      "Code documentation" DOXYGEN_FOUND)
 SUMMARY_ADD("Python tests" "Python bindings nose tests" HAVE_NOSETESTS)
-SUMMARY_ADD("Unit tests" "Unit tests" CXXTEST_FOUND)
+SUMMARY_ADD("Unit tests"   "Unit tests" CXXTEST_FOUND)
 
 SUMMARY_SHOW()
