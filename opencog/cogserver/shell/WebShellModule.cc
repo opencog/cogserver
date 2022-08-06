@@ -81,10 +81,13 @@ WebShellModule::shelloutRequest::execute(void)
 	ServerConsole *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-printf("duuude new web shell command\n");
+printf("duuude new web shell command %s %s\n",
+_parameters.front().c_str(),
+_parameters.back().c_str());
 	if (_parameters.size() != 2)
 	{
 		send("HTTP/1.1 400 Bad Request\r\n");
+		con->Exit();
 		return false;
 	}
 
@@ -92,6 +95,7 @@ printf("duuude new web shell command\n");
 	if (_parameters.back().compare("HTTP/1.1") != 0)
 	{
 		send("HTTP/1.1 501 Not Implemented\r\n");
+		con->Exit();
 		return false;
 	}
 
@@ -99,6 +103,7 @@ printf("duuude new web shell command\n");
 	if (_parameters.front().compare("/json") != 0)
 	{
 		send("HTTP/1.1 404 Not Found\r\n");
+		con->Exit();
 		return false;
 	}
 
