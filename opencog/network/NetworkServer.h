@@ -14,7 +14,7 @@
 #include <thread>
 
 #include <boost/asio.hpp>
-#include <opencog/network/ConsoleSocket.h>
+#include <opencog/network/ServerSocket.h>
 
 namespace opencog
 {
@@ -48,7 +48,7 @@ protected:
 
     /** The network server's main listener thread.  */
     void listen();
-    ConsoleSocket* (*_getConsole)(void);
+    ServerSocket* (*_getServer)(void);
 
     /** monitoring stats */
     time_t _start_time;
@@ -65,7 +65,7 @@ public:
     ~NetworkServer();
 
     /** Start and stop the server */
-    void run(ConsoleSocket* (*)(void));
+    void run(ServerSocket* (*)(void));
     void stop();
 
     /** Print network stats in human-readable tabular form */

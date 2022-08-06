@@ -18,6 +18,7 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
+#include <opencog/network/ServerSocket.h>
 #include <opencog/network/ConsoleSocket.h>
 
 #include "NetworkServer.h"
@@ -98,17 +99,17 @@ void NetworkServer::listen(void)
         // The total number of concurrently open sockets is managed by
         // keeping a count in ConsoleSocket, and blocking when there are
         // too many.
-        ConsoleSocket* ss = _getConsole();
+        ServerSocket* ss = _getServer();
         ss->set_connection(sock);
-        std::thread(&ConsoleSocket::handle_connection, ss).detach();
+        std::thread(&ServerSocket::handle_connection, ss).detach();
     }
 }
 
-void NetworkServer::run(ConsoleSocket* (*handler)(void))
+void NetworkServer::run(ServerSocket* (*handler)(void))
 {
     if (_running) return;
     _running = true;
-    _getConsole = handler;
+    _getServer = handler;
 
     try {
         _io_service.run();
