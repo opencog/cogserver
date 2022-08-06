@@ -26,6 +26,9 @@ namespace opencog
 class WebServer : public ServerSocket
 {
 private:
+	bool _first_line;
+	bool _http_handshake;
+	bool _websock_handshake;
 
 protected:
 	virtual void OnConnection(void);
