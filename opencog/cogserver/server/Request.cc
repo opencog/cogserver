@@ -14,6 +14,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
+#include <opencog/network/ConsoleSocket.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 
 #include "Request.h"
@@ -30,12 +31,18 @@ Request::~Request()
     logger().debug("[Request] destructor");
     if (_console)
     {
-        _console->OnRequestComplete();
+        // Send out a prompt to telnet users.
+        //... Except for shells, which provide their own prompt.
+        if (nullptr == _console->getShell())
+        {
+            ServerConsole* sc = dynamic_cast<ServerConsole*>(_console);
+            if (sc) sc->sendPrompt();
+        }
         _console->put();  // dec use count we are done with it.
     }
 }
 
-void Request::set_console(ServerConsole* con)
+void Request::set_console(ConsoleSocket* con)
 {
     // The "exit" request causes the console to be destroyed,
     // rendering the _console pointer invalid. However, generic
@@ -60,7 +67,7 @@ void Request::send(const std::string& msg) const
     // The _console might be zero for the exit request, because the
     // exit command destroys the socket, and then tries to send a
     // reply on the socket it just destroyed.
-    if (_console) _console->SendResult(msg);
+    if (_console) _console->Send(msg);
 }
 
 void Request::setParameters(const std::list<std::string>& params)

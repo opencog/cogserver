@@ -28,7 +28,7 @@
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
-#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/network/ConsoleSocket.h>
 
 #include "SchemeShell.h"
 #include "ShellModule.h"
@@ -87,7 +87,7 @@ SchemeShellModule::shelloutRequest::info(void)
 bool
 SchemeShellModule::shelloutRequest::execute(void)
 {
-	ServerConsole *con = this->get_console();
+	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
 	SchemeShell *sh = new SchemeShell();

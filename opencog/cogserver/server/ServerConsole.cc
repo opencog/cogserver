@@ -238,23 +238,4 @@ void ServerConsole::OnLine(const std::string& line)
     }
 }
 
-void ServerConsole::OnRequestComplete()
-{
-    logger().debug("[ServerConsole] OnRequestComplete");
-
-    // Shells will send their own prompt
-    if (nullptr == _shell) sendPrompt();
-}
-
-void ServerConsole::Exit()
-{
-    logger().debug("[ServerConsole] ExecuteExitRequest");
-    SetCloseAndDelete();
-}
-
-void ServerConsole::SendResult(const std::string& res)
-{
-    Send(res);
-}
-
 // ==================================================================

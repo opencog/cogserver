@@ -29,11 +29,6 @@ namespace opencog
  * simultaneous clients. This is done by creating a separate thread and
  * dispatching a client socket for each client that connects to the
  * server socket.
- *
- * We provide a callback method: `OnRequestComplete()`. This callback
- * tells the server socket that request processing has finished (so that
- * the command prompt can be sent to the client immediately, while the
- * request itself is processed 'asynchronously'.
  */
 class ServerConsole : public ConsoleSocket
 {
@@ -73,26 +68,9 @@ public:
     ~ServerConsole();
 
     /**
-     * OnRequestComplete: called when a request has finished. It
-     * just sends another command prompt (configuration parameter
-     * "PROMPT") to the client.
-     */
-    void OnRequestComplete();
-
-    /**
-     * Sends a request result to the client,
-     */
-    void SendResult(const std::string&);
-
-    /**
      * Send a prompt string.
      */
     void sendPrompt();
-
-    /**
-     * Called when a Request exits the connection
-     */
-    void Exit();
 
 }; // class
 
