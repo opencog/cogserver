@@ -482,9 +482,10 @@ std::string ServerSocket::get_websocket_line()
     uint32_t mask;
     boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
 
-    // XXX FIXME stackoverflow if paylen is too large for the stack.
-    // AIEEE ... should we malloc ??? Ugh.
-    char data[paylen+1];
+    // Use malloc inside of std::string to get a buffer.
+    std::string blob;
+    blob.resize(paylen+1);
+    char* data = blob.data();
     boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
 
     // Bulk unmask the data, using XOR.
@@ -509,7 +510,7 @@ std::string ServerSocket::get_websocket_line()
     // using websockets. If teh user wants to search for newline
     // chars in the datastream, they are welcome to. We're not
     // going to futz with that.
-    return data;
+    return blob;
 }
 
 // ==================================================================
