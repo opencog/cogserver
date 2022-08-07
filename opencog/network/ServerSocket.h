@@ -65,6 +65,9 @@ protected:
      */
     virtual void OnLine (const std::string&) = 0;
 
+    /// If true, then decode websocket frames.
+    bool _decode_frames;
+
     /**
      * Report human-readable stats for this socket.
      */
@@ -83,6 +86,7 @@ public:
 
     void set_connection(boost::asio::ip::tcp::socket*);
     void handle_connection(void);
+    void set_framing_mode(void) { _decode_frames = true; }
 
     /**
      * Sends data to the client

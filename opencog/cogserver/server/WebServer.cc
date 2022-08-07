@@ -158,6 +158,10 @@ printf("\n");
 
 printf("duuuude %p websoc response=\n%s\n", this, response.c_str());
 		Send(response);
+
+		// After this point, websockets will send frames. Yuck.
+		// Need to change the receiving mode to decode them.
+		set_framing_mode();
 		return;
 	}
 printf("duuuude websock %p is bidi\n", this);

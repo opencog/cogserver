@@ -178,7 +178,8 @@ std::condition_variable ServerSocket::_max_cv;
 size_t ServerSocket::_num_open_stalls = 0;
 
 ServerSocket::ServerSocket(void) :
-    _socket(nullptr)
+    _socket(nullptr),
+    _decode_frames(false)
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
@@ -222,6 +223,8 @@ ServerSocket::~ServerSocket()
     _max_cv.notify_all();
     mxlck.unlock();
 }
+
+// ==================================================================
 
 void ServerSocket::Send(const std::string& cmd)
 {
@@ -305,6 +308,16 @@ void ServerSocket::SetCloseAndDelete()
     _status = DOWN;
 }
 
+// ==================================================================
+
+void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
+{
+    if (_socket) delete _socket;
+    _socket = sock;
+}
+
+// ==================================================================
+
 typedef boost::asio::buffers_iterator<
     boost::asio::streambuf::const_buffers_type> bitter;
 
@@ -348,10 +361,11 @@ match_eol_or_escape(bitter begin, bitter end)
     return std::make_pair(i, false);
 }
 
-void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
+std::pair<bitter, bool>
+frame_match_eol(bitter begin, bitter end)
 {
-    if (_socket) delete _socket;
-    _socket = sock;
+    bitter i = begin;
+    return std::make_pair(i, false);
 }
 
 // ==================================================================
@@ -370,6 +384,7 @@ void ServerSocket::handle_connection(void)
     {
         try
         {
+printf("duude read loop decode frames=%d\n", _decode_frames);
             _status = IWAIT;
             boost::asio::read_until(*_socket, b, match_eol_or_escape);
             std::istream is(&b);
