@@ -30,11 +30,6 @@ namespace opencog
  * simultaneous clients. This is done by creating a separate thread and
  * dispatching a client socket for each client that connects to the
  * server socket.
- *
- * We provide a callback method: 'OnRequestCompleted()'. This callback
- * tells the server socket that request processing has finished (so that
- * the command prompt can be sent to the client immediately, while the
- * request itself is processed 'asynchronously'.
  */
 class ConsoleSocket : public ServerSocket
 {
