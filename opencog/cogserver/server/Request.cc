@@ -14,7 +14,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
-#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/network/ConsoleSocket.h>
 
 #include "Request.h"
 
@@ -29,13 +29,10 @@ Request::~Request()
 {
     logger().debug("[Request] destructor");
     if (_console)
-    {
-        _console->OnRequestComplete();
         _console->put();  // dec use count we are done with it.
-    }
 }
 
-void Request::set_console(ServerConsole* con)
+void Request::set_console(ConsoleSocket* con)
 {
     // The "exit" request causes the console to be destroyed,
     // rendering the _console pointer invalid. However, generic
