@@ -252,9 +252,4 @@ void ServerConsole::Exit()
     SetCloseAndDelete();
 }
 
-void ServerConsole::SendResult(const std::string& res)
-{
-    Send(res);
-}
-
 // ==================================================================

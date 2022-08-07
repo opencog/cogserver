@@ -80,17 +80,12 @@ public:
     void OnRequestComplete();
 
     /**
-     * Sends a request result to the client,
-     */
-    void SendResult(const std::string&);
-
-    /**
      * Send a prompt string.
      */
     void sendPrompt();
 
     /**
-     * Called when a Request exits the connection
+     * Called when a Request closes the socket connection.
      */
     void Exit();
 

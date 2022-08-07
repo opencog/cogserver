@@ -60,7 +60,7 @@ void Request::send(const std::string& msg) const
     // The _console might be zero for the exit request, because the
     // exit command destroys the socket, and then tries to send a
     // reply on the socket it just destroyed.
-    if (_console) _console->SendResult(msg);
+    if (_console) _console->Send(msg);
 }
 
 void Request::setParameters(const std::list<std::string>& params)
