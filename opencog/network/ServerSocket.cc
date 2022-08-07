@@ -420,7 +420,7 @@ std::string ServerSocket::get_websocket_line()
     unsigned char fop;
     boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
 
-    bool finbit = fop & 0x80;
+    // bool finbit = fop & 0x80;
     unsigned char opcode = fop & 0xf;
 
     // Handle pings
@@ -453,14 +453,19 @@ std::string ServerSocket::get_websocket_line()
 
         // And wait for the next frame...
         boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
-        finbit = fop & 0x80;
+        // finbit = fop & 0x80;
         opcode = fop & 0xf;
     }
+
+    // Socket close message .. just quit.
+    if (8 == opcode)
+        throw SilentException();
 
     // We only support text data.
     if (1 != opcode)
     {
-        logger().warn("Not expecting binary websocket data");
+        logger().warn("Not expecting binary websocket data; opcode=%d",
+            opcode);
         throw SilentException();
     }
 
@@ -500,8 +505,6 @@ std::string ServerSocket::get_websocket_line()
     // Null-terminated string.
     data[paylen] = 0x0;
 
-// XXX FIXME .. if fintbit is non-zero, should we wait for more ?
-printf("duude finbit=%d\n", finbit);
     // We're not actually going to use a line protocol, when we're
     // using websockets. If teh user wants to search for newline
     // chars in the datastream, they are welcome to. We're not
