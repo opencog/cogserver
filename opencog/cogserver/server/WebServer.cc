@@ -146,7 +146,6 @@ void WebServer::OnLine(const std::string& line)
 			"\r\n"
 			"\r\n";
 
-printf("duuuude %p websoc response=\n%s\n", this, response.c_str());
 		Send(response);
 
 		// After this point, websockets will send frames. Yuck.
@@ -156,7 +155,7 @@ printf("duuuude %p websoc response=\n%s\n", this, response.c_str());
 	}
 printf("duuuude websock %p is bidi\n", this);
 
-	Send("yeah baby\n");
+	Send("yeah baby go for it\n");
 }
 
 // ==================================================================

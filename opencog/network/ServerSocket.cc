@@ -430,18 +430,33 @@ printf("duude fin=%d opcod=%d\n", finbit, opcode);
     size_t paylen = mpay & 0x7f;
 printf("duude maskbit=%d paylen=%lu\n", maskbit, paylen);
 
-    if (maskbit)
-    {
-        uint32_t mask;
-        boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
-printf("duude mask=%x\n", mask);
-    }
+    // XXX TODO it is an error if maskbit is not set...
+    uint32_t mask;
+    boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
 
-    char data[paylen];
+    char data[paylen+1];
     boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
 printf("duuude read paylen=%lu\n", paylen);
 
-    std::string line;
+    // bulk unmaske the data, using XOR
+    uint32_t *dp = (uint32_t *) data;
+    size_t i=0;
+    while (i < paylen)
+    {
+        *dp = *dp ^ mask;
+        ++dp;
+        i += 4;
+    }
+
+    // unmask any remaining bytes
+    i -= 4;
+    for (unsigned int j=0; j<i%4; j++)
+        data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
+
+    // null-terminated string.
+    data[paylen] = 0x0;
+    std::string line(data);
+printf ("duuude decoded as %s\n", data);
     return line;
 }
 
