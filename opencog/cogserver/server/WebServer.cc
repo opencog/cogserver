@@ -40,23 +40,27 @@ void WebServer::OnConnection(void)
 		throw SilentException();
 	}
 
-	// We expect teh URL to have the form
+	// We expect the URL to have the form /json or /scm or
+	// whatever, and, stripping away the leading slash, it
+	// should be one of the supported comands.
+	std::string cmdName = _url.substr(1);
+	CogServer& cs = cogserver();
+	Request* request = cs.createRequest(cmdName);
 
+printf("duuude cmd=%s<< rq=%p\n", cmdName.c_str(), request);
 
-#if 0
-	// Check for supported protocols
-	if (0 != _url.compare("/json"))
+	// Reject URL's we don't know about.
+	if (nullptr == request)
 	{
-		logger().info("[WebServer] Unsupported request %s", line.c_str());
+		logger().info("[WebServer] Unsupported request %s", _url.c_str());
 		Send("HTTP/1.1 404 Not Found\r\n"
 			"Server: CogServer\r\n"
 			"Content-Type: text/plain\r\n"
 			"\r\n"
 			"404 Not Found\n"
-			"Cogserver currently supports only /json\n");
+			"The Cogserver doesn't know about " + _url + "\n");
 		throw SilentException();
 	}
-#endif
 
 }
 

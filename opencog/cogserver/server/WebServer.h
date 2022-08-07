@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include <opencog/network/ServerSocket.h>
+#include <opencog/network/ConsoleSocket.h>
 
 namespace opencog
 {
@@ -20,8 +20,11 @@ namespace opencog
 
 /**
  * This class implements a super-simple WebSockets server.
+ * The actual WebSockets protocol is handled in class ServerSocket.
+ * The shell handling is in class ConsoleSocket.
+ * All that we do is provide some glue.
  */
-class WebServer : public ServerSocket
+class WebServer : public ConsoleSocket
 {
 protected:
 	virtual void OnConnection(void);
