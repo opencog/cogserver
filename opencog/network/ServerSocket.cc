@@ -569,19 +569,23 @@ void ServerSocket::handle_connection(void)
     _last_activity = time(nullptr);
     _status = CLOSE;
 
-    // If the data sent to us is not new-line terminated, then
-    // there may still be some bytes sitting in the buffer. Get
-    // them and forward them on.  These are typically scheme
-    // strings issued from netcat, that simply did not have
-    // newlines at the end.
-    std::istream is(&b);
-    std::string line;
-    std::getline(is, line);
-    if (not line.empty() and line[line.length()-1] == '\r') {
-        line.erase(line.end()-1);
+    // Perform cleanup at end, if in telnet mode.
+    if (not _do_frame_io)
+    {
+        // If the data sent to us is not new-line terminated, then
+        // there may still be some bytes sitting in the buffer. Get
+        // them and forward them on.  These are typically scheme
+        // strings issued from netcat, that simply did not have
+        // newlines at the end.
+        std::istream is(&b);
+        std::string line;
+        std::getline(is, line);
+        if (not line.empty() and line[line.length()-1] == '\r') {
+            line.erase(line.end()-1);
+        }
+        if (not line.empty())
+            OnLine(line);
     }
-    if (not line.empty())
-        OnLine(line);
 
     logger().debug("ServerSocket::exiting handle_connection()");
 
