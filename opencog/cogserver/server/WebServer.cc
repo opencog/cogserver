@@ -25,12 +25,10 @@ WebServer::WebServer(void) :
 	_websock_handshake(false),
 	_websock_open(false)
 {
-printf("duuude web ctor this=%p\n", this);
 }
 
 WebServer::~WebServer()
 {
-printf("duuude web dtor this=%p\n", this);
 }
 
 // ==================================================================
@@ -59,22 +57,14 @@ static std::string base64_encode(unsigned char* buf, int len)
 
 // ==================================================================
 
+// Called before any data is sent/received.
 void WebServer::OnConnection(void)
 {
-printf("duude connect\n");
 }
 
+// Called for each newline-terminated line received.
 void WebServer::OnLine(const std::string& line)
 {
-printf("duude line %d %d %d %p >>%s<<\n", _http_handshake,
-_websock_handshake, _websock_open, this, line.c_str());
-if(0x7f < (unsigned int) line[0]) {
-for(size_t i=0; i< line.size(); i++) {
-printf("%x ", (unsigned int) line[i]);
-}
-printf("\n");
-}
-
 	if (not _first_line)
 	{
 		_first_line = true;
@@ -160,8 +150,8 @@ printf("duuuude %p websoc response=\n%s\n", this, response.c_str());
 		Send(response);
 
 		// After this point, websockets will send frames. Yuck.
-		// Need to change the receiving mode to decode them.
-		set_framing_mode();
+		// Need to change the mode to work with frames.
+		set_frame_mode();
 		return;
 	}
 printf("duuuude websock %p is bidi\n", this);

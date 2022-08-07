@@ -179,7 +179,7 @@ size_t ServerSocket::_num_open_stalls = 0;
 
 ServerSocket::ServerSocket(void) :
     _socket(nullptr),
-    _decode_frames(false)
+    _do_frame_io(false)
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
@@ -228,10 +228,27 @@ ServerSocket::~ServerSocket()
 
 void ServerSocket::Send(const std::string& cmd)
 {
+    if (not _do_frame_io)
+    {
+        Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
+        return;
+    }
+
+    // If we are here, we have to perform websockets framing.
+    size_t paylen = cmd.size();
+    char header[2];
+    header[0] = 0x81;
+    header[1] = (char) paylen;
+    Send(boost::asio::const_buffer(header, 2));
+    Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
+}
+
+void ServerSocket::Send(boost::asio::const_buffer buf)
+{
     OC_ASSERT(_socket, "Use of socket after it's been closed!\n");
 
     boost::system::error_code error;
-    boost::asio::write(*_socket, boost::asio::buffer(cmd),
+    boost::asio::write(*_socket, buf,
                        boost::asio::transfer_all(), error);
 
     // The most likely cause of an error is that the remote side has
@@ -239,14 +256,14 @@ void ServerSocket::Send(const std::string& cmd)
     // I beleive this is a ENOTCON errno, maybe others as well.
     // (for example, ECONNRESET `Connection reset by peer`)
     // Don't log these harmless errors.
+    // Do log true failures.
     if (error.value() != boost::system::errc::success and
         error.value() != boost::asio::error::not_connected and
         error.value() != boost::asio::error::broken_pipe and
         error.value() != boost::asio::error::bad_descriptor and
         error.value() != boost::asio::error::connection_reset)
-        logger().warn("ServerSocket::Send(): %s on thread 0x%x\n"
-                      "Attempted to send: %s",
-             error.message().c_str(), pthread_self(), cmd.c_str());
+        logger().warn("ServerSocket::Send(): %s on thread 0x%x\n",
+             error.message().c_str(), pthread_self());
 }
 
 // As far as I can tell, boost::asio is not actually thread-safe,
@@ -420,7 +437,7 @@ void ServerSocket::handle_connection(void)
         {
             _status = IWAIT;
             std::string line;
-            if (not _decode_frames)
+            if (not _do_frame_io)
                line = get_telnet_line(b);
             else
                line = get_websocket_line();
