@@ -528,7 +528,10 @@ void ServerSocket::handle_connection(void)
     _tid = gettid();
     _pth = pthread_self();
     logger().debug("ServerSocket::handle_connection()");
-    OnConnection();
+
+    // telent sockets have no setup to do.
+    if (not _is_websocket)
+        OnConnection();
     boost::asio::streambuf b;
     while (true)
     {

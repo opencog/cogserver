@@ -81,29 +81,21 @@ void ServerSocket::HandshakeLine(const std::string& line)
 		return;
 	}
 
-	// If we are here, then the full HTTP header was received.
-	// If it wasn't a websocket header, then just print stats.
-	// This is the server stats formated as HTML.
-	if (not _websock_handshake)
-	{
-		// Send (html_stats());
-		throw SilentException();
-	}
+	// If we are here, then the full HTTP header was received. This
+	// is enough to get started: call the user's OnConnection()
+	// method. The user is supposed to check two things:
+	// (a) Do they like the URL in the header? If not, they
+	//     should send some response e.g. 404 Not Found
+	//     and then `throw SilentException()` to close the sock.
+	// (b) Was an actual WebSocket negotiated? If not, then the
+	//     user should send some response, e.g. 200 OK and some
+	//     HTML, and then `throw SilentException()` to close the
+	//     sock.
+	OnConnection();
 
-#if 0
-	// Check for supported protocols
-	if (0 != _url.compare("/json"))
-	{
-		logger().info("[WebServer] Unsupported request %s", line.c_str());
-		Send("HTTP/1.1 404 Not Found\r\n"
-			"Server: CogServer\r\n"
-			"Content-Type: text/plain\r\n"
-			"\r\n"
-			"404 Not Found\n"
-			"Cogserver currently supports only /json\n");
+	// In case the user blew it above, we close the sock.
+	if (not _websock_handshake)
 		throw SilentException();
-	}
-#endif
 
 	// If we are here, we've received an HTTP header, and it
 	// as a WebSocket header. Do the websocket reply.
