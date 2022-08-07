@@ -30,6 +30,7 @@ private:
 	bool _websock_open;
 	std::string _url;
 	std::string _webkey;
+	void HandshakeLine (const std::string&);
 
 protected:
 	virtual void OnConnection(void);

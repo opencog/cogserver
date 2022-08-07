@@ -65,6 +65,21 @@ void WebServer::OnConnection(void)
 // Called for each newline-terminated line received.
 void WebServer::OnLine(const std::string& line)
 {
+	if (not _websock_open)
+	{
+		HandshakeLine(line);
+		return;
+	}
+
+printf("duuuude websock recv'd >>%s<<\n", line.c_str());
+
+	Send("yeah baby go for it\n");
+}
+
+// Perform the webscokets handshake.
+void WebServer::HandshakeLine(const std::string& line)
+{
+	// The very first HTTP line
 	if (not _first_line)
 	{
 		_first_line = true;
@@ -102,6 +117,7 @@ void WebServer::OnLine(const std::string& line)
 
 	// If we are here, then the full HTTP header was received.
 	// If it wasn't a websocket header, then just print stats.
+	// This is the server stats formated as HTML.
 	if (not _websock_handshake)
 	{
 		Send (html_stats());
@@ -124,38 +140,30 @@ void WebServer::OnLine(const std::string& line)
 #endif
 
 	// If we are here, we've received an HTTP header, and it
-	// as a WebSocket header. Do the websocket reply, if we
-	// haven't done so yet.
-	if (not _websock_open)
-	{
-		_websock_open = true;
-		_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	// as a WebSocket header. Do the websocket reply.
+	_websock_open = true;
+	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-		unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
-		memset(hash, 0, SHA_DIGEST_LENGTH);
-		SHA1((const unsigned char*) _webkey.c_str(), _webkey.size(), hash);
-		std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
+	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
+	memset(hash, 0, SHA_DIGEST_LENGTH);
+	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size(), hash);
+	std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
 
-		std::string response =
-			"HTTP/1.1 101 Switching Protocols\r\n"
-			"Upgrade: websocket\r\n"
-			"Connection: Upgrade\r\n"
-			"Sec-WebSocket-Accept: ";
-		response += b64hash;
-		response +=
-			"\r\n"
-			"\r\n";
+	std::string response =
+		"HTTP/1.1 101 Switching Protocols\r\n"
+		"Upgrade: websocket\r\n"
+		"Connection: Upgrade\r\n"
+		"Sec-WebSocket-Accept: ";
+	response += b64hash;
+	response +=
+		"\r\n"
+		"\r\n";
 
-		Send(response);
+	Send(response);
 
-		// After this point, websockets will send frames. Yuck.
-		// Need to change the mode to work with frames.
-		set_frame_mode();
-		return;
-	}
-printf("duuuude websock recv'd >>%s<<\n", line.c_str());
-
-	Send("yeah baby go for it\n");
+	// After this point, websockets will send frames.
+	// Need to change the mode to work with frames.
+	set_frame_mode();
 }
 
 // ==================================================================
