@@ -32,13 +32,18 @@ WebServer::~WebServer()
 // Called before any data is sent/received.
 void WebServer::OnConnection(void)
 {
-#if 0
-	if (not _websock_handshake)
+	// If the the socket didn't connect as a websocet, then just
+	// report the stats as an HTML page.
+	if (not _got_websock_header)
 	{
 		Send (html_stats());
 		throw SilentException();
 	}
 
+	// We expect teh URL to have the form
+
+
+#if 0
 	// Check for supported protocols
 	if (0 != _url.compare("/json"))
 	{
