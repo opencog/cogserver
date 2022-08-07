@@ -55,7 +55,7 @@ private:
     std::condition_variable _in_use_cv;
 
 protected:
-    GenericShell *_shell;
+    GenericShell* _shell;
 
     /**
      * Connection callback: called whenever a new connection arrives
@@ -87,6 +87,7 @@ public:
      * command line processing.
      */
     void SetShell(GenericShell *);
+    GenericShell * getShell(void) { return _shell; }
 
     /**
      * Assorted debugging utilities.

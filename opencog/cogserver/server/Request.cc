@@ -15,6 +15,7 @@
 #include <opencog/util/oc_assert.h>
 
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/cogserver/server/ServerConsole.h>
 
 #include "Request.h"
 
@@ -29,7 +30,16 @@ Request::~Request()
 {
     logger().debug("[Request] destructor");
     if (_console)
+    {
+        // Send out a prompt to telnet users.
+        //... Except for shells, which provide their own prompt.
+        if (nullptr == _console->getShell())
+        {
+            ServerConsole* sc = dynamic_cast<ServerConsole*>(_console);
+            if (sc) sc->sendPrompt();
+        }
         _console->put();  // dec use count we are done with it.
+    }
 }
 
 void Request::set_console(ConsoleSocket* con)
