@@ -356,6 +356,8 @@ void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
 
 // ==================================================================
 
+// Ths method is called in a new thread, when a new network connection is
+// made. It handles all socket reads for that socket.
 void ServerSocket::handle_connection(void)
 {
     prctl(PR_SET_NAME, "cogserv:connect", 0, 0, 0);

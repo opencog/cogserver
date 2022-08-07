@@ -20,10 +20,23 @@ namespace opencog
  */
 
 /**
- * This class defines the minimal set of methods a server socket must
- * have to handle the primary interface of the server.
+ * An instance of this class is created when a network client connects
+ * to the server. It handles all socket read/write for that client.
  *
- * Each ServerSocket supports a client that connects to the cog server.
+ * When a client connects to the server, the ServerSocket::handle_connection()
+ * method is called in a new thread (and thus all socket reads for that
+ * client occur in this thread.)
+ *
+ * This class has two pure-virtual methods: OnConnection() and OnLine().
+ * The OnConnection() method is called once, when the reader thread is
+ * first entered.  The OnLine() method is called whenever a new-line
+ * delimited bit of utf-8 text data arrives on the socket.
+ *
+ * Users of this class need only implement these two methods.
+ *
+ * This class exists only to hide the ugliness of boost:asio.
+ * Some day in the future, this should be re-written to avoid using
+ * boost! But for now, it's stable debugged and it works.
  */
 class ServerSocket
 {
