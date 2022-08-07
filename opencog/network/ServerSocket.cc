@@ -48,9 +48,9 @@ static void rem_sock(ServerSocket* ss)
 
 std::string ServerSocket::display_stats(void)
 {
-	// Hack(?) Send a half-ping, in an attempt to close
-	// dead connections.
-	half_ping();
+    // Hack(?) Send a half-ping, in an attempt to close
+    // dead connections.
+    half_ping();
 
     std::string rc;
     std::lock_guard<std::mutex> lock(_sock_lock);
@@ -63,8 +63,8 @@ std::string ServerSocket::display_stats(void)
     std::sort (sov.begin(), sov.end(),
         [](ServerSocket* sa, ServerSocket* sb) -> bool
         { return sa->_start_time == sb->_start_time ?
-				sa->_tid < sb->_tid :
-				sa->_start_time < sb->_start_time; });
+            sa->_tid < sb->_tid :
+            sa->_start_time < sb->_start_time; });
 
     // Print the sorted list; use the first to print a header.
     bool hdr = false;
@@ -361,11 +361,45 @@ match_eol_or_escape(bitter begin, bitter end)
     return std::make_pair(i, false);
 }
 
-std::pair<bitter, bool>
-frame_match_eol(bitter begin, bitter end)
+std::string ServerSocket::get_telnet_line(boost::asio::streambuf& b)
 {
-    bitter i = begin;
-    return std::make_pair(i, false);
+    boost::asio::read_until(*_socket, b, match_eol_or_escape);
+    std::istream is(&b);
+    std::string line;
+    std::getline(is, line);
+    return line;
+}
+
+std::string ServerSocket::get_websocket_line()
+{
+    // frame and opcode
+    unsigned char fop;
+    boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
+
+    bool finbit = fop & 0x80;
+    unsigned char opcode = fop & 0xf;
+printf("duude fin=%d opcod=%d\n", finbit, opcode);
+
+    // mask and payload length
+    unsigned char mpay;
+    boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
+    bool maskbit = mpay & 0x80;
+    size_t paylen = mpay & 0x7f;
+printf("duude maskbit=%d paylen=%lu\n", maskbit, paylen);
+
+    if (maskbit)
+    {
+        uint32_t mask;
+        boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
+printf("duude mask=%x\n", mask);
+    }
+
+    char data[paylen];
+    boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+printf("duuude read paylen=%lu\n", paylen);
+
+    std::string line;
+    return line;
 }
 
 // ==================================================================
@@ -384,12 +418,15 @@ void ServerSocket::handle_connection(void)
     {
         try
         {
-printf("duude read loop decode frames=%d\n", _decode_frames);
             _status = IWAIT;
-            boost::asio::read_until(*_socket, b, match_eol_or_escape);
-            std::istream is(&b);
             std::string line;
-            std::getline(is, line);
+            if (not _decode_frames)
+               line = get_telnet_line(b);
+            else
+               line = get_websocket_line();
+
+            // Strip off carriage returns. The line already stripped
+            // newlines.
             if (not line.empty() and line[line.length()-1] == '\r') {
                 line.erase(line.end()-1);
             }

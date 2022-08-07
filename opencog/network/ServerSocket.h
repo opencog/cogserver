@@ -54,6 +54,9 @@ private:
     // A count of the number of times the max condition was reached.
     static size_t _num_open_stalls;
 
+    std::string get_telnet_line(boost::asio::streambuf&);
+    std::string get_websocket_line(void);
+
 protected:
     /**
      * Connection callback: called whenever a new connection arrives
