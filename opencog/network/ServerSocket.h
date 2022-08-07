@@ -106,14 +106,15 @@ public:
     void handle_connection(void);
 
     /**
-     * Sends data to the client
+     * Send data to the client.
      */
     void Send(const std::string&);
 
     /**
-     * Close this socket
+     * Close this socket. Called from a thread other than
+     * the one that is actually polling the socket.
      */
-    void SetCloseAndDelete(void);
+    void Exit(void);
 
     /**
      * Return a human-readable table of socket statistics.

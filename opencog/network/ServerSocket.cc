@@ -147,7 +147,7 @@ bool ServerSocket::kill(pid_t tid)
     {
         if (tid == ss->_tid)
         {
-            ss->SetCloseAndDelete();
+            ss->Exit();
             // pthread_cancel(ss->_pth);
             return true;
         }
@@ -215,7 +215,7 @@ ServerSocket::~ServerSocket()
     _status = DTOR;
     logger().debug("ServerSocket::~ServerSocket()");
 
-    SetCloseAndDelete();
+    Exit();
     delete _socket;
     _socket = nullptr;
     rem_sock(this);
@@ -307,10 +307,10 @@ static std::mutex _asio_crash;
 // the connection -- it does so by closing the socket. Sometime later,
 // the handle_connection() method notices that it's closed, and exits
 // it's loop, thus ending the thread that its running in.
-void ServerSocket::SetCloseAndDelete()
+void ServerSocket::Exit()
 {
     std::lock_guard<std::mutex> lock(_asio_crash);
-    logger().debug("ServerSocket::SetCloseAndDelete()");
+    logger().debug("ServerSocket::Exit()");
     try
     {
         _socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
@@ -349,7 +349,7 @@ void ServerSocket::SetCloseAndDelete()
         if (e.code() != boost::asio::error::not_connected and
             e.code() != boost::asio::error::bad_descriptor)
         {
-            logger().error("ServerSocket::SetCloseAndDelete(): Error closing socket: %s", e.what());
+            logger().error("ServerSocket::Exit(): Error closing socket: %s", e.what());
         }
     }
     _status = DOWN;

@@ -36,7 +36,7 @@
 #include <opencog/util/platform.h>
 
 #include <opencog/cython/PythonEval.h>
-#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/network/ConsoleSocket.h>
 #include "PythonShellModule.h"
 
 namespace opencog
@@ -67,7 +67,7 @@ void PythonShellModule::init(void)
 
 std::string PythonShellModule::shellout(Request *req, std::list<std::string> args)
 {
-    ServerConsole *con = req->get_console();
+    ConsoleSocket *con = req->get_console();
     OC_ASSERT(con, "Invalid Request object");
 
     PythonShell *sh = new PythonShell();

@@ -25,7 +25,7 @@
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
-#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/network/ConsoleSocket.h>
 
 #include "TopShell.h"
 #include "ShellModule.h"
@@ -75,7 +75,7 @@ TopShellModule::shelloutRequest::info(void)
 bool
 TopShellModule::shelloutRequest::execute(void)
 {
-	ServerConsole *con = this->get_console();
+	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
 	TopShell *sh = new TopShell();

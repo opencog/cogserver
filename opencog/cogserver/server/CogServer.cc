@@ -153,17 +153,7 @@ void CogServer::runLoopStep(void)
 {
     // Process requests
     if (0 < getRequestQueueSize())
-    {
-        struct timeval timer_start, timer_end, requests_time;
-        gettimeofday(&timer_start, NULL);
         processRequests();
-        gettimeofday(&timer_end, NULL);
-        timersub(&timer_end, &timer_start, &requests_time);
-
-        logger().fine("[CogServer::runLoopStep] Time to process requests: %f",
-                   requests_time.tv_usec/1000000.0
-                  );
-    }
 }
 
 std::string CogServer::display_stats(void)

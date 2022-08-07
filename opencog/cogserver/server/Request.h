@@ -27,7 +27,7 @@ namespace opencog
  */
 
 class CogServer;
-class ServerConsole;
+class ConsoleSocket;
 
 /**
  * The DECLARE_CMD_REQUEST macro provides a simple, easy-to-use interface
@@ -232,7 +232,7 @@ class ServerConsole;
 class Request
 {
 private:
-    ServerConsole*         _console;
+    ConsoleSocket*         _console;
 
 protected:
     CogServer&             _cogserver;
@@ -257,8 +257,8 @@ public:
     void send(const std::string& msg) const;
 
     /** Stores the socket on which to return results. */
-    void set_console(ServerConsole*);
-    ServerConsole *get_console(void) const { return _console; }
+    void set_console(ConsoleSocket*);
+    ConsoleSocket *get_console(void) const { return _console; }
 
     /** sets the command's parameter list. */
     virtual void setParameters(const std::list<std::string>&);

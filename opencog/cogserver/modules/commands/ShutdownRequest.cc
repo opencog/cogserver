@@ -8,7 +8,7 @@
 
 #include <opencog/util/oc_assert.h>
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/network/ConsoleSocket.h>
 
 #include "ShutdownRequest.h"
 
@@ -37,7 +37,7 @@ bool ShutdownRequest::execute()
 
     _cogserver.stop();
 
-    ServerConsole* con = get_console();
+    ConsoleSocket* con = get_console();
     OC_ASSERT(con, "Bad request state");
     set_console(nullptr);
     con->Exit();
