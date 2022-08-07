@@ -23,20 +23,10 @@ namespace opencog
  */
 class WebServer : public ServerSocket
 {
-private:
-	bool _first_line;
-	bool _http_handshake;
-	bool _websock_handshake;
-	bool _websock_open;
-	std::string _url;
-	std::string _webkey;
-	void HandshakeLine (const std::string&);
-
 protected:
 	virtual void OnConnection(void);
 	virtual void OnLine (const std::string&);
 
-	virtual std::string connection_stats(void);
 	std::string html_stats(void);
 public:
     WebServer(void);

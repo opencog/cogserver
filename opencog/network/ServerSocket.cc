@@ -179,7 +179,12 @@ size_t ServerSocket::_num_open_stalls = 0;
 
 ServerSocket::ServerSocket(void) :
     _socket(nullptr),
-    _do_frame_io(false)
+    _first_line(false),
+    _http_handshake(false),
+    _websock_handshake(false),
+    _websock_open(false),
+    _do_frame_io(false),
+    _is_websocket(false)
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
@@ -546,7 +551,12 @@ void ServerSocket::handle_connection(void)
             _line_count++;
             total_line_count++;
             _status = RUN;
-            OnLine(line);
+
+				// Bypass until we've got the WebSocket fully open.
+				if (_is_websocket and not _websock_open)
+					HandshakeLine(line);
+				else
+            	OnLine(line);
         }
         catch (const boost::system::system_error& e)
         {
@@ -570,7 +580,7 @@ void ServerSocket::handle_connection(void)
     _status = CLOSE;
 
     // Perform cleanup at end, if in telnet mode.
-    if (not _do_frame_io)
+    if (not _is_websocket)
     {
         // If the data sent to us is not new-line terminated, then
         // there may still be some bytes sitting in the buffer. Get

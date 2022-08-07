@@ -19,11 +19,7 @@
 
 using namespace opencog;
 
-WebServer::WebServer(void) :
-	_first_line(false),
-	_http_handshake(false),
-	_websock_handshake(false),
-	_websock_open(false)
+WebServer::WebServer(void)
 {
 }
 
@@ -33,98 +29,16 @@ WebServer::~WebServer()
 
 // ==================================================================
 
-static std::string base64_encode(unsigned char* buf, int len)
-{
-	std::string out;
-
-	unsigned int val = 0;
-	int valb = -6;
-	for (int i=0; i<len; i++)
-	{
-		unsigned char c = buf[i];
-		val = (val << 8) + c;
-		valb += 8;
-		while (valb >= 0)
-		{
-			out.push_back("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[(val>>valb)&0x3F]);
-			valb -= 6;
-		}
-	}
-	if (valb > -6) out.push_back("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[((val<<8)>>(valb+8))&0x3F]);
-	while (out.size()%4) out.push_back('=');
-	return out;
-}
-
-// ==================================================================
-
 // Called before any data is sent/received.
 void WebServer::OnConnection(void)
 {
-}
-
-// Called for each newline-terminated line received.
-void WebServer::OnLine(const std::string& line)
-{
-	if (not _websock_open)
-	{
-		HandshakeLine(line);
-		return;
-	}
-
-printf("duuuude websock recv'd >>%s<<\n", line.c_str());
-
-	Send("yeah baby go for it\n");
-}
-
-// Perform the webscokets handshake.
-void WebServer::HandshakeLine(const std::string& line)
-{
-	// The very first HTTP line
-	if (not _first_line)
-	{
-		_first_line = true;
-
-		if (0 != line.compare(0, 4, "GET "))
-		{
-			Send("HTTP/1.1 501 Not Implemented\r\n"
-				"Server: CogServer\r\n"
-				"\r\n");
-			throw SilentException();
-		}
-		_url = line.substr(4, line.find(" ", 4) - 4);
-		return;
-	}
-
-	if (not _http_handshake and 0 == line.size())
-	{
-		_http_handshake = true;
-	}
-	if (not _http_handshake)
-	{
-		static const char* upg = "Upgrade: websocket";
-		if (0 == line.compare(0, strlen(upg), upg))
-			{ _websock_handshake = true; return; }
-
-		static const char* key = "Sec-WebSocket-Key: ";
-		if (0 == line.compare(0, strlen(key), key))
-			{ _webkey = line.substr(strlen(key)); return; }
-
-		// TODO validate
-		// static const char* org = "Origin: ";
-
-		return;
-	}
-
-	// If we are here, then the full HTTP header was received.
-	// If it wasn't a websocket header, then just print stats.
-	// This is the server stats formated as HTML.
+#if 0
 	if (not _websock_handshake)
 	{
 		Send (html_stats());
 		throw SilentException();
 	}
 
-#if 0
 	// Check for supported protocols
 	if (0 != _url.compare("/json"))
 	{
@@ -139,42 +53,18 @@ void WebServer::HandshakeLine(const std::string& line)
 	}
 #endif
 
-	// If we are here, we've received an HTTP header, and it
-	// as a WebSocket header. Do the websocket reply.
-	_websock_open = true;
-	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20
-	memset(hash, 0, SHA_DIGEST_LENGTH);
-	SHA1((const unsigned char*) _webkey.c_str(), _webkey.size(), hash);
-	std::string b64hash = base64_encode(hash, SHA_DIGEST_LENGTH);
-
-	std::string response =
-		"HTTP/1.1 101 Switching Protocols\r\n"
-		"Upgrade: websocket\r\n"
-		"Connection: Upgrade\r\n"
-		"Sec-WebSocket-Accept: ";
-	response += b64hash;
-	response +=
-		"\r\n"
-		"\r\n";
-
-	Send(response);
-
-	// After this point, websockets will send frames.
-	// Need to change the mode to work with frames.
-	set_frame_mode();
 }
+
+// Called for each newline-terminated line received.
+void WebServer::OnLine(const std::string& line)
+{
+printf("duuuude websock recv'd >>%s<<\n", line.c_str());
+
+	Send("yeah baby go for it\n");
+}
+
 
 // ==================================================================
-
-std::string WebServer::connection_stats(void)
-{
-	std::string rc = ServerSocket::connection_stats();
-	rc += " 1 "; // use_count (fake)
-	rc += "webs           ";
-	return rc;
-}
 
 std::string WebServer::html_stats(void)
 {

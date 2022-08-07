@@ -83,8 +83,11 @@ void CogServer::enableWebServer(int port)
     if (_webServer) return;
     _webServer = new NetworkServer(port);
 
-    auto make_console = [](void)->ServerSocket*
-            { return new WebServer(); };
+    auto make_console = [](void)->ServerSocket* {
+        ServerSocket* ss = new WebServer();
+        ss->act_as_websocket();
+        return ss;
+    };
     _webServer->run(make_console);
     _running = true;
     logger().info("Web server running on port %d", port);
