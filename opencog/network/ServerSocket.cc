@@ -415,30 +415,74 @@ std::string ServerSocket::get_telnet_line(boost::asio::streambuf& b)
 
 std::string ServerSocket::get_websocket_line()
 {
-    // frame and opcode
+    // If we are here, then we are expecting a frame header.
+    // Get frame and opcode
     unsigned char fop;
     boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
 
     bool finbit = fop & 0x80;
     unsigned char opcode = fop & 0xf;
-printf("duude fin=%d opcod=%d\n", finbit, opcode);
+
+    // Handle pings
+    while (9 == opcode)
+    {
+        // Mask and payload length
+        unsigned char mpay;
+        boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
+        bool maskbit = mpay & 0x80;
+        unsigned char paylen = mpay & 0x7f;
+
+        // Not expecting a mask in a ping
+        if (maskbit)
+        {
+            logger().warn("Not expecting a mask in a websocket ping");
+            throw SilentException();
+        }
+
+        char data[paylen+1];
+        if (0 < paylen)
+            boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+
+        // Send a pong, copying the data.
+        char header[2];
+        header[0] = 0x8a;
+        header[1] = (char) paylen;
+        Send(boost::asio::const_buffer(header, 2));
+        if (0 < paylen)
+            Send(boost::asio::const_buffer(data, paylen));
+
+        // And wait for the next frame...
+        boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
+        finbit = fop & 0x80;
+        opcode = fop & 0xf;
+    }
+
+    // We only support text data.
+    if (1 != opcode)
+    {
+        logger().warn("Not expecting binary websocket data");
+        throw SilentException();
+    }
 
     // mask and payload length
     unsigned char mpay;
     boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
     bool maskbit = mpay & 0x80;
     size_t paylen = mpay & 0x7f;
-printf("duude maskbit=%d paylen=%lu\n", maskbit, paylen);
 
-    // XXX TODO it is an error if maskbit is not set...
+    // It is an error if the maskbit is not set. Bail out.
+    if (not maskbit)
+        throw SilentException();
+
     uint32_t mask;
     boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
 
+    // XXX FIXME stackoverflow if paylen is too large for the stack.
+    // AIEEE ... should we malloc ??? Ugh.
     char data[paylen+1];
     boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
-printf("duuude read paylen=%lu\n", paylen);
 
-    // bulk unmaske the data, using XOR
+    // Bulk unmask the data, using XOR.
     uint32_t *dp = (uint32_t *) data;
     size_t i=0;
     while (i < paylen)
@@ -448,16 +492,21 @@ printf("duuude read paylen=%lu\n", paylen);
         i += 4;
     }
 
-    // unmask any remaining bytes
+    // Unmask any remaining bytes.
     i -= 4;
     for (unsigned int j=0; j<i%4; j++)
         data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
 
-    // null-terminated string.
+    // Null-terminated string.
     data[paylen] = 0x0;
-    std::string line(data);
-printf ("duuude decoded as %s\n", data);
-    return line;
+
+// XXX FIXME .. if fintbit is non-zero, should we wait for more ?
+printf("duude finbit=%d\n", finbit);
+    // We're not actually going to use a line protocol, when we're
+    // using websockets. If teh user wants to search for newline
+    // chars in the datastream, they are welcome to. We're not
+    // going to futz with that.
+    return data;
 }
 
 // ==================================================================

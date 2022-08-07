@@ -153,7 +153,7 @@ void WebServer::OnLine(const std::string& line)
 		set_frame_mode();
 		return;
 	}
-printf("duuuude websock %p is bidi\n", this);
+printf("duuuude websock recv'd >>%s<<\n", line.c_str());
 
 	Send("yeah baby go for it\n");
 }
