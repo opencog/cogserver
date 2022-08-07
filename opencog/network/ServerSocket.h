@@ -63,16 +63,18 @@ private:
     void Send(boost::asio::const_buffer);
 
     // WebSocket state machine; unused in the telnet interface.
-    bool _first_line;
-    bool _http_handshake;
-    bool _websock_handshake;
-    bool _websock_open;
+    bool _got_first_line;
+    bool _got_http_header;
     bool _do_frame_io;
-    std::string _url;
     std::string _webkey;
     void HandshakeLine(const std::string&);
 
 protected:
+    // WebSocket stuff that users will be interested in.
+    bool _is_websocket;
+    bool _got_websock_header;
+    std::string _url;
+
     /**
      * Connection callback: called whenever a new connection arrives
      */
@@ -82,8 +84,6 @@ protected:
      * Callback: called when a client has sent us a line of text.
      */
     virtual void OnLine (const std::string&) = 0;
-
-    bool _is_websocket;
 
     /**
      * Report human-readable stats for this socket.

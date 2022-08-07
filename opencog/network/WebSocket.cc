@@ -45,9 +45,9 @@ static std::string base64_encode(unsigned char* buf, int len)
 void ServerSocket::HandshakeLine(const std::string& line)
 {
 	// The very first HTTP line.
-	if (not _first_line)
+	if (not _got_first_line)
 	{
-		_first_line = true;
+		_got_first_line = true;
 
 		if (0 != line.compare(0, 4, "GET "))
 		{
@@ -62,17 +62,17 @@ void ServerSocket::HandshakeLine(const std::string& line)
 
 	// If the line-size is zero, then we've reached the end of
 	// header sent by the client.
-	if (not _http_handshake and 0 == line.size())
+	if (not _got_http_header and 0 == line.size())
 	{
-		_http_handshake = true;
+		_got_http_header = true;
 	}
 
 	// Extract stuff from the header the client is sending us.
-	if (not _http_handshake)
+	if (not _got_http_header)
 	{
 		static const char* upg = "Upgrade: websocket";
 		if (0 == line.compare(0, strlen(upg), upg))
-			{ _websock_handshake = true; return; }
+			{ _got_websock_header = true; return; }
 
 		static const char* key = "Sec-WebSocket-Key: ";
 		if (0 == line.compare(0, strlen(key), key))
@@ -94,12 +94,11 @@ void ServerSocket::HandshakeLine(const std::string& line)
 	OnConnection();
 
 	// In case the user blew it above, we close the sock.
-	if (not _websock_handshake)
+	if (not _got_websock_header)
 		throw SilentException();
 
 	// If we are here, we've received an HTTP header, and it
 	// as a WebSocket header. Do the websocket reply.
-	_websock_open = true;
 	_webkey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 	unsigned char hash[SHA_DIGEST_LENGTH]; // == 20

@@ -179,12 +179,11 @@ size_t ServerSocket::_num_open_stalls = 0;
 
 ServerSocket::ServerSocket(void) :
     _socket(nullptr),
-    _first_line(false),
-    _http_handshake(false),
-    _websock_handshake(false),
-    _websock_open(false),
+    _got_first_line(false),
+    _got_http_header(false),
     _do_frame_io(false),
-    _is_websocket(false)
+    _is_websocket(false),
+    _got_websock_header(false)
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
@@ -556,7 +555,7 @@ void ServerSocket::handle_connection(void)
             _status = RUN;
 
 				// Bypass until we've got the WebSocket fully open.
-				if (_is_websocket and not _websock_open)
+				if (_is_websocket and not _do_frame_io)
 					HandshakeLine(line);
 				else
             	OnLine(line);
