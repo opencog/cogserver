@@ -246,10 +246,4 @@ void ServerConsole::OnRequestComplete()
     if (nullptr == _shell) sendPrompt();
 }
 
-void ServerConsole::Exit()
-{
-    logger().debug("[ServerConsole] ExecuteExitRequest");
-    SetCloseAndDelete();
-}
-
 // ==================================================================

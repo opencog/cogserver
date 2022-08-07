@@ -84,11 +84,6 @@ public:
      */
     void sendPrompt();
 
-    /**
-     * Called when a Request closes the socket connection.
-     */
-    void Exit();
-
 }; // class
 
 /** @}*/
