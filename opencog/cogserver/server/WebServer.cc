@@ -37,14 +37,10 @@ void WebServer::OnConnection(void)
 	// report the stats as an HTML page.
 	if (not _got_websock_header)
 	{
-		if (0 == _url.compare("/favicion.ico"))
-		{
+		if (0 == _url.compare("/favicon.ico"))
 			Send(favicon());
-printf("duude got fave ico request\n");
-		}
 		else
-			Send (html_stats());
-printf("duude plain http url=%s\n", _url.c_str());
+			Send(html_stats());
 		throw SilentException();
 	}
 
@@ -128,12 +124,24 @@ std::string WebServer::html_stats(void)
 
 std::string WebServer::favicon(void)
 {
+	std::string bicon =
+#include "favicon.ico.base64"
+	;
+
 	std::string response =
 		"HTTP/1.1 200 OK\r\n"
 		"Server: CogServer\r\n"
+		"Content-Length: ";
+
+	char buf[20];
+	snprintf(buf, 20, "%lu", bicon.size());
+	response += buf;
+	response += "\r\n"
 		"Content-Type: image/vnd.microsoft.icon\r\n"
-		"Content-Transfer-Encoding: binary\r\n"
+		"Content-Transfer-Encoding: base64\r\n"
 		"\r\n";
+
+	response += bicon;
 
 	return response;
 }
