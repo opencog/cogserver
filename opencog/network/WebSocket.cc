@@ -42,7 +42,8 @@ std::string ServerSocket::get_websocket_line()
 		// If ping, send a pong, copying the data.
 		if (9 == opcode)
 		{
-			size_t paylen = pingd.size();
+			// The data read appended a null byte. Skip it.
+			size_t paylen = pingd.size() - 1;
 			char header[2];
 			header[0] = 0x8a;
 			header[1] = (char) paylen;
@@ -117,11 +118,12 @@ std::string ServerSocket::get_websocket_data(void)
 	for (unsigned int j=0; j<paylen%4; j++)
 		data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
 
-	// Null-terminated string.
+	// Apparently, strings get sent without a null terminator.
+	// So add one now.
 	data[paylen] = 0x0;
 
 	// We're not actually going to use a line protocol, when we're
-	// using websockets. If teh user wants to search for newline
+	// using websockets. If the user wants to search for newline
 	// chars in the datastream, they are welcome to. We're not
 	// going to futz with that.
 	return blob;
