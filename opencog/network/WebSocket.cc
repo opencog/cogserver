@@ -37,32 +37,18 @@ std::string ServerSocket::get_websocket_line()
 	// Handle pings
 	while (9 == opcode or 0xa == opcode)
 	{
-		// Mask and payload length
-		unsigned char mpay;
-		boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
-		bool maskbit = mpay & 0x80;
-		unsigned char paylen = mpay & 0x7f;
-
-		// Not expecting a mask in a ping
-		if (maskbit)
-		{
-			logger().warn("Not expecting a mask in a websocket ping");
-			throw SilentException();
-		}
-
-		char data[paylen+1];
-		if (0 < paylen)
-			boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+		std::string pingd = get_websocket_data();
 
 		// If ping, send a pong, copying the data.
 		if (9 == opcode)
 		{
+			size_t paylen = pingd.size();
 			char header[2];
 			header[0] = 0x8a;
 			header[1] = (char) paylen;
 			Send(boost::asio::const_buffer(header, 2));
 			if (0 < paylen)
-				Send(boost::asio::const_buffer(data, paylen));
+				Send(boost::asio::const_buffer(pingd.data(), paylen));
 		}
 
 		// And wait for the next frame...
@@ -73,7 +59,10 @@ std::string ServerSocket::get_websocket_line()
 
 	// Socket close message .. just quit.
 	if (8 == opcode)
+	{
+		logger().info("Received WebSocket close");
 		throw SilentException();
+	}
 
 	// We only support text data.
 	if (1 != opcode)
@@ -83,7 +72,16 @@ std::string ServerSocket::get_websocket_line()
 		throw SilentException();
 	}
 
-	// mask and payload length
+	return get_websocket_data();
+}
+
+/// Read from the websocket, decoding the length and data.
+/// Assumes the opcode has already been read.
+/// Return the text data as a string. This returns one frame
+/// at a time. No attempt is made to consolidate fragments.
+std::string ServerSocket::get_websocket_data(void)
+{
+	// Mask and payload length
 	unsigned char mpay;
 	boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
 	bool maskbit = mpay & 0x80;
@@ -91,7 +89,10 @@ std::string ServerSocket::get_websocket_line()
 
 	// It is an error if the maskbit is not set. Bail out.
 	if (not maskbit)
+	{
+		logger().warn("WebSocket received unmasked data!");
 		throw SilentException();
+	}
 
 	uint32_t mask;
 	boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
@@ -105,7 +106,7 @@ std::string ServerSocket::get_websocket_line()
 	// Bulk unmask the data, using XOR.
 	uint32_t *dp = (uint32_t *) data;
 	size_t i=0;
-	while (i < paylen)
+	while (i < paylen-4)
 	{
 		*dp = *dp ^ mask;
 		++dp;
@@ -113,8 +114,7 @@ std::string ServerSocket::get_websocket_line()
 	}
 
 	// Unmask any remaining bytes.
-	i -= 4;
-	for (unsigned int j=0; j<i%4; j++)
+	for (unsigned int j=0; j<paylen%4; j++)
 		data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
 
 	// Null-terminated string.

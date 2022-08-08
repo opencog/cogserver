@@ -67,6 +67,7 @@ private:
     bool _do_frame_io;
     std::string _webkey;
     void HandshakeLine(const std::string&);
+    std::string get_websocket_data(void);
     std::string get_websocket_line(void);
     void send_websocket_pong(void);
 
