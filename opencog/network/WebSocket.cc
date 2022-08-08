@@ -35,7 +35,7 @@ std::string ServerSocket::get_websocket_line()
 	unsigned char opcode = fop & 0xf;
 
 	// Handle pings
-	while (9 == opcode)
+	while (9 == opcode or 0xa == opcode)
 	{
 		// Mask and payload length
 		unsigned char mpay;
@@ -54,13 +54,16 @@ std::string ServerSocket::get_websocket_line()
 		if (0 < paylen)
 			boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
 
-		// Send a pong, copying the data.
-		char header[2];
-		header[0] = 0x8a;
-		header[1] = (char) paylen;
-		Send(boost::asio::const_buffer(header, 2));
-		if (0 < paylen)
-			Send(boost::asio::const_buffer(data, paylen));
+		// If ping, send a pong, copying the data.
+		if (9 == opcode)
+		{
+			char header[2];
+			header[0] = 0x8a;
+			header[1] = (char) paylen;
+			Send(boost::asio::const_buffer(header, 2));
+			if (0 < paylen)
+				Send(boost::asio::const_buffer(data, paylen));
+		}
 
 		// And wait for the next frame...
 		boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
