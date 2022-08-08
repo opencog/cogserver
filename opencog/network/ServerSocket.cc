@@ -242,15 +242,27 @@ ServerSocket::~ServerSocket()
 
 void ServerSocket::Send(const std::string& cmd)
 {
+    size_t cmdsize = cmd.size();
+
+    // Avoid spurious zero-length packets. They have no meaning.
+    if (0 == cmdsize) return;
+
+    // Avoid lonely newlines. The various shells return these for
+    // no particular reason.  Due to old confusions about line
+    // discipline. Just avoid them. The only place this might
+    // matter would be python, and the "obvious" solution is to
+    // use two newlines, or a crlf.
+    if (1 == cmdsize and '\n' == cmd[0]) return;
+
     if (not _do_frame_io)
     {
-        Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
+        Send(boost::asio::const_buffer(cmd.c_str(), cmdsize));
         return;
     }
 
     // If we are here, we have to perform websockets framing.
     // Send only one packet, and indicate it's length.
-    size_t paylen = cmd.size();
+    size_t paylen = cmdsize;
     char header[10];
     header[0] = 0x81;
     if (paylen < 126)
@@ -280,7 +292,7 @@ void ServerSocket::Send(const std::string& cmd)
     }
 
     // Send the actual data.
-    Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
+    Send(boost::asio::const_buffer(cmd.c_str(), cmdsize));
 }
 
 void ServerSocket::Send(const boost::asio::const_buffer& buf)
