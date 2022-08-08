@@ -107,7 +107,7 @@ std::string ServerSocket::get_websocket_data(void)
 	// Bulk unmask the data, using XOR.
 	uint32_t *dp = (uint32_t *) data;
 	size_t i=0;
-	while (i < paylen-4)
+	while (i <= paylen-4)
 	{
 		*dp = *dp ^ mask;
 		++dp;
