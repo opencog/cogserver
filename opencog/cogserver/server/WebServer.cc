@@ -26,6 +26,7 @@ WebServer::WebServer(void) :
 
 WebServer::~WebServer()
 {
+	logger().info("Closed WebSocket Shell");
 }
 
 // ==================================================================
@@ -64,7 +65,7 @@ void WebServer::OnConnection(void)
 		throw SilentException();
 	}
 
-	logger().info("Opened WebSocket %s Shell", cmdName);
+	logger().info("Opened WebSocket %s Shell", cmdName.c_str());
 }
 
 // Called for each newline-terminated line received.
