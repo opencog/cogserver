@@ -127,6 +127,15 @@ std::string ServerSocket::get_websocket_line()
 	return blob;
 }
 
+/// Send a WebSocket pong message.
+void ServerSocket::send_websocket_pong()
+{
+	char header[2];
+	header[0] = 0x8a;
+	header[1] = 0;
+	Send(boost::asio::const_buffer(header, 2));
+}
+
 // ==================================================================
 
 /// Given a char buffer of data (possibly including nulls)

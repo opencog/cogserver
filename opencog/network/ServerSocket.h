@@ -55,9 +55,8 @@ private:
     // A count of the number of times the max condition was reached.
     static size_t _num_open_stalls;
 
-    // helper functions
+    // Read a newline-delimited line of text from socket.
     std::string get_telnet_line(boost::asio::streambuf&);
-    std::string get_websocket_line(void);
 
     // Send an asio buffer that has data in it.
     void Send(boost::asio::const_buffer);
@@ -68,6 +67,8 @@ private:
     bool _do_frame_io;
     std::string _webkey;
     void HandshakeLine(const std::string&);
+    std::string get_websocket_line(void);
+    void send_websocket_pong(void);
 
 protected:
     // WebSocket stuff that users will be interested in.

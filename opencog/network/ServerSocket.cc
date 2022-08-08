@@ -90,6 +90,9 @@ std::string ServerSocket::display_stats(void)
 // hex 0x16 ASCII SYN synchronous idle. Will this confuse
 // any users of the cogserver? I dunno.  Lets go for SYN.
 // It's slightly cleaner.
+//
+// For websockets, this sends the pong frame, which has
+// the same effect.
 void ServerSocket::half_ping(void)
 {
     // static const char buf[2] = " ";
@@ -104,7 +107,13 @@ void ServerSocket::half_ping(void)
         // for more than ten seconds, then ping it to see if it
         // is still alive.
         if (ss->_status == IWAIT and
-            now - ss->_last_activity > 10) ss->Send(buf);
+            now - ss->_last_activity > 10)
+        {
+            if (ss->_do_frame_io)
+                ss->send_websocket_pong();
+            else
+                ss->Send(buf);
+        }
     }
 }
 
@@ -408,6 +417,8 @@ match_eol_or_escape(bitter begin, bitter end)
     return std::make_pair(i, false);
 }
 
+/// Read a single newline-delimited line from the socket.
+/// Return immediately if a ctrl-C or ctrl-D is found.
 std::string ServerSocket::get_telnet_line(boost::asio::streambuf& b)
 {
     boost::asio::read_until(*_socket, b, match_eol_or_escape);
