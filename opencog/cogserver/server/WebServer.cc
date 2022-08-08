@@ -19,7 +19,8 @@
 
 using namespace opencog;
 
-WebServer::WebServer(void)
+WebServer::WebServer(void) :
+	_request(nullptr)
 {
 }
 
@@ -45,12 +46,10 @@ void WebServer::OnConnection(void)
 	// should be one of the supported comands.
 	std::string cmdName = _url.substr(1);
 	CogServer& cs = cogserver();
-	Request* request = cs.createRequest(cmdName);
-
-printf("duuude cmd=%s<< rq=%p\n", cmdName.c_str(), request);
+	_request = cs.createRequest(cmdName);
 
 	// Reject URL's we don't know about.
-	if (nullptr == request)
+	if (nullptr == _request)
 	{
 		logger().info("[WebServer] Unsupported request %s", _url.c_str());
 		Send("HTTP/1.1 404 Not Found\r\n"
@@ -61,12 +60,24 @@ printf("duuude cmd=%s<< rq=%p\n", cmdName.c_str(), request);
 			"The Cogserver doesn't know about " + _url + "\n");
 		throw SilentException();
 	}
-
 }
 
 // Called for each newline-terminated line received.
 void WebServer::OnLine(const std::string& line)
 {
+	if (_request)
+	{
+		std::list<std::string> params;
+		params.push_back("hush");
+		_request->setParameters(params);
+		_request->set_console(this);
+		_request->execute();
+printf("duude now shell=%p usecount=%d\n", _shell, get_use_count());
+		get();
+		delete _request;
+printf("duude post delete shell=%p usecount=%d\n", _shell, get_use_count());
+		_request = nullptr;
+	}
 printf("duuuude websock recv'd >>%s<<\n", line.c_str());
 
 	Send("yeah baby go for it\n");

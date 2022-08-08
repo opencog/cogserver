@@ -11,6 +11,7 @@
 #include <string>
 
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/cogserver/server/Request.h>
 
 namespace opencog
 {
@@ -26,6 +27,9 @@ namespace opencog
  */
 class WebServer : public ConsoleSocket
 {
+private:
+	Request* _request;
+
 protected:
 	virtual void OnConnection(void);
 	virtual void OnLine (const std::string&);
