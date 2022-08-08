@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     int console_port = 17001;
     int webserver_port = 18080;
 
-    static const char *optString = "cpw:D:h";
+    static const char *optString = "cp:w:D:h";
     int c = 0;
     std::vector<std::string> configFiles;
     std::vector<std::pair<std::string, std::string>> configPairs;
