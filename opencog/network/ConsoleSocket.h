@@ -60,13 +60,13 @@ protected:
     /**
      * Connection callback: called whenever a new connection arrives
      */
-    void OnConnection(void) = 0;
+    virtual void OnConnection(void) = 0;
 
     /**
      * OnLine callback: called when a newline-terminated line is received
      * from the client.
      */
-    void OnLine(const std::string&) = 0;
+    virtual void OnLine(const std::string&) = 0;
 
     /** Status printing */
     virtual std::string connection_header(void);

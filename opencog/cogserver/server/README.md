@@ -28,6 +28,35 @@ This is a generic network server, and so `netcat localhost 17001`
 also works. Long or complex sequences of commands may be placed in a
 file, and loaded by saying `cat somefile | netcat localhost 17001`.
 
+A WebSocket server is provided at the default port of 18080. This
+can be accessed using standard WebSocket API's. Examples:
+* A json server at `ws://localhost:18080/json`
+* A scheme server at `ws://localhost:18080/scm`
+* A python server at `ws://localhost:18080/py`
+At this time, encryption is not supported; the `wss://` URL's won't
+work.
+
+Server stats can be viewed as an ordinary web page, at
+`http://localhost:18080/`.
+
+A non-default network port can set with the `-p` option, and an
+alternate websocket port with the `-w` option on the cogserver.
+
+From guile
+----------
+The cogserver can be started from guile, as follows:
+```
+$ guile
+(use-modules (opencog))
+(use-modules (opencog cogserver))
+(start-cogserver)
+```
+Non default ports can be specified:
+```
+(start-cogserver #port 17002 #:web 8080)
+```
+Enter `,descri start-cogserver` for more options.
+
 Loadable Modules
 ----------------
 The loadable module subsystem is deprecated; interested users should

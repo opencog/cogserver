@@ -36,9 +36,15 @@ different ways:
   faster, lower latency/higher throughput, and infinitely more stable;
   its free of lockups, hangs and crashes. It's fast.
 
+* **WebSocket API.** All interfaces are accessible through websockets.
+  The only difference is that prompts are not sent. For example, the
+  python API is avaiable at `ws://localhost:18080/py`.  At this time,
+  encryption is not supported, so `wss://` URL's will not work.
+
 * **JSON-style interface.** This is useful for creating JavaScript-powered
   visualizers and user interfaces. Suitable for people who are more
-  comfortable working with JSON.
+  comfortable working with JSON.  This API is avaiable at
+  `ws://localhost:18080/json`.
 
 * **Bulk data transfer**. The base "s-expression" encoding of Atoms and
   (Truth)Values is UTF-8 text string format. It's  human-readable, easy
@@ -127,6 +133,13 @@ To build and run the CogServer, you need to install the AtomSpace first.
 > http://github.com/opencog/atomspace
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
+
+The WebSockets server needs the OpenSSL devel invironment to be
+instaled.
+
+###### OpenSSL
+> OpenSSL
+> On Debian/Ubuntu, `apt get install openssl-dev`
 
 Unit tests
 ----------

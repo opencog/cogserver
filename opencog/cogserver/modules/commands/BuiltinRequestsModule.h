@@ -79,33 +79,7 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "h", do_h,
 
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, "stats", do_stats,
        "Print some diagnostic statistics about the server.",
-       "Usage: stats\n\n"
-       "The current date in UTC is printed, followed by:\n"
-       "  up-since: the date when the server was started.\n"
-       "  last: the date when the most recent connection was opened.\n"
-       "  tot-cnct: grand total number of network connections opened.\n"
-       "  cur-open-socks: number of currently open connections.\n"
-       "  num-open-fds: number of open file descriptors.\n"
-       "  stalls: times that open stalled due to hitting max-open-cnt.\n"
-       "  tot-lines: total number of newlines received by all shells.\n"
-       "  cpu user sys: number of CPU seconds used by server.\n"
-       "  maxrss: resident set size, in KB. Taken from `getrusage`.\n"
-       "\n"
-       "The table shows a list of the currently open connections.\n"
-       "The table header has the following form:\n"
-       "OPEN-DATE THREAD STATE NLINE LAST-ACTIVITY U SHEL QZ E PENDG\n"
-       "The columns are:\n"
-       "  OPEN-DATE -- when the connection was opened.\n"
-       "  THREAD -- the Linux thread-id, as printed by `ps -eLf`\n"
-       "  STATE -- several states possible; `iwait` means waiting for input.\n"
-       "  NLINE -- number of newlines received by the shell.\n"
-       "  LAST-ACTIVITY -- the last time anything was received.\n"
-       "  U -- use count. The number of active handlers for the socket.\n"
-       "  SHEL -- the current shell processor for the socket.\n"
-       "  QZ -- size of the unprocessed (pending) request queue.\n"
-       "  E -- `T` if the shell evaluator is running, else `F`.\n"
-       "  PENDG -- number of bytes of output not yet sent.\n"
-       "\n",
+       "Usage: stats\n\n" + CogServer::stats_legend(),
        false, false)
 
 public:

@@ -21,6 +21,7 @@
 #include <opencog/network/NetworkServer.h>
 
 #include <opencog/cogserver/server/ServerConsole.h>
+#include <opencog/cogserver/server/WebServer.h>
 
 #include "CogServer.h"
 #include "BaseServer.h"
@@ -30,46 +31,80 @@ using namespace opencog;
 CogServer::~CogServer()
 {
     logger().debug("[CogServer] enter destructor");
+    disableWebServer();
     disableNetworkServer();
     logger().debug("[CogServer] exit destructor");
 }
 
 CogServer::CogServer(void) :
     BaseServer(),
-    _networkServer(nullptr),
+    _consoleServer(nullptr),
+    _webServer(nullptr),
     _running(false)
 {
+	set_max_open_sockets();
 }
 
 CogServer::CogServer(AtomSpacePtr as) :
     BaseServer(as),
-    _networkServer(nullptr),
+    _consoleServer(nullptr),
+    _webServer(nullptr),
     _running(false)
 {
+	set_max_open_sockets();
 }
 
-/// Open the given port number for network service.
 /// Allow at most `max_open_socks` concurrent connections.
 /// Setting this larger than 10 or 20 will usually lead to
 /// poor performance, and setting it larger than 140 will
 /// require changing the unix ulimit on max open file descriptors.
-void CogServer::enableNetworkServer(int port, int max_open_socks)
+void CogServer::set_max_open_sockets(int max_open_socks)
 {
-    if (_networkServer) return;
-    _networkServer = new NetworkServer(port);
-
     ServerSocket::set_max_open_sockets(max_open_socks);
+}
+
+/// Open the given port number for network service.
+void CogServer::enableNetworkServer(int port)
+{
+    if (_consoleServer) return;
+    _consoleServer = new NetworkServer(port);
+
     auto make_console = [](void)->ServerSocket*
             { return new ServerConsole(); };
-    _networkServer->run(make_console);
+    _consoleServer->run(make_console);
     _running = true;
     logger().info("Network server running on port %d", port);
+}
+
+/// Open the given port number for web service.
+void CogServer::enableWebServer(int port)
+{
+#ifdef HAVE_OPENSSL
+    if (_webServer) return;
+    _webServer = new NetworkServer(port);
+
+    auto make_console = [](void)->ServerSocket* {
+        ServerSocket* ss = new WebServer();
+        ss->act_as_websocket();
+        return ss;
+    };
+    _webServer->run(make_console);
+    _running = true;
+    logger().info("Web server running on port %d", port);
+#else
+    printf("CogServer compiled without WebSockets.\n");
+    logger().info("CogServer compiled without WebSockets.");
+#endif // HAVE_SSL
 }
 
 void CogServer::disableNetworkServer()
 {
     // No-op for backwards-compat. Actual cleanup performed on
     // main-loop exit.  See notes there about thread races.
+}
+
+void CogServer::disableWebServer()
+{
 }
 
 void CogServer::stop()
@@ -94,7 +129,10 @@ void CogServer::serverLoop()
 
     // Prevent the Network server from accepting any more connections,
     // and from queing any more Requests. I think. This might be racey.
-    _networkServer->stop();
+    if (_webServer)
+        _webServer->stop();
+    if (_consoleServer)
+        _consoleServer->stop();
 
     // Drain whatever is left in the queue.
     while (0 < getRequestQueueSize())
@@ -104,8 +142,10 @@ void CogServer::serverLoop()
     // doing this in other threads, e.g. the thread that calls stop()
     // or the thread that calls disableNetworkServer() will lead to
     // races.
-    delete _networkServer;
-    _networkServer = nullptr;
+    if (_webServer) delete _webServer;
+    _webServer = nullptr;
+    if (_consoleServer) delete _consoleServer;
+    _consoleServer = nullptr;
 
     logger().info("Stopped CogServer");
     logger().flush();
@@ -120,7 +160,39 @@ void CogServer::runLoopStep(void)
 
 std::string CogServer::display_stats(void)
 {
-    return _networkServer->display_stats();
+    return _consoleServer->display_stats();
+}
+
+std::string CogServer::stats_legend(void)
+{
+	return
+       "The current date in UTC is printed, followed by:\n"
+       "  up-since: the date when the server was started.\n"
+       "  last: the date when the most recent connection was opened.\n"
+       "  tot-cnct: grand total number of network connections opened.\n"
+       "  cur-open-socks: number of currently open connections.\n"
+       "  num-open-fds: number of open file descriptors.\n"
+       "  stalls: times that open stalled due to hitting max-open-cnt.\n"
+       "  tot-lines: total number of newlines received by all shells.\n"
+       "  cpu user sys: number of CPU seconds used by server.\n"
+       "  maxrss: resident set size, in KB. Taken from `getrusage`.\n"
+       "\n"
+       "The table shows a list of the currently open connections.\n"
+       "The table header has the following form:\n"
+       "OPEN-DATE THREAD STATE NLINE LAST-ACTIVITY K U SHEL QZ E PENDG\n"
+       "The columns are:\n"
+       "  OPEN-DATE -- when the connection was opened.\n"
+       "  THREAD -- the Linux thread-id, as printed by `ps -eLf`\n"
+       "  STATE -- several states possible; `iwait` means waiting for input.\n"
+       "  NLINE -- number of newlines received by the shell.\n"
+       "  LAST-ACTIVITY -- the last time anything was received.\n"
+       "  K -- socket kind. `T` for telnet, `W` for WebSocket.\n"
+       "  U -- use count. The number of active handlers for the socket.\n"
+       "  SHEL -- the current shell processor for the socket.\n"
+       "  QZ -- size of the unprocessed (pending) request queue.\n"
+       "  E -- `T` if the shell evaluator is running, else `F`.\n"
+       "  PENDG -- number of bytes of output not yet sent.\n"
+       "\n";
 }
 
 // =============================================================

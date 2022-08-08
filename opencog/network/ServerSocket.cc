@@ -13,6 +13,7 @@
 #include <mutex>
 #include <set>
 
+#include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/network/ServerSocket.h>
@@ -47,9 +48,9 @@ static void rem_sock(ServerSocket* ss)
 
 std::string ServerSocket::display_stats(void)
 {
-	// Hack(?) Send a half-ping, in an attempt to close
-	// dead connections.
-	half_ping();
+    // Hack(?) Send a half-ping, in an attempt to close
+    // dead connections.
+    half_ping();
 
     std::string rc;
     std::lock_guard<std::mutex> lock(_sock_lock);
@@ -62,8 +63,8 @@ std::string ServerSocket::display_stats(void)
     std::sort (sov.begin(), sov.end(),
         [](ServerSocket* sa, ServerSocket* sb) -> bool
         { return sa->_start_time == sb->_start_time ?
-				sa->_tid < sb->_tid :
-				sa->_start_time < sb->_start_time; });
+            sa->_tid < sb->_tid :
+            sa->_start_time < sb->_start_time; });
 
     // Print the sorted list; use the first to print a header.
     bool hdr = false;
@@ -89,6 +90,9 @@ std::string ServerSocket::display_stats(void)
 // hex 0x16 ASCII SYN synchronous idle. Will this confuse
 // any users of the cogserver? I dunno.  Lets go for SYN.
 // It's slightly cleaner.
+//
+// For websockets, this sends the pong frame, which has
+// the same effect.
 void ServerSocket::half_ping(void)
 {
     // static const char buf[2] = " ";
@@ -103,13 +107,19 @@ void ServerSocket::half_ping(void)
         // for more than ten seconds, then ping it to see if it
         // is still alive.
         if (ss->_status == IWAIT and
-            now - ss->_last_activity > 10) ss->Send(buf);
+            now - ss->_last_activity > 10)
+        {
+            if (ss->_do_frame_io)
+                ss->send_websocket_pong();
+            else
+                ss->Send(buf);
+        }
     }
 }
 
 std::string ServerSocket::connection_header(void)
 {
-    return "OPEN-DATE        THREAD  STATE NLINE  LAST-ACTIVITY ";
+    return "OPEN-DATE        THREAD  STATE NLINE  LAST-ACTIVITY  K";
 }
 
 std::string ServerSocket::connection_stats(void)
@@ -128,8 +138,9 @@ std::string ServerSocket::connection_stats(void)
 
     // Thread ID as shown by `ps -eLf`
     char bf[132];
-    snprintf(bf, 132, "%s %8d %s %5zd %s",
-        sbuff, _tid, _status, _line_count, abuff);
+    snprintf(bf, 132, "%s %8d %s %5zd %s %c",
+        sbuff, _tid, _status, _line_count, abuff,
+        _is_websocket?'W':'T');
 
     return bf;
 }
@@ -177,7 +188,12 @@ std::condition_variable ServerSocket::_max_cv;
 size_t ServerSocket::_num_open_stalls = 0;
 
 ServerSocket::ServerSocket(void) :
-    _socket(nullptr)
+    _socket(nullptr),
+    _got_first_line(false),
+    _got_http_header(false),
+    _do_frame_io(false),
+    _is_websocket(false),
+    _got_websock_header(false)
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
@@ -222,12 +238,57 @@ ServerSocket::~ServerSocket()
     mxlck.unlock();
 }
 
+// ==================================================================
+
 void ServerSocket::Send(const std::string& cmd)
+{
+    if (not _do_frame_io)
+    {
+        Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
+        return;
+    }
+
+    // If we are here, we have to perform websockets framing.
+    // Send only one packet, and indicate it's length.
+    size_t paylen = cmd.size();
+    char header[10];
+    header[0] = 0x81;
+    if (paylen < 126)
+    {
+        header[1] = (char) paylen;
+        Send(boost::asio::const_buffer(header, 2));
+    }
+    else if (paylen < 65536)
+    {
+        header[1] = 126;
+        header[2] = (paylen >> 8) & 0xff;
+        header[3] = paylen & 0xff;
+        Send(boost::asio::const_buffer(header, 4));
+    }
+    else
+    {
+        header[1] = 127;
+        header[2] = (paylen >> 56) & 0xff;
+        header[3] = (paylen >> 48) & 0xff;
+        header[4] = (paylen >> 40) & 0xff;
+        header[5] = (paylen >> 32) & 0xff;
+        header[6] = (paylen >> 24) & 0xff;
+        header[7] = (paylen >> 16) & 0xff;
+        header[8] = (paylen >> 8) & 0xff;
+        header[9] = paylen & 0xff;
+        Send(boost::asio::const_buffer(header, 10));
+    }
+
+    // Send the actual data.
+    Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
+}
+
+void ServerSocket::Send(const boost::asio::const_buffer& buf)
 {
     OC_ASSERT(_socket, "Use of socket after it's been closed!\n");
 
     boost::system::error_code error;
-    boost::asio::write(*_socket, boost::asio::buffer(cmd),
+    boost::asio::write(*_socket, buf,
                        boost::asio::transfer_all(), error);
 
     // The most likely cause of an error is that the remote side has
@@ -235,14 +296,14 @@ void ServerSocket::Send(const std::string& cmd)
     // I beleive this is a ENOTCON errno, maybe others as well.
     // (for example, ECONNRESET `Connection reset by peer`)
     // Don't log these harmless errors.
+    // Do log true failures.
     if (error.value() != boost::system::errc::success and
         error.value() != boost::asio::error::not_connected and
         error.value() != boost::asio::error::broken_pipe and
         error.value() != boost::asio::error::bad_descriptor and
         error.value() != boost::asio::error::connection_reset)
-        logger().warn("ServerSocket::Send(): %s on thread 0x%x\n"
-                      "Attempted to send: %s",
-             error.message().c_str(), pthread_self(), cmd.c_str());
+        logger().warn("ServerSocket::Send(): %s on thread 0x%x\n",
+             error.message().c_str(), pthread_self());
 }
 
 // As far as I can tell, boost::asio is not actually thread-safe,
@@ -266,7 +327,7 @@ void ServerSocket::Exit()
 
         // OK, so there is some boost bug here. This line of code
         // crashes, and I can't figure out how to make it not crash.
-        // So, it we start a cogserver, telnet into it, stop the
+        // So, if we start a cogserver, telnet into it, stop the
         // cogserver, then exit telnet, it will crash deep inside of
         // boost (in the `close()` below.) I think it crashes because
         // boost is accessing freed memory. That is, by this point,
@@ -303,6 +364,16 @@ void ServerSocket::Exit()
     }
     _status = DOWN;
 }
+
+// ==================================================================
+
+void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
+{
+    if (_socket) delete _socket;
+    _socket = sock;
+}
+
+// ==================================================================
 
 typedef boost::asio::buffers_iterator<
     boost::asio::streambuf::const_buffers_type> bitter;
@@ -347,10 +418,15 @@ match_eol_or_escape(bitter begin, bitter end)
     return std::make_pair(i, false);
 }
 
-void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
+/// Read a single newline-delimited line from the socket.
+/// Return immediately if a ctrl-C or ctrl-D is found.
+std::string ServerSocket::get_telnet_line(boost::asio::streambuf& b)
 {
-    if (_socket) delete _socket;
-    _socket = sock;
+    boost::asio::read_until(*_socket, b, match_eol_or_escape);
+    std::istream is(&b);
+    std::string line;
+    std::getline(is, line);
+    return line;
 }
 
 // ==================================================================
@@ -363,17 +439,24 @@ void ServerSocket::handle_connection(void)
     _tid = gettid();
     _pth = pthread_self();
     logger().debug("ServerSocket::handle_connection()");
-    OnConnection();
+
+    // telent sockets have no setup to do.
+    if (not _is_websocket)
+        OnConnection();
     boost::asio::streambuf b;
     while (true)
     {
         try
         {
             _status = IWAIT;
-            boost::asio::read_until(*_socket, b, match_eol_or_escape);
-            std::istream is(&b);
             std::string line;
-            std::getline(is, line);
+            if (not _do_frame_io)
+               line = get_telnet_line(b);
+            else
+               line = get_websocket_line();
+
+            // Strip off carriage returns. The line already stripped
+            // newlines.
             if (not line.empty() and line[line.length()-1] == '\r') {
                 line.erase(line.end()-1);
             }
@@ -382,7 +465,12 @@ void ServerSocket::handle_connection(void)
             _line_count++;
             total_line_count++;
             _status = RUN;
-            OnLine(line);
+
+				// Bypass until we've got the WebSocket fully open.
+				if (_is_websocket and not _do_frame_io)
+					HandshakeLine(line);
+				else
+            	OnLine(line);
         }
         catch (const boost::system::system_error& e)
         {
@@ -396,24 +484,32 @@ void ServerSocket::handle_connection(void)
                 logger().error("ServerSocket::handle_connection(): Error reading data. Message: %s", e.what());
             }
         }
+        catch (const SilentException& e)
+        {
+            break;
+        }
     }
 
     _last_activity = time(nullptr);
     _status = CLOSE;
 
-    // If the data sent to us is not new-line terminated, then
-    // there may still be some bytes sitting in the buffer. Get
-    // them and forward them on.  These are typically scheme
-    // strings issued from netcat, that simply did not have
-    // newlines at the end.
-    std::istream is(&b);
-    std::string line;
-    std::getline(is, line);
-    if (not line.empty() and line[line.length()-1] == '\r') {
-        line.erase(line.end()-1);
+    // Perform cleanup at end, if in telnet mode.
+    if (not _is_websocket)
+    {
+        // If the data sent to us is not new-line terminated, then
+        // there may still be some bytes sitting in the buffer. Get
+        // them and forward them on.  These are typically scheme
+        // strings issued from netcat, that simply did not have
+        // newlines at the end.
+        std::istream is(&b);
+        std::string line;
+        std::getline(is, line);
+        if (not line.empty() and line[line.length()-1] == '\r') {
+            line.erase(line.end()-1);
+        }
+        if (not line.empty())
+            OnLine(line);
     }
-    if (not line.empty())
-        OnLine(line);
 
     logger().debug("ServerSocket::exiting handle_connection()");
 

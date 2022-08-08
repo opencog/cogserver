@@ -41,6 +41,7 @@ namespace opencog
 class ServerSocket
 {
 private:
+    // The actual socket on which data comes & goes.
     boost::asio::ip::tcp::socket* _socket;
 
     // A count of the number of concurrent open sockets. This is used
@@ -54,7 +55,27 @@ private:
     // A count of the number of times the max condition was reached.
     static size_t _num_open_stalls;
 
+    // Read a newline-delimited line of text from socket.
+    std::string get_telnet_line(boost::asio::streambuf&);
+
+    // Send an asio buffer that has data in it.
+    void Send(const boost::asio::const_buffer&);
+
+    // WebSocket state machine; unused in the telnet interface.
+    bool _got_first_line;
+    bool _got_http_header;
+    bool _do_frame_io;
+    std::string _webkey;
+    void HandshakeLine(const std::string&);
+    std::string get_websocket_line(void);
+    void send_websocket_pong(void);
+
 protected:
+    // WebSocket stuff that users will be interested in.
+    bool _is_websocket;
+    bool _got_websock_header;
+    std::string _url;
+
     /**
      * Connection callback: called whenever a new connection arrives
      */
@@ -80,6 +101,7 @@ protected:
 public:
     ServerSocket(void);
     virtual ~ServerSocket();
+    void act_as_websocket(void) { _is_websocket = true; }
 
     void set_connection(boost::asio::ip::tcp::socket*);
     void handle_connection(void);

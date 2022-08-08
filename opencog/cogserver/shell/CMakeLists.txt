@@ -77,16 +77,15 @@ TARGET_LINK_LIBRARIES(top-shell
 
 # ---------------------- install targets
 
+INSTALL (TARGETS
+	json-shell
+	scheme-shell
+	sexpr-shell
+	top-shell
+	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+
 IF (HAVE_CYTHON)
 	INSTALL (TARGETS py-shell
 		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
 ENDIF (HAVE_CYTHON)
 
-INSTALL (TARGETS scheme-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
-INSTALL (TARGETS sexpr-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
-INSTALL (TARGETS json-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
-INSTALL (TARGETS top-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
