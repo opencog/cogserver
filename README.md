@@ -36,9 +36,15 @@ different ways:
   faster, lower latency/higher throughput, and infinitely more stable;
   its free of lockups, hangs and crashes. It's fast.
 
+* **WebSocket API.** All interfaces are accessible through websockets.
+  The only difference is that prompts are not sent. For example, the
+  python API is avaiable at `ws://localhost:18080/py`.  At this time,
+  encryption is not supported, so `wss://` URL's will not work.
+
 * **JSON-style interface.** This is useful for creating JavaScript-powered
   visualizers and user interfaces. Suitable for people who are more
-  comfortable working with JSON.
+  comfortable working with JSON.  This API is avaiable at
+  `ws://localhost:18080/json`.
 
 * **Bulk data transfer**. The base "s-expression" encoding of Atoms and
   (Truth)Values is UTF-8 text string format. It's  human-readable, easy
