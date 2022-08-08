@@ -70,6 +70,7 @@ private:
     std::string get_websocket_data(void);
     std::string get_websocket_line(void);
     void send_websocket_pong(void);
+    void send_websocket(const std::string&);
 
 protected:
     // WebSocket stuff that users will be interested in.

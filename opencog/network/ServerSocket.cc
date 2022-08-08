@@ -261,38 +261,7 @@ void ServerSocket::Send(const std::string& cmd)
     }
 
     // If we are here, we have to perform websockets framing.
-    // Send only one packet, and indicate it's length.
-    size_t paylen = cmdsize;
-    char header[10];
-    header[0] = 0x81;
-    if (paylen < 126)
-    {
-        header[1] = (char) paylen;
-        Send(boost::asio::const_buffer(header, 2));
-    }
-    else if (paylen < 65536)
-    {
-        header[1] = 126;
-        header[2] = (paylen >> 8) & 0xff;
-        header[3] = paylen & 0xff;
-        Send(boost::asio::const_buffer(header, 4));
-    }
-    else
-    {
-        header[1] = 127;
-        header[2] = (paylen >> 56) & 0xff;
-        header[3] = (paylen >> 48) & 0xff;
-        header[4] = (paylen >> 40) & 0xff;
-        header[5] = (paylen >> 32) & 0xff;
-        header[6] = (paylen >> 24) & 0xff;
-        header[7] = (paylen >> 16) & 0xff;
-        header[8] = (paylen >> 8) & 0xff;
-        header[9] = paylen & 0xff;
-        Send(boost::asio::const_buffer(header, 10));
-    }
-
-    // Send the actual data.
-    Send(boost::asio::const_buffer(cmd.c_str(), cmdsize));
+    send_websocket(cmd);
 }
 
 void ServerSocket::Send(const boost::asio::const_buffer& buf)
