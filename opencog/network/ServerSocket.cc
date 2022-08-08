@@ -327,7 +327,7 @@ void ServerSocket::Exit()
 
         // OK, so there is some boost bug here. This line of code
         // crashes, and I can't figure out how to make it not crash.
-        // So, it we start a cogserver, telnet into it, stop the
+        // So, if we start a cogserver, telnet into it, stop the
         // cogserver, then exit telnet, it will crash deep inside of
         // boost (in the `close()` below.) I think it crashes because
         // boost is accessing freed memory. That is, by this point,

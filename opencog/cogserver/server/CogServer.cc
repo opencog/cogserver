@@ -129,8 +129,10 @@ void CogServer::serverLoop()
 
     // Prevent the Network server from accepting any more connections,
     // and from queing any more Requests. I think. This might be racey.
-    _webServer->stop();
-    _consoleServer->stop();
+    if (_webServer)
+        _webServer->stop();
+    if (_consoleServer)
+        _consoleServer->stop();
 
     // Drain whatever is left in the queue.
     while (0 < getRequestQueueSize())
