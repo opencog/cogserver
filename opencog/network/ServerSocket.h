@@ -59,7 +59,7 @@ private:
     std::string get_telnet_line(boost::asio::streambuf&);
 
     // Send an asio buffer that has data in it.
-    void Send(boost::asio::const_buffer);
+    void Send(const boost::asio::const_buffer&);
 
     // WebSocket state machine; unused in the telnet interface.
     bool _got_first_line;

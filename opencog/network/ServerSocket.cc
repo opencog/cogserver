@@ -283,7 +283,7 @@ void ServerSocket::Send(const std::string& cmd)
     Send(boost::asio::const_buffer(cmd.c_str(), cmd.size()));
 }
 
-void ServerSocket::Send(boost::asio::const_buffer buf)
+void ServerSocket::Send(const boost::asio::const_buffer& buf)
 {
     OC_ASSERT(_socket, "Use of socket after it's been closed!\n");
 
