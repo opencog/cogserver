@@ -78,7 +78,7 @@ void gargleblast(int tid, int reps)
 			// if (' ' != reso[i]) nch++;
 			if (0x16 != reso[i]) nch++;
 
-#define CUR_MSG_SZ 265  // Size without synchronous idle.
+#define CUR_MSG_SZ 264  // Size without synchronous idle.
 // #define CUR_MSG_SZ 235     // Size without blank spaces.
 		// size_t msgsz = reso.size();
 		size_t msgsz = nch;
