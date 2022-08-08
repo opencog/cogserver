@@ -75,6 +75,7 @@ GenericShell::GenericShell(void) :
     show_output(true),
     show_prompt(true),
     self_destruct(false),
+    apply_discipline(true),
     _eval_done(true),
     _evaluator(nullptr),
     _name("gnrc")
@@ -111,6 +112,11 @@ void GenericShell::hush_output(bool hush)
 void GenericShell::hush_prompt(bool hush)
 {
 	show_prompt = !hush;
+}
+
+void GenericShell::discipline(bool d)
+{
+	apply_discipline = d;
 }
 
 const std::string& GenericShell::get_prompt(void)
@@ -193,7 +199,10 @@ void GenericShell::eval(const std::string &expr)
 	}
 
 	// Queue up the expr, where it will be evaluated in another thread.
-	line_discipline(expr);
+	if (apply_discipline)
+		line_discipline(expr);
+	else
+		evalque.push(expr);
 
 	// The user is exiting the shell. No one will ever call a method on
 	// this instance ever again. So stop hogging space, and self-destruct.
@@ -229,7 +238,7 @@ void GenericShell::user_interrupt()
 
 /* ============================================================== */
 /**
- * Handle special characters, evaluate the expression
+ * Handle special characters, evaluate the expression.
  */
 void GenericShell::line_discipline(const std::string &expr)
 {
@@ -382,6 +391,8 @@ void GenericShell::line_discipline(const std::string &expr)
 	 * The newline was cut by the request subsystem. Re-insert it;
 	 * otherwise, comments within procedures will have the effect of
 	 * commenting out the rest of the procedure, leading to garbage.
+	 *
+	 * XXX Is this still true?
 	 */
 	evalque.push(expr + "\n");
 }

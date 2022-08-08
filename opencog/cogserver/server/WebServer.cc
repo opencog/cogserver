@@ -69,14 +69,23 @@ void WebServer::OnLine(const std::string& line)
 {
 	if (_request)
 	{
+		// Use the request mechanism to get a fully configured
+		// shell. This is a hang-over from the telnet interfaces,
+		// where input strings become Requests, which, when executed
+		// are looked up in the module system, passed to the correct
+		// module, and then configured to send replies on this socket.
+		// It works, so don't mess with it.
 		std::list<std::string> params;
 		params.push_back("hush");
 		_request->setParameters(params);
 		_request->set_console(this);
 		_request->execute();
-		get();
+		get(); // Incremenet use count.
 		delete _request;
 		_request = nullptr;
+
+		// Disable line discipline
+		_shell->discipline(false);
 	}
 	_shell->eval(line);
 }
