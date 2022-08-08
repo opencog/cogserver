@@ -39,7 +39,7 @@ private:
     static void init_in_module(void*);
     void init(void);
 
-    std::string start_server(AtomSpace*, int, const std::string&,
+    std::string start_server(AtomSpace*, int, int, const std::string&,
                              const std::string&, const std::string&);
     std::string stop_server(void);
 
@@ -113,7 +113,8 @@ void opencog_cogserver_init(void)
 // --------------------------------------------------------------
 
 std::string CogServerSCM::start_server(AtomSpace* as,
-                                       int port,
+                                       int telnet_port,
+                                       int websocket_port,
                                        const std::string& prompt,
                                        const std::string& scmprompt,
                                        const std::string& cfg)
@@ -127,7 +128,8 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     if (0 < cfg.size())
     {
         config().load(cfg.c_str(), true);
-        port = config().get_int("SERVER_PORT", port);
+        telnet_port = config().get_int("SERVER_PORT", telnet_port);
+        websocket_port = config().get_int("WEBSOCKET_PORT", websocket_port);
     }
 
     // Pass parameters non-locally.
@@ -141,7 +143,10 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     srvr->loadModules();
 
     // Enable the network server and run the server's main loop
-    srvr->enableNetworkServer(port);
+    if (0 < telnet_port)
+        srvr->enableNetworkServer(telnet_port);
+    if (0 < websocket_port)
+        srvr->enableWebServer(websocket_port);
     main_loop = new std::thread(&CogServer::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;

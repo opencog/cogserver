@@ -233,9 +233,11 @@ int main(int argc, char *argv[])
     // Load modules specified in config
     cogserve.loadModules();
 
-    // enable the network server and run the server's main loop
-    cogserve.enableNetworkServer(console_port);
-    cogserve.enableWebServer(webserver_port);
+    // Enable the network server and run the server's main loop.
+    if (0 < console_port)
+        cogserve.enableNetworkServer(console_port);
+    if (0 < webserver_port)
+        cogserve.enableWebServer(webserver_port);
     cogserve.serverLoop();
     exit(0);
 }
