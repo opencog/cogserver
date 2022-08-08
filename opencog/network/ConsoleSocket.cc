@@ -66,10 +66,11 @@ std::string ConsoleSocket::connection_header(void)
 
 std::string ConsoleSocket::connection_stats(void)
 {
+    std::string rc = ServerSocket::connection_stats();
+
     char buf[40];
     snprintf(buf, 40, " %1d ", get_use_count());
-
-    std::string rc = ServerSocket::connection_stats() + buf;
+    rc += buf;
 
     if (_shell)
     {

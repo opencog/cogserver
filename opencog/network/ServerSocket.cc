@@ -119,7 +119,7 @@ void ServerSocket::half_ping(void)
 
 std::string ServerSocket::connection_header(void)
 {
-    return "OPEN-DATE        THREAD  STATE NLINE  LAST-ACTIVITY ";
+    return "OPEN-DATE        THREAD  STATE NLINE  LAST-ACTIVITY  K";
 }
 
 std::string ServerSocket::connection_stats(void)
@@ -138,8 +138,9 @@ std::string ServerSocket::connection_stats(void)
 
     // Thread ID as shown by `ps -eLf`
     char bf[132];
-    snprintf(bf, 132, "%s %8d %s %5zd %s",
-        sbuff, _tid, _status, _line_count, abuff);
+    snprintf(bf, 132, "%s %8d %s %5zd %s %c",
+        sbuff, _tid, _status, _line_count, abuff,
+        _is_websocket?'W':'T');
 
     return bf;
 }
