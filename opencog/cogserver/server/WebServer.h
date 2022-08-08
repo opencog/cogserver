@@ -35,6 +35,7 @@ protected:
 	virtual void OnLine (const std::string&);
 
 	std::string html_stats(void);
+	std::string favicon(void);
 public:
     WebServer(void);
     ~WebServer();

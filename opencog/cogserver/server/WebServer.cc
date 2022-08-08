@@ -37,7 +37,14 @@ void WebServer::OnConnection(void)
 	// report the stats as an HTML page.
 	if (not _got_websock_header)
 	{
-		Send (html_stats());
+		if (0 == _url.compare("/favicion.ico"))
+		{
+			Send(favicon());
+printf("duude got fave ico request\n");
+		}
+		else
+			Send (html_stats());
+printf("duude plain http url=%s\n", _url.c_str());
 		throw SilentException();
 	}
 
@@ -113,6 +120,20 @@ std::string WebServer::html_stats(void)
 		"<pre>";
 	response += CogServer::stats_legend();
 	response += "</pre></body></html>";
+
+	return response;
+}
+
+// ==================================================================
+
+std::string WebServer::favicon(void)
+{
+	std::string response =
+		"HTTP/1.1 200 OK\r\n"
+		"Server: CogServer\r\n"
+		"Content-Type: image/vnd.microsoft.icon\r\n"
+		"Content-Transfer-Encoding: binary\r\n"
+		"\r\n";
 
 	return response;
 }
