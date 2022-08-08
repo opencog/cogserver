@@ -122,11 +122,46 @@ std::string WebServer::html_stats(void)
 
 // ==================================================================
 
+/// Given an input in base64, return the raw binary, stuffed into
+/// a string.
+// Found code blob on stackexchange from user Manuel Martinez.
+static std::string base64_decode(const std::string &in)
+{
+	std::string out;
+
+	std::vector<int> T(256,-1);
+	for (int i=0; i<64; i++) T["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]] = i;
+
+	int val=0, valb=-8;
+	for (unsigned char c : in)
+	{
+		if (T[c] == -1) break;
+		val = (val << 6) + T[c];
+		valb += 6;
+		if (valb >= 0)
+		{
+			out.push_back(char((val>>valb) & 0xFF));
+			valb -= 8;
+		}
+	}
+	return out;
+}
+
+// ==================================================================
+
+/// Return an HTTP response holding the opencog favicon.ico image.
 std::string WebServer::favicon(void)
 {
+	// I do not want to open and read a file; so we're going to
+	// just insert this into the source code. Which means it cannot
+	// be a binary blob. So we insert base64 into the code.
+	// Now, it would be great if Firefox/Mozilla accepted
+	// Content-Transfer-Encoding: base64 but it doesn't, so we
+	// convert the thing into binary, and send that.
 	std::string bicon =
 #include "favicon.ico.base64"
 	;
+	std::string icon = base64_decode(bicon);
 
 	std::string response =
 		"HTTP/1.1 200 OK\r\n"
@@ -134,14 +169,13 @@ std::string WebServer::favicon(void)
 		"Content-Length: ";
 
 	char buf[20];
-	snprintf(buf, 20, "%lu", bicon.size());
+	snprintf(buf, 20, "%lu", icon.size());
 	response += buf;
 	response += "\r\n"
 		"Content-Type: image/vnd.microsoft.icon\r\n"
-		"Content-Transfer-Encoding: base64\r\n"
 		"\r\n";
 
-	response += bicon;
+	response += icon;
 
 	return response;
 }

@@ -139,7 +139,8 @@ void ServerSocket::send_websocket_pong()
 // ==================================================================
 
 /// Given a char buffer of data (possibly including nulls)
-/// return the base64 encoding of it.  Found on stackexchange.
+/// return the base64 encoding of it.
+// Found code blob on stackexchange from user Manuel Martinez.
 static std::string base64_encode(unsigned char* buf, int len)
 {
 	std::string out;
