@@ -80,7 +80,6 @@ void WebServer::OnLine(const std::string& line)
 		_request->setParameters(params);
 		_request->set_console(this);
 		_request->execute();
-		get(); // Incremenet use count.
 		delete _request;
 		_request = nullptr;
 
