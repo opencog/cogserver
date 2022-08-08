@@ -19,6 +19,113 @@ using namespace opencog;
 
 // ==================================================================
 
+/// Read from the websocket, decoding all framing and control bits,
+/// and return the text data as a string. This returns one frame
+/// at a time. No attempt is made to consolidate fragments.
+std::string ServerSocket::get_websocket_line()
+{
+    // If we are here, then we are expecting a frame header.
+    // Get frame and opcode
+    unsigned char fop;
+    boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
+
+    // bool finbit = fop & 0x80;
+    unsigned char opcode = fop & 0xf;
+
+    // Handle pings
+    while (9 == opcode)
+    {
+        // Mask and payload length
+        unsigned char mpay;
+        boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
+        bool maskbit = mpay & 0x80;
+        unsigned char paylen = mpay & 0x7f;
+
+        // Not expecting a mask in a ping
+        if (maskbit)
+        {
+            logger().warn("Not expecting a mask in a websocket ping");
+            throw SilentException();
+        }
+
+        char data[paylen+1];
+        if (0 < paylen)
+            boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+
+        // Send a pong, copying the data.
+        char header[2];
+        header[0] = 0x8a;
+        header[1] = (char) paylen;
+        Send(boost::asio::const_buffer(header, 2));
+        if (0 < paylen)
+            Send(boost::asio::const_buffer(data, paylen));
+
+        // And wait for the next frame...
+        boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
+        // finbit = fop & 0x80;
+        opcode = fop & 0xf;
+    }
+
+    // Socket close message .. just quit.
+    if (8 == opcode)
+        throw SilentException();
+
+    // We only support text data.
+    if (1 != opcode)
+    {
+        logger().warn("Not expecting binary websocket data; opcode=%d",
+            opcode);
+        throw SilentException();
+    }
+
+    // mask and payload length
+    unsigned char mpay;
+    boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
+    bool maskbit = mpay & 0x80;
+    size_t paylen = mpay & 0x7f;
+
+    // It is an error if the maskbit is not set. Bail out.
+    if (not maskbit)
+        throw SilentException();
+
+    uint32_t mask;
+    boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
+
+    // Use malloc inside of std::string to get a buffer.
+    std::string blob;
+    blob.resize(paylen+1);
+    char* data = blob.data();
+    boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+
+    // Bulk unmask the data, using XOR.
+    uint32_t *dp = (uint32_t *) data;
+    size_t i=0;
+    while (i < paylen)
+    {
+        *dp = *dp ^ mask;
+        ++dp;
+        i += 4;
+    }
+
+    // Unmask any remaining bytes.
+    i -= 4;
+    for (unsigned int j=0; j<i%4; j++)
+        data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
+
+    // Null-terminated string.
+    data[paylen] = 0x0;
+
+    // We're not actually going to use a line protocol, when we're
+    // using websockets. If teh user wants to search for newline
+    // chars in the datastream, they are welcome to. We're not
+    // going to futz with that.
+    return blob;
+}
+
+// ==================================================================
+
+/// Given a char buffer of data (possibly including nulls)
+/// return the base64 encoding of it.  Found on stackexchange.
 static std::string base64_encode(unsigned char* buf, int len)
 {
 	std::string out;
@@ -41,7 +148,10 @@ static std::string base64_encode(unsigned char* buf, int len)
 	return out;
 }
 
-// Perform the webscokets handshake.
+/// Perform the websockets handshake. That is, listen for the HTTP
+/// header, verify that it has an `Upgrade: websocket` line in it,
+/// and then do the magic-key exchange, etc. Upon compltion, the
+/// socket is ready to send and receive websocket frames.
 void ServerSocket::HandshakeLine(const std::string& line)
 {
 	// The very first HTTP line.
