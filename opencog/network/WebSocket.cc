@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+// OpenSSL is needed for only one thing: the SHA1 hash of the websocket
+// key. It is not used for anything else.
 #ifdef HAVE_OPENSSL
 
 #include <string>
@@ -24,102 +26,102 @@ using namespace opencog;
 /// at a time. No attempt is made to consolidate fragments.
 std::string ServerSocket::get_websocket_line()
 {
-    // If we are here, then we are expecting a frame header.
-    // Get frame and opcode
-    unsigned char fop;
-    boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
+	// If we are here, then we are expecting a frame header.
+	// Get frame and opcode
+	unsigned char fop;
+	boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
 
-    // bool finbit = fop & 0x80;
-    unsigned char opcode = fop & 0xf;
+	// bool finbit = fop & 0x80;
+	unsigned char opcode = fop & 0xf;
 
-    // Handle pings
-    while (9 == opcode)
-    {
-        // Mask and payload length
-        unsigned char mpay;
-        boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
-        bool maskbit = mpay & 0x80;
-        unsigned char paylen = mpay & 0x7f;
+	// Handle pings
+	while (9 == opcode)
+	{
+		// Mask and payload length
+		unsigned char mpay;
+		boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
+		bool maskbit = mpay & 0x80;
+		unsigned char paylen = mpay & 0x7f;
 
-        // Not expecting a mask in a ping
-        if (maskbit)
-        {
-            logger().warn("Not expecting a mask in a websocket ping");
-            throw SilentException();
-        }
+		// Not expecting a mask in a ping
+		if (maskbit)
+		{
+			logger().warn("Not expecting a mask in a websocket ping");
+			throw SilentException();
+		}
 
-        char data[paylen+1];
-        if (0 < paylen)
-            boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+		char data[paylen+1];
+		if (0 < paylen)
+			boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
 
-        // Send a pong, copying the data.
-        char header[2];
-        header[0] = 0x8a;
-        header[1] = (char) paylen;
-        Send(boost::asio::const_buffer(header, 2));
-        if (0 < paylen)
-            Send(boost::asio::const_buffer(data, paylen));
+		// Send a pong, copying the data.
+		char header[2];
+		header[0] = 0x8a;
+		header[1] = (char) paylen;
+		Send(boost::asio::const_buffer(header, 2));
+		if (0 < paylen)
+			Send(boost::asio::const_buffer(data, paylen));
 
-        // And wait for the next frame...
-        boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
-        // finbit = fop & 0x80;
-        opcode = fop & 0xf;
-    }
+		// And wait for the next frame...
+		boost::asio::read(*_socket, boost::asio::buffer(&fop, 1));
+		// finbit = fop & 0x80;
+		opcode = fop & 0xf;
+	}
 
-    // Socket close message .. just quit.
-    if (8 == opcode)
-        throw SilentException();
+	// Socket close message .. just quit.
+	if (8 == opcode)
+		throw SilentException();
 
-    // We only support text data.
-    if (1 != opcode)
-    {
-        logger().warn("Not expecting binary websocket data; opcode=%d",
-            opcode);
-        throw SilentException();
-    }
+	// We only support text data.
+	if (1 != opcode)
+	{
+		logger().warn("Not expecting binary websocket data; opcode=%d",
+			opcode);
+		throw SilentException();
+	}
 
-    // mask and payload length
-    unsigned char mpay;
-    boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
-    bool maskbit = mpay & 0x80;
-    size_t paylen = mpay & 0x7f;
+	// mask and payload length
+	unsigned char mpay;
+	boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
+	bool maskbit = mpay & 0x80;
+	size_t paylen = mpay & 0x7f;
 
-    // It is an error if the maskbit is not set. Bail out.
-    if (not maskbit)
-        throw SilentException();
+	// It is an error if the maskbit is not set. Bail out.
+	if (not maskbit)
+		throw SilentException();
 
-    uint32_t mask;
-    boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
+	uint32_t mask;
+	boost::asio::read(*_socket, boost::asio::buffer(&mask, 4));
 
-    // Use malloc inside of std::string to get a buffer.
-    std::string blob;
-    blob.resize(paylen+1);
-    char* data = blob.data();
-    boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
+	// Use malloc inside of std::string to get a buffer.
+	std::string blob;
+	blob.resize(paylen+1);
+	char* data = blob.data();
+	boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
 
-    // Bulk unmask the data, using XOR.
-    uint32_t *dp = (uint32_t *) data;
-    size_t i=0;
-    while (i < paylen)
-    {
-        *dp = *dp ^ mask;
-        ++dp;
-        i += 4;
-    }
+	// Bulk unmask the data, using XOR.
+	uint32_t *dp = (uint32_t *) data;
+	size_t i=0;
+	while (i < paylen)
+	{
+		*dp = *dp ^ mask;
+		++dp;
+		i += 4;
+	}
 
-    // Unmask any remaining bytes.
-    i -= 4;
-    for (unsigned int j=0; j<i%4; j++)
-        data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
+	// Unmask any remaining bytes.
+	i -= 4;
+	for (unsigned int j=0; j<i%4; j++)
+		data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
 
-    // Null-terminated string.
-    data[paylen] = 0x0;
+	// Null-terminated string.
+	data[paylen] = 0x0;
 
-    // We're not actually going to use a line protocol, when we're
-    // using websockets. If teh user wants to search for newline
-    // chars in the datastream, they are welcome to. We're not
-    // going to futz with that.
-    return blob;
+	// We're not actually going to use a line protocol, when we're
+	// using websockets. If teh user wants to search for newline
+	// chars in the datastream, they are welcome to. We're not
+	// going to futz with that.
+	return blob;
 }
 
 // ==================================================================
