@@ -60,6 +60,8 @@ void WebServer::OnConnection(void)
 			"The Cogserver doesn't know about " + _url + "\n");
 		throw SilentException();
 	}
+
+	logger().info("Opened WebSocket %s Shell", cmdName);
 }
 
 // Called for each newline-terminated line received.
@@ -72,15 +74,11 @@ void WebServer::OnLine(const std::string& line)
 		_request->setParameters(params);
 		_request->set_console(this);
 		_request->execute();
-printf("duude now shell=%p usecount=%d\n", _shell, get_use_count());
 		get();
 		delete _request;
-printf("duude post delete shell=%p usecount=%d\n", _shell, get_use_count());
 		_request = nullptr;
 	}
-printf("duuuude websock recv'd >>%s<<\n", line.c_str());
-
-	Send("yeah baby go for it\n");
+	_shell->eval(line);
 }
 
 
