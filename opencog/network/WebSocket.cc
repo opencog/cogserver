@@ -86,7 +86,26 @@ std::string ServerSocket::get_websocket_data(void)
 	unsigned char mpay;
 	boost::asio::read(*_socket, boost::asio::buffer(&mpay, 1));
 	bool maskbit = mpay & 0x80;
-	size_t paylen = mpay & 0x7f;
+	int8_t paybyte = mpay & 0x7f;
+	int64_t paylen = paybyte;
+
+	if (126 == paybyte)
+	{
+		uint16_t shore;
+		boost::asio::read(*_socket, boost::asio::buffer(&shore, 2));
+		paylen = shore;
+	}
+	else if (127 == paybyte)
+	{
+		uint64_t lung;
+		boost::asio::read(*_socket, boost::asio::buffer(&lung, 8));
+		if ((1UL << 40) < lung)
+		{
+			logger().warn("Websocket insane length %lu\n", lung);
+			throw SilentException();
+		}
+		paylen = lung;
+	}
 
 	// It is an error if the maskbit is not set. Bail out.
 	if (not maskbit)
@@ -106,7 +125,7 @@ std::string ServerSocket::get_websocket_data(void)
 
 	// Bulk unmask the data, using XOR.
 	uint32_t *dp = (uint32_t *) data;
-	size_t i=0;
+	int64_t i=0;
 	while (i <= paylen-4)
 	{
 		*dp = *dp ^ mask;
