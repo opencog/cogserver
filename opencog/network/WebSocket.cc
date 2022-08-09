@@ -93,12 +93,15 @@ std::string ServerSocket::get_websocket_data(void)
 	{
 		uint16_t shore;
 		boost::asio::read(*_socket, boost::asio::buffer(&shore, 2));
-		paylen = shore;
+		paylen = ntohs(shore);
 	}
 	else if (127 == paybyte)
 	{
-		uint64_t lung;
-		boost::asio::read(*_socket, boost::asio::buffer(&lung, 8));
+		uint32_t lunglo, lunghi;
+		boost::asio::read(*_socket, boost::asio::buffer(&lunghi, 4));
+		boost::asio::read(*_socket, boost::asio::buffer(&lunglo, 4));
+		uint64_t lung = ntohl(lunghi);
+		lung = lung << 32 | ntohl(lunglo);
 		if ((1UL << 40) < lung)
 		{
 			logger().warn("Websocket insane length %lu\n", lung);
