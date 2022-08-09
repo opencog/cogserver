@@ -160,7 +160,18 @@ void CogServer::runLoopStep(void)
 
 std::string CogServer::display_stats(void)
 {
-    return _consoleServer->display_stats();
+    if (_consoleServer)
+        return _consoleServer->display_stats();
+    else
+        return "Console server is not running";
+}
+
+std::string CogServer::display_web_stats(void)
+{
+    if (_webServer)
+        return _webServer->display_stats();
+    else
+        return "Web server is not running";
 }
 
 std::string CogServer::stats_legend(void)

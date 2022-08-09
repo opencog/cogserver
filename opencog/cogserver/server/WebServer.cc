@@ -110,7 +110,7 @@ std::string WebServer::html_stats(void)
 		"<body>"
 		"<h2>CogServer Stats</h2>"
 		"<pre>\n";
-	response += cogserver().display_stats();
+	response += cogserver().display_web_stats();
 	response +=
 		"</pre>"
 		"<h2>Stats Legend</h2>"

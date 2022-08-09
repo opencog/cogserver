@@ -31,7 +31,7 @@ namespace opencog
  * will so that a server may run in networkless mode if desired.
  *
  * The network server supports only one server socket. Client applications
- * should use the 'start' methodr to start listening to a port.
+ * should use the 'start' method to start listening to a port.
  * Currently, the network server doesn't
  * support selecting the network interface that the server socket will bind to
  * (every server sockets binds to 0.0.0.0, i.e., all interfaces). Thus,
