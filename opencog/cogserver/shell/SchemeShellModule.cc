@@ -101,6 +101,7 @@ SchemeShellModule::shelloutRequest::execute(void)
 		sh->hush_prompt(hush);
 		sh->hush_output(hush);
 
+		// Why are we sending an empty string ???
 		if (hush) { send(""); return true; }
 	}
 

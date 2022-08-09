@@ -42,8 +42,7 @@ std::string ServerSocket::get_websocket_line()
 		// If ping, send a pong, copying the data.
 		if (9 == opcode)
 		{
-			// The data read appended a null byte. Skip it.
-			size_t paylen = pingd.size() - 1;
+			size_t paylen = pingd.size();
 			char header[2];
 			header[0] = 0x8a;
 			header[1] = (char) paylen;
@@ -122,7 +121,7 @@ std::string ServerSocket::get_websocket_data(void)
 
 	// Use malloc inside of std::string to get a buffer.
 	std::string blob;
-	blob.resize(paylen+1);
+	blob.resize(paylen);
 	char* data = blob.data();
 	boost::asio::read(*_socket, boost::asio::buffer(data, paylen));
 
@@ -139,10 +138,6 @@ std::string ServerSocket::get_websocket_data(void)
 	// Unmask any remaining bytes.
 	for (unsigned int j=0; j<paylen%4; j++)
 		data[i+j] = data[i+j] ^ ((mask >> (8*j)) & 0xff);
-
-	// Apparently, strings get sent without a null terminator.
-	// So add one now.
-	data[paylen] = 0x0;
 
 	// We're not actually going to use a line protocol, when we're
 	// using websockets. If the user wants to search for newline
