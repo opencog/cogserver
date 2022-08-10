@@ -108,6 +108,11 @@ std::string WebServer::html_stats(void)
 		"<head><title>CogServer Stats</title>"
 		"  <meta charset=\"UTF-8\"></head>"
 		"<body>"
+		"<h2>Loaded Modules</h2>"
+		"<pre>\n";
+	response += cogserver().listModules();
+	response +=
+		"</pre>"
 		"<h2>CogServer Stats</h2>"
 		"<pre>\n";
 	response += cogserver().display_web_stats();
