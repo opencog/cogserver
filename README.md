@@ -16,12 +16,15 @@ network-distributed AtomSpaces. The CogServer is a part of the
 
 Overview
 --------
-The CogServer provides a network command-line console server.  The
-network console server provides a fast, efficient telnet interface,
-giving access to Scheme (guile), Python and JSON command-lines.
+The CogServer provides a network command-line console and a WebSocket
+server.  The network console server provides a fast, efficient telnet
+interface, giving access to Scheme (guile), Python and JSON command-lines.
 These can be used by multiple users at the same time, all obtaining
-access to the *same* AtomSpace.  This capability is useful in several
-different ways:
+access to the *same* AtomSpace. This is also shared by the WebSocket
+interface, so that all users see the same data, irrespective of the
+network connection.
+
+This capability is useful in several different ways:
 
 * **General maintenance** on long-running OpenCog or AtomSpace processes
   (e.g. robot control, large batch-job processing or long-running
@@ -46,7 +49,7 @@ different ways:
   comfortable working with JSON.  This API is avaiable at
   `ws://localhost:18080/json`.
 
-* **Bulk data transfer**. The base "s-expression" encoding of Atoms and
+* **Bulk data transfer.** The base "s-expression" encoding of Atoms and
   (Truth)Values is UTF-8 text string format. It's  human-readable, easy
   and efficient. It does not require fiddling with complex binary formats
   or protocols or the use of protocol libraries or API's. (We're looking
@@ -69,7 +72,8 @@ different ways:
   network-distributed, decentralized processing.
 
 * The `stats` command provides a `top`-like command for viewing who is
-  connected to the Cogserver, and what they are doing.
+  connected to the Cogserver, and what they are doing. Type `help stats`
+  for more info.
 
 
 For more info, please consult the
