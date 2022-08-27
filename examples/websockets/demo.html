@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="script.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <title>CogServer WebSocket Demo</title>
+</head>
+<body>
+  <h1>CogServer WebSocket Demo</h1>
+ <p>You can interact with a running CogServer with this web page.
+    Be sure to start a cogserver first!  Try running it either from
+    the command line:
+<pre>
+$ /usr/local/bin/cogserver
+</pre>
+    or from guile:
+<pre>
+$ guile
+> (use-modules (opencog) (opencog cogserver))
+> (start-cogserver)
+</pre>
+
+Take a moment to visit the stats page at
+<a href="http://localhost:18080/">http://localhost:18080/</a>.
+ </p>
+ <h2>Interact</h2>
+ <p>
+    Changes do not take effect until the current connection
+    is dsiconnected and a new connection is made
+ </p>
+  <div>
+    CogServer: <input type="text" id="server-box"><br>
+    Endpoint:
+      <select id="endpoint-menu">
+        <option value="json">JSON</option>
+        <option value="scm">Scheme</option>
+        <option value="python">Python</option>
+        <option value="sexpr">S-Expressions</option>
+      </select>
+    <br>
+    Connected to server: <span id="connection">false</span><br>
+    <input type="button" id="connectButton" value="Connect"><br>
+    <br>
+    <br>
+    Connection Type: <span id="endpoint"></span></br>
+    CogServer URL: <span id="full-url"></span><br>
+    Command: <input type="text" id="outgoing"><br>
+    CogServer Reply: <span id="reply"></span><br>
+  </div>
+ <h2>Suggested Mesages</h2>
+ Try sending these messages:
+ <h3>JSON</h3>
+   See the <a href="https://github.com/opencog/atomspace/tree/master/opencog/persist/json">JSON README</a>
+   for full documentation.
+     <table>
+     <tr><td>JSON API Version:</td>
+         <td><tt>AtomSpace.version()</tt></td></tr>
+     <tr><td>Create a ConceptNode:</td>
+         <td><tt>AtomSpace.makeAtom({"type": "Concept", "name": "foo"})</tt></td></tr>
+     <tr><td>Fetch all Atoms:</td>
+         <td><tt>AtomSpace.getAtoms("Atom", true)</tt></td></tr>
+     </table>
+ <h3>Scheme</h3>
+   See the <a href="https://wiki.opencog.org/w/Scheme">OpenCog Wiki</a>
+   for full documentation.
+     <table>
+     <tr><td>Sanity check:</td>
+         <td><tt>(+ 2 2)</tt></td></tr>
+     <tr><td>Hello, World!</td>
+         <td><tt>(display "Hello, World!\n")</tt></td></tr>
+     <tr><td>Create a ConceptNode:</td>
+         <td><tt>(Concept "bar")</tt></td></tr>
+     <tr><td>Fetch all Atoms:</td>
+         <td><tt>(cog-get-atoms 'Atom #t)</tt></td></tr>
+     <tr><td>Print a Summary report:</td>
+         <td><tt>(cog-report-counts)</tt></td></tr>
+     </table>
+ <h3>S-Expressions</h3>
+   See the <a href="https://github.com/opencog/atomspace/tree/master/opencog/persist/sexpr">Sexpr README</a>
+   for full documentation. Note that syntax errors fail silently,
+   and that many successful commands do not return anything!
+     <table>
+     <tr><td>Create a ConceptNode:</td>
+         <td><tt>(cog-set-tv! (Concept "zinger") (stv 1 0))</tt></td></tr>
+     <tr><td>Fetch all Atoms:</td>
+         <td><tt>(cog-get-atoms 'Atom #t)</tt></td></tr>
+     <tr><td>Set a value on an Atom:</td>
+         <td><tt>(cog-set-value! (Concept "foo") (Predicate "key") (FloatValue 1 2 3))</tt></td></tr>
+     <tr><td>Get a value on an Atom:</td>
+         <td><tt>(cog-value (Concept "foo") (Predicate "key"))</tt></td></tr>
+     </table>
+ <h3>Python</h3>
+   See the <a href="https://wiki.opencog.org/w/Python">OpenCog Wiki</a>
+   for full documentation.
+     <table>
+     <tr><td>Hello, World!</td>
+         <td><tt>print("Hello, World!\n")</tt></td></tr>
+     <tr><td>Create a ConceptNode:</td>
+         <td><tt>Concept("foo")</tt></td></tr>
+     <tr><td>Fetch all Atoms:</td>
+         <td><tt>atomspace.get_atoms_by_type(types.Atom, true)</tt></td></tr>
+     </table>
+<hr>
+<h3>The End</h3>
+</body>
+</html>
