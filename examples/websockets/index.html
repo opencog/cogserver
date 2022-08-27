@@ -15,13 +15,21 @@
  </p>
   <div>
     Cogserver: <input type="text" id="server-box"><br>
+    Endpoint:
+      <select name="endpoint" id="endpoint">
+        <option value="json">JSON</option>
+        <option value="scm">Scheme</option>
+        <option value="python">Python</option>
+        <option value="sexpr">S-Expressions</option>
+      </select>
+    <br>
     Connected to server: <span id="connection">false</span><br>
     <input type="button" id="connectButton" value="Connect"><br>
   </div>
 
  <h2>JSON</h2>
   <div>
-    CogServer URL: <span id="json-url"></span><br>
+    CogServer URL: <span id="full-url"></span><br>
     Outgoing message: <input type="text" id="outgoing"><br>
     Incoming message: <span id="incoming"></span><br>
   </div>

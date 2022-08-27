@@ -12,6 +12,11 @@ input {
   left: 200px;
 }
 
+select {
+  position: sticky;
+  left: 200px;
+}
+
 span {
   position: sticky;
   left: 200px;

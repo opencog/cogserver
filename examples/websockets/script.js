@@ -7,14 +7,14 @@
   modified 17 Jan 2021
   by Tom Igoe
 */
-const server = 'ws://localhost:18080/';
-const serverURL = server + 'json';
-// const serverURL = 'ws://localhost:18080/scm';
+let server;
+let serverURL;
 
 let socket;
 // variables for the DOM elements:
-let serverSpan;
-let jsonUrlSpan;
+let serverText;
+let endpointMenu;
+let urlSpan;
 let incomingSpan;
 let outgoingText;
 let connectionSpan;
@@ -22,17 +22,32 @@ let connectButton;
 
 function setup() {
   // Get all the DOM elements that need listeners:
-  serverSpan = document.getElementById('server-box');
-  jsonUrlSpan = document.getElementById('json-url');
+  serverText = document.getElementById('server-box');
+  endpointMenu = document.getElementById('endpoint');
+  urlSpan = document.getElementById('full-url');
   incomingSpan = document.getElementById('incoming');
   outgoingText = document.getElementById('outgoing');
   connectionSpan = document.getElementById('connection');
   connectButton = document.getElementById('connectButton');
 
   // set the listeners:
+  serverText.addEventListener('change', setServer);
   outgoingText.addEventListener('change', sendMessage);
   connectButton.addEventListener('click', changeConnection);
+
+  // Initial server and endpoint
+  serverText.value = 'ws://localhost:18080/';
+  endpointMenu.value = 'json';
+  server = serverText.value;
+  serverURL = server + endpointMenu.value;
+  urlSpan.innerHTML = serverURL;
   openSocket(serverURL);
+}
+
+function setServer() {
+  console.log("enter setve");
+  server = serverText.value;
+  serverURL = server + endpointMenu.value;
 }
 
 function openSocket(url) {
@@ -46,7 +61,7 @@ function openSocket(url) {
 
 
 function changeConnection(event) {
-  console.log("clcckety state=" + socket.readyState + " vs closed=" + WebSocket.CLOSED);
+  console.log("clickety state=" + socket.readyState + " vs closed=" + WebSocket.CLOSED);
   // open the connection if it's closed, or close it if open:
   if (socket.readyState === WebSocket.CLOSED) {
     console.log("opening it");
@@ -59,15 +74,15 @@ function changeConnection(event) {
 
 function openConnection() {
   // display the change of state:
-  serverSpan.value = server;
-  jsonUrlSpan.innerHTML = server + 'json';
+  serverText.value = server;
+  urlSpan.innerHTML = serverURL;
   connectionSpan.innerHTML = "true";
   connectButton.value = "Disconnect";
 }
 
 function closeConnection() {
   // display the change of state:
-  jsonUrlSpan.innerHTML = "";
+  urlSpan.innerHTML = "";
   connectionSpan.innerHTML = "false";
   connectButton.value = "Connect";
 }
