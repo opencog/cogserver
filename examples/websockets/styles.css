@@ -21,3 +21,7 @@ span {
   position: sticky;
   left: 200px;
 }
+
+input[id=outgoing] {
+  width: 70%;
+}

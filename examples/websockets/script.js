@@ -128,14 +128,13 @@ function readIncomingMessage(event)
   replySpan.innerHTML = event.data;
 }
 
-function sendMessage() {
-  console.log("enter sendmsg state=" + socket.readyState + " vs open=" + WebSocket.OPEN);
-  //if the socket's open, send a message:
+function sendMessage()
+{
+  console.log("enter sendmsg; socket state=" + socket.readyState + " vs open=" + WebSocket.OPEN);
+  // If the socket's open, send a message:
   if (socket.readyState === WebSocket.OPEN) {
-    // winl = outgoingText.value +"\n";
     winl = outgoingText.value;
-    // winl = "; come\n(+ 4 4); moroeco";
-    console.log("gonna send this=" + winl + "<<");
+    console.log("going to send this" + winl + "<<");
     socket.send(winl);
   }
 }
