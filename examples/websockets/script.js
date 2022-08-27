@@ -16,19 +16,21 @@ let socket;
 // variables for the DOM elements:
 let serverText;
 let endpointMenu;
+let endpointType;
 let urlSpan;
 let connectionSpan;
 let connectButton;
-let incomingSpan;
+let replySpan;
 let outgoingText;
 
 function setup()
 {
   // Get all the DOM elements that need listeners.
   serverText = document.getElementById('server-box');
-  endpointMenu = document.getElementById('endpoint');
+  endpointMenu = document.getElementById('endpoint-menu');
+  endpointType = document.getElementById('endpoint');
   urlSpan = document.getElementById('full-url');
-  incomingSpan = document.getElementById('incoming');
+  replySpan = document.getElementById('reply');
   outgoingText = document.getElementById('outgoing');
   connectionSpan = document.getElementById('connection');
   connectButton = document.getElementById('connectButton');
@@ -93,6 +95,15 @@ function openConnection()
   urlSpan.innerHTML = serverURL;
   connectionSpan.innerHTML = "true";
   connectButton.value = "Disconnect";
+
+  if (endpoint == 'json')
+    endpointType.innerHTML = "JSON";
+  else if (endpoint == 'scm')
+    endpointType.innerHTML = "Guile Scheme";
+  else if (endpoint == 'python')
+    endpointType.innerHTML = "Python";
+  else if (endpoint == 'sexpr')
+    endpointType.innerHTML = "S-Expressions";
 }
 
 function closeConnection()
@@ -101,6 +112,7 @@ function closeConnection()
   urlSpan.innerHTML = "none";
   connectionSpan.innerHTML = "false" + errorState;
   connectButton.value = "Connect";
+  endpointType.innerHTML = "none";
 }
 
 function reportError(event)
@@ -109,10 +121,11 @@ function reportError(event)
   errorState = "; Unable to connect to \'" + serverURL + "\'";
 }
 
-function readIncomingMessage(event) {
-  console.log("got incoming=" + event.data + "<<");
-  // display the incoming message:
-  incomingSpan.innerHTML = event.data;
+// Display the reply message
+function readIncomingMessage(event)
+{
+  console.log("got reply=" + event.data + "<<");
+  replySpan.innerHTML = event.data;
 }
 
 function sendMessage() {

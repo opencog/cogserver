@@ -9,14 +9,17 @@
 </head>
 <body>
   <h1>CogServer WebSocket Demo</h1>
- <p>This web page provides a connection to a running CogServer
-    WebSocket server.
-    It sends when you press return in the outgoing message box.
+ <p>You can interact with a running CogServer with this web page.
+ </p>
+ <p>
+    Change the CogServer location, if desired, and select the
+    endpoint you want to use, then disconnect and reconnect to get the
+    new endpoint.
  </p>
   <div>
     CogServer: <input type="text" id="server-box"><br>
     Endpoint:
-      <select name="endpoint" id="endpoint">
+      <select id="endpoint-menu">
         <option value="json">JSON</option>
         <option value="scm">Scheme</option>
         <option value="python">Python</option>
@@ -27,11 +30,12 @@
     <input type="button" id="connectButton" value="Connect"><br>
   </div>
 
- <h2>JSON</h2>
+ <h2>Endpoint I/O</h2>
   <div>
+    Type: <span id="endpoint"></span></br>
     CogServer URL: <span id="full-url"></span><br>
-    Outgoing message: <input type="text" id="outgoing"><br>
-    Incoming message: <span id="incoming"></span><br>
+    Command: <input type="text" id="outgoing"><br>
+    CogServer Reply: <span id="reply"></span><br>
   </div>
 </body>
 </html>
