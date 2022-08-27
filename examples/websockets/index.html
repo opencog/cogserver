@@ -5,15 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="script.js"></script>
   <link rel="stylesheet" href="styles.css">
-  <title>WebSocket</title>
+  <title>CogServer WebSocket Demo</title>
 </head>
 <body>
-  <h1>WebSocket Client</h1>
- <p> This client connects to a local  WebSocket server. It sends when you press return in the outgoing message box.
+  <h1>CogServer WebSocket Demo</h1>
+ <p>This web page provides a connection to a running CogServer
+    WebSocket server.
+    It sends when you press return in the outgoing message box.
  </p>
   <div>
+    Cogserver: <input type="text" id="server-box"><br>
     Connected to server: <span id="connection">false</span><br>
     <input type="button" id="connectButton" value="Connect"><br>
+  </div>
+
+ <h2>JSON</h2>
+  <div>
+    CogServer URL: <span id="json-url"></span><br>
     Outgoing message: <input type="text" id="outgoing"><br>
     Incoming message: <span id="incoming"></span><br>
   </div>

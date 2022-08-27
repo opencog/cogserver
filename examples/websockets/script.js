@@ -7,22 +7,28 @@
   modified 17 Jan 2021
   by Tom Igoe
 */
-const serverURL = 'ws://localhost:18080/json';
+const server = 'ws://localhost:18080/';
+const serverURL = server + 'json';
 // const serverURL = 'ws://localhost:18080/scm';
 
 let socket;
 // variables for the DOM elements:
+let serverSpan;
+let jsonUrlSpan;
 let incomingSpan;
 let outgoingText;
 let connectionSpan;
 let connectButton;
 
 function setup() {
-  // get all the DOM elements that need listeners:
+  // Get all the DOM elements that need listeners:
+  serverSpan = document.getElementById('server-box');
+  jsonUrlSpan = document.getElementById('json-url');
   incomingSpan = document.getElementById('incoming');
   outgoingText = document.getElementById('outgoing');
   connectionSpan = document.getElementById('connection');
   connectButton = document.getElementById('connectButton');
+
   // set the listeners:
   outgoingText.addEventListener('change', sendMessage);
   connectButton.addEventListener('click', changeConnection);
@@ -53,12 +59,15 @@ function changeConnection(event) {
 
 function openConnection() {
   // display the change of state:
+  serverSpan.value = server;
+  jsonUrlSpan.innerHTML = server + 'json';
   connectionSpan.innerHTML = "true";
   connectButton.value = "Disconnect";
 }
 
 function closeConnection() {
   // display the change of state:
+  jsonUrlSpan.innerHTML = "";
   connectionSpan.innerHTML = "false";
   connectButton.value = "Connect";
 }
