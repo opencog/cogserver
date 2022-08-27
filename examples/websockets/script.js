@@ -8,6 +8,7 @@
   by Tom Igoe
 */
 let server;
+let endpoint;
 let serverURL;
 
 let socket;
@@ -20,8 +21,9 @@ let outgoingText;
 let connectionSpan;
 let connectButton;
 
-function setup() {
-  // Get all the DOM elements that need listeners:
+function setup()
+{
+  // Get all the DOM elements that need listeners.
   serverText = document.getElementById('server-box');
   endpointMenu = document.getElementById('endpoint');
   urlSpan = document.getElementById('full-url');
@@ -30,29 +32,34 @@ function setup() {
   connectionSpan = document.getElementById('connection');
   connectButton = document.getElementById('connectButton');
 
-  // set the listeners:
+  // Set the listeners.
   serverText.addEventListener('change', setServer);
   outgoingText.addEventListener('change', sendMessage);
   connectButton.addEventListener('click', changeConnection);
 
-  // Initial server and endpoint
-  serverText.value = 'ws://localhost:18080/';
-  endpointMenu.value = 'json';
-  server = serverText.value;
-  serverURL = server + endpointMenu.value;
+  // Initial server and endpoint.
+  server = 'ws://localhost:18080/';
+  endpoint = 'json';
+  serverURL = server + endpoint;
+
+  // DOM elements
+  serverText.value = server;
+  endpointMenu.value = endpoint;
   urlSpan.innerHTML = serverURL;
   openSocket(serverURL);
 }
 
+// Called when user enters a new CogServer base URL
 function setServer() {
-  console.log("enter setve");
   server = serverText.value;
-  serverURL = server + endpointMenu.value;
+  endpoint = endpointMenu.value;
+  serverURL = server + endpoint;
+  console.log("Enter setServer, new url=" + serverURL);
 }
 
-function openSocket(url) {
-  // open the socket:
-  // alert("Connecting to server now");
+function openSocket(url)
+{
+  // Open the socket.
   socket = new WebSocket(url);
   socket.addEventListener('open', openConnection);
   socket.addEventListener('close', closeConnection);
@@ -60,29 +67,35 @@ function openSocket(url) {
 }
 
 
-function changeConnection(event) {
-  console.log("clickety state=" + socket.readyState + " vs closed=" + WebSocket.CLOSED);
-  // open the connection if it's closed, or close it if open:
+function changeConnection(event)
+{
+  console.log("button click; socket state=" + socket.readyState + " vs closed=" + WebSocket.CLOSED);
+  // Open the connection if it's closed, or close it if open.
   if (socket.readyState === WebSocket.CLOSED) {
-    console.log("opening it");
+    server = serverText.value;
+    endpoint = endpointMenu.value;
+    serverURL = server + endpoint;
+    console.log("Opening socket connection to " + serverURL);
     openSocket(serverURL);
   } else {
-    console.log("closing it");
+    console.log("close socket");
     socket.close();
   }
 }
 
-function openConnection() {
-  // display the change of state:
+function openConnection()
+{
+  // Display the change of state:
   serverText.value = server;
   urlSpan.innerHTML = serverURL;
   connectionSpan.innerHTML = "true";
   connectButton.value = "Disconnect";
 }
 
-function closeConnection() {
-  // display the change of state:
-  urlSpan.innerHTML = "";
+function closeConnection()
+{
+  // Display the change of state:
+  urlSpan.innerHTML = "none";
   connectionSpan.innerHTML = "false";
   connectButton.value = "Connect";
 }
