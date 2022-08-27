@@ -113,6 +113,7 @@ function closeConnection()
   connectionSpan.innerHTML = "false" + errorState;
   connectButton.value = "Connect";
   endpointType.innerHTML = "none";
+  replySpan.innerHTML = "";
 }
 
 function reportError(event)

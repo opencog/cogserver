@@ -33,15 +33,19 @@
  <h2>Suggested Mesages</h2>
  Try sending these messages:
  <h3>JSON</h3>
+   See the <a href="https://github.com/opencog/atomspace/tree/master/opencog/persist/json">JSON README</a>
+   for full documentation.
      <table>
      <tr><td>JSON API Version:</td>
          <td><tt>AtomSpace.version()</tt></td></tr>
      <tr><td>Create a ConceptNode:</td>
          <td><tt>AtomSpace.makeAtom({"type": "Concept", "name": "foo"})</tt></td></tr>
-     <tr><td>Fetch all Atoms in AtomSpace:</td>
+     <tr><td>Fetch all Atoms:</td>
          <td><tt>AtomSpace.getAtoms("Atom", true)</tt></td></tr>
      </table>
  <h3>Scheme</h3>
+   See the <a href="https://wiki.opencog.org/w/Scheme">OpenCog Wiki</a>
+   for full documentation.
      <table>
      <tr><td>Sanity check:</td>
          <td><tt>(+ 2 2)</tt></td></tr>
@@ -49,10 +53,23 @@
          <td><tt>(display "Hello, World!\n")</tt></td></tr>
      <tr><td>Create a ConceptNode:</td>
          <td><tt>(Concept "bar")</tt></td></tr>
-     <tr><td>Fetch all Atoms in AtomSpace:</td>
+     <tr><td>Fetch all Atoms:</td>
          <td><tt>(cog-prt-atomspace)</tt></td></tr>
      <tr><td>Print a Summary report:</td>
          <td><tt>(cog-report-counts)</tt></td></tr>
+     </table>
+ <h3>S-Expressions</h3>
+   See the <a href="https://github.com/opencog/atomspace/tree/master/opencog/persist/sexpr">Sexpr README</a>
+   for full documentation. Note that syntax errors fail silently!
+     <table>
+     <tr><td>Create a ConceptNode:</td>
+         <td><tt>(Concept "bar")</tt></td></tr>
+     <tr><td>Fetch all Atoms:</td>
+         <td><tt>(cog-get-atoms 'Atom #t)</tt></td></tr>
+     <tr><td>Set a value on an Atom:</td>
+         <td><tt>(cog-set-value! (Concept "foo") (Predicate "key") (FloatValue 1 2 3))</tt></td></tr>
+     <tr><td>Get a value on an Atom:</td>
+         <td><tt>(cog-value (Concept "foo") (Predicate "key"))</tt></td></tr>
      </table>
  <h2>Endpoint I/O</h2>
   <div>
