@@ -10,16 +10,17 @@
 let server;
 let endpoint;
 let serverURL;
+let errorState = "";
 
 let socket;
 // variables for the DOM elements:
 let serverText;
 let endpointMenu;
 let urlSpan;
-let incomingSpan;
-let outgoingText;
 let connectionSpan;
 let connectButton;
+let incomingSpan;
+let outgoingText;
 
 function setup()
 {
@@ -64,6 +65,7 @@ function openSocket(url)
   socket.addEventListener('open', openConnection);
   socket.addEventListener('close', closeConnection);
   socket.addEventListener('message', readIncomingMessage);
+  socket.addEventListener('error', reportError);
 }
 
 
@@ -85,6 +87,7 @@ function changeConnection(event)
 
 function openConnection()
 {
+  errorState = "";
   // Display the change of state:
   serverText.value = server;
   urlSpan.innerHTML = serverURL;
@@ -96,8 +99,14 @@ function closeConnection()
 {
   // Display the change of state:
   urlSpan.innerHTML = "none";
-  connectionSpan.innerHTML = "false";
+  connectionSpan.innerHTML = "false" + errorState;
   connectButton.value = "Connect";
+}
+
+function reportError(event)
+{
+  console.log("oh nooo=" + event.data + "<<");
+  errorState = "; Unable to connect to \'" + serverURL + "\'";
 }
 
 function readIncomingMessage(event) {
