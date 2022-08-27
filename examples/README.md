@@ -2,8 +2,10 @@
 Examples
 --------
 The [websockets](./websockets) subdirectory contains a web page that
-allows simple interactions with a running webserver.  Just load the
-[index.html](./websockets/demo.html) page in a browser, and go.
+shows how to interact with a running cogserver.  Just load the
+[demo.html](./websockets/demo.html) page in a browser, and go.
+All the actual network i/o is done with the
+[script.js](./websockets/script.js) javascript file.
 
 The [module](./module) subdirectory provides a template for creating
 a custom module. Most developers should NOT be interested in this
