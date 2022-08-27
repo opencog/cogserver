@@ -21,6 +21,9 @@ $ guile
 > (use-modules (opencog) (opencog cogserver))
 > (start-cogserver)
 </pre>
+
+Take a moment to visit the stats page at
+<a href="http://localhost:18080/">http://localhost:18080/</a>.
  </p>
  <h2>Interact</h2>
  <p>
@@ -65,7 +68,7 @@ $ guile
      <table>
      <tr><td>Sanity check:</td>
          <td><tt>(+ 2 2)</tt></td></tr>
-     <tr><td>Hello, World!:</td>
+     <tr><td>Hello, World!</td>
          <td><tt>(display "Hello, World!\n")</tt></td></tr>
      <tr><td>Create a ConceptNode:</td>
          <td><tt>(Concept "bar")</tt></td></tr>
@@ -87,6 +90,17 @@ $ guile
          <td><tt>(cog-set-value! (Concept "foo") (Predicate "key") (FloatValue 1 2 3))</tt></td></tr>
      <tr><td>Get a value on an Atom:</td>
          <td><tt>(cog-value (Concept "foo") (Predicate "key"))</tt></td></tr>
+     </table>
+ <h3>Python</h3>
+   See the <a href="https://wiki.opencog.org/w/Python">OpenCog Wiki</a>
+   for full documentation.
+     <table>
+     <tr><td>Hello, World!</td>
+         <td><tt>print("Hello, World!\n")</tt></td></tr>
+     <tr><td>Create a ConceptNode:</td>
+         <td><tt>Concept("foo")</tt></td></tr>
+     <tr><td>Fetch all Atoms:</td>
+         <td><tt>atomspace.get_atoms_by_type(types.Atom, true)</tt></td></tr>
      </table>
 <hr>
 <h3>The End</h3>

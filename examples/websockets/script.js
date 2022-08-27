@@ -6,6 +6,8 @@
   created 7 Jan 2021
   modified 17 Jan 2021
   by Tom Igoe
+
+  Revised and adapted for the CogServer, Linas Vepstas August 2022
 */
 let server;
 let endpoint;
@@ -66,7 +68,7 @@ function openSocket(url)
   socket = new WebSocket(url);
   socket.addEventListener('open', openConnection);
   socket.addEventListener('close', closeConnection);
-  socket.addEventListener('message', readIncomingMessage);
+  socket.addEventListener('message', readReplyMessage);
   socket.addEventListener('error', reportError);
 }
 
@@ -123,7 +125,7 @@ function reportError(event)
 }
 
 // Display the reply message
-function readIncomingMessage(event)
+function readReplyMessage(event)
 {
   console.log("got reply=" + event.data + "<<");
   replySpan.innerHTML = event.data;
