@@ -21,6 +21,12 @@ $ guile
 > (use-modules (opencog) (opencog cogserver))
 > (start-cogserver)
 </pre>
+    or from python:
+<pre>
+$ python3
+> import opencog, opencog.cogserver
+> opencog.cogserver.startCogserver()
+</pre>
 
 Take a moment to visit the stats page at
 <a href="http://localhost:18080/">http://localhost:18080/</a>.
@@ -28,7 +34,7 @@ Take a moment to visit the stats page at
  <h2>Interact</h2>
  <p>
     Changes do not take effect until the current connection
-    is dsiconnected and a new connection is made
+    is disconnected and a new connection is made.
  </p>
   <div>
     CogServer: <input type="text" id="server-box"><br>

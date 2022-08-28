@@ -27,10 +27,6 @@ from opencog.atomspace cimport cAtomSpace
 cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
     cAtomSpace& cython_server_atomspace()
 
-# ideally we'd import these typedefs instead of defining them here but I don't
-# know how to do that with Cython
-ctypedef short stim_t
-
 cdef extern from "opencog/cogserver/server/Request.h" namespace "opencog":
     cdef cppclass cRequest "opencog::Request":
         void send(string s)
