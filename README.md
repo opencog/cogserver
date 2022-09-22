@@ -139,12 +139,12 @@ To build and run the CogServer, you need to install the AtomSpace first.
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
 
-The WebSockets server needs the OpenSSL devel invironment to be
+The WebSockets server needs the OpenSSL devel environment to be
 instaled.
 
 ###### OpenSSL
 > OpenSSL
-> On Debian/Ubuntu, `apt get install openssl-dev`
+> On Debian/Ubuntu, `sudo apt install libssl-dev`
 
 Unit tests
 ----------
