@@ -25,7 +25,7 @@ protected:
 
 public:
     /** Returns the atomspace instance. */
-    AtomSpace& getAtomSpace() { return *_atomSpace.get(); }
+    AtomSpacePtr getAtomSpace() { return _atomSpace; }
 
     BaseServer(void);
     BaseServer(AtomSpacePtr);

@@ -40,7 +40,7 @@ WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs)
 
 void WriteThruProxy::init(void)
 {
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 
 	// Get all of the StorageNodes to which we will be
 	// forwarding writes.
@@ -84,7 +84,7 @@ printf("duuuude write-thru proxy cfg %s\n", cfg);
 void WriteThruProxy::setup(SexprEval* sev)
 {
 	// Read-only atomspace ... should check earlier!?
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 	if (as->get_read_only())
 	{
 		logger().info("Read-only atomspace; no write-through proxying!");
@@ -113,7 +113,7 @@ std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
                                                bool flag)
 {
 	// XXX FIXME Handle space frames
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 	size_t pos = 0;
 	// Handle h = _base_space->get_atom(Sexpr::decode_atom(arg, pos, _space_map));
 	Handle h = as->get_atom(Sexpr::decode_atom(arg, pos));
@@ -136,11 +136,11 @@ std::string WriteThruProxy::cog_set_value(const std::string& arg)
 	Handle key = Sexpr::decode_atom(arg, ++pos /* , _space_map */);
 	ValuePtr vp = Sexpr::decode_value(arg, ++pos);
 
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 	atom = as->add_atom(atom);
 	key = as->add_atom(key);
 	if (vp)
-		vp = Sexpr::add_atoms(as, vp);
+		vp = Sexpr::add_atoms(as.get(), vp);
 	as->set_value(atom, key, vp);
 
 	// Loop over all targets, and send them the new value.
@@ -159,7 +159,7 @@ std::string WriteThruProxy::cog_set_values(const std::string& arg)
 	// XXX FIXME Handle space frames
 	// if (_multi_space)
 
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 	h = as->add_atom(h);
 	Sexpr::decode_slist(h, arg, pos);
 
@@ -185,7 +185,7 @@ std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 
 	// Search for optional AtomSpace argument
 	// AtomSpace* as = get_opt_as(arg, pos);
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 
 	Handle ha = as->add_atom(h);
 	as->set_truthvalue(ha, TruthValueCast(tv));
@@ -211,7 +211,7 @@ std::string WriteThruProxy::cog_update_value(const std::string& arg)
 
 	// Search for optional AtomSpace argument
 	// AtomSpace* as = get_opt_as(arg, pos);
-	AtomSpace* as = &_cogserver.getAtomSpace();
+	AtomSpacePtr as = _cogserver.getAtomSpace();
 	atom = as->add_atom(atom);
 	key = as->add_atom(key);
 

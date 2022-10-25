@@ -44,7 +44,7 @@ SexprShell::~SexprShell()
 
 GenericEval* SexprShell::get_evaluator(void)
 {
-	return SexprEval::get_evaluator(&cogserver().getAtomSpace());
+	return SexprEval::get_evaluator(cogserver().getAtomSpace());
 }
 
 /* ===================== END OF FILE ============================ */
