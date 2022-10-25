@@ -71,5 +71,23 @@
 	(c-stop-cogserver)
 )
 
+(set-procedure-property! set-cogserver-atomspace! 'documentation
+"
+ set-cogserver-atomspace! ATOMSPACE
+
+   Change the default AtomSpace of the cogserver to ATOMSPACE.
+
+   From this point onwards, all new network connections will use the
+   indicated AtomSpace; existing connnections will continue to use the
+   previous one. This change applied to all of the various shells
+   supported by the cogserver.
+
+   This call is useful when a stack of AtomSpace frames is being used,
+   and there is a need for setting the active frame.
+
+   Returns the old AtomSpace.
+")
+
 (export start-cogserver)
 (export stop-cogserver)
+(export set-cogserver-atomspace)
