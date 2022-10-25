@@ -25,6 +25,7 @@ protected:
 public:
     /** Returns the atomspace instance. */
     AtomSpacePtr getAtomSpace() { return _atomSpace; }
+    void setAtomSpace(const AtomSpacePtr& as) { _atomSpace = as; }
 
     BaseServer(void);
     BaseServer(AtomSpacePtr);
