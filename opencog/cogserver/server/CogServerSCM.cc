@@ -42,7 +42,7 @@ private:
     std::string start_server(AtomSpace*, int, int, const std::string&,
                              const std::string&, const std::string&);
     std::string stop_server(void);
-    AtomSpace* set_server_space(AtomSpace*);
+    Handle set_server_space(AtomSpace*);
 
     CogServer* srvr = NULL;
     std::thread * main_loop = NULL;
@@ -181,11 +181,11 @@ std::string CogServerSCM::stop_server(void)
     return rc;
 }
 
-AtomSpace* CogServerSCM::set_server_space(AtomSpace* new_as)
+Handle CogServerSCM::set_server_space(AtomSpace* new_as)
 {
-	if (NULL == srvr) return nullptr;
+	if (NULL == srvr) return Handle::UNDEFINED;
 
 	AtomSpacePtr old_as = srvr->getAtomSpace();
 	srvr->setAtomSpace(AtomSpaceCast(new_as));
-	return old_as.get();
+	return HandleCast(old_as);
 }
