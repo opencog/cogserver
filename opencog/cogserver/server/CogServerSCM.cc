@@ -43,6 +43,7 @@ private:
                              const std::string&, const std::string&);
     std::string stop_server(void);
     Handle set_server_space(AtomSpace*);
+    Handle get_server_space(void);
 
     CogServer* srvr = NULL;
     std::thread * main_loop = NULL;
@@ -103,6 +104,7 @@ void CogServerSCM::init()
     define_scheme_primitive("c-start-cogserver", &CogServerSCM::start_server, this, "cogserver");
     define_scheme_primitive("c-start-cogserver", &CogServerSCM::start_server, this, "cogserver");
     define_scheme_primitive("set-cogserver-atomspace!", &CogServerSCM::set_server_space, this, "cogserver");
+    define_scheme_primitive("get-cogserver-atomspace", &CogServerSCM::get_server_space, this, "cogserver");
 }
 
 extern "C" {
@@ -179,6 +181,12 @@ std::string CogServerSCM::stop_server(void)
 
     rc = "Stopped CogServer";
     return rc;
+}
+
+Handle CogServerSCM::get_server_space()
+{
+	if (NULL == srvr) return Handle::UNDEFINED;
+	return HandleCast(srvr->getAtomSpace());
 }
 
 Handle CogServerSCM::set_server_space(AtomSpace* new_as)
