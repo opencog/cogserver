@@ -20,7 +20,6 @@ namespace opencog
 class BaseServer
 {
 protected:
-    AtomSpacePtr _private_as;
     AtomSpacePtr _atomSpace;
 
 public:
