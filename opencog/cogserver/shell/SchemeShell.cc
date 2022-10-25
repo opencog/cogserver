@@ -53,7 +53,7 @@ SchemeShell::SchemeShell(void)
 	_name = " scm";
 
 	// Set the inital atomspace for this thread.
-	SchemeEval::set_scheme_as(&cogserver().getAtomSpace());
+	SchemeEval::set_scheme_as(cogserver().getAtomSpace().get());
 }
 
 SchemeShell::~SchemeShell()
@@ -67,7 +67,7 @@ SchemeShell::~SchemeShell()
 
 GenericEval* SchemeShell::get_evaluator(void)
 {
-	return SchemeEval::get_evaluator(&cogserver().getAtomSpace());
+	return SchemeEval::get_evaluator(cogserver().getAtomSpace());
 }
 
 /**
@@ -75,7 +75,7 @@ GenericEval* SchemeShell::get_evaluator(void)
  */
 void SchemeShell::thread_init(void)
 {
-	SchemeEval::set_scheme_as(&cogserver().getAtomSpace());
+	SchemeEval::set_scheme_as(cogserver().getAtomSpace().get());
 }
 
 #endif

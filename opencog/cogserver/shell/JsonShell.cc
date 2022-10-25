@@ -44,7 +44,7 @@ JsonShell::~JsonShell()
 
 GenericEval* JsonShell::get_evaluator(void)
 {
-	return JsonEval::get_evaluator(&cogserver().getAtomSpace());
+	return JsonEval::get_evaluator(cogserver().getAtomSpace().get());
 }
 
 /* ===================== END OF FILE ============================ */
