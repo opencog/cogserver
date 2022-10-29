@@ -66,32 +66,36 @@ void ReadThruProxy::setup(SexprEval* sev)
 	using namespace std::placeholders;  // for _1, _2, _3...
 
 	// Install dispatch handlers.
-	sev->install_handler("cog-node",
-		std::bind(&ReadThruProxy::cog_node, this, _1));
+	sev->install_handler("cog-incoming-by-type",
+		std::bind(&ReadThruProxy::cog_incoming_by_type, this, _1));
 }
 
-std::string ReadThruProxy::cog_node(const std::string& arg)
+// XXX FIXME? Tgis is a cut-n-paste of Commands::cog_incoming_by_type()
+// from the main atomspace sexpr directory; just that, in the middle,
+// we've added an extra step.
+std::string ReadThruProxy::cog_incoming_by_type(const std::string& cmd)
 {
-#if 0
 	size_t pos = 0;
+	Handle h = Sexpr::decode_atom(cmd, pos);
+	pos++; // step past close-paren
 	Type t = Sexpr::decode_type(cmd, pos);
 
-	size_t l = pos+1;
-	size_t r = cmd.size();
-	std::string name = Sexpr::get_node_name(cmd, l, r, t);
-
 	AtomSpacePtr as = _cogserver.getAtomSpace();
+	h = as->add_atom(h);
 
-	// Return copy from the first target that finds the node.
+	// Get all incoming sets from all targets.
 	for (const StorageNodePtr& snp : _targets)
-	{
-		snp->tom(as, h, );
-		return Sexpr::encode_atom(h, _multi_space);
-	}
-this is wrong
-#endif
+		snp->fetch_incoming_by_type(h, t);
 
-	return "()";
+	for (const StorageNodePtr& snp : _targets)
+		snp->barrier();
+
+	std::string alist = "(";
+	for (const Handle& hi : h->getIncomingSetByType(t))
+		alist += Sexpr::encode_atom(hi);
+
+	alist += ")";
+	return alist;
 }
 
 /* ===================== END OF FILE ============================ */

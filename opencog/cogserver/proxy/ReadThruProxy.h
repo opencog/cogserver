@@ -46,11 +46,11 @@ class ReadThruProxy : public WriteThruProxy
 		// std::string cog_atomspace_clear(const std::string&);
 		// std::string cog_execute_cache(const std::string&);
 		// std::string cog_get_atoms(const std::string&);
-		// std::string cog_incoming_by_type(const std::string&);
+		std::string cog_incoming_by_type(const std::string&);
 		// std::string cog_incoming_set(const std::string&);
 		// std::string cog_keys_alist(const std::string&);
 		// std::string cog_link(const std::string&);
-		std::string cog_node(const std::string&);
+		// std::string cog_node(const std::string&);
 
 		// std::string cog_value(const std::string&);
 		// std::string cog_ping(const std::string&);

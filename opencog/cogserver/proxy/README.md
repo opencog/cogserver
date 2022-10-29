@@ -202,4 +202,9 @@ of command strings that are currently in use can be found in the
  * The support for SpaceFrames by the CogStorageNode is currently
    incomplete and broken.
 
+### Issues
+ * The ReadThruProxy cannot proxy queries for `cog-node` and `cog-link`
+   because there is no `StorageNode` API that allows for an existance
+   query. Unclear if this needs to be "fixed" or if it is OK as-is.
+
 -----
