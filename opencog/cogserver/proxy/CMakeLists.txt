@@ -16,7 +16,6 @@ INSTALL (TARGETS w-thru-proxy
 
 # --------------------------------------
 
-IF(0)
 ADD_LIBRARY (r-thru-proxy SHARED
 	ReadThruProxy.cc
 	ThruCommands.cc
@@ -31,7 +30,6 @@ TARGET_LINK_LIBRARIES(r-thru-proxy
 
 INSTALL (TARGETS r-thru-proxy
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
-ENDIF()
 
 # --------------------------------------
 

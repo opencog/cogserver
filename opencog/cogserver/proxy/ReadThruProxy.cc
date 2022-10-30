@@ -30,22 +30,14 @@
 #include "ReadThruProxy.h"
 
 using namespace opencog;
-using namespace std::placeholders;  // for _1, _2, _3...
 
 DECLARE_MODULE(ReadThruProxy);
 
-ReadThruProxy::ReadThruProxy(CogServer& cs) : ThruProxy(cs)
-{
-}
+ReadThruProxy::ReadThruProxy(CogServer& cs) : Proxy(cs) {}
 
-void ReadThruProxy::init(void)
-{
-	ThruProxy::init();
-}
+void ReadThruProxy::init(void) {}
 
-ReadThruProxy::~ReadThruProxy()
-{
-}
+ReadThruProxy::~ReadThruProxy() {}
 
 bool ReadThruProxy::config(const char* cfg)
 {
@@ -53,34 +45,37 @@ printf("duuuude read-thru proxy cfg %s\n", cfg);
 	return false;
 }
 
-
 void ReadThruProxy::setup(SexprEval* sev)
 {
-	ThruProxy::setup(sev);
-
-	// Install dispatch handlers.
-	sev->install_handler("cog-incoming-by-type",
-		std::bind(&ReadThruProxy::cog_incoming_by_type, this, _1));
-}
-
-// ------------------------------------------------------------------
-
-std::string ReadThruProxy::cog_incoming_by_type(const std::string& arg)
-{
-	return _decoder.cog_incoming_by_type(arg,
-		std::bind(&ReadThruProxy::incoming_by_type_cb, this, _1, _2));
-}
-
-std::string ReadThruProxy::cog_incoming_set(const std::string& arg)
-{
-	return _decoder.cog_incoming_set(arg,
-		std::bind(&ReadThruProxy::incoming_set_cb, this, _1));
+   _rthru_wrap.init(_cogserver.getAtomSpace());
+   _rthru_wrap.setup(sev);
 }
 
 // ------------------------------------------------------------------
 // The callbacks are called after the string command is decoded.
 
-void ReadThruProxy::incoming_set_cb(const Handle& h)
+ReadThru::ReadThru(void)
+{
+	have_incoming_set_cb = true;
+	have_incoming_by_type = true;
+}
+
+~ReadThru::ReadThru() {}
+
+void ReadThru::setup(SexprEval* sev)
+{
+	using namespace std::placeholders;  // for _1, _2, _3...
+
+	// Install dispatch handlers.
+	sev->install_handler("cog-incoming-by-type",
+		std::bind(&Commands::cog_incoming_by_type, &_decoder, _1));
+	sev->install_handler("cog-incoming-set",
+		std::bind(&Commands::cog_incoming_set, &_decoder, _1));
+}
+
+// ------------------------------------------------------------------
+
+void ReadThru::incoming_set_cb(const Handle& h)
 {
 	// Get all incoming sets from all targets.
 	for (const StorageNodePtr& snp : _targets)
@@ -90,7 +85,7 @@ void ReadThruProxy::incoming_set_cb(const Handle& h)
 		snp->barrier();
 }
 
-void ReadThruProxy::incoming_by_type_cb(const Handle& h, Type t)
+void ReadThru::incoming_by_type_cb(const Handle& h, Type t)
 {
 	// Get all incoming sets from all targets.
 	for (const StorageNodePtr& snp : _targets)

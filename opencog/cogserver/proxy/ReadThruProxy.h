@@ -32,26 +32,21 @@ namespace opencog {
  *  @{
  */
 
-class ReadThruProxy : public Proxy
+class ReadThru : public ThruCommands
 {
-	private:
+	public:
+		ReadThru(void);
+		~ReadThru();
+		void setup(SexprEval*);
+
 		void incoming_by_type_cb(const Handle&, Type);
 		void incoming_set_cb(const Handle&);
+};
 
-		/// Methods that implement the interpreted commands
-		// std::string cog_atomspace(const std::string&);
-		// std::string cog_atomspace_clear(const std::string&);
-		// std::string cog_execute_cache(const std::string&);
-		// std::string cog_get_atoms(const std::string&);
-		std::string cog_incoming_by_type(const std::string&);
-		std::string cog_incoming_set(const std::string&);
-		// std::string cog_keys_alist(const std::string&);
-		// std::string cog_link(const std::string&);
-		// std::string cog_node(const std::string&);
-
-		// std::string cog_value(const std::string&);
-		// std::string cog_ping(const std::string&);
-		// std::string cog_version(const std::string&);
+class ReadThruProxy : public Proxy
+{
+	protected:
+		ReadThru _rthru_wrap;
 
 	public:
 		ReadThruProxy(CogServer&);

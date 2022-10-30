@@ -31,22 +31,14 @@
 #include "WriteThruProxy.h"
 
 using namespace opencog;
-using namespace std::placeholders;  // for _1, _2, _3...
 
 DECLARE_MODULE(WriteThruProxy);
 
-WriteThruProxy::WriteThruProxy(CogServer& cs) :
-	Proxy(cs),
-{
-}
+WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs) {}
 
-void WriteThruProxy::init(void)
-{
-}
+void WriteThruProxy::init(void) {}
 
-WriteThruProxy::~WriteThruProxy()
-{
-}
+WriteThruProxy::~WriteThruProxy() {}
 
 bool WriteThruProxy::config(const char* cfg)
 {
@@ -73,12 +65,12 @@ WriteThru::WriteThru(void)
 	have_update_value_cb = true;
 }
 
-WriteThru::~WriteThru()
-{
-}
+WriteThru::~WriteThru() {}
 
 void WriteThru::setup(SexprEval* sev)
 {
+	using namespace std::placeholders;  // for _1, _2, _3...
+
 	// Install dispatch handlers.
 	sev->install_handler("cog-extract!",
 		std::bind(&Commands::cog_extract, &_decoder, _1));
