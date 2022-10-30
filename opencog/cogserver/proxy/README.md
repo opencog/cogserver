@@ -79,10 +79,12 @@ guile> (cog-open rsn)
 guile> (start-cogserver)
 ```
 Then, on the local machine machine, contact the server and configure the
-write-through proxy:
+write-through proxy. Also configure the read-thru proxy, although this
+demo does not use it:
 ```
 $ rlwrap telnet 10.0.3.208 17001
-opencog> config SexprShellModule libwthru-proxy.so
+opencog> config SexprShellModule libw-thru-proxy.so
+opencog> config SexprShellModule libr-thru-proxy.so
 opencog> list
 ```
 Be sure to replace the IP addr `10.0.3.208` by the actual remote hostname.
