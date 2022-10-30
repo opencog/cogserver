@@ -56,6 +56,10 @@ void ReadThruProxy::setup(SexprEval* sev)
 
 ReadThru::ReadThru(void)
 {
+	have_node_cb = true;
+	have_link_cb = true;
+	have_value_cb = true;
+
 	have_incoming_set_cb = true;
 	have_incoming_by_type_cb = true;
 }
@@ -74,6 +78,36 @@ void ReadThru::setup(SexprEval* sev)
 }
 
 // ------------------------------------------------------------------
+
+void ReadThru::node_cb(const Handle& h)
+{
+	// Get the node from all targets; last one wins.
+	for (const StorageNodePtr& snp : _targets)
+	{
+		snp->fetch_atom(h);
+		snp->barrier();
+	}
+}
+
+void ReadThru::link_cb(const Handle& h)
+{
+	// Get the link from all targets; last one wins.
+	for (const StorageNodePtr& snp : _targets)
+	{
+		snp->fetch_atom(h);
+		snp->barrier();
+	}
+}
+
+void ReadThru::value_cb(const Handle& atom, const Handle& key)
+{
+	// Get the value from all targets; last one wins.
+	for (const StorageNodePtr& snp : _targets)
+	{
+		snp->fetch_value(atom, key);
+		snp->barrier();
+	}
+}
 
 void ReadThru::incoming_set_cb(const Handle& h)
 {

@@ -40,6 +40,10 @@ class ReadThru : public ThruCommands
 		~ReadThru();
 		void setup(SexprEval*);
 
+		void node_cb(const Handle&);
+		void link_cb(const Handle&);
+		void value_cb(const Handle&, const Handle&);
+
 		void incoming_by_type_cb(const Handle&, Type);
 		void incoming_set_cb(const Handle&);
 };
