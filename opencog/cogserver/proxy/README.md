@@ -199,9 +199,14 @@ should coordinate with regards to what kind of proxying should be done.
     list of StorageNode to write to.
 
 
-Write-Thru Proxy Agent
-----------------------
-The write-thru proxy agent is (manually) configured as follows:
+Read-Thru and Write-Thru Proxy Agents
+-------------------------------------
+The read-thru and write-thru proxy agents must be manually loaded before
+use.  These can be used together, or separately. If used separately,
+then only the reading resp. writing pass-thru functions are available.
+
+The block below starts by connecting to the cogserver; poking around,
+then loading the proxies, then looking around some more.
 ```
 $ rlwrap telnet localhost 17001
 opencog> list
@@ -211,15 +216,17 @@ BuiltinRequestsModule libbuiltinreqs.so  /usr/local/lib/opencog/modules
 SexprShellModule      libsexpr-shell.so  /usr/local/lib/opencog/modules
 ...
 
-opencog> config SexprShellModule libwthru-proxy.so
+opencog> config SexprShellModule libr-thru-proxy.so
+opencog> config SexprShellModule libw-thru-proxy.so
 opencog> list
    Module Name           Library            Module Directory Path
    -----------           -------            ---------------------
-WriteThruProxy        libwthru-proxy.so  /usr/local/lib/opencog/modules
+ReadThruProxy         libr-thru-proxy.so  /usr/local/lib/opencog/modules
+WriteThruProxy        libw-thru-proxy.so  /usr/local/lib/opencog/modules
 ...
 ```
 That's it. After this point, all subsequent `sexpr` invocations will
-pass through the the write-thru proxy.
+pass through both of the pass-thru proxies.
 
 Design Notes
 ------------
@@ -249,7 +256,7 @@ of command strings that are currently in use can be found in the
  * The support for SpaceFrames by the CogStorageNode is currently
    incomplete and broken.
  * Implement a caching read-through node, so that read requests hit
-   the disk only the first time, and subequent reads do not go to disk
+   the disk only the first time, and subsequent reads do not go to disk
    a second time.
 
 -----
