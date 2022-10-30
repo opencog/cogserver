@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/proxy/WriteThruProxy.h
+ * opencog/cogserver/proxy/ReadThruProxy.h
  *
  * Module for starting up s-expression shells
  * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
@@ -20,8 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _OPENCOG_WRITE_THRU_PROXY_H
-#define _OPENCOG_WRITE_THRU_PROXY_H
+#ifndef _OPENCOG_READ_THRU_PROXY_H
+#define _OPENCOG_READ_THRU_PROXY_H
 
 #include <vector>
 
@@ -33,28 +33,30 @@ namespace opencog {
  *  @{
  */
 
-class WriteThru : public ThruCommands
+class ReadThru : public ThruCommands
 {
 	public:
-		WriteThru(void);
-		~WriteThru();
+		ReadThru(void);
+		~ReadThru();
 		void setup(SexprEval*);
 
-		void extract_cb(const Handle&, bool);
-		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
-		void set_values_cb(const Handle&);
-		void set_tv_cb(const Handle&, const TruthValuePtr&);
-		void update_value_cb(const Handle&, const Handle&, const ValuePtr&);
+		void get_atoms_cb(Type, bool);
+		void incoming_by_type_cb(const Handle&, Type);
+		void incoming_set_cb(const Handle&);
+		void keys_alist_cb(const Handle&);
+		void node_cb(const Handle&);
+		void link_cb(const Handle&);
+		void value_cb(const Handle&, const Handle&);
 };
 
-class WriteThruProxy : public Proxy
+class ReadThruProxy : public Proxy
 {
 	protected:
-		WriteThru _wthru_wrap;
+		ReadThru _rthru_wrap;
 
 	public:
-		WriteThruProxy(CogServer&);
-		virtual ~WriteThruProxy();
+		ReadThruProxy(CogServer&);
+		virtual ~ReadThruProxy();
 
 		static const char *id(void);
 		virtual void init(void);
@@ -66,4 +68,4 @@ class WriteThruProxy : public Proxy
 /** @}*/
 }
 
-#endif // _OPENCOG_WRITE_THRU_PROXY_H
+#endif // _OPENCOG_READ_THRU_PROXY_H

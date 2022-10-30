@@ -95,9 +95,7 @@ class CogServer;
 
 class Module
 {
-
 public:
-
     static const char* id_function_name(void)
     {
          static const char* s = "opencog_module_id";

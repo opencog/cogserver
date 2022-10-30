@@ -18,7 +18,7 @@
  * coming over a network TCP/IP socket. All the details of socket
  * handling are abstracted away.
  */
-#define DEFINE_SHELL_MODULE(MODNAME)                                  \
+#define DEFINE_SHELL_MODULE2(MODNAME,EXTRA)                           \
 namespace opencog {                                                   \
                                                                       \
 class MODNAME : public Module {                                       \
@@ -33,7 +33,7 @@ class MODNAME : public Module {                                       \
                 virtual bool isShell(void) { return true; }           \
         };                                                            \
         Factory<shelloutRequest, Request> shelloutFactory;            \
-        static std::string _config_setting;                           \
+        EXTRA;                                                        \
     public:                                                           \
         MODNAME(CogServer&);                                          \
         virtual ~MODNAME();                                           \
@@ -41,7 +41,8 @@ class MODNAME : public Module {                                       \
         virtual void init(void);                                      \
         virtual bool config(const char *);                            \
 };                                                                    \
-std::string MODNAME::_config_setting;                                 \
 }
+
+#define DEFINE_SHELL_MODULE(MODNAME) DEFINE_SHELL_MODULE2(MODNAME,)
 
 #endif // _OPENCOG_SHELL_MODULE_H

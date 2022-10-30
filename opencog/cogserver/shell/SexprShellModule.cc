@@ -35,8 +35,13 @@
 
 using namespace opencog;
 
-DEFINE_SHELL_MODULE(SexprShellModule);
+#define EXTRA \
+	static std::vector<std::string> _proxy_list;
+
+DEFINE_SHELL_MODULE2(SexprShellModule, EXTRA);
 DECLARE_MODULE(SexprShellModule);
+
+std::vector<std::string> SexprShellModule::_proxy_list;
 
 SexprShellModule::SexprShellModule(CogServer& cs) : Module(cs)
 {
@@ -70,7 +75,7 @@ bool SexprShellModule::config(const char* cfg)
 	// Just record the config setting for now.
 	// We should check it for valid syntax, and return false if it is
 	// bad. ... but not ready for that, yet.
-	_config_setting = cfg;
+	_proxy_list.push_back(cfg);
 	return true;
 }
 
@@ -110,10 +115,10 @@ SexprShellModule::shelloutRequest::execute(void)
 
 	SexprShell *sh = new SexprShell();
 
-	if (0 < _config_setting.size())
+	for (const std::string& proxy: _proxy_list)
 	{
-		Module *ext = _cogserver.getModule(_config_setting);
-		printf("sexpr shell config: %p %s\n", ext, _config_setting.c_str());
+		Module *ext = _cogserver.getModule(proxy);
+		printf("sexpr shell init proxy: %p %s\n", ext, proxy.c_str());
 
 		if (ext)
 		{

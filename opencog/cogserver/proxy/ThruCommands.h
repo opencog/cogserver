@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/proxy/WriteThruProxy.h
+ * opencog/cogserver/proxy/ThruCommands.h
  *
  * Module for starting up s-expression shells
  * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
@@ -20,50 +20,36 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _OPENCOG_WRITE_THRU_PROXY_H
-#define _OPENCOG_WRITE_THRU_PROXY_H
+#ifndef _OPENCOG_THRU_COMMANDS_H
+#define _OPENCOG_THRU_COMMANDS_H
 
 #include <vector>
 
-#include <opencog/cogserver/proxy/Proxy.h>
-#include <opencog/cogserver/proxy/ThruCommands.h>
+#include <opencog/persist/api/StorageNode.h>
+#include <opencog/persist/sexpr/Commands.h>
 
 namespace opencog {
 /** \addtogroup grp_server
  *  @{
  */
 
-class WriteThru : public ThruCommands
-{
-	public:
-		WriteThru(void);
-		~WriteThru();
-		void setup(SexprEval*);
-
-		void extract_cb(const Handle&, bool);
-		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
-		void set_values_cb(const Handle&);
-		void set_tv_cb(const Handle&, const TruthValuePtr&);
-		void update_value_cb(const Handle&, const Handle&, const ValuePtr&);
-};
-
-class WriteThruProxy : public Proxy
+class ThruCommands : public UnwrappedCommands
 {
 	protected:
-		WriteThru _wthru_wrap;
+		AtomSpacePtr _as;
+		Handle _truth_key;
+		std::vector<StorageNodePtr> _targets;
+
+		Commands _decoder;
 
 	public:
-		WriteThruProxy(CogServer&);
-		virtual ~WriteThruProxy();
+		ThruCommands();
+		virtual ~ThruCommands();
 
-		static const char *id(void);
-		virtual void init(void);
-		virtual bool config(const char*);
-
-		virtual void setup(SexprEval*);
+		void init(const AtomSpacePtr&);
 };
 
 /** @}*/
 }
 
-#endif // _OPENCOG_WRITE_THRU_PROXY_H
+#endif // _OPENCOG_THRU_COMMANDS_H
