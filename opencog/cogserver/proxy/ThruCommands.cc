@@ -33,13 +33,12 @@
 
 using namespace opencog;
 
-ThruCommands::ThruCommands()
+ThruCommands::ThruCommands() :
+	_decoder(*dynamic_cast<UnwrappedCommands*>(this))
 {
 }
 
-ThruCommands::~ThruCommands()
-{
-}
+ThruCommands::~ThruCommands() {}
 
 void ThruCommands::init(const AtomSpacePtr& asp)
 {

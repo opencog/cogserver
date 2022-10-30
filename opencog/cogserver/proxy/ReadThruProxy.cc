@@ -72,10 +72,16 @@ void ReadThru::setup(SexprEval* sev)
 	using namespace std::placeholders;  // for _1, _2, _3...
 
 	// Install dispatch handlers.
-	sev->install_handler("cog-incoming-by-type",
-		std::bind(&Commands::cog_incoming_by_type, &_decoder, _1));
-	sev->install_handler("cog-incoming-set",
-		std::bind(&Commands::cog_incoming_set, &_decoder, _1));
+#define INST(STR,CB) \
+	sev->install_handler(STR, std::bind(&Commands::CB, &_decoder, _1));
+
+	INST("cog-get-atoms",        cog_get_atoms);
+	INST("cog-incoming-by-type", cog_incoming_by_type);
+	INST("cog-incoming-set",     cog_incoming_set);
+	INST("cog-keys->alist",      cog_keys_alist);
+	INST("cog-link",             cog_link);
+	INST("cog-node",             cog_node);
+	INST("cog-value",            cog_value);
 }
 
 // ------------------------------------------------------------------
