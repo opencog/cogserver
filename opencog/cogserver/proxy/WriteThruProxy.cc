@@ -144,6 +144,18 @@ std::string WriteThruProxy::cog_set_values(const std::string& arg)
 		std::bind(&WriteThruProxy::set_values_cb, this, _1));
 }
 
+std::string WriteThruProxy::cog_set_tv(const std::string& arg)
+{
+	return _decoder.cog_set_tv(arg,
+		std::bind(&WriteThruProxy::set_tv_cb, this, _1, _2));
+}
+
+std::string WriteThruProxy::cog_update_value(const std::string& arg)
+{
+	return _decoder.cog_update_value(arg,
+		std::bind(&WriteThruProxy::update_value_cb, this, _1, _2, _3));
+}
+
 // ------------------------------------------------------------------
 
 // This is called after the string is decoded.
@@ -178,20 +190,12 @@ void WriteThruProxy::set_values_cb(const Handle& h)
 		snp->store_atom(atom);
 }
 
-std::string WriteThruProxy::cog_set_tv(const std::string& arg)
+void WriteThruProxy::set_tv_cb(const Handle& h, const TruthValuePtr& tv)
 {
-	size_t pos = 0;
-	// XXX FIXME Handle space frames
-	// Handle h = Sexpr::decode_atom(arg, pos, _space_map);
-	Handle h = Sexpr::decode_atom(arg, pos);
-	ValuePtr tv = Sexpr::decode_value(arg, ++pos);
-
-	// Search for optional AtomSpace argument
-	// AtomSpace* as = get_opt_as(arg, pos);
 	AtomSpacePtr as = _cogserver.getAtomSpace();
 
 	Handle ha = as->add_atom(h);
-	as->set_truthvalue(ha, TruthValueCast(tv));
+	as->set_truthvalue(ha, tv);
 
 	// Make sure we can store truth values!
 	if (nullptr == _truth_key)
@@ -201,34 +205,20 @@ std::string WriteThruProxy::cog_set_tv(const std::string& arg)
 	// Loop over all targets, and send them the new truth value.
 	for (const StorageNodePtr& snp : _targets)
 		snp->store_value(ha, _truth_key);
-
-	return "()";
 }
 
-std::string WriteThruProxy::cog_update_value(const std::string& arg)
+void WriteThruProxy::update_value_cb(const Handle& h, const Handle& k,
+                                     const ValuePtr& delta)
 {
-	size_t pos = 0;
-	Handle atom = Sexpr::decode_atom(arg, pos /* , _space_map */);
-	Handle key = Sexpr::decode_atom(arg, ++pos /* , _space_map */);
-	ValuePtr delta = Sexpr::decode_value(arg, ++pos);
-
 	// Search for optional AtomSpace argument
 	// AtomSpace* as = get_opt_as(arg, pos);
 	AtomSpacePtr as = _cogserver.getAtomSpace();
-	atom = as->add_atom(atom);
-	key = as->add_atom(key);
-
-	if (not nameserver().isA(delta->get_type(), FLOAT_VALUE))
-		return "()";
-
-	FloatValuePtr fvp = FloatValueCast(delta);
-	as->increment_count(atom, key, fvp->value());
+	Handle atom = as->add_atom(h);
+	Handle key = as->add_atom(k);
 
 	// Loop over all targets, and send them the new truth value.
 	for (const StorageNodePtr& snp : _targets)
 		snp->update_value(atom, key, delta);
-
-	return "()";
 }
 
 /* ===================== END OF FILE ============================ */

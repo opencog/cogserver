@@ -44,6 +44,8 @@ class WriteThruProxy : public Proxy
 
 		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
 		void set_values_cb(const Handle&);
+		void set_tv_cb(const Handle&, const TruthValuePtr&);
+		void update_value_cb(const Handle&, const Handle&, const ValuePtr&);
 
 		std::string cog_extract_helper(const std::string&, bool);
 
