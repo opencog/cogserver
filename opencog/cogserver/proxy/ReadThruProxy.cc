@@ -63,32 +63,41 @@ void ReadThruProxy::setup(SexprEval* sev)
 		std::bind(&ReadThruProxy::cog_incoming_by_type, this, _1));
 }
 
-// XXX FIXME? Tgis is a cut-n-paste of Commands::cog_incoming_by_type()
-// from the main atomspace sexpr directory; just that, in the middle,
-// we've added an extra step.
-std::string ReadThruProxy::cog_incoming_by_type(const std::string& cmd)
+// ------------------------------------------------------------------
+
+std::string ReadThruProxy::cog_incoming_by_type(const std::string& arg)
 {
-	size_t pos = 0;
-	Handle h = Sexpr::decode_atom(cmd, pos);
-	pos++; // step past close-paren
-	Type t = Sexpr::decode_type(cmd, pos);
+	return _decoder.cog_incoming_by_type(arg,
+		std::bind(&ReadThruProxy::incoming_by_type_cb, this, _1, _2));
+}
 
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-	h = as->add_atom(h);
+std::string ReadThruProxy::cog_incoming_set(const std::string& arg)
+{
+	return _decoder.cog_incoming_set(arg,
+		std::bind(&ReadThruProxy::incoming_set_cb, this, _1));
+}
 
+// ------------------------------------------------------------------
+// The callbacks are called after the string command is decoded.
+
+void ReadThruProxy::incoming_set_cb(const Handle& h)
+{
+	// Get all incoming sets from all targets.
+	for (const StorageNodePtr& snp : _targets)
+		snp->fetch_incoming_set(h);
+
+	for (const StorageNodePtr& snp : _targets)
+		snp->barrier();
+}
+
+void ReadThruProxy::incoming_by_type_cb(const Handle& h, Type t)
+{
 	// Get all incoming sets from all targets.
 	for (const StorageNodePtr& snp : _targets)
 		snp->fetch_incoming_by_type(h, t);
 
 	for (const StorageNodePtr& snp : _targets)
 		snp->barrier();
-
-	std::string alist = "(";
-	for (const Handle& hi : h->getIncomingSetByType(t))
-		alist += Sexpr::encode_atom(hi);
-
-	alist += ")";
-	return alist;
 }
 
 /* ===================== END OF FILE ============================ */
