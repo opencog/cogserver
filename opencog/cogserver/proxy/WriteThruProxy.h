@@ -37,23 +37,22 @@ namespace opencog {
 class WriteThruProxy : public Proxy
 {
 	protected:
+		AtomSpacePtr _as;
 		Handle _truth_key;
 		std::vector<StorageNodePtr> _targets;
 
 		Commands _decoder;
 
+	private:
+		void extract_cb(const Handle&, bool);
 		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
 		void set_values_cb(const Handle&);
 		void set_tv_cb(const Handle&, const TruthValuePtr&);
 		void update_value_cb(const Handle&, const Handle&, const ValuePtr&);
 
-		std::string cog_extract_helper(const std::string&, bool);
-
 		/// Methods that implement the interpreted commands
-		std::string cog_extract(const std::string& arg)
-			{ return cog_extract_helper(arg, false); }
-		std::string cog_extract_recursive(const std::string& arg)
-			{ return cog_extract_helper(arg, true); }
+		std::string cog_extract(const std::string& arg);
+		std::string cog_extract_recursive(const std::string& arg);
 		std::string cog_set_value(const std::string&);
 		std::string cog_set_values(const std::string&);
 		std::string cog_set_tv(const std::string&);

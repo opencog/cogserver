@@ -42,15 +42,15 @@ WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs)
 
 void WriteThruProxy::init(void)
 {
-	AtomSpacePtr as = _cogserver.getAtomSpace();
+	_as = _cogserver.getAtomSpace();
 
 	// Tell the command decoder what AtomSpace to use
-	_decoder.set_base_space(as);
+	_decoder.set_base_space(_as);
 
 	// Get all of the StorageNodes to which we will be
 	// forwarding writes.
 	HandleSeq hsns;
-	as->get_handles_by_type(hsns, STORAGE_NODE, true);
+	_as->get_handles_by_type(hsns, STORAGE_NODE, true);
 
 	_targets.clear();
 	for (const Handle& hsn : hsns)
@@ -89,8 +89,7 @@ printf("duuuude write-thru proxy cfg %s\n", cfg);
 void WriteThruProxy::setup(SexprEval* sev)
 {
 	// Read-only atomspace ... should check earlier!?
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-	if (as->get_read_only())
+	if (_as->get_read_only())
 	{
 		logger().info("Read-only atomspace; no write-through proxying!");
 		return;
@@ -114,26 +113,19 @@ void WriteThruProxy::setup(SexprEval* sev)
 		std::bind(&WriteThruProxy::cog_update_value, this, _1));
 }
 
-std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
-                                               bool flag)
+// ------------------------------------------------------------------
+
+std::string WriteThruProxy::cog_extract(const std::string& arg)
 {
-	// XXX FIXME Handle space frames
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-	size_t pos = 0;
-	// Handle h = _base_space->get_atom(Sexpr::decode_atom(arg, pos, _space_map));
-	Handle h = as->get_atom(Sexpr::decode_atom(arg, pos));
-	if (nullptr == h) return "#t";
-	// if (not _base_space->extract_atom(h, flag)) return "#f";
-	if (not as->extract_atom(h, flag)) return "#f";
-
-	// Loop over all targets, and extract there as well.
-	for (const StorageNodePtr& snp : _targets)
-		snp->remove_atom(as, h, flag);
-
-	return "#t";
+	return _decoder.cog_extract(arg,
+		std::bind(&WriteThruProxy::extract_cb, this, _1, false));
 }
 
-// ------------------------------------------------------------------
+std::string WriteThruProxy::cog_extract_recursive(const std::string& arg)
+{
+	return _decoder.cog_extract_recursive(arg,
+		std::bind(&WriteThruProxy::extract_cb, this, _1, true));
+}
 
 std::string WriteThruProxy::cog_set_value(const std::string& arg)
 {
@@ -160,8 +152,15 @@ std::string WriteThruProxy::cog_update_value(const std::string& arg)
 }
 
 // ------------------------------------------------------------------
+// The callbacks are called after the string command is decoded.
 
-// This is called after the string is decoded.
+void WriteThruProxy::extract_cb(const Handle& h, bool flag)
+{
+	// Loop over all targets, and extract there as well.
+	for (const StorageNodePtr& snp : _targets)
+		snp->remove_atom(_as, h, flag);
+}
+
 void WriteThruProxy::set_value_cb(const Handle& atom, const Handle& key,
                                   const ValuePtr& v)
 {
@@ -184,13 +183,9 @@ void WriteThruProxy::set_values_cb(const Handle& atom)
 
 void WriteThruProxy::set_tv_cb(const Handle& ha, const TruthValuePtr& tv)
 {
-	// XXX FIXME what if user changed the AS recnetly? Other code (above)
-	// will be using the old AS!!
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-
 	// Make sure we can store truth values!
 	if (nullptr == _truth_key)
-		_truth_key = as->add_atom(
+		_truth_key = _as->add_atom(
 			createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
 
 	// Loop over all targets, and send them the new truth value.
