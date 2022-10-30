@@ -46,7 +46,7 @@ read-thru proxy.)
 
 Status
 ------
-**Version 0.9**. The Write-Through Proxy works. Lightly tested.
+**Version 0.9.2**. The Write-Through Proxy works. Lightly tested.
 Need to:
 
 * Expand the `WriteThruProxyUnitTest` to test the other four
@@ -249,10 +249,5 @@ of command strings that are currently in use can be found in the
  * Implement a caching read-through node, so that read requests hit
    the disk only the first time, and subequent reads do not go to disk
    a second time.
-
-### Issues
- * The ReadThruProxy cannot proxy queries for `cog-node` and `cog-link`
-   because there is no `StorageNode` API that allows for an existance
-   query. Unclear if this needs to be "fixed" or if it is OK as-is.
 
 -----

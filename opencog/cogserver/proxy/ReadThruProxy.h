@@ -40,12 +40,13 @@ class ReadThru : public ThruCommands
 		~ReadThru();
 		void setup(SexprEval*);
 
+		void get_atoms_cb(Type, bool);
+		void incoming_by_type_cb(const Handle&, Type);
+		void incoming_set_cb(const Handle&);
+		void keys_alist_cb(const Handle&);
 		void node_cb(const Handle&);
 		void link_cb(const Handle&);
 		void value_cb(const Handle&, const Handle&);
-
-		void incoming_by_type_cb(const Handle&, Type);
-		void incoming_set_cb(const Handle&);
 };
 
 class ReadThruProxy : public Proxy

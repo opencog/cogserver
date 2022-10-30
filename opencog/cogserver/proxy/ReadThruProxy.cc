@@ -56,12 +56,13 @@ void ReadThruProxy::setup(SexprEval* sev)
 
 ReadThru::ReadThru(void)
 {
+	have_get_atoms_cb = true;
+	have_incoming_set_cb = true;
+	have_incoming_by_type_cb = true;
+	have_keys_alist_cb = true;
 	have_node_cb = true;
 	have_link_cb = true;
 	have_value_cb = true;
-
-	have_incoming_set_cb = true;
-	have_incoming_by_type_cb = true;
 }
 
 ReadThru::~ReadThru() {}
@@ -78,6 +79,52 @@ void ReadThru::setup(SexprEval* sev)
 }
 
 // ------------------------------------------------------------------
+
+void ReadThru::get_atoms_cb(Type t, bool get_subtypes)
+{
+	// Get all atoms from all targets.
+	for (const StorageNodePtr& snp : _targets)
+	{
+		snp->fetch_all_atoms_of_type(t);
+		if (get_subtypes)
+		{
+//xxxxxx
+		}
+	}
+
+	for (const StorageNodePtr& snp : _targets)
+		snp->barrier();
+}
+
+void ReadThru::incoming_set_cb(const Handle& h)
+{
+	// Get all incoming sets from all targets.
+	for (const StorageNodePtr& snp : _targets)
+		snp->fetch_incoming_set(h);
+
+	for (const StorageNodePtr& snp : _targets)
+		snp->barrier();
+}
+
+void ReadThru::incoming_by_type_cb(const Handle& h, Type t)
+{
+	// Get all incoming sets from all targets.
+	for (const StorageNodePtr& snp : _targets)
+		snp->fetch_incoming_by_type(h, t);
+
+	for (const StorageNodePtr& snp : _targets)
+		snp->barrier();
+}
+
+void ReadThru::keys_alist_cb(const Handle& h)
+{
+	// Get all incoming sets from all targets.
+	for (const StorageNodePtr& snp : _targets)
+	{
+		snp->fetch_atom(h);
+		snp->barrier();
+	}
+}
 
 void ReadThru::node_cb(const Handle& h)
 {
@@ -107,26 +154,6 @@ void ReadThru::value_cb(const Handle& atom, const Handle& key)
 		snp->fetch_value(atom, key);
 		snp->barrier();
 	}
-}
-
-void ReadThru::incoming_set_cb(const Handle& h)
-{
-	// Get all incoming sets from all targets.
-	for (const StorageNodePtr& snp : _targets)
-		snp->fetch_incoming_set(h);
-
-	for (const StorageNodePtr& snp : _targets)
-		snp->barrier();
-}
-
-void ReadThru::incoming_by_type_cb(const Handle& h, Type t)
-{
-	// Get all incoming sets from all targets.
-	for (const StorageNodePtr& snp : _targets)
-		snp->fetch_incoming_by_type(h, t);
-
-	for (const StorageNodePtr& snp : _targets)
-		snp->barrier();
 }
 
 /* ===================== END OF FILE ============================ */
