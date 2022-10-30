@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/proxy/ThruProxy.h
+ * opencog/cogserver/proxy/ThruCommands.h
  *
  * Module for starting up s-expression shells
  * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
@@ -20,12 +20,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _OPENCOG_THRU_PROXY_H
-#define _OPENCOG_THRU_PROXY_H
+#ifndef _OPENCOG_THRU_COMMANDS_H
+#define _OPENCOG_THRU_COMMANDS_H
 
 #include <vector>
 
-#include <opencog/cogserver/proxy/Proxy.h>
 #include <opencog/persist/api/StorageNode.h>
 #include <opencog/persist/sexpr/Commands.h>
 
@@ -34,7 +33,7 @@ namespace opencog {
  *  @{
  */
 
-class ThruProxy : public Proxy
+class ThruCommands : public UnwrappedCommands
 {
 	protected:
 		AtomSpacePtr _as;
@@ -44,14 +43,13 @@ class ThruProxy : public Proxy
 		Commands _decoder;
 
 	public:
-		ThruProxy(CogServer&);
-		virtual ~ThruProxy();
+		ThruCommands();
+		virtual ~ThruCommands();
 
-		virtual void init(void);
-		virtual void setup(SexprEval*);
+		void init(const AtomSpacePtr&);
 };
 
 /** @}*/
 }
 
-#endif // _OPENCOG_THRU_PROXY_H
+#endif // _OPENCOG_THRU_COMMANDS_H

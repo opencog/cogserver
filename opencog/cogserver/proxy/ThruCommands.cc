@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/proxy/ThruProxy.cc
+ * opencog/cogserver/proxy/ThruCommands.cc
  *
  * Simple Thru proxy agent
  * Copyright (c) 2008, 2020, 2022 Linas Vepstas <linas@linas.org>
@@ -29,17 +29,28 @@
 #include <opencog/persist/sexpr/Sexpr.h>
 
 #include <opencog/cogserver/server/CogServer.h>
-#include "ThruProxy.h"
+#include "ThruCommands.h"
 
 using namespace opencog;
 
-ThruProxy::ThruProxy(CogServer& cs) : Proxy(cs)
+ThruCommands::ThruCommands()
 {
 }
 
-void ThruProxy::init(void)
+ThruCommands::~ThruCommands()
 {
-	_as = _cogserver.getAtomSpace();
+}
+
+void ThruCommands::init(const AtomSpacePtr& asp)
+{
+	_as = asp;
+
+	// Read-only atomspace ... maybe should check earlier!?
+	if (_as->get_read_only())
+	{
+		logger().info("Read-only atomspace; no proxying!");
+		return;
+	}
 
 	// Tell the command decoder what AtomSpace to use
 	_decoder.set_base_space(_as);
@@ -59,7 +70,7 @@ void ThruProxy::init(void)
 		if (snp->connected())
 		{
 			_targets.push_back(snp);
-			logger().info("[-Thru Proxy] Will write-thru to %s\n",
+			logger().info("[-Thru Commands] Will pass-thru to %s\n",
 				snp->to_short_string().c_str());
 		}
 
@@ -67,21 +78,7 @@ void ThruProxy::init(void)
 	}
 
 	if (0 == _targets.size())
-		logger().info("[ThruProxy] There aren't any targets to work with!");
-}
-
-ThruProxy::~ThruProxy()
-{
-}
-
-void ThruProxy::setup(SexprEval* sev)
-{
-	// Read-only atomspace ... maybe should check earlier!?
-	if (_as->get_read_only())
-	{
-		logger().info("Read-only atomspace; no write-through proxying!");
-		return;
-	}
+		logger().info("[ThruCommands] There aren't any targets to work with!");
 }
 
 /* ===================== END OF FILE ============================ */

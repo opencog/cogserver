@@ -36,14 +36,12 @@ using namespace std::placeholders;  // for _1, _2, _3...
 DECLARE_MODULE(WriteThruProxy);
 
 WriteThruProxy::WriteThruProxy(CogServer& cs) :
-	ThruProxy(cs),
-	_wthru_cmds(_wthru_wrap)
+	Proxy(cs),
 {
 }
 
 void WriteThruProxy::init(void)
 {
-	ThruProxy::init();
 }
 
 WriteThruProxy::~WriteThruProxy()
@@ -56,40 +54,16 @@ printf("duuuude write-thru proxy cfg %s\n", cfg);
 	return false;
 }
 
-// TODO:
-// * Need space-frame support!
-
 void WriteThruProxy::setup(SexprEval* sev)
 {
-	ThruProxy::setup(sev);
-
-	// Read-only atomspace ... should check earlier!?
-	if (_as->get_read_only())
-	{
-		logger().info("Read-only atomspace; no write-through proxying!");
-		return;
-	}
-
-	// Install dispatch handlers.
-	sev->install_handler("cog-extract!",
-		std::bind(&Commands::cog_extract, &_wthru_cmds, _1));
-	sev->install_handler("cog-extract-recursive!",
-		std::bind(&Commands::cog_extract_recursive, &_wthru_cmds, _1));
-
-	sev->install_handler("cog-set-value!",
-		std::bind(&Commands::cog_set_value, &_wthru_cmds, _1));
-	sev->install_handler("cog-set-values!",
-		std::bind(&Commands::cog_set_values, &_wthru_cmds, _1));
-	sev->install_handler("cog-set-tv!",
-		std::bind(&Commands::cog_set_tv, &_wthru_cmds, _1));
-	sev->install_handler("cog-update-value!",
-		std::bind(&Commands::cog_update_value, &_wthru_cmds, _1));
+	_wthru_wrap.init(_cogserver.getAtomSpace());
+	_wthru_wrap.setup(sev);
 }
 
 // ------------------------------------------------------------------
 // The callbacks are called after the string command is decoded.
 
-void WriteThru::WriteThru(void);
+WriteThru::WriteThru(void)
 {
 	have_extract_cb = true;
 	have_extract_recursive_cb = true;
@@ -99,9 +73,29 @@ void WriteThru::WriteThru(void);
 	have_update_value_cb = true;
 }
 
-void WriteThru::~WriteThru();
+WriteThru::~WriteThru()
 {
 }
+
+void WriteThru::setup(SexprEval* sev)
+{
+	// Install dispatch handlers.
+	sev->install_handler("cog-extract!",
+		std::bind(&Commands::cog_extract, &_decoder, _1));
+	sev->install_handler("cog-extract-recursive!",
+		std::bind(&Commands::cog_extract_recursive, &_decoder, _1));
+
+	sev->install_handler("cog-set-value!",
+		std::bind(&Commands::cog_set_value, &_decoder, _1));
+	sev->install_handler("cog-set-values!",
+		std::bind(&Commands::cog_set_values, &_decoder, _1));
+	sev->install_handler("cog-set-tv!",
+		std::bind(&Commands::cog_set_tv, &_decoder, _1));
+	sev->install_handler("cog-update-value!",
+		std::bind(&Commands::cog_update_value, &_decoder, _1));
+}
+
+// ------------------------------------------------------------------
 
 void WriteThru::extract_cb(const Handle& h, bool flag)
 {

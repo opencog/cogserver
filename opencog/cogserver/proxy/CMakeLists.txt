@@ -1,6 +1,6 @@
 
 ADD_LIBRARY (w-thru-proxy SHARED
-	ThruProxy.cc
+	ThruCommands.cc
 	WriteThruProxy.cc
 )
 
@@ -16,9 +16,10 @@ INSTALL (TARGETS w-thru-proxy
 
 # --------------------------------------
 
+IF(0)
 ADD_LIBRARY (r-thru-proxy SHARED
 	ReadThruProxy.cc
-	ThruProxy.cc
+	ThruCommands.cc
 )
 
 TARGET_LINK_LIBRARIES(r-thru-proxy
@@ -30,13 +31,14 @@ TARGET_LINK_LIBRARIES(r-thru-proxy
 
 INSTALL (TARGETS r-thru-proxy
 	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+ENDIF()
 
 # --------------------------------------
 
 INSTALL (FILES
 	Proxy.h
 	ReadThruProxy.h
-	ThruProxy.h
+	ThruCommands.h
 	WriteThruProxy.h
 	DESTINATION "include/opencog/cogserver/proxy/"
 )

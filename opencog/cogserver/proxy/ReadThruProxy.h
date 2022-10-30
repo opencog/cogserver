@@ -25,14 +25,14 @@
 
 #include <vector>
 
-#include <opencog/cogserver/proxy/ThruProxy.h>
+#include <opencog/cogserver/proxy/Proxy.h>
 
 namespace opencog {
 /** \addtogroup grp_server
  *  @{
  */
 
-class ReadThruProxy : public ThruProxy
+class ReadThruProxy : public Proxy
 {
 	private:
 		void incoming_by_type_cb(const Handle&, Type);

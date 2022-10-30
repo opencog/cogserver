@@ -25,30 +25,32 @@
 
 #include <vector>
 
-#include <opencog/cogserver/proxy/ThruProxy.h>
+#include <opencog/cogserver/proxy/Proxy.h>
+#include <opencog/cogserver/proxy/ThruCommands.h>
 
 namespace opencog {
 /** \addtogroup grp_server
  *  @{
  */
 
-class WriteThru : public UnwrappedCommands
+class WriteThru : public ThruCommands
 {
 	public:
 		WriteThru(void);
-		~WriteTrhu();
+		~WriteThru();
+		void setup(SexprEval*);
+
 		void extract_cb(const Handle&, bool);
 		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
 		void set_values_cb(const Handle&);
 		void set_tv_cb(const Handle&, const TruthValuePtr&);
 		void update_value_cb(const Handle&, const Handle&, const ValuePtr&);
-}
+};
 
-class WriteThruProxy : public ThruProxy
+class WriteThruProxy : public Proxy
 {
 	protected:
 		WriteThru _wthru_wrap;
-		Commands _wthru_cmds;
 
 	public:
 		WriteThruProxy(CogServer&);
