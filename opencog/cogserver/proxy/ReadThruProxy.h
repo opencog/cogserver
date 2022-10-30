@@ -25,21 +25,16 @@
 
 #include <vector>
 
-#include <opencog/cogserver/proxy/WriteThruProxy.h>
-#include <opencog/persist/api/StorageNode.h>
+#include <opencog/cogserver/proxy/ThruProxy.h>
 
 namespace opencog {
 /** \addtogroup grp_server
  *  @{
  */
 
-class ReadThruProxy : public WriteThruProxy
+class ReadThruProxy : public ThruProxy
 {
 	protected:
-		Handle _truth_key;
-		std::vector<StorageNodePtr> _targets;
-
-		std::string cog_extract_helper(const std::string&, bool);
 
 		/// Methods that implement the interpreted commands
 		// std::string cog_atomspace(const std::string&);

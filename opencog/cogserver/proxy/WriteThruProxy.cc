@@ -25,7 +25,6 @@
 
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/atoms/base/Atom.h>
-#include <opencog/persist/sexpr/Commands.h>
 #include <opencog/persist/sexpr/Sexpr.h>
 
 #include <opencog/cogserver/server/CogServer.h>
@@ -36,41 +35,13 @@ using namespace std::placeholders;  // for _1, _2, _3...
 
 DECLARE_MODULE(WriteThruProxy);
 
-WriteThruProxy::WriteThruProxy(CogServer& cs) : Proxy(cs)
+WriteThruProxy::WriteThruProxy(CogServer& cs) : ThruProxy(cs)
 {
 }
 
 void WriteThruProxy::init(void)
 {
-	_as = _cogserver.getAtomSpace();
-
-	// Tell the command decoder what AtomSpace to use
-	_decoder.set_base_space(_as);
-
-	// Get all of the StorageNodes to which we will be
-	// forwarding writes.
-	HandleSeq hsns;
-	_as->get_handles_by_type(hsns, STORAGE_NODE, true);
-
-	_targets.clear();
-	for (const Handle& hsn : hsns)
-	{
-		StorageNodePtr snp = StorageNodeCast(hsn);
-
-		// Check to see if the StorageNode is actually open;
-		// We cannot write to nodes that are closed.
-		if (snp->connected())
-		{
-			_targets.push_back(snp);
-			logger().info("[Write-Thru Proxy] Will write-thru to %s\n",
-				snp->to_short_string().c_str());
-		}
-
-		// TODO: check if the StorageNode is read-only.
-	}
-
-	if (0 == _targets.size())
-		logger().info("[Write-Thru Proxy] There aren't any targets to write to!");
+	ThruProxy::init();
 }
 
 WriteThruProxy::~WriteThruProxy()
@@ -88,14 +59,14 @@ printf("duuuude write-thru proxy cfg %s\n", cfg);
 
 void WriteThruProxy::setup(SexprEval* sev)
 {
+	ThruProxy::setup(sev);
+
 	// Read-only atomspace ... should check earlier!?
 	if (_as->get_read_only())
 	{
 		logger().info("Read-only atomspace; no write-through proxying!");
 		return;
 	}
-
-	using namespace std::placeholders;  // for _1, _2, _3...
 
 	// Install dispatch handlers.
 	sev->install_handler("cog-extract!",

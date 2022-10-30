@@ -24,26 +24,23 @@
 
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/atoms/base/Atom.h>
-#include <opencog/persist/sexpr/Commands.h>
 #include <opencog/persist/sexpr/Sexpr.h>
 
 #include <opencog/cogserver/server/CogServer.h>
 #include "ReadThruProxy.h"
 
 using namespace opencog;
+using namespace std::placeholders;  // for _1, _2, _3...
 
 DECLARE_MODULE(ReadThruProxy);
 
-ReadThruProxy::ReadThruProxy(CogServer& cs) : WriteThruProxy(cs)
+ReadThruProxy::ReadThruProxy(CogServer& cs) : ThruProxy(cs)
 {
 }
 
 void ReadThruProxy::init(void)
 {
-	WriteThruProxy::init();
-
-	if (0 == _targets.size())
-		logger().info("[Read-Thru Proxy] There aren't any targets to read from!");
+	ThruProxy::init();
 }
 
 ReadThruProxy::~ReadThruProxy()
@@ -56,14 +53,10 @@ printf("duuuude read-thru proxy cfg %s\n", cfg);
 	return false;
 }
 
-// TODO:
-// * Need space-frame support!
 
 void ReadThruProxy::setup(SexprEval* sev)
 {
-	WriteThruProxy::setup(sev);
-
-	using namespace std::placeholders;  // for _1, _2, _3...
+	ThruProxy::setup(sev);
 
 	// Install dispatch handlers.
 	sev->install_handler("cog-incoming-by-type",
