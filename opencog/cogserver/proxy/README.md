@@ -67,6 +67,57 @@ All of the above is "easy to do" but tedious and time-consuming.
 See also the TODO list at the bottom, for the more abstract and more
 difficult work items. Those will be hard.
 
+HOWTO & Demo
+-------------
+Follow these steps to test by hand. The demo requires two machines: the
+"remote" server and the  "local" client.  They can both be localhost, as
+long as you keep tabs which is which. In the below, the "remote" machine
+has IP address `10.0.3.208`; replace this by the actual hostname or IP
+addr.
+
+First, start a cogserver on the "remote" machine:
+```
+$ guile
+guile> (use-modules (opencog) (opencog persist) (opencog persist-rocks))
+guile> (use-modules (opencog cogserver))
+guile> (define rsn (RocksStorageNode "rocks:///tmp/foo.rdb"))
+guile> (cog-open rsn)
+guile> (start-cogserver)
+```
+Then, on the local machine machine, contact the server and configure the
+write-through proxy:
+```
+$ rlwrap telnet 10.0.3.208 17001
+opencog> config SexprShellModule libwthru-proxy.so
+opencog> list
+```
+Be sure to replace the IP addr `10.0.3.208` by the actual remote hostname.
+Continuing on the "local" machine:
+```
+$ guile
+guile> (use-modules (opencog) (opencog persist) (opencog persist-cog))
+guile> (define csn (CogStorageNode "cog://10.0.3.208"))
+guile> (cog-open csn)
+guile> (store-atom (Concept "foo" (stv 0.123 0.456)))
+guile> (cog-close csn)
+guile> ^D  ; exit the guile shell
+```
+The above should have written a single Atom to the Rocks DB on the remote
+machine.  Verify this by exiting the guile shell on the remote machine, and
+then restarting it, loading the AtomSpace, and taking a look at it:
+```
+$ guile
+guile> (use-modules (opencog) (opencog persist) (opencog persist-rocks))
+guile> (define rsn (RocksStorageNode "rocks:///tmp/foo.rdb"))
+guile> (cog-open rsn)
+guile> (load-atomspace)
+guile> (cog-prt-atomspace)
+```
+Observe that this AtomSpace now contains an Atom called `(Concept "foo")`
+and that it has the correct TruthValue `(stv 0.123 0.456)`. That's it.
+Notice that the `(store-atom stuff)` in the local AtomSpace resulted in
+a store on the remote machine.
+
 Design Choices
 --------------
 How should the above be implemented?  There are several design choices.
