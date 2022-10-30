@@ -21,6 +21,7 @@
  */
 
 #include <cstdio>
+#include <functional>
 
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/atoms/base/Atom.h>
@@ -31,6 +32,7 @@
 #include "WriteThruProxy.h"
 
 using namespace opencog;
+using namespace std::placeholders;  // for _1, _2, _3...
 
 DECLARE_MODULE(WriteThruProxy);
 
@@ -130,15 +132,18 @@ std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
 
 std::string WriteThruProxy::cog_set_value(const std::string& arg)
 {
-	// XXX FIXME Handle space frames
-	size_t pos = 0;
-	Handle atom = Sexpr::decode_atom(arg, pos /* , _space_map */);
-	Handle key = Sexpr::decode_atom(arg, ++pos /* , _space_map */);
-	ValuePtr vp = Sexpr::decode_value(arg, ++pos);
+	return _decoder.cog_set_value(arg,
+		std::bind(&WriteThruProxy::do_set_value, this, _1, _2, _3));
+}
+
+void WriteThruProxy::do_set_value(const Handle& h, const Handle& k,
+                                  const ValuePtr& v)
+{
 
 	AtomSpacePtr as = _cogserver.getAtomSpace();
-	atom = as->add_atom(atom);
-	key = as->add_atom(key);
+	Handle atom = as->add_atom(h);
+	Handle key = as->add_atom(k);
+	ValuePtr vp = v;
 	if (vp)
 		vp = Sexpr::add_atoms(as.get(), vp);
 	as->set_value(atom, key, vp);
@@ -146,8 +151,6 @@ std::string WriteThruProxy::cog_set_value(const std::string& arg)
 	// Loop over all targets, and send them the new value.
 	for (const StorageNodePtr& snp : _targets)
 		snp->store_value(atom, key);
-
-	return "()";
 }
 
 std::string WriteThruProxy::cog_set_values(const std::string& arg)

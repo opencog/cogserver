@@ -27,6 +27,7 @@
 
 #include <opencog/cogserver/proxy/Proxy.h>
 #include <opencog/persist/api/StorageNode.h>
+#include <opencog/persist/sexpr/Commands.h>
 
 namespace opencog {
 /** \addtogroup grp_server
@@ -38,6 +39,10 @@ class WriteThruProxy : public Proxy
 	protected:
 		Handle _truth_key;
 		std::vector<StorageNodePtr> _targets;
+
+		Commands _decoder;
+
+		void do_set_value(const Handle&, const Handle&, const ValuePtr&);
 
 		std::string cog_extract_helper(const std::string&, bool);
 
