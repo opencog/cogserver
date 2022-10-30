@@ -65,12 +65,14 @@ This capability is useful in several different ways:
 
 * **Proxy Agents.** The proxy-agent infrastructure allows Atoms arriving
   on the net (or requests for getting them or changing them) to be
-  forewarded on to either disk storage, or other network nodes.
+  forwarded onwards to either disk storage, or other network nodes.
   Interacting with storage is particularly useful: the CogServer can
   not only serve up Atoms to remote clients, but can also save up
   whatever it is given, and move it to storage (without any manual
   intervention.)  This is one of the basic building blocks for
   network-distributed, decentralized processing.
+  See the [proxy/README](opencog/cogserver/proxy/README.md) for more
+  info and a demo of the `ReadThru` and `WriteThru` proxies.
 
 * The `stats` command provides a `top`-like command for viewing who is
   connected to the Cogserver, and what they are doing. Type `help stats`
