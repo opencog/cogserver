@@ -42,7 +42,8 @@ class WriteThruProxy : public Proxy
 
 		Commands _decoder;
 
-		void do_set_value(const Handle&, const Handle&, const ValuePtr&);
+		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
+		void set_values_cb(const Handle&);
 
 		std::string cog_extract_helper(const std::string&, bool);
 

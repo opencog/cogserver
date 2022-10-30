@@ -130,16 +130,26 @@ std::string WriteThruProxy::cog_extract_helper(const std::string& arg,
 	return "#t";
 }
 
+// ------------------------------------------------------------------
+
 std::string WriteThruProxy::cog_set_value(const std::string& arg)
 {
 	return _decoder.cog_set_value(arg,
-		std::bind(&WriteThruProxy::do_set_value, this, _1, _2, _3));
+		std::bind(&WriteThruProxy::set_value_cb, this, _1, _2, _3));
 }
 
-void WriteThruProxy::do_set_value(const Handle& h, const Handle& k,
+std::string WriteThruProxy::cog_set_values(const std::string& arg)
+{
+	return _decoder.cog_set_values(arg,
+		std::bind(&WriteThruProxy::set_values_cb, this, _1));
+}
+
+// ------------------------------------------------------------------
+
+// This is called after the string is decoded.
+void WriteThruProxy::set_value_cb(const Handle& h, const Handle& k,
                                   const ValuePtr& v)
 {
-
 	AtomSpacePtr as = _cogserver.getAtomSpace();
 	Handle atom = as->add_atom(h);
 	Handle key = as->add_atom(k);
@@ -153,18 +163,10 @@ void WriteThruProxy::do_set_value(const Handle& h, const Handle& k,
 		snp->store_value(atom, key);
 }
 
-std::string WriteThruProxy::cog_set_values(const std::string& arg)
+void WriteThruProxy::set_values_cb(const Handle& h)
 {
-	size_t pos = 0;
-	Handle h = Sexpr::decode_atom(arg, pos /*, _space_map*/ );
-	pos++; // skip past close-paren
-
-	// XXX FIXME Handle space frames
-	// if (_multi_space)
-
 	AtomSpacePtr as = _cogserver.getAtomSpace();
-	h = as->add_atom(h);
-	Sexpr::decode_slist(h, arg, pos);
+	Handle atom = as->add_atom(h);
 
 	// Loop over all targets, and store everything.
 	// In principle, we should be selective, and only pass
@@ -173,9 +175,7 @@ std::string WriteThruProxy::cog_set_values(const std::string& arg)
 	// and then we'd have to store one key at a time,
 	// which seems inefficient. But still ... XXX FIXME ?
 	for (const StorageNodePtr& snp : _targets)
-		snp->store_atom(h);
-
-	return "()";
+		snp->store_atom(atom);
 }
 
 std::string WriteThruProxy::cog_set_tv(const std::string& arg)
