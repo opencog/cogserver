@@ -80,15 +80,19 @@ void ReadThru::setup(SexprEval* sev)
 
 // ------------------------------------------------------------------
 
-void ReadThru::get_atoms_cb(Type t, bool get_subtypes)
+void ReadThru::get_atoms_cb(Type type, bool get_subtypes)
 {
 	// Get all atoms from all targets.
 	for (const StorageNodePtr& snp : _targets)
 	{
-		snp->fetch_all_atoms_of_type(t);
+		snp->fetch_all_atoms_of_type(type);
 		if (get_subtypes)
 		{
-//xxxxxx
+			for (Type t = type+1; t < nameserver().getNumberOfClasses(); t++)
+			{
+				if (nameserver().isA(t, type))
+					snp->fetch_all_atoms_of_type(t);
+			}
 		}
 	}
 
