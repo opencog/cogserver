@@ -44,6 +44,9 @@ void WriteThruProxy::init(void)
 {
 	AtomSpacePtr as = _cogserver.getAtomSpace();
 
+	// Tell the command decoder what AtomSpace to use
+	_decoder.set_base_space(as);
+
 	// Get all of the StorageNodes to which we will be
 	// forwarding writes.
 	HandleSeq hsns;
@@ -159,27 +162,16 @@ std::string WriteThruProxy::cog_update_value(const std::string& arg)
 // ------------------------------------------------------------------
 
 // This is called after the string is decoded.
-void WriteThruProxy::set_value_cb(const Handle& h, const Handle& k,
+void WriteThruProxy::set_value_cb(const Handle& atom, const Handle& key,
                                   const ValuePtr& v)
 {
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-	Handle atom = as->add_atom(h);
-	Handle key = as->add_atom(k);
-	ValuePtr vp = v;
-	if (vp)
-		vp = Sexpr::add_atoms(as.get(), vp);
-	as->set_value(atom, key, vp);
-
 	// Loop over all targets, and send them the new value.
 	for (const StorageNodePtr& snp : _targets)
 		snp->store_value(atom, key);
 }
 
-void WriteThruProxy::set_values_cb(const Handle& h)
+void WriteThruProxy::set_values_cb(const Handle& atom)
 {
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-	Handle atom = as->add_atom(h);
-
 	// Loop over all targets, and store everything.
 	// In principle, we should be selective, and only pass
 	// on the values we were given... this would require
@@ -190,12 +182,11 @@ void WriteThruProxy::set_values_cb(const Handle& h)
 		snp->store_atom(atom);
 }
 
-void WriteThruProxy::set_tv_cb(const Handle& h, const TruthValuePtr& tv)
+void WriteThruProxy::set_tv_cb(const Handle& ha, const TruthValuePtr& tv)
 {
+	// XXX FIXME what if user changed the AS recnetly? Other code (above)
+	// will be using the old AS!!
 	AtomSpacePtr as = _cogserver.getAtomSpace();
-
-	Handle ha = as->add_atom(h);
-	as->set_truthvalue(ha, tv);
 
 	// Make sure we can store truth values!
 	if (nullptr == _truth_key)
@@ -207,16 +198,10 @@ void WriteThruProxy::set_tv_cb(const Handle& h, const TruthValuePtr& tv)
 		snp->store_value(ha, _truth_key);
 }
 
-void WriteThruProxy::update_value_cb(const Handle& h, const Handle& k,
+void WriteThruProxy::update_value_cb(const Handle& atom, const Handle& key,
                                      const ValuePtr& delta)
 {
-	// Search for optional AtomSpace argument
-	// AtomSpace* as = get_opt_as(arg, pos);
-	AtomSpacePtr as = _cogserver.getAtomSpace();
-	Handle atom = as->add_atom(h);
-	Handle key = as->add_atom(k);
-
-	// Loop over all targets, and send them the new truth value.
+	// Loop over all targets, and send them the delta value.
 	for (const StorageNodePtr& snp : _targets)
 		snp->update_value(atom, key, delta);
 }
