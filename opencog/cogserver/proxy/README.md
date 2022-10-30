@@ -53,15 +53,9 @@ Need to:
   handlers. Also, write unit tests that use the `CogStorageNode`
   to make sure it works end-to-end.  Tedious and time-consuming.
 
-The above is for the basic WriteThru node. Also need:
+* Create a `ReadThruProxyUnitTest`.
 
-* A read-through node, that passes all Atom read requests onwards,
-  e.g. so that one doesn't have to load up the AtomSpace on startup,
-  but instead only as each Atom is requested.
-
-* A caching read-through node, so that read requests hit the disk
-  only the first time, and subequent reads do not go to disk a
-  second time.
+* Test both, together.
 
 All of the above is "easy to do" but tedious and time-consuming.
 See also the TODO list at the bottom, for the more abstract and more
@@ -252,6 +246,9 @@ of command strings that are currently in use can be found in the
  * SpaceFrames need to be handled in the StorageNodes!
  * The support for SpaceFrames by the CogStorageNode is currently
    incomplete and broken.
+ * Implement a caching read-through node, so that read requests hit
+   the disk only the first time, and subequent reads do not go to disk
+   a second time.
 
 ### Issues
  * The ReadThruProxy cannot proxy queries for `cog-node` and `cog-link`
