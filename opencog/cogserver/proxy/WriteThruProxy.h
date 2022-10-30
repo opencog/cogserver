@@ -32,22 +32,23 @@ namespace opencog {
  *  @{
  */
 
-class WriteThruProxy : public ThruProxy
+class WriteThru : public UnwrappedCommands
 {
-	private:
+	public:
+		WriteThru(void);
+		~WriteTrhu();
 		void extract_cb(const Handle&, bool);
 		void set_value_cb(const Handle&, const Handle&, const ValuePtr&);
 		void set_values_cb(const Handle&);
 		void set_tv_cb(const Handle&, const TruthValuePtr&);
 		void update_value_cb(const Handle&, const Handle&, const ValuePtr&);
+}
 
-		/// Methods that implement the interpreted commands
-		std::string cog_extract(const std::string& arg);
-		std::string cog_extract_recursive(const std::string& arg);
-		std::string cog_set_value(const std::string&);
-		std::string cog_set_values(const std::string&);
-		std::string cog_set_tv(const std::string&);
-		std::string cog_update_value(const std::string&);
+class WriteThruProxy : public ThruProxy
+{
+	protected:
+		WriteThru _wthru_wrap;
+		Commands _wthru_cmds;
 
 	public:
 		WriteThruProxy(CogServer&);

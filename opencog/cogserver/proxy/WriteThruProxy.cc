@@ -35,7 +35,9 @@ using namespace std::placeholders;  // for _1, _2, _3...
 
 DECLARE_MODULE(WriteThruProxy);
 
-WriteThruProxy::WriteThruProxy(CogServer& cs) : ThruProxy(cs)
+WriteThruProxy::WriteThruProxy(CogServer& cs) :
+	ThruProxy(cs),
+	_wthru_cmds(_wthru_wrap)
 {
 }
 
@@ -70,69 +72,45 @@ void WriteThruProxy::setup(SexprEval* sev)
 
 	// Install dispatch handlers.
 	sev->install_handler("cog-extract!",
-		std::bind(&WriteThruProxy::cog_extract, this, _1));
+		std::bind(&Commands::cog_extract, &_wthru_cmds, _1));
 	sev->install_handler("cog-extract-recursive!",
-		std::bind(&WriteThruProxy::cog_extract_recursive, this, _1));
+		std::bind(&Commands::cog_extract_recursive, &_wthru_cmds, _1));
 
 	sev->install_handler("cog-set-value!",
-		std::bind(&WriteThruProxy::cog_set_value, this, _1));
+		std::bind(&Commands::cog_set_value, &_wthru_cmds, _1));
 	sev->install_handler("cog-set-values!",
-		std::bind(&WriteThruProxy::cog_set_values, this, _1));
+		std::bind(&Commands::cog_set_values, &_wthru_cmds, _1));
 	sev->install_handler("cog-set-tv!",
-		std::bind(&WriteThruProxy::cog_set_tv, this, _1));
+		std::bind(&Commands::cog_set_tv, &_wthru_cmds, _1));
 	sev->install_handler("cog-update-value!",
-		std::bind(&WriteThruProxy::cog_update_value, this, _1));
-}
-
-// ------------------------------------------------------------------
-
-std::string WriteThruProxy::cog_extract(const std::string& arg)
-{
-	return _decoder.cog_extract(arg,
-		std::bind(&WriteThruProxy::extract_cb, this, _1, false));
-}
-
-std::string WriteThruProxy::cog_extract_recursive(const std::string& arg)
-{
-	return _decoder.cog_extract_recursive(arg,
-		std::bind(&WriteThruProxy::extract_cb, this, _1, true));
-}
-
-std::string WriteThruProxy::cog_set_value(const std::string& arg)
-{
-	return _decoder.cog_set_value(arg,
-		std::bind(&WriteThruProxy::set_value_cb, this, _1, _2, _3));
-}
-
-std::string WriteThruProxy::cog_set_values(const std::string& arg)
-{
-	return _decoder.cog_set_values(arg,
-		std::bind(&WriteThruProxy::set_values_cb, this, _1));
-}
-
-std::string WriteThruProxy::cog_set_tv(const std::string& arg)
-{
-	return _decoder.cog_set_tv(arg,
-		std::bind(&WriteThruProxy::set_tv_cb, this, _1, _2));
-}
-
-std::string WriteThruProxy::cog_update_value(const std::string& arg)
-{
-	return _decoder.cog_update_value(arg,
-		std::bind(&WriteThruProxy::update_value_cb, this, _1, _2, _3));
+		std::bind(&Commands::cog_update_value, &_wthru_cmds, _1));
 }
 
 // ------------------------------------------------------------------
 // The callbacks are called after the string command is decoded.
 
-void WriteThruProxy::extract_cb(const Handle& h, bool flag)
+void WriteThru::WriteThru(void);
+{
+	have_extract_cb = true;
+	have_extract_recursive_cb = true;
+	have_set_value_cb = true;
+	have_set_values_cb = true;
+	have_set_tv_cb = true;
+	have_update_value_cb = true;
+}
+
+void WriteThru::~WriteThru();
+{
+}
+
+void WriteThru::extract_cb(const Handle& h, bool flag)
 {
 	// Loop over all targets, and extract there as well.
 	for (const StorageNodePtr& snp : _targets)
 		snp->remove_atom(_as, h, flag);
 }
 
-void WriteThruProxy::set_value_cb(const Handle& atom, const Handle& key,
+void WriteThru::set_value_cb(const Handle& atom, const Handle& key,
                                   const ValuePtr& v)
 {
 	// Loop over all targets, and send them the new value.
@@ -140,7 +118,7 @@ void WriteThruProxy::set_value_cb(const Handle& atom, const Handle& key,
 		snp->store_value(atom, key);
 }
 
-void WriteThruProxy::set_values_cb(const Handle& atom)
+void WriteThru::set_values_cb(const Handle& atom)
 {
 	// Loop over all targets, and store everything.
 	// In principle, we should be selective, and only pass
@@ -152,7 +130,7 @@ void WriteThruProxy::set_values_cb(const Handle& atom)
 		snp->store_atom(atom);
 }
 
-void WriteThruProxy::set_tv_cb(const Handle& ha, const TruthValuePtr& tv)
+void WriteThru::set_tv_cb(const Handle& ha, const TruthValuePtr& tv)
 {
 	// Make sure we can store truth values!
 	if (nullptr == _truth_key)
@@ -164,7 +142,7 @@ void WriteThruProxy::set_tv_cb(const Handle& ha, const TruthValuePtr& tv)
 		snp->store_value(ha, _truth_key);
 }
 
-void WriteThruProxy::update_value_cb(const Handle& atom, const Handle& key,
+void WriteThru::update_value_cb(const Handle& atom, const Handle& key,
                                      const ValuePtr& delta)
 {
 	// Loop over all targets, and send them the delta value.
