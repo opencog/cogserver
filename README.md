@@ -41,13 +41,13 @@ This capability is useful in several different ways:
 
 * **WebSocket API.** All interfaces are accessible through websockets.
   The only difference is that prompts are not sent. For example, the
-  python API is avaiable at `ws://localhost:18080/py`.  At this time,
+  python API is available at `ws://localhost:18080/py`.  At this time,
   encryption is not supported, so `wss://` URL's will not work.
   See the [websocket example](./examples/websocket/demo.html) for more.
 
 * **JSON-style interface.** This is useful for creating JavaScript-powered
   visualizers and user interfaces. Suitable for people who are more
-  comfortable working with JSON.  This API is avaiable at
+  comfortable working with JSON.  This API is available at
   `ws://localhost:18080/json`.
 
 * **Bulk data transfer.** The base "s-expression" encoding of Atoms and
@@ -142,7 +142,7 @@ To build and run the CogServer, you need to install the AtomSpace first.
   to `sudo make install` at the end.
 
 The WebSockets server needs the OpenSSL devel environment to be
-instaled.
+installed.
 
 ###### OpenSSL
 > OpenSSL
