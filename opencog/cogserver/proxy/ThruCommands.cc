@@ -69,7 +69,7 @@ void ThruCommands::init(const AtomSpacePtr& asp)
 		if (snp->connected())
 		{
 			_targets.push_back(snp);
-			logger().info("[-Thru Commands] Will pass-thru to %s\n",
+			logger().info("[Thru Commands] Will pass-thru to %s\n",
 				snp->to_short_string().c_str());
 		}
 
