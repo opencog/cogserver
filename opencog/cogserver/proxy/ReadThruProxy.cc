@@ -57,10 +57,10 @@ void ReadThruProxy::setup(SexprEval* sev)
 ReadThru::ReadThru(void)
 {
 	have_incoming_set_cb = true;
-	have_incoming_by_type = true;
+	have_incoming_by_type_cb = true;
 }
 
-~ReadThru::ReadThru() {}
+ReadThru::~ReadThru() {}
 
 void ReadThru::setup(SexprEval* sev)
 {

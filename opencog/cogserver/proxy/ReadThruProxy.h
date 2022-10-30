@@ -26,6 +26,7 @@
 #include <vector>
 
 #include <opencog/cogserver/proxy/Proxy.h>
+#include <opencog/cogserver/proxy/ThruCommands.h>
 
 namespace opencog {
 /** \addtogroup grp_server
