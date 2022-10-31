@@ -32,7 +32,7 @@ class WriteThruProxyUTest :  public CxxTest::TestSuite
 private:
 	std::thread* main_loop;
 	CogServer* csrv;
-	AtomSpace* as;
+	AtomSpacePtr as;
 
 public:
 
@@ -58,7 +58,7 @@ public:
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
-		as = &csrv->getAtomSpace();
+		as = csrv->getAtomSpace();
 	}
 
 	void tearDown()
@@ -90,7 +90,7 @@ public:
 
 		// First use of the proxy needs to be *after*
 		// the storage nodes have been opened.
-		rc = system("echo 'config SexprShellModule libwthru-proxy.so\n' | nc -q 0 localhost 17444");
+		rc = system("echo 'config SexprShellModule libw-thru-proxy.so\n' | nc -q 0 localhost 17444");
 		if (rc != 0) printf("Error: config failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 

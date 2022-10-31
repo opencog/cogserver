@@ -12,5 +12,5 @@ LINK_LIBRARIES(
 
 
 # Disable for now. This passes for me, but fails in circleci
-# and I cannot tell why.
+# and I cannot tell why. Too lazy to fix.
 # ADD_CXXTEST(WriteThruProxyUTest)
