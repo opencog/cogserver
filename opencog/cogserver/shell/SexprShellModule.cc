@@ -118,7 +118,7 @@ SexprShellModule::shelloutRequest::execute(void)
 	for (const std::string& proxy: _proxy_list)
 	{
 		Module *ext = _cogserver.getModule(proxy);
-		printf("sexpr shell init proxy: %p %s\n", ext, proxy.c_str());
+		logger().info("[SexprShellModule] setup proxy: %p %s", ext, proxy.c_str());
 
 		if (ext)
 		{
