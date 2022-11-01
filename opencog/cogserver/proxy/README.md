@@ -56,11 +56,11 @@ HOWTO & Demo
 -------------
 Follow these steps to test by hand. The demo requires two machines: the
 "remote" server and the  "local" client.  They can both be localhost, as
-long as you keep tabs which is which. In the below, the "remote" machine
-has IP address `10.0.3.208`; replace this by the actual hostname or IP
-addr.
+long as you keep tabs on which is which. In the below, the "remote" machine
+has the name `example.com`; replace this by the actual hostname or
+dotted IPv4 address.
 
-First, start a cogserver on the "remote" machine:
+First, log into `example.com` and start a cogserver:
 ```
 $ guile
 guile> (use-modules (opencog) (opencog persist) (opencog persist-rocks))
@@ -74,14 +74,15 @@ server:
 ```
 $ guile
 guile> (use-modules (opencog) (opencog persist) (opencog persist-cog))
-guile> (define csn (CogStorageNode "cog://10.0.3.208?w-thru"))
+guile> (define csn (CogStorageNode "cog://example.com?w-thru"))
 guile> (cog-open csn)
 guile> (store-atom (Concept "foo" (stv 0.123 0.456)))
 guile> (cog-close csn)
 guile> ^D  ; exit the guile shell
 ```
-Be sure to replace the IP addr `10.0.3.208` by the actual remote hostname.
-(Just say `localhost` if both local and remote are the same machine.)
+Replace `example.com` by the actual hostname, or just use `localhost`
+if both local and remote are the same machine. Dotted addresses, such
+as `192.168.0.42` and `127.0.0.1` also work.
 
 The above should have written a single Atom to the Rocks DB on the remote
 machine.  Verify this by exiting the guile shell on the remote machine, and
