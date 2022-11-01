@@ -78,9 +78,14 @@ This capability is useful in several different ways:
   connected to the Cogserver, and what they are doing. Type `help stats`
   for more info.
 
-
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
+
+Version
+-------
+This is **version 3.2.0**. The code is stable, it's been used in
+production settings for a decade.   There are no known bugs. There are
+some planned features; see below.
 
 Using
 -----
@@ -114,6 +119,10 @@ number `17001` can be changed; see the documentation.
 The socket protocol used is 'trivial'. Thus, besides `telnet`, one can
 also use `netcat`, or access the socket directly, with ordinary socket
 connect, open and read/write calls.
+
+WebSocket programmers will find it convenient to use their own favorite
+tools to access the json API. A very simple example can be found in the
+[WebSocket Example](examples/websockets/) directory.
 
 Building and Running
 --------------------
@@ -171,9 +180,14 @@ TODO
 There are two major open ToDo items for the CogServer.  These are:
 
 * **Distributed computing.** How to build a distributed computing fabric
-  for AtomSpace data? Work on this question can be found in the
+  for AtomSpace data? The read-thru and write-thru proxies provide basic
+  building blocks for distributed computing: they can forward I/O
+  traffic to other servers.
+  See the [proxy/README](opencog/cogserver/proxy/README.md) for details.
+  There are no automation tools for configuring these into a large complex
+  network. There is a project for this in the
   [AtomSpace Agents](https://github.com/opencog/atomspace-agents) git
-  repo.
+  repo. It is currently abandoned (due to lack of interest).
 
 * **Security.** Right now, anyone who has network access can attach to
   the CogServer, and do anything. There are three different ways to do
