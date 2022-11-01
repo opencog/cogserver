@@ -47,6 +47,8 @@ read-thru proxy.)
 Status
 ------
 **Version 1.0.0**. Both the read-thru and the write-thru proxies work.
+There are no known bugs.
+
 They have been used in a "demanding" environment: multi-day data
 processing runs, transferring many gigabytes of data. Everything looks
 good. They've not yet been used in "production" runs (runs that burn
