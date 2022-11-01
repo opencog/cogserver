@@ -1,8 +1,8 @@
 Proxy Agents
 ------------
-The code here implements an under-construction, experimental form
-of AtomSpace proxying; that is, of receiving Atoms over the network,
-and passing them onwards to other StorageNodes.
+The code here implements a form of AtomSpace proxying; that is, of
+sending and receiving Atoms over the network, and passing them onwards
+to other StorageNodes.
 
 In the standard mode, when a network connection is made to the
 CogServer, the user at the far end of the network connection is working
@@ -46,20 +46,11 @@ read-thru proxy.)
 
 Status
 ------
-**Version 0.9.2**. The Write-Through Proxy works. Lightly tested.
-Need to:
-
-* Expand the `WriteThruProxyUnitTest` to test the other four
-  handlers. Also, write unit tests that use the `CogStorageNode`
-  to make sure it works end-to-end.  Tedious and time-consuming.
-
-* Create a `ReadThruProxyUnitTest`.
-
-* Test both, together.
-
-All of the above is "easy to do" but tedious and time-consuming.
-See also the TODO list at the bottom, for the more abstract and more
-difficult work items. Those will be hard.
+**Version 1.0.0**. Both the read-thru and the write-thru proxies work.
+They have been used in a "demanding" environment: multi-day data
+processing runs, transferring many gigabytes of data. Everything looks
+good. They've not yet been used in "production" runs (runs that burn
+through terabytes of data).
 
 HOWTO & Demo
 -------------
@@ -78,26 +69,20 @@ guile> (define rsn (RocksStorageNode "rocks:///tmp/foo.rdb"))
 guile> (cog-open rsn)
 guile> (start-cogserver)
 ```
-Then, on the local machine machine, contact the server and configure the
-write-through proxy. Also configure the read-thru proxy, although this
-demo does not use it:
-```
-$ rlwrap telnet 10.0.3.208 17001
-opencog> config SexprShellModule libw-thru-proxy.so
-opencog> config SexprShellModule libr-thru-proxy.so
-opencog> list
-```
-Be sure to replace the IP addr `10.0.3.208` by the actual remote hostname.
-Continuing on the "local" machine:
+Then, on the local machine machine, establish a connection to the
+server:
 ```
 $ guile
 guile> (use-modules (opencog) (opencog persist) (opencog persist-cog))
-guile> (define csn (CogStorageNode "cog://10.0.3.208"))
+guile> (define csn (CogStorageNode "cog://10.0.3.208?w-thru"))
 guile> (cog-open csn)
 guile> (store-atom (Concept "foo" (stv 0.123 0.456)))
 guile> (cog-close csn)
 guile> ^D  ; exit the guile shell
 ```
+Be sure to replace the IP addr `10.0.3.208` by the actual remote hostname.
+(Just say `localhost` if both local and remote are the same machine.)
+
 The above should have written a single Atom to the Rocks DB on the remote
 machine.  Verify this by exiting the guile shell on the remote machine, and
 then restarting it, loading the AtomSpace, and taking a look at it:
@@ -114,9 +99,24 @@ and that it has the correct TruthValue `(stv 0.123 0.456)`. That's it.
 Notice that the `(store-atom stuff)` in the local AtomSpace resulted in
 a store on the remote machine.
 
+The above only used the write through proxy.  Both can be used together
+by specifying the URL
+```
+   cog://example.com?r-thru&w-thru
+```
+
+The read-thru proxy can be used all by itself:
+```
+   cog://example.com?r-thru
+```
+
+See below for details.
+
+
 Design Choices
 --------------
-How should the above be implemented?  There are several design choices.
+Ruminations about design choices. During development, several design
+choices were considered.
 
 * Create a wrapper around the AtomSpace, so that everything going
   through the AtomSpace goes through the wrapper first. The CogServer
@@ -166,12 +166,12 @@ should coordinate with regards to what kind of proxying should be done.
     connection to `wthru` instead of `sexpr`. On the CogServer
     side, there is a `libwthru-shell.so` that responds to this.
 
-  * Use URL's of the form `cog://example.com?policy=wthru&foo=bar`.
+  * Use URL's of the form `cog://example.com?policy=w-thru&foo=bar`.
     The CogStorageNode splits off everything following the `?` and
-    uses that to configure the `sexpr` shell.
+    uses that to configure the `sexpr` shell. This is what is
+    currently implemented.
 
-  * Manual configuration. This is what is being done right now.
-    See below for details.
+  * Manual configuration.  See below for examples and details.
 
   * Create a `WriteThroughStorageNode` that negotiates with the
     CogServer to do the right thing... This could be as simple as
@@ -201,11 +201,11 @@ should coordinate with regards to what kind of proxying should be done.
 
 Read-Thru and Write-Thru Proxy Agents
 -------------------------------------
-The read-thru and write-thru proxy agents must be manually loaded before
-use.  These can be used together, or separately. If used separately,
+The read-thru and write-thru proxy agents can be manually loaded.
+These can be used together, or separately. If used separately,
 then only the reading resp. writing pass-thru functions are available.
 
-The block below starts by connecting to the cogserver; poking around,
+The example below starts by connecting to the cogserver; poking around,
 then loading the proxies, then looking around some more.
 ```
 $ rlwrap telnet localhost 17001
@@ -226,7 +226,8 @@ WriteThruProxy        libw-thru-proxy.so  /usr/local/lib/opencog/modules
 ...
 ```
 That's it. After this point, all subsequent `sexpr` invocations will
-pass through both of the pass-thru proxies.
+pass through both of the pass-thru proxies.  Alternately, just use the
+`cog://example.com?r-thru&w-thru` URL in the CogStorageNode.
 
 Design Notes
 ------------
@@ -251,7 +252,23 @@ that string is sent back to the client. The list of the actual set
 of command strings that are currently in use can be found in the
 `Commands.cc` file.
 
-### TODO
+TODO
+----
+Simple todo items:
+
+* Expand the `WriteThruProxyUnitTest` to test the other four
+  handlers. Also, write unit tests that use the `CogStorageNode`
+  to make sure it works end-to-end.  Tedious and time-consuming.
+
+* Create a `ReadThruProxyUnitTest`.
+
+* Test both, together.
+
+All of the above is "easy to do" but tedious and time-consuming.
+See also the TODO list at the bottom, for the more abstract and more
+difficult work items. Those will be hard.
+
+### Complex TODO
  * SpaceFrames need to be handled in the StorageNodes!
  * The support for SpaceFrames by the CogStorageNode is currently
    incomplete and broken.
