@@ -53,7 +53,7 @@
   To stop the cogserver, just say stop-cogserver.
 "
 	(cog-logger-set-filename! logfile)
-	(if (string? port) (set! port (string->integer port)))
+	(if (string? port) (set! port (string->number port)))
 	(c-start-cogserver (cog-atomspace) port web prompt scmprompt config-path)
 )
 
