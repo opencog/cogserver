@@ -1,8 +1,6 @@
 OpenCog CogServer
 =================
 
-opencog
--------
 [![CircleCI](https://circleci.com/gh/opencog/cogserver.svg?style=svg)](https://circleci.com/gh/opencog/cogserver)
 
 The OpenCog CogServer is a network scheme & python command-line
