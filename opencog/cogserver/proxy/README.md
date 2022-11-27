@@ -115,6 +115,40 @@ The read-thru proxy can be used all by itself:
 
 See below for details.
 
+TODO
+----
+***Stop the presses!***. OK everything described in the later sections
+works, but now we've got a much much better idea, and it neeeds to be
+implemented. It will make everything here "obsolete" (because it will
+be built-in).
+
+Create a `ProxyStorageNode`. It's a `StorageNode`, like all the others,
+providing the same API. But it implements all the decision-making about
+"what to do" when some particular read/write request is made, inside
+itself. So, for example, there's a `ReadThruProxyStorageNode` and a
+`WriteThruProxyStorageNode`.
+
+Before the user starts the cogserver, the user will create one or both
+of these nodes, and open them.
+
+When starting the cogserver, the user will tell the cogserver to use
+one of these proxies. If none is given, it will use the normal mode.
+(perhaps the normal mode can be a TransparantProxyStorageNode that
+"does nothing" but access the AtomSpace directly.)
+
+That's it. Proxying is now "built in" and "always on". No need to
+fiddle with loadmodule crap. Proxying now "moves back" to the
+AtomSpace, where all kinds of wild and crazy things can be built,
+with zero dependence on the cogserver.  Those proxy nodes can then
+also be used in other ways, for other reasons!
+
+The proxy nodes can be used to build processing pipelines....
+
+Configuration is delegated to the ProxyNode.  Perhaps it needs to
+be a ProxyLink, for parameters?
+
+That's it! Simple, easy, solves a mess of the issues raise below.
+
 
 Design Choices
 --------------
