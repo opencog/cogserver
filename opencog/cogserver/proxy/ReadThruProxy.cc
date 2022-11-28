@@ -128,7 +128,7 @@ void ReadThru::incoming_by_type_cb(const Handle& h, Type t)
 
 void ReadThru::keys_alist_cb(const Handle& h)
 {
-	// Get all incoming sets from all targets.
+	// Get all keys from all targets.
 	for (const StorageNodePtr& snp : _targets)
 	{
 		snp->fetch_atom(h);
