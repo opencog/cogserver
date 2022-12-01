@@ -1,3 +1,10 @@
+OBOSLETE
+========
+The code below has been obsoleted by the base AtomSpace ProxyNode
+infrastructure. The code here worked. Just that it is not really
+the best design ... it was hard to configure. Not flexible. The
+ProxyNode infrastrcuture is superior. We keep this here as a curio.
+
 Proxy Agents
 ------------
 The code here implements a form of AtomSpace proxying; that is, of
