@@ -61,16 +61,10 @@ This capability is useful in several different ways:
   CogServer implements this API, thus allowing multiple AtomSpaces
   distributed on the network to share data.
 
-* **Proxy Agents.** The proxy-agent infrastructure allows Atoms arriving
-  on the net (or requests for getting them or changing them) to be
-  forwarded onwards to either disk storage, or other network nodes.
-  Interacting with storage is particularly useful: the CogServer can
-  not only serve up Atoms to remote clients, but can also save up
-  whatever it is given, and move it to storage (without any manual
-  intervention.)  This is one of the basic building blocks for
-  network-distributed, decentralized processing.
-  See the [proxy/README](opencog/cogserver/proxy/README.md) for more
-  info and a demo of the `ReadThru` and `WriteThru` proxies.
+* **Proxy Agents.** The proxy infrastructure has been replaced by a
+  more general, more flexible, more powerful and configurable proxying
+  system. See the main AtomSpace git repo, in the
+  [opencog/persist/proxy directory.](https://github.com/opencog/atomspace/tree/master/opencog/persist/proxy)
 
 * The `stats` command provides a `top`-like command for viewing who is
   connected to the Cogserver, and what they are doing. Type `help stats`
