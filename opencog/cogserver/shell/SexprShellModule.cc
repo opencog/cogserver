@@ -72,7 +72,7 @@ bool SexprShellModule::config(const char* cfg)
 	// We should check it for valid syntax, and return false if it is
 	// bad. ... but not ready for that, yet.
 	_proxy_list.push_back(cfg);
-#enidf // DEAD_CODE
+#endif // DEAD_CODE
 	return true;
 }
 
