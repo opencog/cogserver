@@ -23,25 +23,19 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
-#include <opencog/cogserver/proxy/Proxy.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
-#include <opencog/persist/sexpr/SexprEval.h>
+#include <opencog/persist/sexcom/SexprEval.h>
 
 #include "SexprShell.h"
 #include "ShellModule.h"
 
 using namespace opencog;
 
-#define EXTRA \
-	static std::vector<std::string> _proxy_list;
-
-DEFINE_SHELL_MODULE2(SexprShellModule, EXTRA);
+DEFINE_SHELL_MODULE(SexprShellModule);
 DECLARE_MODULE(SexprShellModule);
-
-std::vector<std::string> SexprShellModule::_proxy_list;
 
 SexprShellModule::SexprShellModule(CogServer& cs) : Module(cs)
 {
@@ -58,8 +52,10 @@ SexprShellModule::~SexprShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
+// This is currently unused.
 bool SexprShellModule::config(const char* cfg)
 {
+#ifdef DEAD_CODE
 	// At this time, the cfg is going to be a module name.
 	// Get the module. If we don't have it, then load it.
 	Module *ext = _cogserver.getModule(cfg);
@@ -68,7 +64,7 @@ bool SexprShellModule::config(const char* cfg)
 	ext = _cogserver.getModule(cfg);
 	if (nullptr == ext)
 	{
-		logger().info("[SexprShell] unable to find proxy module %s", cfg);
+		logger().info("[SexprShell] unable to find config module %s", cfg);
 		return false;
 	}
 
@@ -76,6 +72,7 @@ bool SexprShellModule::config(const char* cfg)
 	// We should check it for valid syntax, and return false if it is
 	// bad. ... but not ready for that, yet.
 	_proxy_list.push_back(cfg);
+#enidf // DEAD_CODE
 	return true;
 }
 
@@ -96,10 +93,7 @@ SexprShellModule::shelloutRequest::info(void)
 		"See that file for details. Example usage: `(cog-get-atoms 'Node #t)`\n"
 		"will return a list of all Nodes in the AtomSpace.\n\n"
 		"Use either a ^D (ctrl-D) or a single . on a line by itself to exit\n"
-		"the shell.\n\n"
-		"Proxies can be configured with the `config` command. For example,\n"
-		"    config SexprShellModule libwthru-proxy.so\n"
-		"will enable the WriteThruProxy for the sexpr shell.\n",
+		"the shell.\n\n",
 		true, false);
 	return _cci;
 }
@@ -115,6 +109,9 @@ SexprShellModule::shelloutRequest::execute(void)
 
 	SexprShell *sh = new SexprShell();
 
+#ifdef DEAD_CODE
+	// We don't do this, need this any more. Its here as
+	// a coding example, I guess...
 	for (const std::string& proxy: _proxy_list)
 	{
 		Module *ext = _cogserver.getModule(proxy);
@@ -133,6 +130,7 @@ SexprShellModule::shelloutRequest::execute(void)
 			pxy->setup(sev);
 		}
 	}
+#endif // DEAD_CODE
 
 	sh->set_socket(con);
 	send("");
