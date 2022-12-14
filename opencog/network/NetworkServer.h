@@ -40,8 +40,9 @@ namespace opencog
 class NetworkServer
 {
 protected:
-    bool _running;
+    std::string _name;
     short _port;
+    bool _running;
     boost::asio::io_service _io_service;
     boost::asio::ip::tcp::acceptor _acceptor;
     std::thread* _listener_thread;
@@ -61,7 +62,7 @@ public:
      * Starts the NetworkServer in a new thread.
      * The socket listen happens in the new thread.
      */
-    NetworkServer(unsigned short port);
+    NetworkServer(unsigned short port, const char* name);
     ~NetworkServer();
 
     /** Start and stop the server */

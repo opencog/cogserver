@@ -67,7 +67,7 @@ void CogServer::set_max_open_sockets(int max_open_socks)
 void CogServer::enableNetworkServer(int port)
 {
     if (_consoleServer) return;
-    _consoleServer = new NetworkServer(port);
+    _consoleServer = new NetworkServer(port, "Telnet Server");
 
     auto make_console = [](void)->ServerSocket*
             { return new ServerConsole(); };
@@ -81,7 +81,7 @@ void CogServer::enableWebServer(int port)
 {
 #ifdef HAVE_OPENSSL
     if (_webServer) return;
-    _webServer = new NetworkServer(port);
+    _webServer = new NetworkServer(port, "WebSocket Server");
 
     auto make_console = [](void)->ServerSocket* {
         ServerSocket* ss = new WebServer();

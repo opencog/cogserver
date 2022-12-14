@@ -25,13 +25,14 @@
 
 using namespace opencog;
 
-NetworkServer::NetworkServer(unsigned short port) :
-    _running(false),
+NetworkServer::NetworkServer(unsigned short port, const char* name) :
+    _name(name),
     _port(port),
+    _running(false),
     _acceptor(_io_service,
         boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 {
-    logger().debug("[NetworkServer] constructor");
+    logger().debug("[NetworkServer] constructor for %s at %d", name, port);
     _start_time = time(nullptr);
     _last_connect = 0;
     _nconnections = 0;
@@ -39,7 +40,8 @@ NetworkServer::NetworkServer(unsigned short port) :
 
 NetworkServer::~NetworkServer()
 {
-    logger().debug("[NetworkServer] enter destructor");
+    logger().debug("[NetworkServer] enter destructor for %s at %d",
+                   _name.c_str(), _port);
 
     stop();
 
@@ -67,7 +69,7 @@ void NetworkServer::stop()
 void NetworkServer::listen(void)
 {
     prctl(PR_SET_NAME, "cogserv:listen", 0, 0, 0);
-    printf("Listening on port %d\n", _port);
+    printf("%s listening on port %d\n", _name.c_str(), _port);
     while (_running)
     {
         // The call to _acceptor.accept() will block this thread until
