@@ -145,8 +145,9 @@ std::string NetworkServer::display_stats(void)
     gmtime_r(&_last_connect, &tm);
     strftime(nbuf, 40, "%d %b %H:%M:%S", &tm);
 
-    char buff[132];
-    snprintf(buff, 132, "status: %s  last: %s  tot-cnct: %4zd  port: %d\n",
+    char buff[180];
+    snprintf(buff, sizeof(buff),
+        "status: %s  last: %s  tot-cnct: %4zd  port: %d\n",
         _running?"running":"halted", nbuf, _nconnections, _port);
 
     rc += buff;
@@ -160,7 +161,7 @@ std::string NetworkServer::display_stats(void)
        nfd++;
     }
 
-    snprintf(buff, 132,
+    snprintf(buff, sizeof(buff),
         "max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d  stalls: %zd\n",
         ConsoleSocket::get_max_open_sockets(),
         ConsoleSocket::get_num_open_sockets(),
@@ -176,7 +177,7 @@ std::string NetworkServer::display_stats(void)
     struct rusage rus;
     getrusage(RUSAGE_SELF, &rus);
 
-    snprintf(buff, 80,
+    snprintf(buff, sizeof(buff),
         "cpu: %d.%03d secs  user: %ld.%03ld  sys: %ld.%03ld     tot-lines: %lu\n",
         sec, msec,
         rus.ru_utime.tv_sec, rus.ru_utime.tv_usec / 1000,
@@ -184,7 +185,7 @@ std::string NetworkServer::display_stats(void)
         ServerSocket::total_line_count.load());
     rc += buff;
 
-    snprintf(buff, 80,
+    snprintf(buff, sizeof(buff),
         "maxrss: %ld KB  majflt: %ld  inblk: %ld  outblk: %ld\n",
         rus.ru_maxrss, rus.ru_majflt, rus.ru_inblock, rus.ru_oublock);
     rc += buff;
