@@ -51,6 +51,20 @@ ServerConsole::~ServerConsole()
 #define DONT 0xfe   // Telnet DONT
 #define CHARSET 0x2a // Telnet RFC 2066 charset
 
+#define EOF 0xec  // 236 Telnet EOF RFC 1184
+
+/// Return true if the Telnet IAC command was rcognized and handled.
+bool ServerConsole::handle_telnet_iac(const std::string& line)
+{
+    // Hmm. Looks like most telnet agents respond with an
+    // IAC WONT CHARSET IAC DONT CHARSET
+    // Any case, just ignore CHARSET RFC 2066 negotiation
+    if (IAC == (line[0] & 0xff) and CHARSET == (line[2] & 0xff)) {
+        return true;
+    }
+    return false;
+}
+
 void ServerConsole::OnConnection()
 {
     logger().debug("[ServerConsole] OnConnection");
@@ -157,11 +171,13 @@ void ServerConsole::OnLine(const std::string& line)
         return;
     }
 
-    // Hmm. Looks like most telnet agents respond with an
-    // IAC WONT CHARSET IAC DONT CHARSET
-    // Any case, just ignore CHARSET RFC 2066 negotiation
-    if (IAC == (line[0] & 0xff) and CHARSET == (line[2] & 0xff)) {
-        return;
+    // Look for telnet stuff, and process it.
+    if (IAC == (line[0] & 0xff)
+        and line.size() < 40
+        and handle_telnet_iac(line))
+    {
+       sendPrompt();
+       return;
     }
 
     // If the command starts with an open-paren, or a semi-colon, assume
