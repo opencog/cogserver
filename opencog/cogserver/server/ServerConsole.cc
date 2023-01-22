@@ -40,29 +40,102 @@ ServerConsole::~ServerConsole()
 }
 
 // Some random RFC 854 characters
-#define IAC 0xff  // Telnet Interpret As Command
-#define IP 0xf4   // Telnet IP Interrupt Process
-#define AO 0xf5   // Telnet AO Abort Output
-#define EL 0xf8   // Telnet EL Erase Line
+#define IAC  0xff // Telnet Interpret As Command
+#define TEOF 0xec // Telnet EOF
+#define SUSP 0xed // Telnet suspend
+#define ABRT 0xee // Telnet abort
+#define NOP  0xf1 // Telnet NOP no-op
+#define BRK  0xf3 // Telnet break
+#define IP   0xf4 // Telnet IP Interrupt Process
+#define AO   0xf5 // Telnet AO Abort Output
+#define AYT  0xf6 // Telnet AYT Are You There
+#define EC   0xf7 // Telnet EC Erase Character
+#define EL   0xf8 // Telnet EL Erase Line
+#define GA   0xf9 // Telnet GA Go ahead
 #define WILL 0xfb // Telnet WILL
-#define SB 0xfa   // Telnet SB subnegotiation start
-#define SE 0xf0   // Telnet SE subnegotiation end
-#define DO 0xfd   // Telnet DO
-#define DONT 0xfe   // Telnet DONT
-#define CHARSET 0x2a // Telnet RFC 2066 charset
+#define WONT 0xfc // Telnet WONT
+#define DO   0xfd // Telnet DO
+#define DONT 0xfe // Telnet DONT
 
-#define EOF 0xec  // 236 Telnet EOF RFC 1184
+#define TRANSMIT_BINARY   0  // Telnet RFC 856 8-bit-clean binary transmission
+#define RFC_ECHO          1  // Telnet RFC 857 ECHO option
+#define SUPPRESS_GO_AHEAD 3  // Telnet RFC 858 supporess go ahead
+#define TIMING_MARK       6  // Telnet RFC 860 timing mark
+#define LINEMODE         34  // Telnet RFC 1116 linemode
+#define CHARSET        0x2A  // Telnet RFC 2066
+#define RFC_EOF         236  // Telnet RFC 1184 linemode EOF   0xec
+#define RFC_SUSP        237  // Telnet RFC 1184 linemode SUSP  0xed
+#define RFC_ABORT       238  // Telnet RFC 1184 linemode ABORT 0xee
 
 /// Return true if the Telnet IAC command was rcognized and handled.
 bool ServerConsole::handle_telnet_iac(const std::string& line)
 {
-    // Hmm. Looks like most telnet agents respond with an
-    // IAC WONT CHARSET IAC DONT CHARSET
-    // Any case, just ignore CHARSET RFC 2066 negotiation
-    if (IAC == (line[0] & 0xff) and CHARSET == (line[2] & 0xff)) {
-        return true;
-    }
-    return false;
+	// Hmm. Most telnet agents respond with an
+	// IAC WONT CHARSET IAC DONT CHARSET
+	// Ignore CHARSET RFC 2066 negotiation
+
+	int sz = line.size();
+	int i = 0;
+	while (i < sz)
+	{
+		if (IAC != line[i]) return false;
+		i++; if (sz <= i) return false;
+		unsigned char c = line[i];
+		i++; if (sz <= i) return false;
+		unsigned char a = line[i];
+		i++;
+
+		logger().debug("[ServerConsole] %d handle IAC %d %d", i, c, a);
+
+		// Actually, ignore all WONT & DONT.
+		if (WONT == c) continue;
+
+		if (DONT == c)
+		{
+			continue;
+		}
+
+		if (DO == c)
+		{
+			// If telnet ever tries to go into character mode,
+			// it will send us SUPPRESS-GO-AHEAD and ECHO. Try to
+			// stop that; we don't want to effing fiddle with that.
+			if (SUPPRESS_GO_AHEAD == a)
+			{
+				unsigned char ok[] = {IAC, WILL, SUPPRESS_GO_AHEAD, 0};
+				Send((const char *) ok);
+				continue;
+			}
+			if (RFC_ECHO == a)
+			{
+				unsigned char ok[] = {IAC, WONT, RFC_ECHO, '\n', 0};
+				Send((const char *) ok);
+				continue;
+			}
+			logger().debug("[ServerConsole] Sending IAC WONT %d", c);
+			unsigned char ok[] = {IAC, WONT, a, '\n', 0};
+			Send((const char *) ok);
+			continue;
+		}
+
+		if (WILL == c)
+		{
+			// Refuse to perform sub-negotation when
+			// IAC WILL LINEMODE is sent by the telnet client.
+			if (LINEMODE == a)
+			{
+				unsigned char ok[] = {IAC, DONT, LINEMODE, '\n', 0};
+				Send((const char *) ok);
+				continue;
+			}
+
+			// Ignore anything else.
+			logger().debug("[ServerConsole] ignoring telnet IAC WILL %d", c);
+			continue;
+		}
+	}
+
+	return true;
 }
 
 void ServerConsole::OnConnection()
