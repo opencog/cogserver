@@ -359,26 +359,14 @@ void ServerSocket::set_connection(boost::asio::ip::tcp::socket* sock)
 typedef boost::asio::buffers_iterator<
     boost::asio::streambuf::const_buffers_type> bitter;
 
-// Some random RFC 854 characters
+// See RFC 854
 #define IAC 0xff  // Telnet Interpret As Command
-#define IP 0xf4   // Telnet IP Interrupt Process
-#define AO 0xf5   // Telnet AO Abort Output
-#define EL 0xf8   // Telnet EL Erase Line
-#define WILL 0xfb // Telnet WILL
-#define DO 0xfd   // Telnet DO
-#define TIMING_MARK 0x6 // Telnet RFC 860 timing mark
-#define TRANSMIT_BINARY 0x0 // Telnet RFC 856 8-bit-clean
-#define CHARSET 0x2A // Telnet RFC 2066
-
 
 // Goal: if the user types in a ctrl-C or a ctrl-D, we want to
 // react immediately to this. A ctrl-D is just the ascii char 0x4
 // while the ctrl-C is wrapped in a telnet "interpret as command"
 // IAC byte secquence.  Basically, we want to forward all IAC
 // sequences immediately, as well as the ctrl-D.
-//
-// Currently not implemented, but could be: support for the arrow
-// keys, which generate the sequence 0x1b 0x5c A B C or D.
 //
 std::pair<bitter, bool>
 match_eol_or_escape(bitter begin, bitter end)
