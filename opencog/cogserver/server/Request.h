@@ -136,7 +136,7 @@ class ConsoleSocket;
           do_cmd##Request(CogServer& cs) : Request(cs) {};            \
           virtual ~do_cmd##Request() {};                              \
           virtual bool execute(void) {                                \
-              logger().debug("[" cmd_str " Request] execute");        \
+              logger().debug("[ %s Request] execute", cmd_str);       \
                                                                       \
               mod_type* mod =                                         \
                   static_cast<mod_type *>(_cogserver.getModule(       \

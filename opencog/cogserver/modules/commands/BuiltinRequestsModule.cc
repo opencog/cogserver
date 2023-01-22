@@ -35,6 +35,7 @@ BuiltinRequestsModule::BuiltinRequestsModule(CogServer& cs) : Module(cs)
     do_quit_register();
     do_q_register();
     do_ctrld_register();
+    do_iaceof_register();
     do_dot_register();
 
     do_stats_register();
@@ -50,6 +51,7 @@ BuiltinRequestsModule::~BuiltinRequestsModule()
     do_quit_unregister();
     do_q_unregister();
     do_ctrld_unregister();
+    do_iaceof_unregister();
     do_dot_unregister();
 
     do_stats_unregister();
@@ -92,6 +94,11 @@ std::string BuiltinRequestsModule::do_q(Request *req, std::list<std::string> arg
 }
 
 std::string BuiltinRequestsModule::do_ctrld(Request *req, std::list<std::string> args)
+{
+    return do_exit(req, args);
+}
+
+std::string BuiltinRequestsModule::do_iaceof(Request *req, std::list<std::string> args)
 {
     return do_exit(req, args);
 }
