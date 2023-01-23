@@ -41,10 +41,12 @@ ServerConsole::~ServerConsole()
 
 // Some random RFC 854 characters
 #define IAC  0xff // Telnet Interpret As Command
-#define TEOF 0xec // Telnet EOF
-#define SUSP 0xed // Telnet suspend
-#define ABRT 0xee // Telnet abort
+#define TEOF 0xec // Telnet EOF      RFC 1184 linemode EOF   236
+#define SUSP 0xed // Telnet suspend  RFC 1184 linemode SUSP  237
+#define ABRT 0xee // Telnet abort    RFC 1184 linemode ABORT 238
+#define SE   0xf0 // Telnet SE End of subnegotiation
 #define NOP  0xf1 // Telnet NOP no-op
+#define MARK 0xf2 // Telnet Data Mark
 #define BRK  0xf3 // Telnet break
 #define IP   0xf4 // Telnet IP Interrupt Process
 #define AO   0xf5 // Telnet AO Abort Output
@@ -52,6 +54,7 @@ ServerConsole::~ServerConsole()
 #define EC   0xf7 // Telnet EC Erase Character
 #define EL   0xf8 // Telnet EL Erase Line
 #define GA   0xf9 // Telnet GA Go ahead
+#define SB   0xfa // Telnet SB Begin subnegotiation
 #define WILL 0xfb // Telnet WILL
 #define WONT 0xfc // Telnet WONT
 #define DO   0xfd // Telnet DO
@@ -61,11 +64,10 @@ ServerConsole::~ServerConsole()
 #define RFC_ECHO          1  // Telnet RFC 857 ECHO option
 #define SUPPRESS_GO_AHEAD 3  // Telnet RFC 858 supporess go ahead
 #define TIMING_MARK       6  // Telnet RFC 860 timing mark
+#define WINSIZE          31  // Telnet RFC 1073 window size
+#define SPEED            32  // Telnet RFC 1079 terminal speed
 #define LINEMODE         34  // Telnet RFC 1116 linemode
 #define CHARSET        0x2A  // Telnet RFC 2066
-#define RFC_EOF         236  // Telnet RFC 1184 linemode EOF   0xec
-#define RFC_SUSP        237  // Telnet RFC 1184 linemode SUSP  0xed
-#define RFC_ABORT       238  // Telnet RFC 1184 linemode ABORT 0xee
 
 /// Return true if the Telnet IAC command was rcognized and handled.
 bool ServerConsole::handle_telnet_iac(const std::string& line)
@@ -78,7 +80,8 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 	int i = 0;
 	while (i < sz)
 	{
-		if (IAC != line[i]) return false;
+		unsigned char iac = line[i];
+		if (IAC != iac) return false;
 		i++; if (sz <= i) return false;
 		unsigned char c = line[i];
 		i++; if (sz <= i) return false;
@@ -112,9 +115,10 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 				Send((const char *) ok);
 				continue;
 			}
-			logger().debug("[ServerConsole] Sending IAC WONT %d", c);
-			unsigned char ok[] = {IAC, WONT, a, '\n', 0};
-			Send((const char *) ok);
+			// logger().debug("[ServerConsole] Sending IAC WONT %d", a);
+			// unsigned char ok[] = {IAC, WONT, a, '\n', 0};
+			// Send((const char *) ok);
+			logger().debug("[ServerConsole] ignoring IAC DO %d", a);
 			continue;
 		}
 
@@ -130,7 +134,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			}
 
 			// Ignore anything else.
-			logger().debug("[ServerConsole] ignoring telnet IAC WILL %d", c);
+			logger().debug("[ServerConsole] ignoring telnet IAC WILL %d", a);
 			continue;
 		}
 	}
@@ -249,7 +253,6 @@ void ServerConsole::OnLine(const std::string& line)
         and line.size() < 40
         and handle_telnet_iac(line))
     {
-       sendPrompt();
        return;
     }
 
