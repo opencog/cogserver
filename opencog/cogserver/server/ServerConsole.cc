@@ -68,7 +68,7 @@ ServerConsole::~ServerConsole()
 #define SPEED            32  // Telnet RFC 1079 terminal speed
 #define LINEMODE         34  // Telnet RFC 1116 linemode
 #define ENVIRON          39  // Telnet RFC 1572 environment variables
-#define CHARSET        0x2A  // Telnet RFC 2066
+#define CHARSET          42  // Telnet RFC 2066
 
 /// Return true if the Telnet IAC command was rcognized and handled.
 bool ServerConsole::handle_telnet_iac(const std::string& line)
@@ -163,7 +163,11 @@ void ServerConsole::OnConnection()
     // Crude attempt to negotiate for a utf-8 clean channel.
     // Using RFC 2066 protocols.  Not robust.  We're just praying
     // for non-garbled UTF-8 goodness, here.
-
+    //
+    // As of 2021 Debian Buster stable, telnet is not 8-bit clean.
+    // It also responds DONT/WONT to the CHARSET negotiatin below.
+    // So, as of now, we can't have UTF-8 with Debian telnet. Bummer.
+    //
     // Anyway, this won't work for netcat, socat, because they'll
     // just pass all this crap back to the user, and we don't want
     // that.  I'm not sure how to tell if we're talking to a true
