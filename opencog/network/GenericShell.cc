@@ -53,10 +53,12 @@ using namespace opencog;
 #define DO   0xfd // Telnet DO
 #define DONT 0xfe // Telnet DONT
 
+#define TRANSMIT_BINARY   0  // Telnet RFC 856 8-bit-clean binary transmission
 #define RFC_ECHO          1  // Telnet RFC 857 ECHO option
 #define SUPPRESS_GO_AHEAD 3  // Telnet RFC 858 supporess go ahead
 #define TIMING_MARK       6  // Telnet RFC 860 timing mark
 #define LINEMODE          34 // Telnet RFC 1116 linemode
+#define CHARSET         0x2A // Telnet RFC 2066
 
 // Some random ASCII control characters (unix semantics)
 #define EOT 0x4   // end    or ^D at keyboard.
@@ -266,13 +268,75 @@ void GenericShell::line_discipline(const std::string &expr)
 	if (m < 0) m = 0;
 	while (m <= i)
 	{
-		unsigned char c = expr[i];
-		if (IAC == c)
+		unsigned char c = expr[m];
+		if (IAC == c) break;
+		m++;
+	}
+
+	while (m <= i)
+	{
+		bool got_break = false;
+		unsigned char c = expr[m];
+		if (IAC != c)
 		{
-			c = expr[i+1];
-			if (IP == c or AO == c or SUSP == c)
+			logger().debug("[GenericShell] Garbled telnet cmd=%d at pos=%d of %s",
+				c, m, expr.c_str());
+			put_output(get_prompt());
+			return;
+		}
+
+		c = expr[m+1];
+		if (IP == c or AO == c or SUSP == c)
+		{
+			logger().debug("[GenericShell] got telnet IAC user-interrupt %d", c);
+			// Must send TIMING-MARK first, as otherwise telnet silently
+			// ignores any bytes that come before it.
+			unsigned char ok[] = {IAC, WILL, TIMING_MARK, '\n', 0};
+			put_output((const char *) ok);
+			user_interrupt();
+			return;
+		}
+
+		// Erase line -- just ignore this line.
+		// Also other things we want to ignore, like abort.
+		if (EL == c or EC == c or ABRT == c or
+		    AYT == c or GA == c or NOP == c)
+		{
+			logger().debug("[GenericShell] Ignoring telnet IAC %d", c);
+			put_output(get_prompt());
+			return;
+		}
+
+		// End-of-file just like ctrl-D
+		if (TEOF == c)
+		{
+			logger().debug("[GenericShell] Got end-of-file; exiting shell");
+			self_destruct = true;
+			evalque.cancel();
+			if (show_prompt)
+				put_output("Exiting the shell\n");
+			return;
+		}
+
+		// Break
+		if (BRK == c)
+		{
+			logger().debug("[GenericShell] Received IAC BREAK");
+			got_break = true;
+			m += 2;
+			continue;
+		}
+
+		if (DO == c)
+		{
+			unsigned char a = expr[m+2];
+			// Some telnets, including on Debian Stable, send us
+			// IAC DO TIMING-MARK instead of a IAC IP or IAC AO
+			// when the user hits ctrl-C.  This seems broken to me,
+			// but whatever. Pretend its a normal interrupt.
+			if (TIMING_MARK == a)
 			{
-				logger().debug("[GenericShell] got telnet IAC user-interrupt %d", c);
+				logger().debug("[GenericShell] timing mark (user-interrupt?)");
 				// Must send TIMING-MARK first, as otherwise telnet silently
 				// ignores any bytes that come before it.
 				unsigned char ok[] = {IAC, WILL, TIMING_MARK, '\n', 0};
@@ -281,84 +345,44 @@ void GenericShell::line_discipline(const std::string &expr)
 				return;
 			}
 
-			// Erase line -- just ignore this line.
-			// Also other things we want to ignore, like break and abort.
-			if (EL == c or EC == c or BRK == c or ABRT == c or
-			    AYT == c or GA == c or NOP == c)
+			// If telnet ever tries to go into character mode,
+			// it will send us SUPPRESS-GO-AHEAD and ECHO. Try to
+			// stop that, we don't want to effing fiddle with that.
+			if (SUPPRESS_GO_AHEAD == a)
 			{
-				logger().debug("[GenericShell] ignoring telnet IAC %d", c);
-				put_output(get_prompt());
+				unsigned char ok[] = {IAC, WILL, SUPPRESS_GO_AHEAD, 0};
+				put_output((const char *) ok);
 				return;
 			}
-
-			// End-of-file just like ctrl-D
-			if (TEOF == c)
+			if (RFC_ECHO == a)
 			{
-				logger().debug("[GenericShell] got end-of-file; exiting shell");
-				self_destruct = true;
-				evalque.cancel();
-				if (show_prompt)
-					put_output("Exiting the shell\n");
+				unsigned char ok[] = {IAC, WONT, RFC_ECHO, '\n', 0};
+				put_output((const char *) ok);
 				return;
 			}
+			logger().debug("[GenericShell] IAC WONT %d", a);
+			unsigned char ok[] = {IAC, WONT, a, '\n', 0};
+			put_output((const char *) ok);
+			return;
+		}
 
-			if (DO == c)
+		if (WILL == c)
+		{
+			// Refuse to perform sub-negotation when
+			// IAC WILL LINEMODE is sent by the telnet client.
+			unsigned char a = expr[m+2];
+			if (LINEMODE == a)
 			{
-				c = expr[i+2];
-				// Some telnets, including on Debian Stable, send us
-				// IAC DO TIMING-MARK instead of a IAC IP or IAC AO
-				// when the user hits ctrl-C.  This seems broken to me,
-				// but whatever. Pretend its a normal interrupt.
-				if (TIMING_MARK == c)
-				{
-					logger().debug("[GenericShell] timing mark (user-interrupt?)");
-					// Must send TIMING-MARK first, as otherwise telnet silently
-					// ignores any bytes that come before it.
-					unsigned char ok[] = {IAC, WILL, TIMING_MARK, '\n', 0};
-					put_output((const char *) ok);
-					user_interrupt();
-					return;
-				}
-
-				// If telnet ever tries to go into character mode,
-				// it will send us SUPPRESS-GO-AHEAD and ECHO. Try to
-				// stop that, we don't want to effing fiddle with that.
-				if (SUPPRESS_GO_AHEAD == c)
-				{
-					unsigned char ok[] = {IAC, WILL, SUPPRESS_GO_AHEAD, 0};
-					put_output((const char *) ok);
-					return;
-				}
-				if (RFC_ECHO == c)
-				{
-					unsigned char ok[] = {IAC, WONT, RFC_ECHO, '\n', 0};
-					put_output((const char *) ok);
-					return;
-				}
-				logger().debug("[GenericShell] IAC WONT %d", c);
-				unsigned char ok[] = {IAC, WONT, c, '\n', 0};
+				unsigned char ok[] = {IAC, DONT, LINEMODE, '\n', 0};
 				put_output((const char *) ok);
 				return;
 			}
 
-			if (WILL == c)
-			{
-				// Refuse to perform sub-negotation when
-				// IAC WILL LINEMODE is sent by the telnet client.
-				c = expr[i+2];
-				if (LINEMODE == c)
-				{
-					unsigned char ok[] = {IAC, DONT, LINEMODE, '\n', 0};
-					put_output((const char *) ok);
-					return;
-				}
-
-				// Ignore anything else.
-				logger().debug("[GenericShell] ignoring telnet IAC WILL %d", c);
-				return;
-			}
+			// Ignore anything else.
+			logger().debug("[GenericShell] ignoring telnet IAC WILL %d", a);
+			return;
 		}
-		i--;
+		m += 2;
 	}
 
 	// Don't evaluate if the line is terminated by
