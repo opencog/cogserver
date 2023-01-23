@@ -67,6 +67,7 @@ ServerConsole::~ServerConsole()
 #define WINSIZE          31  // Telnet RFC 1073 window size
 #define SPEED            32  // Telnet RFC 1079 terminal speed
 #define LINEMODE         34  // Telnet RFC 1116 linemode
+#define ENVIRON          39  // Telnet RFC 1572 environment variables
 #define CHARSET        0x2A  // Telnet RFC 2066
 
 /// Return true if the Telnet IAC command was rcognized and handled.
@@ -103,6 +104,8 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// If telnet ever tries to go into character mode,
 			// it will send us SUPPRESS-GO-AHEAD and ECHO. Try to
 			// stop that; we don't want to effing fiddle with that.
+			// The putty telnet client tries to do this, and it won't
+			// work unless we say WONT.
 			if (SUPPRESS_GO_AHEAD == a)
 			{
 				unsigned char ok[] = {IAC, WONT, SUPPRESS_GO_AHEAD, 0};
@@ -115,10 +118,13 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 				Send((const char *) ok);
 				continue;
 			}
-			// logger().debug("[ServerConsole] Sending IAC WONT %d", a);
-			// unsigned char ok[] = {IAC, WONT, a, '\n', 0};
-			// Send((const char *) ok);
-			logger().debug("[ServerConsole] Ignoring IAC DO %d", a);
+
+			// Just say we won't do anything more.
+			// PuTTY will give us 31, 32, 34, 39
+			// which is WINSIZE SPEED LINEMODE ENVIRON
+			logger().debug("[ServerConsole] Sending IAC WONT %d", a);
+			unsigned char ok[] = {IAC, WONT, a, '\n', 0};
+			Send((const char *) ok);
 			continue;
 		}
 
