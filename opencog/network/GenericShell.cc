@@ -339,15 +339,26 @@ void GenericShell::line_discipline(const std::string &expr)
 			if (TIMING_MARK == a)
 			{
 				logger().debug("[GenericShell] Received IAC timing-mark");
+
 				// Send TIMING-MARK first, as otherwise telnet silently
 				// ignores any bytes that come before it, per RFC 860.
 				unsigned char ok[] = {IAC, WILL, TIMING_MARK, '\n', 0};
 				put_output((const char *) ok);
 
+				// Crap. For some reason, telnet will garble some but not
+				// all UTF-8.  For example: (Concept "“") which is e2 80 9c
+				// but tlenet sends e2 80 ff f3 ff fd 6 or, that is,
+				// IAC BRK IAC DO TIMING_MARK. And never sends the rest.
+				// See for example:
+				// https://www.reddit.com/r/node/comments/1op7ns/bizarre_issues_with_utf8_over_telnet/
+				// I cannot find a solution. WILL/WONT/DO/DONT above makes
+				// no difference.
 				if (got_break)
 				{
 					std::string mute = expr;
 					mute[breakpt] = 0;
+					logger().warn("[GenericShell] Telnet sent RFC 860 TIMING MARK -- Probably garbled UTF-8: %s",
+						mute.c_str());
 					evalque.push(mute);
 					return;
 				}
