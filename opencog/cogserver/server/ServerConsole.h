@@ -36,6 +36,7 @@ private:
     static std::string _prompt;
 
 protected:
+    bool handle_telnet_iac(const std::string&);
 
     /**
      * Connection callback: called whenever a new connection arrives

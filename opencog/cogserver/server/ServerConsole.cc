@@ -40,16 +40,120 @@ ServerConsole::~ServerConsole()
 }
 
 // Some random RFC 854 characters
-#define IAC 0xff  // Telnet Interpret As Command
-#define IP 0xf4   // Telnet IP Interrupt Process
-#define AO 0xf5   // Telnet AO Abort Output
-#define EL 0xf8   // Telnet EL Erase Line
+#define IAC  0xff // Telnet Interpret As Command
+#define TEOF 0xec // Telnet EOF      RFC 1184 linemode EOF   236
+#define SUSP 0xed // Telnet suspend  RFC 1184 linemode SUSP  237
+#define ABRT 0xee // Telnet abort    RFC 1184 linemode ABORT 238
+#define SE   0xf0 // Telnet SE End of subnegotiation
+#define NOP  0xf1 // Telnet NOP no-op
+#define MARK 0xf2 // Telnet Data Mark
+#define BRK  0xf3 // Telnet break
+#define IP   0xf4 // Telnet IP Interrupt Process
+#define AO   0xf5 // Telnet AO Abort Output
+#define AYT  0xf6 // Telnet AYT Are You There
+#define EC   0xf7 // Telnet EC Erase Character
+#define EL   0xf8 // Telnet EL Erase Line
+#define GA   0xf9 // Telnet GA Go ahead
+#define SB   0xfa // Telnet SB Begin subnegotiation
 #define WILL 0xfb // Telnet WILL
-#define SB 0xfa   // Telnet SB subnegotiation start
-#define SE 0xf0   // Telnet SE subnegotiation end
-#define DO 0xfd   // Telnet DO
-#define DONT 0xfe   // Telnet DONT
-#define CHARSET 0x2a // Telnet RFC 2066 charset
+#define WONT 0xfc // Telnet WONT
+#define DO   0xfd // Telnet DO
+#define DONT 0xfe // Telnet DONT
+
+#define TRANSMIT_BINARY   0  // Telnet RFC 856 8-bit-clean binary transmission
+#define RFC_ECHO          1  // Telnet RFC 857 ECHO option
+#define SUPPRESS_GO_AHEAD 3  // Telnet RFC 858 supporess go ahead
+#define TIMING_MARK       6  // Telnet RFC 860 timing mark
+#define WINSIZE          31  // Telnet RFC 1073 window size
+#define SPEED            32  // Telnet RFC 1079 terminal speed
+#define LINEMODE         34  // Telnet RFC 1116 linemode
+#define ENVIRON          39  // Telnet RFC 1572 environment variables
+#define CHARSET          42  // Telnet RFC 2066
+
+/// Return true if the Telnet IAC command was rcognized and handled.
+bool ServerConsole::handle_telnet_iac(const std::string& line)
+{
+	// Hmm. Most telnet agents respond with an
+	// IAC WONT CHARSET IAC DONT CHARSET
+	// Ignore CHARSET RFC 2066 negotiation
+
+	int sz = line.size();
+	int i = 0;
+	while (i < sz)
+	{
+		unsigned char iac = line[i];
+		if (IAC != iac) return false;
+		i++; if (sz <= i) return false;
+		unsigned char c = line[i];
+		i++; if (sz <= i) return false;
+		unsigned char a = line[i];
+		i++;
+
+		logger().debug("[ServerConsole] %d Received telnet IAC %d %d", i, c, a);
+
+		// Actually, ignore all WONT & DONT.
+		if (WONT == c) continue;
+
+		if (DONT == c)
+		{
+			continue;
+		}
+
+		if (DO == c)
+		{
+			// If telnet ever tries to go into character mode,
+			// it will send us SUPPRESS-GO-AHEAD and ECHO. Try to
+			// stop that; we don't want to effing fiddle with that.
+			// The putty telnet client tries to do this, and it won't
+			// work unless we say WONT.
+			if (SUPPRESS_GO_AHEAD == a)
+			{
+				unsigned char ok[] = {IAC, WONT, SUPPRESS_GO_AHEAD, 0};
+				Send((const char *) ok);
+				continue;
+			}
+			if (RFC_ECHO == a)
+			{
+				unsigned char ok[] = {IAC, WONT, RFC_ECHO, '\n', 0};
+				Send((const char *) ok);
+				continue;
+			}
+			if (TRANSMIT_BINARY == a)
+			{
+				logger().debug("[ServerConsole] Sending IAC WILL TRANSMIT_BINARY");
+				unsigned char ok[] = {IAC, WILL, TRANSMIT_BINARY, '\n', 0};
+				Send((const char *) ok);
+				continue;
+			}
+
+			// Just say we won't do anything more.
+			// PuTTY will give us 31, 32, 34, 39
+			// which is WINSIZE SPEED LINEMODE ENVIRON
+			logger().debug("[ServerConsole] Sending IAC WONT %d", a);
+			unsigned char ok[] = {IAC, WONT, a, '\n', 0};
+			Send((const char *) ok);
+			continue;
+		}
+
+		if (WILL == c)
+		{
+			// Refuse to perform sub-negotation when
+			// IAC WILL LINEMODE is sent by the telnet client.
+			if (LINEMODE == a)
+			{
+				unsigned char ok[] = {IAC, DONT, LINEMODE, '\n', 0};
+				Send((const char *) ok);
+				continue;
+			}
+
+			// Ignore anything else.
+			logger().debug("[ServerConsole] Ignoring telnet IAC WILL %d", a);
+			continue;
+		}
+	}
+
+	return true;
+}
 
 void ServerConsole::OnConnection()
 {
@@ -59,7 +163,11 @@ void ServerConsole::OnConnection()
     // Crude attempt to negotiate for a utf-8 clean channel.
     // Using RFC 2066 protocols.  Not robust.  We're just praying
     // for non-garbled UTF-8 goodness, here.
-
+    //
+    // As of 2021 Debian Buster stable, telnet is not 8-bit clean.
+    // It also responds DONT/WONT to the CHARSET negotiatin below.
+    // So, as of now, we can't have UTF-8 with Debian telnet. Bummer.
+    //
     // Anyway, this won't work for netcat, socat, because they'll
     // just pass all this crap back to the user, and we don't want
     // that.  I'm not sure how to tell if we're talking to a true
@@ -157,11 +265,12 @@ void ServerConsole::OnLine(const std::string& line)
         return;
     }
 
-    // Hmm. Looks like most telnet agents respond with an
-    // IAC WONT CHARSET IAC DONT CHARSET
-    // Any case, just ignore CHARSET RFC 2066 negotiation
-    if (IAC == (line[0] & 0xff) and CHARSET == (line[2] & 0xff)) {
-        return;
+    // Look for telnet stuff, and process it.
+    if (IAC == (line[0] & 0xff)
+        and line.size() < 40
+        and handle_telnet_iac(line))
+    {
+       return;
     }
 
     // If the command starts with an open-paren, or a semi-colon, assume

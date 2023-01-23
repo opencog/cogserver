@@ -57,6 +57,14 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "", do_ctrld,
        "Close the shell TCP/IP connection.\n",
        false, true)
 
+    // This is the RFC 1184 Telnet encoding of EOF.
+    static constexpr char iaceof[3] = {(char)255, (char)236, 0};
+DECLARE_CMD_REQUEST(BuiltinRequestsModule, iaceof, do_iaceof,
+       "Close the shell connection",
+       "Usage: ^D\n\n"
+       "Close the shell TCP/IP connection.\n",
+       false, true)
+
 DECLARE_CMD_REQUEST(BuiltinRequestsModule, ".", do_dot,
        "Close the shell connection",
        "Usage: .\n\n"
