@@ -88,7 +88,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 		unsigned char a = line[i];
 		i++;
 
-		logger().debug("[ServerConsole] %d handle IAC %d %d", i, c, a);
+		logger().debug("[ServerConsole] %d Received telnet IAC %d %d", i, c, a);
 
 		// Actually, ignore all WONT & DONT.
 		if (WONT == c) continue;
@@ -105,7 +105,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// stop that; we don't want to effing fiddle with that.
 			if (SUPPRESS_GO_AHEAD == a)
 			{
-				unsigned char ok[] = {IAC, WILL, SUPPRESS_GO_AHEAD, 0};
+				unsigned char ok[] = {IAC, WONT, SUPPRESS_GO_AHEAD, 0};
 				Send((const char *) ok);
 				continue;
 			}
@@ -118,7 +118,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// logger().debug("[ServerConsole] Sending IAC WONT %d", a);
 			// unsigned char ok[] = {IAC, WONT, a, '\n', 0};
 			// Send((const char *) ok);
-			logger().debug("[ServerConsole] ignoring IAC DO %d", a);
+			logger().debug("[ServerConsole] Ignoring IAC DO %d", a);
 			continue;
 		}
 
@@ -134,7 +134,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			}
 
 			// Ignore anything else.
-			logger().debug("[ServerConsole] ignoring telnet IAC WILL %d", a);
+			logger().debug("[ServerConsole] Ignoring telnet IAC WILL %d", a);
 			continue;
 		}
 	}
