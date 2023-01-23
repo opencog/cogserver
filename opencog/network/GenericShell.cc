@@ -57,8 +57,8 @@ using namespace opencog;
 #define RFC_ECHO          1  // Telnet RFC 857 ECHO option
 #define SUPPRESS_GO_AHEAD 3  // Telnet RFC 858 supporess go ahead
 #define TIMING_MARK       6  // Telnet RFC 860 timing mark
-#define LINEMODE          34 // Telnet RFC 1116 linemode
-#define CHARSET         0x2A // Telnet RFC 2066
+#define LINEMODE         34  // Telnet RFC 1116 linemode
+#define CHARSET          44  // Telnet RFC 2066
 
 // Some random ASCII control characters (unix semantics)
 #define EOT 0x4   // end    or ^D at keyboard.
@@ -273,9 +273,10 @@ void GenericShell::line_discipline(const std::string &expr)
 		m++;
 	}
 
+	unsigned char breakpt = 0;
+	bool got_break = false;
 	while (m <= i)
 	{
-		bool got_break = false;
 		unsigned char c = expr[m];
 		if (IAC != c)
 		{
@@ -323,6 +324,7 @@ void GenericShell::line_discipline(const std::string &expr)
 		{
 			logger().debug("[GenericShell] Received IAC BREAK");
 			got_break = true;
+			breakpt = m;
 			m += 2;
 			continue;
 		}
@@ -336,11 +338,21 @@ void GenericShell::line_discipline(const std::string &expr)
 			// but whatever. Pretend its a normal interrupt.
 			if (TIMING_MARK == a)
 			{
-				logger().debug("[GenericShell] timing mark (user-interrupt?)");
-				// Must send TIMING-MARK first, as otherwise telnet silently
-				// ignores any bytes that come before it.
+				logger().debug("[GenericShell] Received IAC timing-mark");
+				// Send TIMING-MARK first, as otherwise telnet silently
+				// ignores any bytes that come before it, per RFC 860.
 				unsigned char ok[] = {IAC, WILL, TIMING_MARK, '\n', 0};
 				put_output((const char *) ok);
+
+				if (got_break)
+				{
+					std::string mute = expr;
+					mute[breakpt] = 0;
+					evalque.push(mute);
+					return;
+				}
+
+				logger().debug("[GenericShell] Huh? Assume user-interrupt");
 				user_interrupt();
 				return;
 			}
