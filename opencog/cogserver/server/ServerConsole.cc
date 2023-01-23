@@ -118,6 +118,13 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 				Send((const char *) ok);
 				continue;
 			}
+			if (TRANSMIT_BINARY == a)
+			{
+				logger().debug("[ServerConsole] Sending IAC WILL TRANSMIT_BINARY");
+				unsigned char ok[] = {IAC, WILL, TRANSMIT_BINARY, '\n', 0};
+				Send((const char *) ok);
+				continue;
+			}
 
 			// Just say we won't do anything more.
 			// PuTTY will give us 31, 32, 34, 39
