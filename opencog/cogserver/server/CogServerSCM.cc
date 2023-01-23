@@ -102,7 +102,7 @@ void CogServerSCM::init_in_module(void* data)
 void CogServerSCM::init()
 {
     define_scheme_primitive("c-start-cogserver", &CogServerSCM::start_server, this, "cogserver");
-    define_scheme_primitive("c-start-cogserver", &CogServerSCM::start_server, this, "cogserver");
+    define_scheme_primitive("c-stop-cogserver", &CogServerSCM::stop_server, this, "cogserver");
     define_scheme_primitive("set-cogserver-atomspace!", &CogServerSCM::set_server_space, this, "cogserver");
     define_scheme_primitive("get-cogserver-atomspace", &CogServerSCM::get_server_space, this, "cogserver");
 }
