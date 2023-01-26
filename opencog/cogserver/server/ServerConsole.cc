@@ -71,6 +71,12 @@ ServerConsole::~ServerConsole()
 #define CHARSET          42  // Telnet RFC 2066
 
 /// Return true if the Telnet IAC command was rcognized and handled.
+// The code here is similar to that in GenericShell, but different.
+// The Console is not a full-fledged shell, but a mini-shell-like
+// thing that just handles Requests. It is much simpler than the
+// GenericShell, which is why we keep it around here: its a more
+// fail-safe, less complex thing that is easier to maintain. The
+// downside is that both have similar telnet line discipline.
 bool ServerConsole::handle_telnet_iac(const std::string& line)
 {
 	// Hmm. Most telnet agents respond with an
@@ -149,6 +155,37 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// Ignore anything else.
 			logger().debug("[ServerConsole] Ignoring telnet IAC WILL %d", a);
 			continue;
+		}
+
+		if (IP == c or AO == c or SUSP == c)
+		{
+			logger().debug("[ServerConsole] Got telnet IAC user-interrupt %d", c);
+			i--; // no arguments
+			continue;
+		}
+
+		// Erase Line -- just ignore this line.
+		if (EL == c or EC == c or ABRT == c or
+		    AYT == c or GA == c or NOP == c)
+		{
+			logger().debug("[ServerConsole] Ignore line; got telnet IAC %d", c);
+			i--; // no arguments
+			continue;
+		}
+
+		// Break -- just ignore this line.
+		if (BRK == c)
+		{
+			logger().debug("[ServerConsole] Received IAC BRK");
+			i--; // no arguments
+			continue;
+		}
+
+		// End-of-file just like ctrl-D
+		if (TEOF == c)
+		{
+			logger().debug("[ServerConsole] Received IAC EOF; exiting shell");
+			return false;
 		}
 	}
 
@@ -270,7 +307,8 @@ void ServerConsole::OnLine(const std::string& line)
         and line.size() < 40
         and handle_telnet_iac(line))
     {
-       return;
+        sendPrompt();
+        return;
     }
 
     // If the command starts with an open-paren, or a semi-colon, assume
