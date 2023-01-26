@@ -91,18 +91,25 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 		if (IAC != iac) return false;
 		i++; if (sz <= i) return false;
 		unsigned char c = line[i];
-		i++; if (sz <= i) return false;
-		unsigned char a = line[i];
 		i++;
 
-		logger().debug("[ServerConsole] %d Received telnet IAC %d %d", i, c, a);
+		logger().debug("[ServerConsole] %d Received telnet IAC %d", i, c);
 
 		// Actually, ignore all WONT & DONT.
-		if (WONT == c) continue;
-		if (DONT == c) continue;
+		if (WONT == c or DONT == c)
+		{
+			// Skip over the argument and advance
+			if (sz <= i) return false;
+			i++;
+			continue;
+		}
 
 		if (DO == c)
 		{
+			if (sz <= i) return false;
+			unsigned char a = line[i];
+			i++;
+
 			logger().debug("[ServerConsole] Received IAC DO %d", a);
 
 			// If telnet ever tries to go into character mode,
@@ -141,6 +148,10 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 
 		if (WILL == c)
 		{
+			if (sz <= i) return false;
+			unsigned char a = line[i];
+			i++;
+
 			// Refuse to perform sub-negotation when
 			// IAC WILL LINEMODE is sent by the telnet client.
 			if (LINEMODE == a)
@@ -165,7 +176,6 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// unsigned char ok[] = {IAC, DO, TIMING_MARK, 0};
 			unsigned char ok[] = {'\n', 0};
 			Send((const char *) ok);
-			i--; // no arguments
 			continue;
 		}
 
@@ -174,7 +184,6 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 		    AYT == c or GA == c or NOP == c)
 		{
 			logger().debug("[ServerConsole] Ignore line; got telnet IAC %d", c);
-			i--; // no arguments
 			continue;
 		}
 
@@ -182,7 +191,6 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 		if (BRK == c)
 		{
 			logger().debug("[ServerConsole] Received IAC BRK");
-			i--; // no arguments
 			continue;
 		}
 
