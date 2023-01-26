@@ -232,6 +232,16 @@ void GenericShell::user_interrupt()
 	// execute, when we go to interrupt it.
 	usleep(10000);
 
+	// It can also happen that eval_loop() has exited, and has set
+	// _evaluator to nullptr. So we need to check for this. Of course,
+	// this is insane and racey, and in principle, we need some kind
+	// addional condition varable to avoid hitting this during shutdown.
+	// but for now, just punt.
+	//
+	// This happens if you run TopShell, enter q carriage return ctrl-C
+	// and then boom, here we are.
+	if (nullptr == _evaluator) return;
+
 	_evaluator->interrupt();
 	_evaluator->clear_pending();
 	put_output(abort_prompt);
