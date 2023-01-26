@@ -238,18 +238,16 @@ void GenericShell::user_interrupt()
 	// addional condition varable to avoid hitting this during shutdown.
 	// but for now, just punt.
 	//
-	// This happens if you run TopShell, enter q carriage return ctrl-C
+	// This happens if you run TopShell, enter . carriage return ctrl-C
 	// and then boom, here we are.
-	if (_evaluator)
-	{
-		_evaluator->interrupt();
-		_evaluator->clear_pending();
-		put_output(abort_prompt);
-	}
-	else
+	if (nullptr == _evaluator)
 	{
 		logger().info("[GenericShell] user interrupt after shutdown!");
+		return;
 	}
+	_evaluator->interrupt();
+	_evaluator->clear_pending();
+	put_output(abort_prompt);
 	finish_eval();
 }
 
