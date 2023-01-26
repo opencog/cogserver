@@ -240,11 +240,16 @@ void GenericShell::user_interrupt()
 	//
 	// This happens if you run TopShell, enter q carriage return ctrl-C
 	// and then boom, here we are.
-	if (nullptr == _evaluator) return;
-
-	_evaluator->interrupt();
-	_evaluator->clear_pending();
-	put_output(abort_prompt);
+	if (_evaluator)
+	{
+		_evaluator->interrupt();
+		_evaluator->clear_pending();
+		put_output(abort_prompt);
+	}
+	else
+	{
+		logger().info("[GenericShell] user interrupt after shutdown!");
+	}
 	finish_eval();
 }
 
