@@ -99,14 +99,12 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 
 		// Actually, ignore all WONT & DONT.
 		if (WONT == c) continue;
-
-		if (DONT == c)
-		{
-			continue;
-		}
+		if (DONT == c) continue;
 
 		if (DO == c)
 		{
+			logger().debug("[ServerConsole] Received IAC DO %d", a);
+
 			// If telnet ever tries to go into character mode,
 			// it will send us SUPPRESS-GO-AHEAD and ECHO. Try to
 			// stop that; we don't want to effing fiddle with that.
@@ -120,14 +118,14 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			}
 			if (RFC_ECHO == a)
 			{
-				unsigned char ok[] = {IAC, WONT, RFC_ECHO, '\n', 0};
+				unsigned char ok[] = {IAC, WONT, RFC_ECHO, 0};
 				Send((const char *) ok);
 				continue;
 			}
 			if (TRANSMIT_BINARY == a)
 			{
 				logger().debug("[ServerConsole] Sending IAC WILL TRANSMIT_BINARY");
-				unsigned char ok[] = {IAC, WILL, TRANSMIT_BINARY, '\n', 0};
+				unsigned char ok[] = {IAC, WILL, TRANSMIT_BINARY, 0};
 				Send((const char *) ok);
 				continue;
 			}
@@ -136,7 +134,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// PuTTY will give us 31, 32, 34, 39
 			// which is WINSIZE SPEED LINEMODE ENVIRON
 			logger().debug("[ServerConsole] Sending IAC WONT %d", a);
-			unsigned char ok[] = {IAC, WONT, a, '\n', 0};
+			unsigned char ok[] = {IAC, WONT, a, 0};
 			Send((const char *) ok);
 			continue;
 		}
@@ -147,7 +145,7 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 			// IAC WILL LINEMODE is sent by the telnet client.
 			if (LINEMODE == a)
 			{
-				unsigned char ok[] = {IAC, DONT, LINEMODE, '\n', 0};
+				unsigned char ok[] = {IAC, DONT, LINEMODE, 0};
 				Send((const char *) ok);
 				continue;
 			}
@@ -160,6 +158,13 @@ bool ServerConsole::handle_telnet_iac(const std::string& line)
 		if (IP == c or AO == c or SUSP == c)
 		{
 			logger().debug("[ServerConsole] Got telnet IAC user-interrupt %d", c);
+			// Telnet keeps resending us the stuff before the ctrl-C.
+			// I want it to throw that away, dut it doesn't.
+			// Whatever. I give up.
+			// unsigned char ok[] = {IAC, EL, 0};
+			// unsigned char ok[] = {IAC, DO, TIMING_MARK, 0};
+			unsigned char ok[] = {'\n', 0};
+			Send((const char *) ok);
 			i--; // no arguments
 			continue;
 		}

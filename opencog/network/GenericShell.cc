@@ -303,8 +303,9 @@ void GenericShell::line_discipline(const std::string &expr)
 		if (IP == c or AO == c or SUSP == c)
 		{
 			logger().debug("[GenericShell] got telnet IAC user-interrupt %d", c);
-			// Must send TIMING-MARK first, as otherwise telnet silently
-			// ignores any bytes that come before it.
+			// Must send TIMING-MARK first, as otherwise telnet
+			// silently ignores (i.e. does not send to us) any bytes
+			// that come after it, per RFC 860.
 			unsigned char ok[] = {IAC, WILL, TIMING_MARK, '\n', 0};
 			put_output((const char *) ok);
 			user_interrupt();
