@@ -16,7 +16,7 @@ IF (COMMAND CMAKE_POLICY)
 ENDIF (COMMAND CMAKE_POLICY)
 
 IF(CMAKE_VERSION VERSION_GREATER 3.0.2)
-	CMAKE_POLICY(SET CMP0037 OLD)
+	CMAKE_POLICY(SET CMP0037 NEW)
 ENDIF(CMAKE_VERSION VERSION_GREATER 3.0.2)
 
 PROJECT(cogserver)
@@ -182,7 +182,7 @@ IF (CXXTEST_FOUND AND HAVE_SERVER)
 	ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
 	IF (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		# doing coverage stuff while running tests if this is the Coverage build
-		ADD_CUSTOM_TARGET(test
+		ADD_CUSTOM_TARGET(check
 			# TODO lcov should be found by cmake first
 			# TODO set it up so that we can pick to run coverage per test, or
 			# combined across all tests (the latter is MUCH faster). Use a define?
