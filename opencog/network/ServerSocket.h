@@ -43,6 +43,7 @@ class ServerSocket
 private:
     // The actual socket on which data comes & goes.
     boost::asio::ip::tcp::socket* _socket;
+    static bool _network_gone;
 
     // A count of the number of concurrent open sockets. This is used
     // to limit the number of connections to the server, so that it
@@ -118,6 +119,7 @@ public:
      * the one that is actually polling the socket.
      */
     void Exit(void);
+    static void network_gone(void) { _network_gone = true; }
 
     /**
      * Return a human-readable table of socket statistics.

@@ -52,6 +52,7 @@ void NetworkServer::stop()
 {
     if (not _running) return;
     _running = false;
+    ServerSocket::network_gone();
 
     boost::system::error_code ec;
     _acceptor.cancel(ec);

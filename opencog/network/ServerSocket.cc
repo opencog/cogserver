@@ -187,6 +187,8 @@ std::mutex ServerSocket::_max_mtx;
 std::condition_variable ServerSocket::_max_cv;
 size_t ServerSocket::_num_open_stalls = 0;
 
+bool ServerSocket::_network_gone = false;
+
 ServerSocket::ServerSocket(void) :
     _socket(nullptr),
     _got_first_line(false),
@@ -202,6 +204,8 @@ ServerSocket::ServerSocket(void) :
     _status = BLOCK;
     _line_count = 0;
     add_sock(this);
+
+    _network_gone = false;
 
     // Block here, if there are too many concurrently-open sockets.
     std::unique_lock<std::mutex> lck(_max_mtx);
@@ -226,7 +230,15 @@ ServerSocket::~ServerSocket()
     logger().debug("ServerSocket::~ServerSocket()");
 
     Exit();
-    delete _socket;
+
+    // An attempt to delete a boost socket, after being stopped with
+    // `boost::asio::io_service::stop()` will result in a crash, deep
+    // inside boost. Failing to delete is also obviously a memleak,
+    // but for now, well accept a memleak in exchange for stability.
+    // See notes in the body of the Exit() method below (circa line 322).
+    if (not _network_gone)
+        delete _socket;
+
     _socket = nullptr;
     rem_sock(this);
 
@@ -333,7 +345,8 @@ void ServerSocket::Exit()
         //
         // The long-term solution is to rewrite this code to not use
         // asio. But that is just a bit more than a weekend project.
-        _socket->close();
+        if (not _network_gone)
+            _socket->close();
     }
     catch (const boost::system::system_error& e)
     {
