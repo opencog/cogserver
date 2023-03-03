@@ -83,6 +83,9 @@ void NetworkServer::listen(void)
         // below, and that is why there is the weird self-delete at the
         // end of ServerSocket::handle_connection().
         boost::asio::ip::tcp::socket* sock = new boost::asio::ip::tcp::socket(_io_service);
+
+        // Exit, if cogserver is being shut down.
+        if (not _running) break;
         _acceptor.accept(*sock);
         _nconnections++;
         _last_connect = time(nullptr);
