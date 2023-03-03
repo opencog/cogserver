@@ -78,8 +78,9 @@ void gargleblast(int tid, int reps)
 			// if (' ' != reso[i]) nch++;
 			if (0x16 != reso[i]) nch++;
 
-#define CUR_MSG_SZ 264  // Size without synchronous idle.
-// #define CUR_MSG_SZ 235     // Size without blank spaces.
+// #define CUR_MSG_SZ 235  // Size without blank spaces.
+// #define CUR_MSG_SZ 264  // Size without synchronous idle.
+#define CUR_MSG_SZ 248     // Size without 'Node", 'Link' suffixes.
 		// size_t msgsz = reso.size();
 		size_t msgsz = nch;
 		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, msgsz);
@@ -328,9 +329,13 @@ public:
 		TS_ASSERT_LESS_THAN(200, ply.size());
 
 		// Expect to get all three atoms.
-		TS_ASSERT(ply.npos != ply.find("(ConceptNode \"A\")"));
-		TS_ASSERT(ply.npos != ply.find("(ConceptNode \"B\")"));
-		TS_ASSERT(ply.npos != ply.find("(ConceptNode \"C\")"));
+		// TS_ASSERT(ply.npos != ply.find("(ConceptNode \"A\")"));
+		// TS_ASSERT(ply.npos != ply.find("(ConceptNode \"B\")"));
+		// TS_ASSERT(ply.npos != ply.find("(ConceptNode \"C\")"));
+
+		TS_ASSERT(ply.npos != ply.find("(Concept \"A\")"));
+		TS_ASSERT(ply.npos != ply.find("(Concept \"B\")"));
+		TS_ASSERT(ply.npos != ply.find("(Concept \"C\")"));
 
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
