@@ -198,7 +198,7 @@ IF (CXXTEST_FOUND AND HAVE_SERVER)
 		)
 	ELSE (CMAKE_BUILD_TYPE STREQUAL "Coverage")
 		# If this is a build with coverage enabled then test normally
-		ADD_CUSTOM_TARGET(test
+		ADD_CUSTOM_TARGET(check
 			DEPENDS tests
 			WORKING_DIRECTORY tests
 			COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure $(ARGS)
