@@ -84,9 +84,11 @@ void NetworkServer::listen(void)
         // end of ServerSocket::handle_connection().
         boost::asio::ip::tcp::socket* sock = new boost::asio::ip::tcp::socket(_io_service);
 
+        _acceptor.accept(*sock);
+
         // Exit, if cogserver is being shut down.
         if (not _running) break;
-        _acceptor.accept(*sock);
+
         _nconnections++;
         _last_connect = time(nullptr);
 
