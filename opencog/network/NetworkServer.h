@@ -9,8 +9,9 @@
 #ifndef _OPENCOG_SIMPLE_NETWORK_SERVER_H
 #define _OPENCOG_SIMPLE_NETWORK_SERVER_H
 
-#include <string>
+#include <atomic>
 #include <queue>
+#include <string>
 #include <thread>
 
 #include <boost/asio.hpp>
@@ -42,7 +43,7 @@ class NetworkServer
 protected:
     std::string _name;
     short _port;
-    bool _running;
+    std::atomic_bool _running;
     boost::asio::io_service _io_service;
     boost::asio::ip::tcp::acceptor _acceptor;
     std::thread* _listener_thread;
