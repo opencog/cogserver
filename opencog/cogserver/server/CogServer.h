@@ -94,6 +94,8 @@ public:
     virtual void disableNetworkServer(void);
     virtual void disableWebServer(void);
 
+    bool running(void) { return _running; }
+
     /*** Request API ***/
     Request* createRequest(const std::string& id) {
         return RequestManager::createRequest(id, *this);

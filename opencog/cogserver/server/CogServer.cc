@@ -210,7 +210,7 @@ std::string CogServer::stats_legend(void)
 // Singleton instance stuff.
 //
 // I don't really like singleton instances very much. There are some
-// interesting use cases where one might want to run multipel
+// interesting use cases where one might want to run multiple
 // cogservers. However, at this time, too much of the code (???)
 // assumes a singleton instance, so we leave this for now. XXX FIXME.
 

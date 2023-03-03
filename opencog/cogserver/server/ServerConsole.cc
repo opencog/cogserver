@@ -315,6 +315,15 @@ void ServerConsole::OnLine(const std::string& line)
         return;
     }
 
+    // If the cogserver has stopped, then the command processor is gone,
+    // and we just ... can't handle commands any longer. Self-destruct.
+    CogServer& cs = cogserver();
+    if (not cs.running())
+    {
+        Exit();
+        return;
+    }
+
     // Look for telnet stuff, and process it.
     if (IAC == (line[0] & 0xff)
         and line.size() < 40
@@ -354,7 +363,6 @@ void ServerConsole::OnLine(const std::string& line)
     std::string cmdName = params.front();
     params.pop_front();
 
-    CogServer& cs = cogserver();
     Request* request = cs.createRequest(cmdName);
 
     // Command not found.
