@@ -142,7 +142,7 @@ std::string NetworkServer::display_stats(void)
     gmtime_r(&now, &tm);
     strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
-    std::string rc = "-----\n";
+    std::string rc = "----- OpenCog CogServer top threads: type help or ^C to exit\n";
     rc += nbuf;
     rc += " UTC ---- up-since: ";
     rc += sbuf;
