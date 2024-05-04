@@ -181,7 +181,11 @@ std::atomic_size_t ServerSocket::total_line_count(0);
 // July 2019 - change to 10. When it is 60, it just thrashes like
 // crazy, mostly because there are 60 threads thrashing in guile
 // on some lock. And that's pretty pointless...
-unsigned int ServerSocket::_max_open_sockets = 10;
+//
+// May 2024 - change to 20. The guile thrashing is real, and is
+// cured by redesigning apps to do less in guile and more in Atomese.
+//
+unsigned int ServerSocket::_max_open_sockets = 20;
 volatile unsigned int ServerSocket::_num_open_sockets = 0;
 std::mutex ServerSocket::_max_mtx;
 std::condition_variable ServerSocket::_max_cv;
