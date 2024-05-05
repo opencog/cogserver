@@ -42,7 +42,6 @@ CogServer::CogServer(void) :
     _webServer(nullptr),
     _running(false)
 {
-	set_max_open_sockets();
 }
 
 CogServer::CogServer(AtomSpacePtr as) :
@@ -51,13 +50,15 @@ CogServer::CogServer(AtomSpacePtr as) :
     _webServer(nullptr),
     _running(false)
 {
-	set_max_open_sockets();
 }
 
 /// Allow at most `max_open_socks` concurrent connections.
 /// Setting this larger than 10 or 20 will usually lead to
 /// poor performance, and setting it larger than 140 will
 /// require changing the unix ulimit on max open file descriptors.
+/// (This is because, for each one that is counted here, there are
+/// another half-dozen utility sockets and so 140*7 gets large and
+/// overflows the ulimit max of 1024.)
 void CogServer::set_max_open_sockets(int max_open_socks)
 {
     ServerSocket::set_max_open_sockets(max_open_socks);

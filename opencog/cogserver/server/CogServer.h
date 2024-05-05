@@ -81,7 +81,7 @@ public:
      *  after the current interaction is finished. */
     virtual void stop(void);
 
-    void set_max_open_sockets(int max_open_socks=10);
+    void set_max_open_sockets(int);
 
     /** Starts the network console server; this provides a command
      *  line server socket on the port specified by the configuration
