@@ -52,7 +52,13 @@ std::string ServerSocket::display_stats(void)
     // dead connections.
     half_ping();
 
+    // Current max sockets is 20
+    // A standard terminal 24 rows x 80 columns is 1920 bytes.
     std::string rc;
+    rc.reserve(2000);
+
+    // Report under a lock so that sockets don't change while
+    // we access them.
     std::lock_guard<std::mutex> lock(_sock_lock);
 
     // Make a copy, and sort it.

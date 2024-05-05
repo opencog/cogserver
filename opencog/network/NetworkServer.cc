@@ -142,7 +142,13 @@ std::string NetworkServer::display_stats(void)
     gmtime_r(&now, &tm);
     strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
-    std::string rc = "----- OpenCog CogServer top threads: type help or ^C to exit\n";
+    // Current max_open_sockets is 30 which requires a terminal
+    // size of 32x80 to display correctly. So reserve a reasonble
+    // string size.
+    std::string rc;
+    rc.reserve(4000);
+
+    rc = "----- OpenCog CogServer top threads: type help or ^C to exit\n";
     rc += nbuf;
     rc += " UTC ---- up-since: ";
     rc += sbuf;
@@ -158,7 +164,7 @@ std::string NetworkServer::display_stats(void)
 
     rc += buff;
 
-    // count open file descs
+    // Count open file descs
     int nfd = 0;
     for (int j=0; j<4096; j++) {
        int fd = dup(j);

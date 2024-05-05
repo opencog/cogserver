@@ -35,6 +35,7 @@ TopEval::TopEval()
 	_started = false;
 	_done = false;
 	_refresh = 3.0;
+	_msg.reserve(80);
 }
 
 TopEval::~TopEval()
@@ -91,6 +92,7 @@ std::string TopEval::poll_result()
 	// Sleep for three seconds, every time except the first time.
 	// Issue a newline the first time to help clear the screen.
 	std::string ret;
+	ret.reserve(4000);
 	if (_started)
 	{
 		std::unique_lock<std::mutex> lck(_sleep_mtx);
