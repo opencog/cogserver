@@ -142,8 +142,8 @@ std::string NetworkServer::display_stats(void)
     gmtime_r(&now, &tm);
     strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
-    // Current max_open_sockets is 30 which requires a terminal
-    // size of 32x80 to display correctly. So reserve a reasonble
+    // Current max_open_sockets is 60 which requires a terminal
+    // size of 66x80 to display correctly. So reserve a reasonble
     // string size.
     std::string rc;
     rc.reserve(4000);

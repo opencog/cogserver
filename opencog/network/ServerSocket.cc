@@ -188,10 +188,12 @@ std::atomic_size_t ServerSocket::total_line_count(0);
 // crazy, mostly because there are 60 threads thrashing in guile
 // on some lock. And that's pretty pointless...
 //
-// May 2024 - change to 20. The guile thrashing is real, and is
+// May 2024 - change to 60. The guile thrashing is real, and is
 // cured by redesigning apps to do less in guile and more in Atomese.
+// The max parallelism is now limited by lock contention in
+// RocksStorageNode.
 //
-unsigned int ServerSocket::_max_open_sockets = 20;
+unsigned int ServerSocket::_max_open_sockets = 60;
 volatile unsigned int ServerSocket::_num_open_sockets = 0;
 std::mutex ServerSocket::_max_mtx;
 std::condition_variable ServerSocket::_max_cv;
