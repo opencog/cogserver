@@ -159,10 +159,10 @@ void CogServer::runLoopStep(void)
         processRequests();
 }
 
-std::string CogServer::display_stats(void)
+std::string CogServer::display_stats(int nlines)
 {
     if (_consoleServer)
-        return _consoleServer->display_stats();
+        return _consoleServer->display_stats(nlines);
     else
         return "Console server is not running";
 }

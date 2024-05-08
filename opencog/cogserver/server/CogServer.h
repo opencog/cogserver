@@ -112,7 +112,7 @@ public:
 
 
     /** Print human-readable stats about the cogserver */
-    std::string display_stats(void);
+    std::string display_stats(int nlines = -1);
     std::string display_web_stats(void);
     static std::string stats_legend(void);
 

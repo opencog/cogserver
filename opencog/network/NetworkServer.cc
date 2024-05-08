@@ -130,7 +130,7 @@ void NetworkServer::run(ServerSocket* (*handler)(void))
 
 // ==================================================================
 
-std::string NetworkServer::display_stats(void)
+std::string NetworkServer::display_stats(int nlines)
 {
     struct tm tm;
     char sbuf[40];
@@ -202,9 +202,9 @@ std::string NetworkServer::display_stats(void)
         rus.ru_maxrss, rus.ru_majflt, rus.ru_inblock, rus.ru_oublock);
     rc += buff;
 
+    // The above chews up 8 lines of display, leaving less for sockets.
     rc += "\n";
-    rc += ServerSocket::display_stats();
-    rc += "\n";
+    rc += ServerSocket::display_stats(nlines - 8);
 
     return rc;
 }

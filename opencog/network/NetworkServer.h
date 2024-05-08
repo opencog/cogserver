@@ -71,7 +71,7 @@ public:
     void stop();
 
     /** Print network stats in human-readable tabular form */
-    std::string display_stats(void);
+    std::string display_stats(int nlines = -1);
 }; // class
 
 /** @}*/

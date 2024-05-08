@@ -44,6 +44,7 @@ class TopEval : public GenericEval
 		std::mutex _sleep_mtx;
 		std::condition_variable _sleeper;
 		double _refresh;
+		int _nlines;
 		bool _started;
 		bool _done;
 		std::string _msg;

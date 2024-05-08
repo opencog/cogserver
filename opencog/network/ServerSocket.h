@@ -126,7 +126,7 @@ public:
      * Used for monitoring the server state.
      * Loops over all active sockets.
      */
-    static std::string display_stats(void);
+    static std::string display_stats(int);
 
     /** Attempt top close half-open sockets, if any. */
     static void half_ping(void);

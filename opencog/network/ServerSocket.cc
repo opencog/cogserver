@@ -46,7 +46,7 @@ static void rem_sock(ServerSocket* ss)
     _sock_list.erase(ss);
 }
 
-std::string ServerSocket::display_stats(void)
+std::string ServerSocket::display_stats(int nlines)
 {
     // Hack(?) Send a half-ping, in an attempt to close
     // dead connections.
@@ -73,15 +73,19 @@ std::string ServerSocket::display_stats(void)
             sa->_start_time < sb->_start_time; });
 
     // Print the sorted list; use the first to print a header.
-    bool hdr = false;
+    int nprt = 0;
     for (ServerSocket* ss : sov)
     {
-        if (not hdr)
+        if (0 == nprt)
         {
             rc += ss->connection_header() + "\n";
-            hdr = true;
+            nprt ++;
         }
         rc += ss->connection_stats() + "\n";
+        nprt ++;
+
+        // Print at most nlines; negative nlines is unlimited.
+        if (0 < nlines and nlines < nprt) break;
     }
 
     return rc;

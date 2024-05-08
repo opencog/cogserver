@@ -35,6 +35,7 @@ TopEval::TopEval()
 	_started = false;
 	_done = false;
 	_refresh = 3.0;
+	_nlines = 24;     // For a standard 24x80 terminal
 	_msg.reserve(80);
 }
 
@@ -106,7 +107,7 @@ std::string TopEval::poll_result()
 
 	// Send the telnet clear-screen command.
 	ret += "\u001B[2J";
-	ret += cogserver().display_stats();
+	ret += cogserver().display_stats(_nlines);
 
 	if (0 < _msg.size())
 	{
