@@ -192,12 +192,13 @@ std::atomic_size_t ServerSocket::total_line_count(0);
 // crazy, mostly because there are 60 threads thrashing in guile
 // on some lock. And that's pretty pointless...
 //
-// May 2024 - change to 60. The guile thrashing is real, and is
-// cured by redesigning apps to do less in guile and more in Atomese.
-// The max parallelism is now limited by lock contention in
-// RocksStorageNode.
+// May 2024 - change to number of hardware cpus.
+// The guile thrashing is real, and is cured by redesigning apps
+// to do less in guile and more in Atomese.
+// The max parallelism is now limited by number of hardware CPU's.
+// Tested for 64 cpus and pair counting: this seems to use them all.
 //
-unsigned int ServerSocket::_max_open_sockets = 60;
+unsigned int ServerSocket::_max_open_sockets = 0;
 volatile unsigned int ServerSocket::_num_open_sockets = 0;
 std::mutex ServerSocket::_max_mtx;
 std::condition_variable ServerSocket::_max_cv;
@@ -213,6 +214,13 @@ ServerSocket::ServerSocket(void) :
     _is_websocket(false),
     _got_websock_header(false)
 {
+    if (0 == _max_open_sockets)
+    {
+        unsigned int hwlim = std::thread::hardware_concurrency();
+        if (0 == hwlim) hwlim = 32;
+        _max_open_sockets = hwlim;
+    }
+
     _start_time = time(nullptr);
     _last_activity = _start_time;
     _tid = 0;
