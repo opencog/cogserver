@@ -202,9 +202,10 @@ std::string NetworkServer::display_stats(int nlines)
         rus.ru_maxrss, rus.ru_majflt, rus.ru_inblock, rus.ru_oublock);
     rc += buff;
 
-    // The above chews up 8 lines of display, leaving less for sockets.
+    // The above chews up 8 lines of display. Byobu/tmux needs a line.
+    // Blank line for accepting commmands. So subtract 10.
     rc += "\n";
-    rc += ServerSocket::display_stats(nlines - 8);
+    rc += ServerSocket::display_stats(nlines - 10);
 
     return rc;
 }
