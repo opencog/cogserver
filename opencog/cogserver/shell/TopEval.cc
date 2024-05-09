@@ -58,7 +58,7 @@ void TopEval::eval_expr(const std::string &expr)
 
 	if ('h' == expr[0])
 	{
-		_msg = "Available commands: kill";
+		_msg = "Available commands: display kill";
 		return;
 	}
 
@@ -81,8 +81,21 @@ void TopEval::eval_expr(const std::string &expr)
 		return;
 	}
 
-	// Right now, we don't have any built-in commands ...
-	// if we did, they'd be handled here.
+	// Change number of display lines
+	if ('d' == expr[0])
+	{
+		size_t pos = expr.find_first_of(" ");
+		if (std::string::npos == pos)
+		{
+			_msg = "Usage: display <num-lines-to-display>";
+			return;
+		}
+
+		_nlines = std::atoi(expr.substr(pos).c_str());
+		return;
+	}
+
+	// Wasn't one of the above.
 	_msg = "Unknown top command >>" + expr;
 }
 
