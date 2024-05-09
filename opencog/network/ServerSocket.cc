@@ -8,6 +8,7 @@
  */
 
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <time.h>
 #include <mutex>
@@ -219,6 +220,21 @@ ServerSocket::ServerSocket(void) :
         unsigned int hwlim = std::thread::hardware_concurrency();
         if (0 == hwlim) hwlim = 32;
         _max_open_sockets = hwlim;
+
+        // Revise number of open files upwards, if needed.
+        // A typical operating condition is that each network
+        // connection to the cogserver results in 6-8 other open
+        // file descriptors. We'll be paranoid, and set this to 16x.
+        rlim_t wanted = 16 * _max_open_sockets;
+
+        struct rlimit rlim;
+        int rc = getrlimit(RLIMIT_NOFILE, &rlim);
+        if (0 == rc and rlim.rlim_cur < wanted)
+        {
+            if (rlim.rlim_max < wanted) wanted = rlim.rlim_max;
+            rlim.rlim_cur = wanted;
+            setrlimit(RLIMIT_NOFILE, &rlim);
+        }
     }
 
     _start_time = time(nullptr);
