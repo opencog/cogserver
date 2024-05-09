@@ -227,11 +227,27 @@ ServerSocket::ServerSocket(void) :
         // file descriptors. We'll be paranoid, and set this to 16x.
         rlim_t wanted = 16 * _max_open_sockets;
 
+        // The only problem here is that we don't have CAP_SYS_RESOURCE
+        // and only the shell user can set this. So in reality, it is
+        // already the case that rlim.rlim_cur == rlim.rlim_max and
+        // we can't do anything to change this. So instead, just print
+        // a warning. Oh well.
         struct rlimit rlim;
         int rc = getrlimit(RLIMIT_NOFILE, &rlim);
         if (0 == rc and rlim.rlim_cur < wanted)
         {
-            if (rlim.rlim_max < wanted) wanted = rlim.rlim_max;
+            if (rlim.rlim_max < wanted)
+            {
+                fprintf(stderr,
+   "Warning: Cogserver: you may want to increase the max open files\n"
+   "Use the `ulimit -a` command to view this, and `ulimit -n` to set it.\n"
+   "Recommend setting this to %lu open file descriptors.\n", wanted);
+                logger().warn(
+   "Warning: Cogserver: you may want to increase the max open files\n"
+   "Use the `ulimit -a` command to view this, and `ulimit -n` to set it.\n"
+   "Recommend setting this to %lu open file descriptors.\n", wanted);
+                wanted = rlim.rlim_max;
+            }
             rlim.rlim_cur = wanted;
             setrlimit(RLIMIT_NOFILE, &rlim);
         }
