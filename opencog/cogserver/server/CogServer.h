@@ -123,9 +123,9 @@ CogServer& cogserver(void);
 CogServer& cogserver(AtomSpacePtr);
 
 // Only cython needs this.
-inline AtomSpace& cython_server_atomspace(void)
+inline AtomSpacePtr cython_server_atomspace(void)
 {
-    return *(cogserver().getAtomSpace().get());
+    return cogserver().getAtomSpace();
 }
 
 /** @}*/

@@ -83,7 +83,7 @@ void PythonModule::init()
     global_python_initialize();
 
     // Make sure that Python has been properly initialized.
-    if (not Py_IsInitialized() || not PyEval_ThreadsInitialized()) {
+    if (not Py_IsInitialized() /* || not PyEval_ThreadsInitialized() */) {
             throw opencog::RuntimeException(TRACE_INFO,
                     "Python not initialized, missing global_python_init()");
     }

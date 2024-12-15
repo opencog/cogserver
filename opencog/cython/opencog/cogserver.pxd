@@ -23,9 +23,9 @@ cdef extern from "opencog/atoms/base/Handle.h" namespace "opencog":
     cdef cppclass cHandleSeq "opencog::HandleSeq"
 
 # AtomSpaces
-from opencog.atomspace cimport cAtomSpace
+from opencog.atomspace cimport cValuePtr
 cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
-    cAtomSpace& cython_server_atomspace()
+    cValuePtr cython_server_atomspace()
 
 cdef extern from "opencog/cogserver/server/Request.h" namespace "opencog":
     cdef cppclass cRequest "opencog::Request":
