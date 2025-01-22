@@ -80,6 +80,16 @@ ELSE (ATOMSPACE_FOUND)
 	MESSAGE(FATAL_ERROR "AtomSpace missing: it is needed!")
 ENDIF (ATOMSPACE_FOUND)
 
+# AtomSpace Storage proves s-expression parsing
+FIND_PACKAGE(AtomSpaceStorage CONFIG REQUIRED)
+IF (ATOMSPACE_STORAGE_FOUND)
+	MESSAGE(STATUS "AtomSpace Storage found.")
+	ADD_DEFINITIONS(-DHAVE_ATOMSPACE_STORAGE)
+	SET(HAVE_ATOMSPACE_STORAGE 1)
+ELSE (ATOMSPACE_STORAGE_FOUND)
+	MESSAGE(FATAL_ERROR "AtomSpace Storage missing: it is needed!")
+ENDIF (ATOMSPACE_STORAGE_FOUND)
+
 # ----------------------------------------------------------
 # Check for boost. We need dynamic-linked, threaded libs by default.
 SET(Boost_USE_STATIC_LIBS OFF)
