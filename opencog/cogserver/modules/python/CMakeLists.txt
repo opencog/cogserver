@@ -3,7 +3,7 @@
 # Python module to be loaded by CogServer
 
 INCLUDE_DIRECTORIES(
-   ${PYTHON_INCLUDE_DIRS}
+   ${Python3_INCLUDE_DIRS}
    ${CMAKE_CURRENT_SOURCE_DIR}
    ${CMAKE_CURRENT_BINARY_DIR}
 )
@@ -17,7 +17,7 @@ TARGET_LINK_LIBRARIES(PythonModule
 	server
 	PythonEval
 	${ATOMSPACE_LIBRARIES}
-	${PYTHON_LIBRARIES}
+	${Python3_LIBRARIES}
 )
 
 INSTALL (TARGETS PythonModule DESTINATION
