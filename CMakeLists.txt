@@ -120,6 +120,17 @@ ELSE (OPENSSL_FOUND)
 	MESSAGE(STATUS "OpenSSL missing: needed for WebSockets.")
 ENDIF (OPENSSL_FOUND)
 
+# FIND_PACKAGE(MCP)
+SET(MCP_FOUND 1)
+IF (MCP_FOUND)
+	ADD_DEFINITIONS(-DHAVE_MCP)
+	SET(HAVE_MCP 1)
+ELSE (MCP_FOUND)
+	MESSAGE(STATUS "MCP missing: needed for Model Context Protocol support.")
+ENDIF (MCP_FOUND)
+
+
+
 # ----------------------------------------------------------
 # Needed for unit tests
 
@@ -272,6 +283,7 @@ FIND_PACKAGE(Doxygen)
 
 SUMMARY_ADD("CogServer"    "CogServer network server" HAVE_SERVER)
 SUMMARY_ADD("WebSockets"   "WebSockets network server" HAVE_OPENSSL)
+SUMMARY_ADD("MCP"          "Model Context Protocol network server" HAVE_MCP)
 SUMMARY_ADD("Cython"       "Cython (python) bindings" HAVE_CYTHON)
 SUMMARY_ADD("Doxygen"      "Code documentation" DOXYGEN_FOUND)
 SUMMARY_ADD("Python tests" "Python bindings nose tests" HAVE_NOSETESTS)
