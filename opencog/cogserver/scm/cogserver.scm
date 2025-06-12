@@ -20,6 +20,7 @@
 (define* (start-cogserver #:optional (config-path "")
                           #:key (port 17001)
                                 (web  18080)
+                                (mcp  18888)
                                 (logfile   "/tmp/cogserver.log")
                                 (prompt    "[0;32mopencog[1;32m> [0m")
                                 (scmprompt "[0;34mguile[1;34m> [0m"))
@@ -27,6 +28,7 @@
   start-cogserver
   start-cogserver #:port 17001
   start-cogserver #:web 18080
+  start-cogserver #:mcp 18888
   start-cogserver #:logfile \"/tmp/cogserver.log\"
   start-cogserver #:prompt \"[0;32mopencog[1;32m> [0m\"
   start-cogserver #:prompt \"\\x1b[0;32mopencog\\x1b[1;32m> \\x1b[0m\"
@@ -54,7 +56,7 @@
 "
 	(cog-logger-set-filename! logfile)
 	(if (string? port) (set! port (string->number port)))
-	(c-start-cogserver (cog-atomspace) port web prompt scmprompt config-path)
+	(c-start-cogserver (cog-atomspace) port web mcp prompt scmprompt config-path)
 )
 
 ; To stop the repl server..

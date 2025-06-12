@@ -65,11 +65,24 @@ static const char* DEFAULT_CONFIG_PATHS[] =
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
         << "If multiple config files are specified, then these are\n"
         << "loaded sequentially, with the values in later files\n"
         << "overwriting the earlier ones. -D Option values override\n"
         << "the options in config files."
+        << "\n"
+        << "Supported options and default values:\n"
+        << "SERVER_PORT = 17001\n"
+        << "WEB_PORT = 18080\n"
+        << "MCP_PORT = 18888\n"
+        << "LOG_FILE = /tmp/cogserver.log\n"
+        << "LOG_LEVEL = info\n"
+        << "LOG_TO_STDOUT = false\n"
+        << "ANSI_PROMPT = ^[[0;32mopencog^[[1;32m> ^[[0m\n"
+        << "PROMPT = opencog> \n"
+        << "ANSI_SCM_PROMPT = ^[[0;34mguile^[[1;34m> ^[[0m\n"
+        << "SCM_PROMPT = guile> \n"
+        << "MODULES = libbuiltinreqs.so, ...\n"
         << std::endl;
 }
 
@@ -103,8 +116,9 @@ int main(int argc, char *argv[])
 
     int console_port = 17001;
     int webserver_port = 18080;
+    int mcp_port = 18888;
 
-    static const char *optString = "cp:w:D:h";
+    static const char *optString = "cp:w:m:D:h";
     int c = 0;
     std::vector<std::string> configFiles;
     std::vector<std::pair<std::string, std::string>> configPairs;
@@ -141,6 +155,8 @@ int main(int argc, char *argv[])
             console_port = atoi(optarg);
         } else if (c == 'w') {
             webserver_port = atoi(optarg);
+        } else if (c == 'm') {
+            mcp_port = atoi(optarg);
         } else {
             // unknown option (or help)
             usage(progname.c_str());
@@ -219,6 +235,17 @@ int main(int argc, char *argv[])
         config().set(optionPair.first, optionPair.second);
     }
 
+    if (config().has("LOG_LEVEL"))
+        logger().set_level(config().get("LOG_LEVEL"));
+    if (config().has("LOG_FILE"))
+        logger().set_filename(config().get("LOG_FILE"));
+    if (config().has("LOG_TO_STDOUT"))
+    {
+        std::string flg = config().get("LOG_TO_STDOUT");
+        if (not ('f' == flg[0] or 'F' == flg[0] or '0' == flg[0]))
+            logger().set_print_to_stdout_flag(true);
+    }
+
     // Start catching signals
     signal(SIGSEGV, sighand);
     signal(SIGBUS, sighand);
@@ -238,6 +265,8 @@ int main(int argc, char *argv[])
         cogserve.enableNetworkServer(console_port);
     if (0 < webserver_port)
         cogserve.enableWebServer(webserver_port);
+    if (0 < mcp_port)
+        cogserve.enableMCPServer(mcp_port);
     cogserve.serverLoop();
     exit(0);
 }

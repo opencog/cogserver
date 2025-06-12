@@ -39,7 +39,7 @@ private:
     static void init_in_module(void*);
     void init(void);
 
-    std::string start_server(AtomSpace*, int, int, const std::string&,
+    std::string start_server(AtomSpace*, int, int, int, const std::string&,
                              const std::string&, const std::string&);
     std::string stop_server(void);
     Handle set_server_space(AtomSpace*);
@@ -119,6 +119,7 @@ void opencog_cogserver_init(void)
 std::string CogServerSCM::start_server(AtomSpace* as,
                                        int telnet_port,
                                        int websocket_port,
+                                       int mcp_port,
                                        const std::string& prompt,
                                        const std::string& scmprompt,
                                        const std::string& cfg)
@@ -134,6 +135,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
         config().load(cfg.c_str(), true);
         telnet_port = config().get_int("SERVER_PORT", telnet_port);
         websocket_port = config().get_int("WEBSOCKET_PORT", websocket_port);
+        mcp_port = config().get_int("MCP_PORT", mcp_port);
     }
 
     // Pass parameters non-locally.
@@ -151,6 +153,8 @@ std::string CogServerSCM::start_server(AtomSpace* as,
         srvr->enableNetworkServer(telnet_port);
     if (0 < websocket_port)
         srvr->enableWebServer(websocket_port);
+    if (0 < mcp_port)
+        srvr->enableMCPServer(mcp_port);
     main_loop = new std::thread(&CogServer::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;
