@@ -235,6 +235,17 @@ int main(int argc, char *argv[])
         config().set(optionPair.first, optionPair.second);
     }
 
+    if (config().has("LOG_LEVEL"))
+        logger().set_level(config().get("LOG_LEVEL"));
+    if (config().has("LOG_FILE"))
+        logger().set_filename(config().get("LOG_FILE"));
+    if (config().has("LOG_TO_STDOUT"))
+    {
+        std::string flg = config().get("LOG_TO_STDOUT");
+        if (not ('f' == flg[0] or 'F' == flg[0] or '0' == flg[0]))
+            logger().set_print_to_stdout_flag(true);
+    }
+
     // Start catching signals
     signal(SIGSEGV, sighand);
     signal(SIGBUS, sighand);
