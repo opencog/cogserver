@@ -79,6 +79,7 @@ protected:
     bool _got_websock_header;
     std::string _url;
 
+    // Handy-dandy flag; not currently used.
     bool _is_mcp_socket;
 
     /**

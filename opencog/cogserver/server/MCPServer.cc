@@ -38,6 +38,7 @@ void MCPServer::OnConnection(void)
 // Called for each newline-terminated line received.
 void MCPServer::OnLine(const std::string& line)
 {
+	logger().debug("[MCPServer] received %s", line.c_str());
 	try
 	{
 		json request = json::parse(line);
@@ -48,6 +49,7 @@ void MCPServer::OnLine(const std::string& line)
 		json params = request.value("params", json::object());
 		json id = request.value("id", json());
 
+		logger().debug("[MCPServer] method %s", method.c_str());
 		json response;
 		response["jsonrpc"] = "2.0";
 		response["id"] = id;
@@ -69,7 +71,10 @@ void MCPServer::OnLine(const std::string& line)
 		} else if (method == "ping") {
 			response["result"] = json::object();
 		}
-		Send(response.dump());
+
+		logger().debug("[MCPServer] replying: %s", response.dump().c_str());
+		// Trailing newline is mandatory; jsonrpc uses line discipline.
+		Send(response.dump() + "\n");
 		return;
 	}
 	catch (const std::exception& e)
