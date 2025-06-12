@@ -207,14 +207,6 @@ std::string CogServer::display_web_stats(void)
         return "Web server is not running";
 }
 
-std::string CogServer::display_mcp_stats(void)
-{
-    if (_mcpServer)
-        return _mcpServer->display_stats();
-    else
-        return "MCP server is not running";
-}
-
 std::string CogServer::stats_legend(void)
 {
 	return
@@ -238,7 +230,7 @@ std::string CogServer::stats_legend(void)
        "  STATE -- several states possible; `iwait` means waiting for input.\n"
        "  NLINE -- number of newlines received by the shell.\n"
        "  LAST-ACTIVITY -- the last time anything was received.\n"
-       "  K -- socket kind. `T` for telnet, `W` for WebSocket.\n"
+       "  K -- socket kind. `T` for telnet, `W` for WebSocket, 'M' for MCP.\n"
        "  U -- use count. The number of active handlers for the socket.\n"
        "  SHEL -- the current shell processor for the socket.\n"
        "  QZ -- size of the unprocessed (pending) request queue.\n"

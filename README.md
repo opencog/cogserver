@@ -65,6 +65,10 @@ This capability is useful in several different ways:
   system. See the main AtomSpace git repo, in the
   [opencog/persist/proxy directory.](https://github.com/opencog/atomspace/tree/master/opencog/persist/proxy)
 
+* **Model Context Protocol.** An experimental MCP interface is being
+  developed; this allows MCP-compatible LLM's to interact with the
+  AtomSpace. The MCP server is located at port 18888.
+
 * The `stats` command provides a `top`-like command for viewing who is
   connected to the Cogserver, and what they are doing. Type `help stats`
   for more info.
@@ -142,11 +146,21 @@ To build and run the CogServer, you need to install the AtomSpace first.
   to `sudo make install` at the end.
 
 The WebSockets server needs the OpenSSL devel environment to be
-installed.
+installed. Optional; if not installed, the cogserver will be built
+without websockets support.
 
 ###### OpenSSL
 > OpenSSL
 > On Debian/Ubuntu, `sudo apt install libssl-dev`
+
+The MCP Model Context Protocol server needs the NLohmann JSON devel
+environment to be installed.  Optional; if not installed, the cogserver
+will be built without MCP support.
+
+###### NLohmann JSON
+> JSON support library
+> On Debian/Ubuntu, `sudo apt install nlohmann-json3-dev`
+
 
 Unit tests
 ----------
