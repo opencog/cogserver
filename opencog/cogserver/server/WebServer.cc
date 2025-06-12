@@ -116,10 +116,9 @@ std::string WebServer::html_stats(void)
 		"<h2>CogServer Stats</h2>"
 		"<pre>\n";
 	response += cogserver().display_web_stats();
-	response += cogserver().display_mcp_stats();
 	response +=
 		"</pre>"
-		"<h2>Stats Legend</h2>"
+		"<h2>CogServer Stats Legend</h2>"
 		"<pre>";
 	response += CogServer::stats_legend();
 	response += "</pre></body></html>";

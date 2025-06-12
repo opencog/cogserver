@@ -77,7 +77,7 @@ public:
      * configures the Socket to use line protocol.
      */
     ConsoleSocket(void);
-    ~ConsoleSocket();
+    virtual ~ConsoleSocket();
 
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
     void put() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count--; _in_use_cv.notify_all(); }

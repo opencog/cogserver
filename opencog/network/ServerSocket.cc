@@ -151,7 +151,7 @@ std::string ServerSocket::connection_stats(void)
     char bf[132];
     snprintf(bf, 132, "%s %8d %s %5zd %s %c",
         sbuff, _tid, _status, _line_count, abuff,
-        _is_websocket?'W':'T');
+        _is_websocket?'W':(_is_mcp_socket?'M':'T'));
 
     return bf;
 }
