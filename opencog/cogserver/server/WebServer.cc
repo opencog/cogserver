@@ -26,7 +26,10 @@ WebServer::WebServer(void) :
 
 WebServer::~WebServer()
 {
-	logger().info("Closed WebSocket Shell");
+	// Log this as 'debug' not 'info', due to nuisance websocket
+	// traffic coming from systemd which pings it every 5 seconds.
+	// Or maybe its the gnome dbus or soething like that.
+	logger().debug("Closed WebSocket Shell");
 }
 
 // ==================================================================
