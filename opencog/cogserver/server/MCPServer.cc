@@ -7,17 +7,18 @@
 
 #include <string>
 
+#include <mcp/json.hpp>
+
 #include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
-#include <opencog/util/misc.h>
 
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
 
 using namespace opencog;
+using namespace nlohmann;
 
-MCPServer::MCPServer(void) :
-	_request(nullptr)
+MCPServer::MCPServer(void)
 {
 }
 
@@ -37,6 +38,51 @@ void MCPServer::OnConnection(void)
 // Called for each newline-terminated line received.
 void MCPServer::OnLine(const std::string& line)
 {
+	try
+	{
+		json request = json::parse(line);
+		if (!request.contains("jsonrpc") || request["jsonrpc"] != "2.0")
+			return; // Invalid JSON-RPC
+
+		std::string method = request.value("method", "");
+		json params = request.value("params", json::object());
+		json id = request.value("id", json());
+
+		json response;
+		response["jsonrpc"] = "2.0";
+		response["id"] = id;
+		if (method == "initialize") {
+			response["result"] = {
+				{"protocolVersion", "2024-11-05"},
+				{"capabilities", {
+					{"tools", json::object()},
+					{"resources", json::object()}
+				}},
+				{"serverInfo", {
+					{"name", "CogServer MCP"},
+					{"version", "0.1.0"}
+				}}
+			};
+		} else if (method == "initialized") {
+			// Notification - no response
+			return;
+		} else if (method == "ping") {
+			response["result"] = json::object();
+		}
+		Send(response.dump());
+		return;
+	}
+	catch (const std::exception& e)
+	{
+		json error_response;
+		error_response["jsonrpc"] = "2.0";
+		error_response["id"] = json();
+		error_response["error"] = {
+			{"code", -32700},
+			{"message", "Parse error: " + std::string(e.what())}
+		};
+		Send(error_response.dump());
+	}
 }
 
 // ==================================================================

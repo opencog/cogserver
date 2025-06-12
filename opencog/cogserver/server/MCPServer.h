@@ -25,7 +25,6 @@ namespace opencog
 class MCPServer : public ConsoleSocket
 {
 private:
-	Request* _request;
 
 protected:
 	virtual void OnConnection(void);
