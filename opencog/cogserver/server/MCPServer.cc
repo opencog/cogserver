@@ -9,7 +9,7 @@
 #include <string>
 
 #if HAVE_MCP
-#include <mcp/json.hpp>
+#include <nlohmann/json.hpp>
 #endif // HAVE_MCP
 
 #include <opencog/util/exceptions.h>

@@ -142,11 +142,21 @@ To build and run the CogServer, you need to install the AtomSpace first.
   to `sudo make install` at the end.
 
 The WebSockets server needs the OpenSSL devel environment to be
-installed.
+installed. Optional; if not installed, the cogserver will be built
+without websockets support.
 
 ###### OpenSSL
 > OpenSSL
 > On Debian/Ubuntu, `sudo apt install libssl-dev`
+
+The MCP Model Context Protocol server needs the NLohmann JSON devel
+environment to be installed.  Optional; if not installed, the cogserver
+will be built without MCP support.
+
+###### NLohmann JSON
+> JSON support library
+> On Debian/Ubuntu, `sudo apt install nlohmann-json3-dev`
+
 
 Unit tests
 ----------

@@ -16,6 +16,8 @@ TARGET_LINK_LIBRARIES(server
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}
 	${OPENSSL_LIBRARIES}
+	# nlohmann_json::nlohmann_json
+	${nlohmann_json_LIBRARIES}
 	dl
 )
 

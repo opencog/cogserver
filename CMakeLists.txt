@@ -120,15 +120,13 @@ ELSE (OPENSSL_FOUND)
 	MESSAGE(STATUS "OpenSSL missing: needed for WebSockets.")
 ENDIF (OPENSSL_FOUND)
 
-# FIND_PACKAGE(MCP)
-# SET(MCP_FOUND 1)
-IF (MCP_FOUND)
+FIND_PACKAGE(nlohmann_json)
+IF (nlohmann_json_FOUND)
 	ADD_DEFINITIONS(-DHAVE_MCP=1)
 	SET(HAVE_MCP 1)
-ELSE (MCP_FOUND)
+ELSE (nlohmann_json_FOUND)
 	MESSAGE(STATUS "MCP missing: needed for Model Context Protocol support.")
-ENDIF (MCP_FOUND)
-
+ENDIF (nlohmann_json_FOUND)
 
 
 # ----------------------------------------------------------
