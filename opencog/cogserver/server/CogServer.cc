@@ -41,6 +41,7 @@ CogServer::CogServer(void) :
     BaseServer(),
     _consoleServer(nullptr),
     _webServer(nullptr),
+    _mcpServer(nullptr),
     _running(false)
 {
 }
@@ -49,6 +50,7 @@ CogServer::CogServer(AtomSpacePtr as) :
     BaseServer(as),
     _consoleServer(nullptr),
     _webServer(nullptr),
+    _mcpServer(nullptr),
     _running(false)
 {
 }
@@ -102,7 +104,7 @@ void CogServer::enableWebServer(int port)
 /// Open the given port number for MCP service.
 void CogServer::enableMCPServer(int port)
 {
-    if (_consoleServer) return;
+    if (_mcpServer) return;
     _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
 
     auto make_console = [](void)->ServerSocket* {
@@ -151,6 +153,8 @@ void CogServer::serverLoop()
 
     // Prevent the Network server from accepting any more connections,
     // and from queing any more Requests. I think. This might be racey.
+    if (_mcpServer)
+        _mcpServer->stop();
     if (_webServer)
         _webServer->stop();
     if (_consoleServer)
@@ -164,6 +168,8 @@ void CogServer::serverLoop()
     // doing this in other threads, e.g. the thread that calls stop()
     // or the thread that calls disableNetworkServer() will lead to
     // races.
+    if (_mcpServer) delete _mcpServer;
+    _mcpServer = nullptr;
     if (_webServer) delete _webServer;
     _webServer = nullptr;
     if (_consoleServer) delete _consoleServer;
@@ -194,6 +200,14 @@ std::string CogServer::display_web_stats(void)
         return _webServer->display_stats();
     else
         return "Web server is not running";
+}
+
+std::string CogServer::display_mcp_stats(void)
+{
+    if (_mcpServer)
+        return _mcpServer->display_stats();
+    else
+        return "MCP server is not running";
 }
 
 std::string CogServer::stats_legend(void)
