@@ -65,11 +65,24 @@ static const char* DEFAULT_CONFIG_PATHS[] =
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
         << "If multiple config files are specified, then these are\n"
         << "loaded sequentially, with the values in later files\n"
         << "overwriting the earlier ones. -D Option values override\n"
         << "the options in config files."
+        << "\n"
+        << "Supported options and default values:\n"
+        << "SERVER_PORT = 17001\n"
+        << "WEB_PORT = 18080\n"
+        << "MCP_PORT = 18888\n"
+        << "LOG_FILE = /tmp/cogserver.log\n"
+        << "LOG_LEVEL = info\n"
+        << "LOG_TO_STDOUT = false\n"
+        << "ANSI_PROMPT = ^[[0;32mopencog^[[1;32m> ^[[0m\n"
+        << "PROMPT = opencog> \n"
+        << "ANSI_SCM_PROMPT = ^[[0;34mguile^[[1;34m> ^[[0m\n"
+        << "SCM_PROMPT = guile> \n"
+        << "MODULES = libbuiltinreqs.so, ...\n"
         << std::endl;
 }
 

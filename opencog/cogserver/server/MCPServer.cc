@@ -24,7 +24,7 @@ MCPServer::MCPServer(void)
 
 MCPServer::~MCPServer()
 {
-	logger().info("Closed MCP Server");
+	logger().info("MCP Client disconnected");
 }
 
 // ==================================================================
@@ -32,7 +32,7 @@ MCPServer::~MCPServer()
 // Called before any data is sent/received.
 void MCPServer::OnConnection(void)
 {
-	logger().info("Opened MCP Shell");
+	logger().info("MCP Client connected");
 }
 
 // Called for each newline-terminated line received.
