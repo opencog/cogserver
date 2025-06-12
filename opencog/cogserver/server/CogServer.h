@@ -54,6 +54,7 @@ class CogServer :
 protected:
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
+    NetworkServer* _mcpServer;
     bool _running;
 
     /** Protected; singleton instance! Bad things happen when there is
@@ -88,11 +89,16 @@ public:
      *  parameter SERVER_PORT */
     virtual void enableNetworkServer(int port=17001);
 
+	 /** Starts the webscokets server. */
     virtual void enableWebServer(int port=18080);
+
+	 /** Starts the MCP Model Context Protocol server. */
+    virtual void enableMCPServer(int port=18888);
 
     /** Stops the network server and closes all the open server sockets. */
     virtual void disableNetworkServer(void);
     virtual void disableWebServer(void);
+    virtual void disableMCPServer(void);
 
     bool running(void) { return _running; }
 

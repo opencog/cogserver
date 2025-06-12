@@ -34,7 +34,7 @@ WebServer::~WebServer()
 // Called before any data is sent/received.
 void WebServer::OnConnection(void)
 {
-	// If the the socket didn't connect as a websocet, then just
+	// If the the socket didn't connect as a websocket, then just
 	// report the stats as an HTML page.
 	if (not _got_websock_header)
 	{

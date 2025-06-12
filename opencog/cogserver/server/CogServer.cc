@@ -22,6 +22,7 @@
 
 #include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/cogserver/server/WebServer.h>
+#include <opencog/cogserver/server/MCPServer.h>
 
 #include "CogServer.h"
 #include "BaseServer.h"
@@ -98,6 +99,22 @@ void CogServer::enableWebServer(int port)
 #endif // HAVE_SSL
 }
 
+/// Open the given port number for MCP service.
+void CogServer::enableMCPServer(int port)
+{
+    if (_consoleServer) return;
+    _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
+
+    auto make_console = [](void)->ServerSocket* {
+        ServerSocket* ss = new MCPServer();
+        ss->act_as_mcp();
+        return ss;
+    };
+    _mcpServer->run(make_console);
+    _running = true;
+    logger().info("MCP server running on port %d", port);
+}
+
 void CogServer::disableNetworkServer()
 {
     // No-op for backwards-compat. Actual cleanup performed on
@@ -105,6 +122,10 @@ void CogServer::disableNetworkServer()
 }
 
 void CogServer::disableWebServer()
+{
+}
+
+void CogServer::disableMCPServer()
 {
 }
 

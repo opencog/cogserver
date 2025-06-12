@@ -103,8 +103,9 @@ int main(int argc, char *argv[])
 
     int console_port = 17001;
     int webserver_port = 18080;
+    int mcp_port = 18888;
 
-    static const char *optString = "cp:w:D:h";
+    static const char *optString = "cp:w:m:D:h";
     int c = 0;
     std::vector<std::string> configFiles;
     std::vector<std::pair<std::string, std::string>> configPairs;
@@ -141,6 +142,8 @@ int main(int argc, char *argv[])
             console_port = atoi(optarg);
         } else if (c == 'w') {
             webserver_port = atoi(optarg);
+        } else if (c == 'm') {
+            mcp_port = atoi(optarg);
         } else {
             // unknown option (or help)
             usage(progname.c_str());
@@ -238,6 +241,8 @@ int main(int argc, char *argv[])
         cogserve.enableNetworkServer(console_port);
     if (0 < webserver_port)
         cogserve.enableWebServer(webserver_port);
+    if (0 < mcp_port)
+        cogserve.enableMCPServer(mcp_port);
     cogserve.serverLoop();
     exit(0);
 }

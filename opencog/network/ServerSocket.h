@@ -79,6 +79,8 @@ protected:
     bool _got_websock_header;
     std::string _url;
 
+    bool _is_mcp_socket;
+
     /**
      * Connection callback: called whenever a new connection arrives
      */
@@ -105,6 +107,7 @@ public:
     ServerSocket(void);
     virtual ~ServerSocket();
     void act_as_websocket(void) { _is_websocket = true; }
+    void act_as_mcp(void) { _is_mcp_socket = true; }
 
     void set_connection(boost::asio::ip::tcp::socket*);
     void handle_connection(void);
