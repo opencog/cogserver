@@ -2,10 +2,12 @@
  * @file mcp-checker.cc
  * @brief Demo MCP client connecting to server via TCP
  * 
- * This example shows how to connect to an MCP server via TCP socket
- * connection, and perform some basic MCP validation on that server.
+ * This implements a simple MCP test client that can be used to verify
+ * that the MCP network server is available, and is responding to
+ * commands.  It will list the tools and resources provided by the
+ * MCP server. Aim it at a running instance of the CogServer.
  *
- * (The example was created by Claude)
+ * (This code was created by Claude.)
  */
 
 #include <nlohmann/json.hpp>
@@ -266,7 +268,7 @@ void print_usage(const char* program_name) {
               << "  " << program_name << " --host localhost --port 18888\n"
               << "\n"
               << "This client connects to an existing MCP server running on the specified\n"
-              << "host and port using only json.hpp library.\n";
+              << "host and port, and lists the available tools and resources.\n";
 }
 
 int main(int argc, char* argv[]) {

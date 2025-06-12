@@ -65,6 +65,10 @@ This capability is useful in several different ways:
   system. See the main AtomSpace git repo, in the
   [opencog/persist/proxy directory.](https://github.com/opencog/atomspace/tree/master/opencog/persist/proxy)
 
+* **Model Context Protocol.** An experimental MCP interface is being
+  developed; this allows MCP-compatible LLM's to interact with the
+  AtomSpace. The MCP server is located at port 18888.
+
 * The `stats` command provides a `top`-like command for viewing who is
   connected to the Cogserver, and what they are doing. Type `help stats`
   for more info.

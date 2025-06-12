@@ -15,6 +15,14 @@ shows how to interact with a running cogserver.  Just load the
 All the actual network i/o is done with the
 [script.js](./websockets/script.js) javascript file.
 
+The [mcp](./mcp) subdirectory contains a Model Context Protocol (MCP)
+checker that can connecto to any MCP server, verify that it responds to
+commands, and then list the tools and resources provided by that server.
+By default, it checks `localhost:18888`, which is where the CogServer
+MCP port is located. Use the `--port` and `--host` flags to specify
+a different location. The binary is in the
+[`build/examples/mcp`](../build/examples/mcp) directory.
+
 The [module](./module) subdirectory provides a template for creating
 a custom module. Most developers should NOT be interested in this
 example! If you want to create a new shell, similar to the python,
