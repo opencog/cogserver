@@ -104,6 +104,7 @@ void CogServer::enableWebServer(int port)
 /// Open the given port number for MCP service.
 void CogServer::enableMCPServer(int port)
 {
+#if HAVE_MCP
     if (_mcpServer) return;
     _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
 
@@ -115,6 +116,10 @@ void CogServer::enableMCPServer(int port)
     _mcpServer->run(make_console);
     _running = true;
     logger().info("MCP server running on port %d", port);
+#else
+    printf("CogServer compiled without MCP Support.\n");
+    logger().info("CogServer compiled without MCP Support.");
+#endif // HAVE_SSL
 }
 
 void CogServer::disableNetworkServer()

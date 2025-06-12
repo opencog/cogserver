@@ -5,9 +5,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+#include <cstddef>
 #include <string>
 
+#if HAVE_MCP
 #include <mcp/json.hpp>
+#endif // HAVE_MCP
 
 #include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
@@ -16,7 +19,9 @@
 #include <opencog/cogserver/server/MCPServer.h>
 
 using namespace opencog;
+#if HAVE_MCP
 using namespace nlohmann;
+#endif // HAVE_MCP
 
 MCPServer::MCPServer(void)
 {
@@ -38,6 +43,7 @@ void MCPServer::OnConnection(void)
 // Called for each newline-terminated line received.
 void MCPServer::OnLine(const std::string& line)
 {
+#if HAVE_MCP
 	logger().debug("[MCPServer] received %s", line.c_str());
 	try
 	{
@@ -86,8 +92,9 @@ void MCPServer::OnLine(const std::string& line)
 			{"code", -32700},
 			{"message", "Parse error: " + std::string(e.what())}
 		};
-		Send(error_response.dump());
+		Send(error_response.dump() + "\n");
 	}
+#endif //HAVE_MCP
 }
 
 // ==================================================================
