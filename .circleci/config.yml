@@ -35,6 +35,13 @@ jobs:
             cd /ws/atomspace/build && cmake .. && make -j2 && make -j2 install
             ldconfig
       - run:
+          name: Checkout AtomSpace Storage
+          command: |
+            git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-storage /ws/atomspace-storage
+            mkdir -p /ws/atomspace-storage/build
+            cd /ws/atomspace-storage/build && cmake .. && make -j2 && make -j2 install
+            ldconfig
+      - run:
           name: Checkout RocksStorageNode
           command: git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-rocks /ws/atomspace-rocks
       - run:
