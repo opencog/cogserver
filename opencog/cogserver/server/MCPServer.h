@@ -12,6 +12,7 @@
 
 #include <opencog/network/ConsoleSocket.h>
 #include <opencog/cogserver/server/Request.h>
+#include <opencog/cogserver/shell/McpEval.h>
 
 namespace opencog
 {
@@ -25,6 +26,7 @@ namespace opencog
 class MCPServer : public ConsoleSocket
 {
 private:
+	McpEval* _eval;
 
 protected:
 	virtual void OnConnection(void);

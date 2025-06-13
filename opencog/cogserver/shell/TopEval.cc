@@ -45,7 +45,7 @@ TopEval::~TopEval()
 
 /* ============================================================== */
 /**
- * Evaluate an basic Javascript/JSON commands.
+ * Evaluate commands appropriate for top.
  */
 void TopEval::eval_expr(const std::string &expr)
 {

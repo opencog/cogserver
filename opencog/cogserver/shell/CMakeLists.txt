@@ -75,6 +75,34 @@ TARGET_LINK_LIBRARIES(top-shell
 	${COGUTIL_LIBRARY}
 )
 
+IF (HAVE_MCP)
+	ADD_LIBRARY (mcp-eval SHARED
+		McpEval.cc
+	)
+	TARGET_LINK_LIBRARIES(mcp-eval
+		# nlohmann_json::nlohmann_json
+		${nlohmann_json_LIBRARIES}
+	)
+
+	INSTALL (TARGETS mcp-eval
+		EXPORT CogServerTargets
+		DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+	)
+
+	ADD_LIBRARY (mcp-shell SHARED
+		McpShell.cc
+		McpShellModule.cc
+	)
+
+	TARGET_LINK_LIBRARIES(mcp-shell
+		mcp-eval
+		network
+		server
+		${ATOMSPACE_LIBRARY}
+		${COGUTIL_LIBRARY}
+	)
+ENDIF (HAVE_MCP)
+
 # ---------------------- install targets
 
 INSTALL (TARGETS
@@ -89,3 +117,7 @@ IF (HAVE_CYTHON)
 		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
 ENDIF (HAVE_CYTHON)
 
+IF (HAVE_MCP)
+	INSTALL (TARGETS mcp-shell
+		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+ENDIF (HAVE_MCP)
