@@ -40,7 +40,7 @@ This capability is useful in several different ways:
   The only difference is that prompts are not sent. For example, the
   python API is available at `ws://localhost:18080/py`.  At this time,
   encryption is not supported, so `wss://` URL's will not work.
-  See the [websocket example](./examples/websocket/demo.html) for more.
+  See the [websocket example](./examples/websockets/demo.html) for more.
 
 * **JSON-style interface.** This is useful for creating JavaScript-powered
   visualizers and user interfaces. Suitable for people who are more

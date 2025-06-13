@@ -44,7 +44,7 @@ void MCPServer::OnConnection(void)
 void MCPServer::OnLine(const std::string& line)
 {
 #if HAVE_MCP
-	logger().debug("[MCPServer] received %s", line.c_str());
+	logger().info("[MCPServer] received %s", line.c_str());
 	try
 	{
 		json request = json::parse(line);
@@ -76,9 +76,77 @@ void MCPServer::OnLine(const std::string& line)
 			return;
 		} else if (method == "ping") {
 			response["result"] = json::object();
+		} else if (method == "tools/list") {
+			response["result"] = {
+				{"tools", {
+					{
+						{"name", "echo"},
+						{"description", "Echo the input text"},
+						{"inputSchema", {
+							{"type", "object"},
+							{"properties", {
+								{"text", {
+									{"type", "string"},
+									{"description", "Text to echo"}
+								}}
+							}},
+							{"required", {"text"}}
+						}}
+					},
+					{
+						{"name", "time"},
+						{"description", "Get current time"},
+						{"inputSchema", {
+							{"type", "object"},
+							{"properties", json::object()}
+						}}
+					}
+				}}
+			};
+		} else if (method == "resources/list") {
+			response["result"] = {
+				{"resources", json::array()}
+			};
+		} else if (method == "tools/call") {
+			std::string tool_name = params.value("name", "");
+			json arguments = params.value("arguments", json::object());
+
+			if (tool_name == "echo") {
+				std::string text = arguments.value("text", "");
+				response["result"] = {
+					{"content", {
+						{
+							{"type", "text"},
+							{"text", "Echo: " + text}
+						}
+					}}
+				};
+			} else if (tool_name == "time") {
+				auto now = std::chrono::system_clock::now();
+				auto time_t = std::chrono::system_clock::to_time_t(now);
+				response["result"] = {
+					{"content", {
+						{
+							{"type", "text"},
+							{"text", std::ctime(&time_t)}
+						}
+					}}
+				};
+			} else {
+				response["error"] = {
+					{"code", -32601},
+					{"message", "Method not found: " + tool_name}
+				};
+			}
+		} else {
+			response["error"] = {
+				{"code", -32601},
+				{"message", "Method not found: " + method}
+			};
 		}
 
-		logger().debug("[MCPServer] replying: %s", response.dump().c_str());
+		logger().info("[MCPServer] replying: %s", response.dump().c_str());
+
 		// Trailing newline is mandatory; jsonrpc uses line discipline.
 		Send(response.dump() + "\n");
 		return;
@@ -92,6 +160,7 @@ void MCPServer::OnLine(const std::string& line)
 			{"code", -32700},
 			{"message", "Parse error: " + std::string(e.what())}
 		};
+		logger().info("[MCPServer] error reply: %s", error_response.dump().c_str());
 		Send(error_response.dump() + "\n");
 	}
 #endif //HAVE_MCP
