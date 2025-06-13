@@ -42,6 +42,8 @@ class McpEval : public GenericEval
 		McpEval(const AtomSpacePtr&);
 		bool _started;
 		bool _done;
+		std::string _result;
+		AtomSpacePtr _atomspace;
 
 	public:
 		virtual ~McpEval();
