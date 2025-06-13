@@ -83,7 +83,7 @@ void McpEval::eval_expr(const std::string &expr)
 		json response;
 		response["jsonrpc"] = "2.0";
 		response["id"] = id;
-		
+
 		if (method == "initialize") {
 			response["result"] = {
 				{"protocolVersion", "2024-11-05"},
