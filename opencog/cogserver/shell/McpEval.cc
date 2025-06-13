@@ -96,7 +96,7 @@ void McpEval::eval_expr(const std::string &expr)
 					{"version", "0.1.0"}
 				}}
 			};
-		} else if (method == "initialized") {
+		} else if (method == "notifications/initialized") {
 			// Notification - no response
 			_result = "";
 			return;
