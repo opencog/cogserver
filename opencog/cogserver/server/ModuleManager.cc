@@ -346,6 +346,7 @@ void ModuleManager::loadModules(CogServer& cs)
             "libscheme-shell.so, "
             "libsexpr-shell.so, "
             "libjson-shell.so, "
+            "libmcp-shell.so, "
             "libpy-shell.so";
 
     std::vector<std::string> modules;
