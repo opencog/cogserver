@@ -29,7 +29,6 @@
 #endif // HAVE_MCP
 
 #include <opencog/util/Logger.h>
-#include <opencog/cogserver/server/CogServer.h>
 #include "McpEval.h"
 
 using namespace opencog;

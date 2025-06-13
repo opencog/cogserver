@@ -13,11 +13,13 @@
 
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
+#include <opencog/cogserver/shell/McpEval.h>
 
 using namespace opencog;
 
 MCPServer::MCPServer(void)
 {
+	_eval = nullptr;
 }
 
 MCPServer::~MCPServer()
@@ -28,36 +30,35 @@ MCPServer::~MCPServer()
 // ==================================================================
 
 // Called before any data is sent/received.
+// We arrive here if MCP is NOT being started from a shell.
+// This is in fact the usual or intended usage, as the only MCP shell
+// users will be coders who are debugging stuff. But there's a catch:
+// the shell automatically provides an evaluator. No shell means no
+// evaluator, so we have to make one for ourself.
+//
 void MCPServer::OnConnection(void)
 {
 	logger().info("MCP Client connected");
+
+	// If there's no shell, then set up an evaluator for ourself.
+	if (nullptr == _shell)
+		_eval = McpEval::get_evaluator(cogserver().getAtomSpace());
 }
 
 // Called for each newline-terminated line received.
 void MCPServer::OnLine(const std::string& line)
 {
-#if 0
-	if (_request)
+	// If there's a shell, just use the shell evaluator.
+	if (_shell)
 	{
-		// Use the request mechanism to get a fully configured
-		// shell. This is a hang-over from the telnet interfaces,
-		// where input strings become Requests, which, when executed
-		// are looked up in the module system, passed to the correct
-		// module, and then configured to send replies on this socket.
-		// It works, so don't mess with it.
-		std::list<std::string> params;
-		params.push_back("hush");
-		_request->setParameters(params);
-		_request->set_console(this);
-		_request->execute();
-		delete _request;
-		_request = nullptr;
-
-		// Disable line discipline
-		// _shell->discipline(false);
+		_shell->eval(line);
+		return;
 	}
-#endif
-	_shell->eval(line);
+
+	// No shell? Do it ourself.
+	_eval->begin_eval();
+	_eval->eval_expr(line);
+	Send(_eval->poll_result());
 }
 
 // ==================================================================

@@ -25,6 +25,7 @@
 
 #include <string>
 #include <opencog/eval/GenericEval.h>
+#include <opencog/atomspace/AtomSpace.h>
 
 /**
  * The McpEval class implements a the generic evaluator API for
