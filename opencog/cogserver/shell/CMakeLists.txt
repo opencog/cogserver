@@ -75,6 +75,21 @@ TARGET_LINK_LIBRARIES(top-shell
 	${COGUTIL_LIBRARY}
 )
 
+IF (HAVE_MCP)
+	ADD_LIBRARY (mcp-shell SHARED
+		McpEval.cc
+		McpShell.cc
+		McpShellModule.cc
+	)
+
+	TARGET_LINK_LIBRARIES(mcp-shell
+		network
+		server
+		${ATOMSPACE_LIBRARY}
+		${COGUTIL_LIBRARY}
+	)
+ENDIF (HAVE_MCP)
+
 # ---------------------- install targets
 
 INSTALL (TARGETS
@@ -89,3 +104,7 @@ IF (HAVE_CYTHON)
 		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
 ENDIF (HAVE_CYTHON)
 
+IF (HAVE_MCP)
+	INSTALL (TARGETS mcp-shell
+		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+ENDIF (HAVE_MCP)

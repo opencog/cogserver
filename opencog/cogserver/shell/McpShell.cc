@@ -20,10 +20,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <opencog/persist/mcp/McpEval.h>
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 
+#include "McpEval.h"
 #include "McpShell.h"
 
 using namespace opencog;
