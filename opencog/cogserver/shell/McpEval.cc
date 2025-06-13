@@ -97,8 +97,14 @@ void McpEval::eval_expr(const std::string &expr)
 				}}
 			};
 		} else if (method == "notifications/initialized") {
-			// Notification - no response
+			// The echo proxy has trouble with messages that get no response.
+			// So response for the heck of it
+			response["result"] = json::object();
+		} else if (method == "initialized") {
+			// Notification - no response ... but this is broken for the
+			// echo proxies.
 			_result = "";
+			_done = true;
 			return;
 		} else if (method == "ping") {
 			response["result"] = json::object();
