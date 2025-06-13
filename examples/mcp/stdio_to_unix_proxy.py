@@ -3,7 +3,7 @@
 # stdio_to_unix_proxy.py
 #
 # Proxy to connect stdio to a unix socket. This is used to evade network
-# connectivity issues that can arise due to techical issues (bugs,
+# connectivity issues that can arise due to technical issues (bugs,
 # actually; see https://github.com/anthropics/claude-code/issues/1536)
 #
 # Reads from stdin, copies to the Unix domain socket /tmp/echo_socket
