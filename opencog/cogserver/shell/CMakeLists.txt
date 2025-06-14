@@ -80,8 +80,10 @@ TARGET_LINK_LIBRARIES(top-shell
 IF (HAVE_MCP)
 	ADD_LIBRARY (mcp-eval SHARED
 		McpEval.cc
+		McpPlugEcho.cc
 	)
 	TARGET_LINK_LIBRARIES(mcp-eval
+		${ATOMSPACE_STORAGE_LIBRARIES}
 		# nlohmann_json::nlohmann_json
 		${nlohmann_json_LIBRARIES}
 	)

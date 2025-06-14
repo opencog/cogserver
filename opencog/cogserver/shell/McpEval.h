@@ -24,8 +24,12 @@
 #define _OPENCOG_MCP_EVAL_H
 
 #include <string>
+#include <memory>
+#include <unordered_map>
+#include <vector>
 #include <opencog/eval/GenericEval.h>
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/persist/json/McpPlugin.h>
 
 /**
  * The McpEval class implements a the generic evaluator API for
@@ -46,6 +50,10 @@ class McpEval : public GenericEval
 		std::string _result;
 		AtomSpacePtr _atomspace;
 
+		// Plugin management
+		std::vector<std::shared_ptr<McpPlugin>> _plugins;
+		std::unordered_map<std::string, std::shared_ptr<McpPlugin>> _tool_to_plugin;
+
 	public:
 		virtual ~McpEval();
 
@@ -54,6 +62,10 @@ class McpEval : public GenericEval
 		virtual std::string poll_result(void);
 
 		virtual void interrupt(void);
+
+		// Plugin registration
+		void register_plugin(std::shared_ptr<McpPlugin> plugin);
+		void unregister_plugin(std::shared_ptr<McpPlugin> plugin);
 
 		// Return per-thread, per-atomspace singleton
 		static McpEval* get_evaluator(const AtomSpacePtr&);
