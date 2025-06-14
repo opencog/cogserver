@@ -209,11 +209,16 @@ void McpEval::interrupt(void)
 	_caught_error = true;
 }
 
+#include "McpPlugEcho.h"
+
 // One evaluator per thread.  This allows multiple users to each
 // have thier own evaluator.
 McpEval* McpEval::get_evaluator(const AtomSpacePtr& asp)
 {
 	static thread_local McpEval* evaluator = new McpEval(asp);
+
+	auto echo_plugin = std::make_shared<McpPlugEcho>();
+	evaluator->register_plugin(echo_plugin);
 
 	// The eval_dtor runs when this thread is destroyed.
 	class eval_dtor {
