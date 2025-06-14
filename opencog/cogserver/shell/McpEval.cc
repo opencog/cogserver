@@ -30,8 +30,8 @@
 #endif // HAVE_MCP
 
 #include <opencog/util/Logger.h>
+#include <opencog/persist/json/McpPlugin.h>
 #include "McpEval.h"
-#include "McpPlugin.h"
 
 using namespace opencog;
 using namespace std::chrono_literals;
