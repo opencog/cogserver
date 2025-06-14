@@ -59,7 +59,7 @@ public:
      * @param arguments The JSON arguments for the tool
      * @return JSON response with result or error
      */
-    virtual nlohmann::json invoke_tool(const std::string& tool_name, 
+    virtual nlohmann::json invoke_tool(const std::string& tool_name,
                                       const nlohmann::json& arguments) const = 0;
 #endif // HAVE_MCP
 };

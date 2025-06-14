@@ -49,7 +49,7 @@ class McpEval : public GenericEval
 		bool _done;
 		std::string _result;
 		AtomSpacePtr _atomspace;
-		
+
 		// Plugin management
 		std::vector<std::shared_ptr<McpPlugin>> _plugins;
 		std::unordered_map<std::string, std::shared_ptr<McpPlugin>> _tool_to_plugin;
@@ -62,7 +62,7 @@ class McpEval : public GenericEval
 		virtual std::string poll_result(void);
 
 		virtual void interrupt(void);
-		
+
 		// Plugin registration
 		void register_plugin(std::shared_ptr<McpPlugin> plugin);
 		void unregister_plugin(std::shared_ptr<McpPlugin> plugin);

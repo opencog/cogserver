@@ -112,7 +112,7 @@ void McpEval::eval_expr(const std::string &expr)
 			response["result"] = json::object();
 		} else if (method == "tools/list") {
 			json all_tools = json::array();
-			
+
 			// Collect tools from all registered plugins
 			for (const auto& plugin : _plugins) {
 				json plugin_tools = plugin->get_tool_descriptions();
@@ -120,7 +120,7 @@ void McpEval::eval_expr(const std::string &expr)
 					all_tools.push_back(tool);
 				}
 			}
-			
+
 			response["result"] = {
 				{"tools", all_tools}
 			};
@@ -137,7 +137,7 @@ void McpEval::eval_expr(const std::string &expr)
 			if (it != _tool_to_plugin.end()) {
 				// Invoke the tool through the plugin
 				json tool_result = it->second->invoke_tool(tool_name, arguments);
-				
+
 				// Check if the plugin returned an error
 				if (tool_result.contains("error")) {
 					response["error"] = tool_result["error"];
@@ -234,9 +234,9 @@ void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
 {
 #if HAVE_MCP
 	if (!plugin) return;
-	
+
 	_plugins.push_back(plugin);
-	
+
 	// Map each tool to its plugin
 	json tools = plugin->get_tool_descriptions();
 	for (const auto& tool : tools) {
@@ -253,13 +253,13 @@ void McpEval::unregister_plugin(std::shared_ptr<McpPlugin> plugin)
 {
 #if HAVE_MCP
 	if (!plugin) return;
-	
+
 	// Remove from plugins list
 	_plugins.erase(
 		std::remove(_plugins.begin(), _plugins.end(), plugin),
 		_plugins.end()
 	);
-	
+
 	// Remove tool mappings
 	auto it = _tool_to_plugin.begin();
 	while (it != _tool_to_plugin.end()) {

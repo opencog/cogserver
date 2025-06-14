@@ -33,7 +33,7 @@ using namespace nlohmann;
 json McpPlugEcho::get_tool_descriptions() const
 {
     json tools = json::array();
-    
+
     // Echo tool description
     tools.push_back({
         {"name", "echo"},
@@ -49,7 +49,7 @@ json McpPlugEcho::get_tool_descriptions() const
             {"required", {"text"}}
         }}
     });
-    
+
     // Time tool description
     tools.push_back({
         {"name", "time"},
@@ -59,15 +59,15 @@ json McpPlugEcho::get_tool_descriptions() const
             {"properties", json::object()}
         }}
     });
-    
+
     return tools;
 }
 
-json McpPlugEcho::invoke_tool(const std::string& tool_name, 
+json McpPlugEcho::invoke_tool(const std::string& tool_name,
                              const json& arguments) const
 {
     json response;
-    
+
     if (tool_name == "echo") {
         std::string text = arguments.value("text", "");
         response["content"] = {
@@ -92,7 +92,7 @@ json McpPlugEcho::invoke_tool(const std::string& tool_name,
             {"message", "Tool not found in McpPlugEcho: " + tool_name}
         };
     }
-    
+
     return response;
 }
 

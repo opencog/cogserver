@@ -51,7 +51,7 @@ public:
      * - echo: Returns the input text prefixed with "Echo: "
      * - time: Returns the current system time
      */
-    virtual nlohmann::json invoke_tool(const std::string& tool_name, 
+    virtual nlohmann::json invoke_tool(const std::string& tool_name,
                                       const nlohmann::json& arguments) const override;
 #endif // HAVE_MCP
 };
