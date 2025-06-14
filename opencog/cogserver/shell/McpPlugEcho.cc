@@ -70,16 +70,15 @@ std::string McpPlugEcho::get_tool_descriptions() const
 }
 
 std::string McpPlugEcho::invoke_tool(const std::string& tool_name,
-                                    const std::string& arguments) const
+                                     const std::string& arguments) const
 {
 #if HAVE_MCP
     using namespace nlohmann;
     json response;
 
     try {
-        json args = json::parse(arguments);
-
         if (tool_name == "echo") {
+            json args = json::parse(arguments);
             std::string text = args.value("text", "");
             response["content"] = {
                 {
