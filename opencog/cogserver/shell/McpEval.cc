@@ -31,6 +31,8 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/persist/json/McpPlugin.h>
+#include <opencog/persist/json/McpPlugAtomSpace.h>
+#include "McpPlugEcho.h"
 #include "McpEval.h"
 
 using namespace opencog;
@@ -212,22 +214,6 @@ void McpEval::interrupt(void)
 	_caught_error = true;
 }
 
-// One evaluator per thread.  This allows multiple users to each
-// have thier own evaluator.
-McpEval* McpEval::get_evaluator(const AtomSpacePtr& asp)
-{
-	static thread_local McpEval* evaluator = new McpEval(asp);
-
-	// The eval_dtor runs when this thread is destroyed.
-	class eval_dtor {
-		public:
-		~eval_dtor() { delete evaluator; }
-	};
-	static thread_local eval_dtor killer;
-
-	return evaluator;
-}
-
 /* ============================================================== */
 
 /**
@@ -274,6 +260,32 @@ void McpEval::unregister_plugin(std::shared_ptr<McpPlugin> plugin)
 		}
 	}
 #endif // HAVE_MCP
+}
+
+/* ============================================================== */
+
+// One evaluator per thread.  This allows multiple users to each
+// have thier own evaluator.
+McpEval* McpEval::get_evaluator(const AtomSpacePtr& asp)
+{
+	static thread_local McpEval* evaluator = new McpEval(asp);
+
+	// Install the plugins here, for now. XXX Hack alert, this is
+	// not the right way to do this long-term, but it holds water for
+	// now.
+	auto echo_plugin = std::make_shared<McpPlugEcho>();
+	evaluator->register_plugin(echo_plugin);
+	auto as_plugin = std::make_shared<McpPlugAtomSpace>(asp.get());
+	evaluator->register_plugin(as_plugin);
+
+	// The eval_dtor runs when this thread is destroyed.
+	class eval_dtor {
+		public:
+		~eval_dtor() { delete evaluator; }
+	};
+	static thread_local eval_dtor killer;
+
+	return evaluator;
 }
 
 /* ===================== END OF FILE ======================== */

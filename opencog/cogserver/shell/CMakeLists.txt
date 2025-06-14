@@ -83,6 +83,7 @@ IF (HAVE_MCP)
 		McpPlugEcho.cc
 	)
 	TARGET_LINK_LIBRARIES(mcp-eval
+		${ATOMSPACE_STORAGE_LIBRARIES}
 		# nlohmann_json::nlohmann_json
 		${nlohmann_json_LIBRARIES}
 	)
