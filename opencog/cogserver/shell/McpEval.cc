@@ -115,7 +115,8 @@ void McpEval::eval_expr(const std::string &expr)
 
 			// Collect tools from all registered plugins
 			for (const auto& plugin : _plugins) {
-				json plugin_tools = plugin->get_tool_descriptions();
+				std::string plugin_tools_json = plugin->get_tool_descriptions();
+				json plugin_tools = json::parse(plugin_tools_json);
 				for (const auto& tool : plugin_tools) {
 					all_tools.push_back(tool);
 				}
@@ -136,7 +137,9 @@ void McpEval::eval_expr(const std::string &expr)
 			auto it = _tool_to_plugin.find(tool_name);
 			if (it != _tool_to_plugin.end()) {
 				// Invoke the tool through the plugin
-				json tool_result = it->second->invoke_tool(tool_name, arguments);
+				std::string arguments_json = arguments.dump();
+				std::string tool_result_json = it->second->invoke_tool(tool_name, arguments_json);
+				json tool_result = json::parse(tool_result_json);
 
 				// Check if the plugin returned an error
 				if (tool_result.contains("error")) {
@@ -209,16 +212,11 @@ void McpEval::interrupt(void)
 	_caught_error = true;
 }
 
-#include "McpPlugEcho.h"
-
 // One evaluator per thread.  This allows multiple users to each
 // have thier own evaluator.
 McpEval* McpEval::get_evaluator(const AtomSpacePtr& asp)
 {
 	static thread_local McpEval* evaluator = new McpEval(asp);
-
-	auto echo_plugin = std::make_shared<McpPlugEcho>();
-	evaluator->register_plugin(echo_plugin);
 
 	// The eval_dtor runs when this thread is destroyed.
 	class eval_dtor {
@@ -243,7 +241,8 @@ void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
 	_plugins.push_back(plugin);
 
 	// Map each tool to its plugin
-	json tools = plugin->get_tool_descriptions();
+	std::string tools_json = plugin->get_tool_descriptions();
+	json tools = json::parse(tools_json);
 	for (const auto& tool : tools) {
 		std::string tool_name = tool["name"];
 		_tool_to_plugin[tool_name] = plugin;

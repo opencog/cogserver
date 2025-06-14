@@ -26,10 +26,6 @@
 #include <string>
 #include <vector>
 
-#if HAVE_MCP
-#include <nlohmann/json.hpp>
-#endif
-
 namespace opencog {
 
 /**
@@ -42,26 +38,24 @@ class McpPlugin
 public:
     virtual ~McpPlugin() = default;
 
-#if HAVE_MCP
     /**
      * Get the list of tool descriptions provided by this plugin.
-     * Returns a JSON array of tool description objects.
+     * Returns a JSON string containing an array of tool description objects.
      * Each tool description should have:
      * - name: string
      * - description: string
      * - inputSchema: JSON schema object
      */
-    virtual nlohmann::json get_tool_descriptions() const = 0;
+    virtual std::string get_tool_descriptions() const = 0;
 
     /**
      * Invoke a tool provided by this plugin.
      * @param tool_name The name of the tool to invoke
-     * @param arguments The JSON arguments for the tool
-     * @return JSON response with result or error
+     * @param arguments JSON string containing the arguments for the tool
+     * @return JSON string containing the response with result or error
      */
-    virtual nlohmann::json invoke_tool(const std::string& tool_name,
-                                      const nlohmann::json& arguments) const = 0;
-#endif // HAVE_MCP
+    virtual std::string invoke_tool(const std::string& tool_name,
+                                   const std::string& arguments) const = 0;
 };
 
 } // namespace opencog

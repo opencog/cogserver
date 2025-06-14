@@ -36,14 +36,13 @@ public:
     McpPlugEcho() = default;
     virtual ~McpPlugEcho() = default;
 
-#if HAVE_MCP
     /**
      * Get the list of tool descriptions provided by this plugin.
      * Returns descriptions for:
      * - echo: Echo the input text
      * - time: Get current time
      */
-    virtual nlohmann::json get_tool_descriptions() const override;
+    virtual std::string get_tool_descriptions() const override;
 
     /**
      * Invoke a tool provided by this plugin.
@@ -51,9 +50,8 @@ public:
      * - echo: Returns the input text prefixed with "Echo: "
      * - time: Returns the current system time
      */
-    virtual nlohmann::json invoke_tool(const std::string& tool_name,
-                                      const nlohmann::json& arguments) const override;
-#endif // HAVE_MCP
+    virtual std::string invoke_tool(const std::string& tool_name,
+                                   const std::string& arguments) const override;
 };
 
 } // namespace opencog

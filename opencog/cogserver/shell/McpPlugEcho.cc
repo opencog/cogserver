@@ -23,15 +23,18 @@
 #include <chrono>
 #include <ctime>
 
+#if HAVE_MCP
+#include <nlohmann/json.hpp>
+#endif
+
 #include "McpPlugEcho.h"
 
 using namespace opencog;
 
-#if HAVE_MCP
-using namespace nlohmann;
-
-json McpPlugEcho::get_tool_descriptions() const
+std::string McpPlugEcho::get_tool_descriptions() const
 {
+#if HAVE_MCP
+    using namespace nlohmann;
     json tools = json::array();
 
     // Echo tool description
@@ -60,40 +63,55 @@ json McpPlugEcho::get_tool_descriptions() const
         }}
     });
 
-    return tools;
+    return tools.dump();
+#else
+    return "[]";
+#endif
 }
 
-json McpPlugEcho::invoke_tool(const std::string& tool_name,
-                             const json& arguments) const
+std::string McpPlugEcho::invoke_tool(const std::string& tool_name,
+                                    const std::string& arguments) const
 {
+#if HAVE_MCP
+    using namespace nlohmann;
     json response;
 
-    if (tool_name == "echo") {
-        std::string text = arguments.value("text", "");
-        response["content"] = {
-            {
-                {"type", "text"},
-                {"text", "Echo: " + text}
-            }
-        };
-    } else if (tool_name == "time") {
-        auto now = std::chrono::system_clock::now();
-        auto time_t = std::chrono::system_clock::to_time_t(now);
-        response["content"] = {
-            {
-                {"type", "text"},
-                {"text", std::ctime(&time_t)}
-            }
-        };
-    } else {
-        // Tool not found in this plugin
+    try {
+        json args = json::parse(arguments);
+
+        if (tool_name == "echo") {
+            std::string text = args.value("text", "");
+            response["content"] = {
+                {
+                    {"type", "text"},
+                    {"text", "Echo: " + text}
+                }
+            };
+        } else if (tool_name == "time") {
+            auto now = std::chrono::system_clock::now();
+            auto time_t = std::chrono::system_clock::to_time_t(now);
+            response["content"] = {
+                {
+                    {"type", "text"},
+                    {"text", std::ctime(&time_t)}
+                }
+            };
+        } else {
+            // Tool not found in this plugin
+            response["error"] = {
+                {"code", -32601},
+                {"message", "Tool not found in McpPlugEcho: " + tool_name}
+            };
+        }
+    } catch (const json::parse_error& e) {
         response["error"] = {
-            {"code", -32601},
-            {"message", "Tool not found in McpPlugEcho: " + tool_name}
+            {"code", -32700},
+            {"message", "Parse error: " + std::string(e.what())}
         };
     }
 
-    return response;
+    return response.dump();
+#else
+    return "{\"error\":{\"code\":-32601,\"message\":\"MCP not compiled\"}}";
+#endif
 }
-
-#endif // HAVE_MCP
