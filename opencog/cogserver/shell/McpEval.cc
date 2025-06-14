@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <algorithm>
 
 #if HAVE_MCP
 #include <nlohmann/json.hpp>
@@ -30,6 +31,7 @@
 
 #include <opencog/util/Logger.h>
 #include "McpEval.h"
+#include "McpPlugin.h"
 
 using namespace opencog;
 using namespace std::chrono_literals;
@@ -109,31 +111,18 @@ void McpEval::eval_expr(const std::string &expr)
 		} else if (method == "ping") {
 			response["result"] = json::object();
 		} else if (method == "tools/list") {
+			json all_tools = json::array();
+			
+			// Collect tools from all registered plugins
+			for (const auto& plugin : _plugins) {
+				json plugin_tools = plugin->get_tool_descriptions();
+				for (const auto& tool : plugin_tools) {
+					all_tools.push_back(tool);
+				}
+			}
+			
 			response["result"] = {
-				{"tools", {
-					{
-						{"name", "echo"},
-						{"description", "Echo the input text"},
-						{"inputSchema", {
-							{"type", "object"},
-							{"properties", {
-								{"text", {
-									{"type", "string"},
-									{"description", "Text to echo"}
-								}}
-							}},
-							{"required", {"text"}}
-						}}
-					},
-					{
-						{"name", "time"},
-						{"description", "Get current time"},
-						{"inputSchema", {
-							{"type", "object"},
-							{"properties", json::object()}
-						}}
-					}
-				}}
+				{"tools", all_tools}
 			};
 		} else if (method == "resources/list") {
 			response["result"] = {
@@ -143,31 +132,22 @@ void McpEval::eval_expr(const std::string &expr)
 			std::string tool_name = params.value("name", "");
 			json arguments = params.value("arguments", json::object());
 
-			if (tool_name == "echo") {
-				std::string text = arguments.value("text", "");
-				response["result"] = {
-					{"content", {
-						{
-							{"type", "text"},
-							{"text", "Echo: " + text}
-						}
-					}}
-				};
-			} else if (tool_name == "time") {
-				auto now = std::chrono::system_clock::now();
-				auto time_t = std::chrono::system_clock::to_time_t(now);
-				response["result"] = {
-					{"content", {
-						{
-							{"type", "text"},
-							{"text", std::ctime(&time_t)}
-						}
-					}}
-				};
+			// Find the plugin that handles this tool
+			auto it = _tool_to_plugin.find(tool_name);
+			if (it != _tool_to_plugin.end()) {
+				// Invoke the tool through the plugin
+				json tool_result = it->second->invoke_tool(tool_name, arguments);
+				
+				// Check if the plugin returned an error
+				if (tool_result.contains("error")) {
+					response["error"] = tool_result["error"];
+				} else {
+					response["result"] = tool_result;
+				}
 			} else {
 				response["error"] = {
 					{"code", -32601},
-					{"message", "Method not found: " + tool_name}
+					{"message", "Tool not found: " + tool_name}
 				};
 			}
 		} else {
@@ -243,6 +223,53 @@ McpEval* McpEval::get_evaluator(const AtomSpacePtr& asp)
 	static thread_local eval_dtor killer;
 
 	return evaluator;
+}
+
+/* ============================================================== */
+
+/**
+ * Register a plugin to provide MCP tools
+ */
+void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
+{
+#if HAVE_MCP
+	if (!plugin) return;
+	
+	_plugins.push_back(plugin);
+	
+	// Map each tool to its plugin
+	json tools = plugin->get_tool_descriptions();
+	for (const auto& tool : tools) {
+		std::string tool_name = tool["name"];
+		_tool_to_plugin[tool_name] = plugin;
+	}
+#endif // HAVE_MCP
+}
+
+/**
+ * Unregister a plugin
+ */
+void McpEval::unregister_plugin(std::shared_ptr<McpPlugin> plugin)
+{
+#if HAVE_MCP
+	if (!plugin) return;
+	
+	// Remove from plugins list
+	_plugins.erase(
+		std::remove(_plugins.begin(), _plugins.end(), plugin),
+		_plugins.end()
+	);
+	
+	// Remove tool mappings
+	auto it = _tool_to_plugin.begin();
+	while (it != _tool_to_plugin.end()) {
+		if (it->second == plugin) {
+			it = _tool_to_plugin.erase(it);
+		} else {
+			++it;
+		}
+	}
+#endif // HAVE_MCP
 }
 
 /* ===================== END OF FILE ======================== */
