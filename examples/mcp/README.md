@@ -24,7 +24,7 @@ clause mcp add cogserv /where/ever/stdio_to_unix_proxy.py
 ```
 Then, in a distinct shell, run
 ```
-./unix_to_tcp_proxy.py --remote-host example.com --remote-port 18888
+./unix_to_tcp_proxy.py --remote-host example.com --remote-port 18888 --verbose
 ```
 and then make sure that the CogServer is running on that host. The
 default CogServer MCP port is 18888.
