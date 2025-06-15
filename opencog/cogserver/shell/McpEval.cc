@@ -102,10 +102,17 @@ void McpEval::eval_expr(const std::string &expr)
 			};
 		} else if (method == "notifications/initialized" or
 		           method == "initialized") {
+#define WTF_INIT
+#ifdef WTF_INIT
+			// Supposedly there should be no response here, but its
+			// broken if we're silent. So ... !???
+			response["result"] = json::object();
+#else
 			// Notification - no response
 			_result = "";
 			_done = true;
 			return;
+#endif
 		} else if (method == "notifications/cancelled") {
 			// XXX FIXME .. the currently running tool should be killed.
 			// To do this, the Mcpplugin API would need to get a new
