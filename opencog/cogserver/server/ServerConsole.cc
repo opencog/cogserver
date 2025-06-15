@@ -347,6 +347,20 @@ void ServerConsole::OnLine(const std::string& line)
         }
     }
 
+    // If the command starts with an open-brace, assume
+    // its a json command. Pop into the json shell, and try again.
+    else if (line[0] == '{')
+    {
+        OnLine("json");
+
+        // Re-issue the command, but only if we sucessfully got a shell.
+        // (We might not get a shell if json is screwed up.)
+        if (_shell) {
+            OnLine(line);
+            return;
+        }
+    }
+
     logger().debug("[ServerConsole] OnLine [%s]", line.c_str());
 
     // Parse command line. Quotes are stripped.
