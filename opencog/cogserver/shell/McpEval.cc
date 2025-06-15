@@ -100,23 +100,17 @@ void McpEval::eval_expr(const std::string &expr)
 					{"version", "0.1.0"}
 				}}
 			};
-		} else if (method == "notifications/initialized") {
-			// The echo proxy has trouble with messages that get no response.
-			// So response for the heck of it
-			response["result"] = json::object();
+		} else if (method == "notifications/initialized" or
+		           method == "initialized") {
+			// Notification - no response
+			_result = "";
+			_done = true;
+			return;
 		} else if (method == "notifications/cancelled") {
 			// XXX FIXME .. the currently running tool should be killed.
 			// To do this, the Mcpplugin API would need to get a new
 			// kill method that would get called to do this. Later.
 			// This method is supposed to not have any response.
-			// But the procies do not handle the no-reponse case.
-			// So this this is broken for the moment.
-			_result = "";
-			_done = true;
-			return;
-		} else if (method == "initialized") {
-			// Notification - no response ... but this is broken for the
-			// echo proxies.
 			_result = "";
 			_done = true;
 			return;
