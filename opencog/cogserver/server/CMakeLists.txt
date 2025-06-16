@@ -12,13 +12,16 @@ ADD_LIBRARY (server SHARED
 )
 
 TARGET_LINK_LIBRARIES(server
-	mcp-eval
 	network
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}
 	${OPENSSL_LIBRARIES}
 	dl
 )
+
+IF(HAVE_MCP)
+	TARGET_LINK_LIBRARIES(server mcp-eval)
+ENDIF(HAVE_MCP)
 
 # ------------------------------------------------------------
 # This defines the guile scheme loadable module
