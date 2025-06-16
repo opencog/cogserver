@@ -25,7 +25,7 @@ import logging
 from datetime import datetime
 
 SOCKET_PATH = "/tmp/echo_socket"
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 65536
 
 def setup_logging(verbose=False):
     """Setup logging configuration"""
@@ -142,6 +142,62 @@ class UnixToTcpThread(ProxyThread):
 
         super().process_and_forward(data)
 
+class TcpToUnixThread(ProxyThread):
+    """Thread for TCP to Unix direction with message buffering"""
+
+    def __init__(self, source_socket, dest_socket, direction, buffer_size=BUFFER_SIZE):
+        super().__init__(source_socket, dest_socket, direction, buffer_size)
+        self.message_buffer = b''
+
+    def run(self):
+        """Main thread loop with message buffering"""
+        self.logger.info(f"[{self.direction}] Thread started with message buffering")
+
+        try:
+            while self.running:
+                # Use select to check if data is available with timeout
+                readable, _, _ = select.select([self.source_socket], [], [], 0.1)
+
+                if not readable:
+                    continue
+
+                # Receive data from source
+                try:
+                    data = self.source_socket.recv(self.buffer_size)
+                except socket.timeout:
+                    continue
+                except socket.error as e:
+                    if e.errno == 9:  # Bad file descriptor (socket closed)
+                        break
+                    raise
+
+                if not data:
+                    self.logger.info(f"[{self.direction}] Source socket closed")
+                    # Send any remaining buffered data
+                    if self.message_buffer:
+                        self.logger.warning(f"[{self.direction}] Incomplete message in buffer: {len(self.message_buffer)} bytes")
+                        self.process_and_forward(self.message_buffer)
+                    break
+
+                # Add data to buffer
+                self.message_buffer += data
+
+                # Process complete messages (newline-terminated)
+                while b'\n' in self.message_buffer:
+                    newline_pos = self.message_buffer.find(b'\n')
+                    complete_message = self.message_buffer[:newline_pos + 1]
+                    self.message_buffer = self.message_buffer[newline_pos + 1:]
+
+                    # Forward the complete message
+                    self.process_and_forward(complete_message)
+
+        except Exception as e:
+            self.logger.error(f"[{self.direction}] Error: {e}")
+        finally:
+            self.logger.info(f"[{self.direction}] Thread shutting down")
+            self.logger.info(f"[{self.direction}] Transferred {self.bytes_transferred} bytes "
+                           f"in {self.messages_transferred} messages")
+
 class ConnectionHandler:
     """Handles a single client connection with bidirectional communication"""
 
@@ -176,7 +232,7 @@ class ConnectionHandler:
                 self.client_socket, remote_socket,
                 "Unix→TCP", self.args.buffer_size
             )
-            tcp_to_unix = ProxyThread(
+            tcp_to_unix = TcpToUnixThread(
                 remote_socket, self.client_socket,
                 "TCP→Unix", self.args.buffer_size
             )
