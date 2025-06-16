@@ -11,7 +11,7 @@ AtomSpace API's have been implemented; this implementation can be found
 in the [atomspace-storage JSON
 directory](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/json).
 
-Some example queries include:
+Some example mini-prompts include:
 * Please ask the cogserv MCP server what version it is.
 * ask the cogserv server what all the direct subtypes of type 'Node' are
 * run that query again, but set subclass to true
@@ -35,6 +35,14 @@ Atoms one or two at a time, but to manipulate millions of them, using
 Atomese sensorimotor interfaces. These are under development, and are
 "pre-alpha" (cough cough. Version 0.0.1 to be precise.) For now, the
 above works.
+
+### TODO
+* Teach Claude how to run AtomSpace queries -- i.e. how to write
+  `QueryLink` and then run it.
+* Teach Claude how to create a data processing pipeline: how to write
+  Atomese needed to compute cosine similarity or mutual information
+  for some collection of `EdgeLink`s, i.e. try to get it to reinvent
+  the old atomspace-matrix code, but this time in pure Atomese.
 
 MCP Utility Tools
 -----------------
