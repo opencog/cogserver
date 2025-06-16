@@ -7,7 +7,7 @@ AtomSpace contents in the CogServer.
 The eventual goal is to be able to chat with the AtomSpace to accomplish
 complex, sophisticated hypergraph manipulations, working entirely in
 Atomese. For now, only the basic AtomSpace API's have been implemented;
-this implmentation can be found in the [atomspace-storage JSON
+this implementation can be found in the [atomspace-storage JSON
 directory](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/json).
 
 Some example queries include:
@@ -29,10 +29,7 @@ Some example queries include:
   the key (Predicate "fovs") and it should be a FloatValue holding the
   vector 1 2 3 0.4 0.5 -0.6 0.777 88 999
 
-Due to an open bug in Claude Code, some proxy tools are provided in this
-directory. Read about them below.
-
-The eventaul goal of attaching MCP to the AtomSpace is not to access
+The eventual goal of attaching MCP to the AtomSpace is not to access
 Atoms one or two at a time, but to manipulate millions of them, using
 Atomese sensorimotor interfaces. These are under development, and are
 "pre-alpha" (cough cough. Version 0.0.1 to be precise.) For now, the
@@ -40,6 +37,9 @@ above works.
 
 MCP Utility Tools
 -----------------
+Due to the open bug
+[Claude Code #1536](https://github.com/anthropics/claude-code/issues/1536),
+some proxy tools are provided in this directory.
 
 ### Socket Proxies
 Due to technical issues, it can be the case that an LLM cannot contact the
