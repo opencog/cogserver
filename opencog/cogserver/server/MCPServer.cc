@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+#ifdef HAVE_MCP
+
 #include <cstddef>
 #include <string>
 
@@ -61,4 +63,5 @@ void MCPServer::OnLine(const std::string& line)
 	Send(_eval->poll_result());
 }
 
+#endif // HAVE_MCP
 // ==================================================================
