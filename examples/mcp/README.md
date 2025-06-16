@@ -6,8 +6,9 @@ AtomSpace contents in the CogServer.
 
 The eventual goal is to be able to chat with the AtomSpace to accomplish
 complex, sophisticated hypergraph manipulations, working entirely in
-Atomese. For now, only the basic AtomSpace API's have been implemented;
-this implementation can be found in the [atomspace-storage JSON
+[Atomese](https://wiki.opencog.org/w/Atomese). For now, only the basic
+AtomSpace API's have been implemented; this implementation can be found
+in the [atomspace-storage JSON
 directory](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/json).
 
 Some example queries include:
