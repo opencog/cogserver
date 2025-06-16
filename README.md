@@ -62,8 +62,8 @@ This capability is useful in several different ways:
 
 * **Proxy Agents.** The proxy infrastructure has been replaced by a
   more general, more flexible, more powerful and configurable proxying
-  system. See the main AtomSpace git repo, in the
-  [opencog/persist/proxy directory.](https://github.com/opencog/atomspace/tree/master/opencog/persist/proxy)
+  system. See the AtomSpace Storage git repo, in the
+  [opencog/persist/proxy directory.](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/proxy)
 
 * **Model Context Protocol.** An experimental MCP interface is being
   developed; this allows MCP-compatible LLM's to interact with the
