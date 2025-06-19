@@ -1,10 +1,11 @@
 
-Information for Claude about 
-how to use the AtomSpace and the Cogserver.
+Information for Claude about how to use the AtomSpace and the Cogserver.
+Please read this carefully. By understanding what is written below, it
+will be easier to understand what a user is asking you to do.
 
-* These can be used by working with the MCP server called `cogserv`.
-* There are more than a dozen MCP tools that can be used to work
-  with the AtomSpace.
+* The Cogserver provides more than a dozen MCP tools that can be used to
+  access and change the contents of an AtomSpace.
+* The MCP server is called `cogserv`.
 
 * The AtomSpace is an in-RAM database that can store Atoms.
 * Atoms come in two core types: Nodes and Links.
@@ -47,4 +48,8 @@ how to use the AtomSpace and the Cogserver.
 * The list of all key-value pairs on an Atom can be obtained with an MCP
   tool.
 
-
+* The AtomSpace can be used to store graphs.
+* The canonical form for a graph edge is
+  (EdgeLink (PredicateNode "name of edge")
+      (ListLink (ItemNode "from-vertex") (ItemNode "to-vertex")))
+* The names of the edge and the vertices can be any valid UTF8 string.
