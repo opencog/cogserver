@@ -30,6 +30,11 @@ Some example mini-prompts include:
   the key (Predicate "fovs") and it should be a FloatValue holding the
   vector 1 2 3 0.4 0.5 -0.6 0.777 88 999
 
+The above works without having to explain anything at all to CLAUDE.
+However, the [CLAUDE-AtomSpace.md](CLAUDE-AtomSpace.md) explains what
+the CogServer and the Atomspace are, and should make it easier for
+Claude to understand what you are trying to do.
+
 The eventual goal of attaching MCP to the AtomSpace is not to access
 Atoms one or two at a time, but to manipulate millions of them, using
 Atomese sensorimotor interfaces. These are under development, and are
