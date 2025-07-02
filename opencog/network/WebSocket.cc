@@ -219,10 +219,14 @@ static std::string base64_encode(unsigned char* buf, int len)
 	return out;
 }
 
-/// Perform the websockets handshake. That is, listen for the HTTP
-/// header, verify that it has an `Upgrade: websocket` line in it,
-/// and then do the magic-key exchange, etc. Upon completion, the
-/// socket is ready to send and receive websocket frames.
+/// Process the HTTP header and optionally perform the websockets
+/// handshake. That is, listen for the HTTP header, and pick through
+/// the various fields in it. If it has an `Upgrade: websocket` line in
+/// it, then upgrade to websockets i.e. perform the magic-key exchange,
+/// etc. Upon upgrade, the socket is ready to send and receive websocket
+/// frames. Otherwise, treat the socket as an ordinary telnet-like
+/// socket, with keep-alive set. In either case, the remaining I/O gets
+/// routed to some shell handler, depending on the URL.
 void ServerSocket::HandshakeLine(const std::string& line)
 {
 	// The very first HTTP line.
