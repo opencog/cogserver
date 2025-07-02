@@ -221,7 +221,7 @@ static std::string base64_encode(unsigned char* buf, int len)
 
 /// Perform the websockets handshake. That is, listen for the HTTP
 /// header, verify that it has an `Upgrade: websocket` line in it,
-/// and then do the magic-key exchange, etc. Upon compltion, the
+/// and then do the magic-key exchange, etc. Upon completion, the
 /// socket is ready to send and receive websocket frames.
 void ServerSocket::HandshakeLine(const std::string& line)
 {
