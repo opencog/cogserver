@@ -509,11 +509,33 @@ void ServerSocket::handle_connection(void)
             total_line_count++;
             _status = RUN;
 
-				// Bypass until we've received the full HTTP header.
-				if (not _got_http_header)
-					HandshakeLine(line);
-				else
-            	OnLine(line);
+            // If its not an http sock, then the API is simple.
+            if (not _is_http_socket)
+                OnLine(line);
+            else
+            {
+                // Bypass until we've received the full HTTP header.
+                if (not _got_http_header)
+                    HandshakeLine(line);
+                if (_got_http_header and _content_length > 0)
+                {
+                    // Read the HTTP body
+                    std::vector<char> body_buffer(_content_length);
+                    boost::asio::read(*_socket,
+                              boost::asio::buffer(body_buffer),
+                              boost::asio::transfer_exactly(_content_length));
+                    std::string http_body(body_buffer.begin(), body_buffer.end());
+
+                    // Process the complete HTTP request.
+                    OnLine(http_body);
+
+                    // Reset for next HTTP request
+                    // Hmm. We should do this only if _keep_alive == true.
+                    _got_http_header = false;
+                    _got_first_line = false;
+                    _content_length = 0;
+                }
+            }
         }
         catch (const boost::system::system_error& e)
         {
