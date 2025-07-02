@@ -271,19 +271,20 @@ void ServerSocket::HandshakeLine(const std::string& line)
 
 	// If we are here, then the full HTTP header was received. This
 	// is enough to get started: call the user's OnConnection()
-	// method. The user is supposed to check two things:
+	// method. The user is supposed to handle the rest:
 	// (a) Do they like the URL in the header? If not, they
 	//     should send some response e.g. 404 Not Found
 	//     and then `throw SilentException()` to close the sock.
-	// (b) Was an actual WebSocket negotiated? If not, then the
-	//     user should send some response, e.g. 200 OK and some
-	//     HTML, and then `throw SilentException()` to close the
-	//     sock.
+	// (b) If the URL is reasonable, the socket should be piped to
+	//     the correspondng shell to handle the remaining traffic.
+	//     By default, the socket should be kept open; it can be
+	//     closed at any time with `throw SilentException()` to
+	//     close the sock.
 	OnConnection();
 
-	// In case the user blew it above, we close the sock.
+	// A websocket upgrade will not be performed. We are done.
 	if (not _got_websock_header)
-		throw SilentException();
+		return;
 
 	// If we are here, we've received an HTTP header, and it
 	// as a WebSocket header. Do the websocket reply.
