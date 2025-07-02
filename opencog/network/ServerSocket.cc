@@ -151,7 +151,9 @@ std::string ServerSocket::connection_stats(void)
     char bf[132];
     snprintf(bf, 132, "%s %8d %s %5zd %s %c",
         sbuff, _tid, _status, _line_count, abuff,
-        _is_websocket?'W':(_is_mcp_socket?'M':'T'));
+        _do_frame_io?'W':
+            (_is_http_socket?'H':
+                (_is_mcp_socket?'M':'T')));
 
     return bf;
 }
@@ -212,8 +214,11 @@ ServerSocket::ServerSocket(void) :
     _got_first_line(false),
     _got_http_header(false),
     _do_frame_io(false),
-    _is_websocket(false),
-    _got_websock_header(false)
+    _is_http_socket(false),
+    _got_websock_header(false),
+    _keep_alive(false),
+    _content_length(0),
+    _is_mcp_socket(false)
 {
     if (0 == _max_open_sockets)
     {
@@ -479,7 +484,7 @@ void ServerSocket::handle_connection(void)
     logger().debug("ServerSocket::handle_connection()");
 
     // telnet sockets have no setup to do.
-    if (not _is_websocket)
+    if (not _is_http_socket)
         OnConnection();
     boost::asio::streambuf b;
     while (true)
@@ -532,7 +537,7 @@ void ServerSocket::handle_connection(void)
     _status = CLOSE;
 
     // Perform cleanup at end, if in telnet mode.
-    if (not _is_websocket)
+    if (not _is_http_socket)
     {
         // If the data sent to us is not new-line terminated, then
         // there may still be some bytes sitting in the buffer. Get
