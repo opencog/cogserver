@@ -291,6 +291,7 @@ void ServerSocket::HandshakeLine(const std::string& line)
 	{
 		if ( _url == "/mcp")
 		{
+			act_as_mcp();
 			std::string response =
 				"HTTP/1.1 202 Accepted\r\n"
 				"Content-Type: application/json\r\n"

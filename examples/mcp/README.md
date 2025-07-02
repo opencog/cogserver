@@ -44,6 +44,30 @@ above works.
   for some collection of `EdgeLink`s, i.e. try to get it to reinvent
   the old atomspace-matrix code, but this time in pure Atomese.
 
+The MCP Servers
+---------------
+There are two ways of using MCP with the CogServer:
+* Over an HTTP connection, where the CogServer acts as a web server,
+* Over a raw TCP/IP socket, which reads and responds to MCP JSON.
+
+The first form provides a conventional HTTP interface, as documented at
+[modelcontextprotocol.io](https://modelcontextprotocol.io/). The second
+form exists for custom applications that wrap MCP in other ways, and
+only need a raw JSON interface. Currently, the major application is to
+work around the open bug
+[Claude Code #1536](https://github.com/anthropics/claude-code/issues/1536).
+The work-around is given further below, and uses a proxy to copy MCP
+JSON on stdio to the raw CogServer seocket.
+
+The regular interface is located at port 18080, at the URL `/mcp`. For
+example, Claude can access this after configuring
+```
+claude mcp add foobar -t http http://localhost:18080/mcp
+```
+The raw interface is at port 18888; an example of how to use it is given
+below.
+
+
 MCP Utility Tools
 -----------------
 Due to the open bug
@@ -51,9 +75,10 @@ Due to the open bug
 some proxy tools are provided in this directory.
 
 ### Socket Proxies
-Due to technical issues, it can be the case that an LLM cannot contact the
-CogServer directly. The pair of proxy servers `stdio_to_unix_proxy.py`
-and `unix_to_tcp_proxy.py` can be used to overcome/bypass these issues.
+Due to networking issues or technical issues or bugs, it can be the case
+that an LLM cannot contact the CogServer directly. The pair of proxy
+servers `stdio_to_unix_proxy.py` and `unix_to_tcp_proxy.py` can be used
+to overcome/bypass these issues.
 
 For example, if using Claude Code, the proxy can be configured as
 ```
