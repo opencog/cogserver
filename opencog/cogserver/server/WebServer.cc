@@ -68,7 +68,42 @@ void WebServer::OnConnection(void)
 		throw SilentException();
 	}
 
-	logger().info("Opened WebSocket %s Shell", cmdName.c_str());
+	logger().info("Opened Http Socket %s Shell", cmdName.c_str());
+
+	// Quick hack for MCP confusion.
+	if (_url == "/mcp")
+	{
+		std::string response =
+			// "HTTP/1.1 202 Accepted\r\n"
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Type: application/json\r\n"
+			"Cache-Control: no-cache\r\n"
+			"Connection: keep-alive\r\n"
+			"\r\n";
+		Send(response);
+
+		// MCP expects the server to immediately send an initial
+		// capabilities message.  This is a server-initiated
+		// notification to advertise capabilities.
+		std::string capabilities_msg =
+			"{"
+			"\"jsonrpc\":\"2.0\","
+			"\"method\":\"notifications/server_capabilities\","
+			"\"params\":{"
+			"\"capabilities\":{"
+			"\"tools\":{\"listTools\":{}},"
+			"\"resources\":{}"
+			"},"
+			"\"serverInfo\":{"
+			"\"name\":\"CogServer MCP\","
+			"\"version\":\"0.1.0\""
+			"}"
+			"}"
+			"}\n";
+
+		Send(capabilities_msg);
+		return;
+	}
 }
 
 // Called for each newline-terminated line received.

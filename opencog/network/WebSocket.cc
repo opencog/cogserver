@@ -300,27 +300,7 @@ void ServerSocket::HandshakeLine(const std::string& line)
 
 	// A websocket upgrade will not be performed. We are done.
 	if (not _got_websock_header)
-	{
-		if ( _url == "/mcp")
-		{
-			std::string response =
-				"HTTP/1.1 202 Accepted\r\n"
-				"Content-Type: application/json\r\n"
-				"Cache-Control: no-cache\r\n"
-				"Connection: keep-alive\r\n"
-				"\r\n";
-			Send(response);
-			return;
-		}
-		std::string response =
-			"HTTP/1.1 200 OK\r\n"
-			"Content-Type: text/event-stream\r\n"
-			"Cache-Control: no-cache\r\n"
-			"Connection: keep-alive\r\n"
-			"\r\n";
-		Send(response);
 		return;
-	}
 
 	// If we are here, we've received an HTTP header, and it
 	// as a WebSocket header. Do the websocket reply.
