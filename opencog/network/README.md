@@ -13,7 +13,7 @@ and supply the pure virtual methods `ConsoleSocket::OnConnection()` and
 you are good to go.  See the example usage below.
 
 It is weakly assumed that the console is working with text data; it uses
-`std::string` as the main API. I suppose it would be tweaked to handle
+`std::string` as the main API. I suppose it could be tweaked to handle
 binary data, but this has not been a requirement.
 
 Why?
@@ -58,9 +58,10 @@ encryption, you should route traffic over an ssh tunnel.
 The server does NOT provide any user-login management. If you need login
 management, that has to be done at the console layer.
 
-The server provides minimal DDOS mitigation: the max number of
-simultaneously allowed connections are configurable; additional
-connections are forced to wait.
+The server provides minimal DDOS mitigation by capping the max number of
+simultaneously allowed connections. This number is configurable, and
+defaults to ten; additional connections are forced to wait. The `status`
+and `top` commands list the connection status.
 
 Example Usage
 -------------
@@ -95,5 +96,4 @@ main()
 	// Process incoming commands.
 	ns->run(make_console);
 }
-
 ```
