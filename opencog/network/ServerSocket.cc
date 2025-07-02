@@ -519,12 +519,29 @@ void ServerSocket::handle_connection(void)
                     HandshakeLine(line);
                 if (_got_http_header and _content_length > 0)
                 {
-                    // Read the HTTP body
-                    std::vector<char> body_buffer(_content_length);
-                    boost::asio::read(*_socket,
-                              boost::asio::buffer(body_buffer),
-                              boost::asio::transfer_exactly(_content_length));
-                    std::string http_body(body_buffer.begin(), body_buffer.end());
+                    // Read the HTTP body.
+                    // The boost::asio::read_until() is a bit funky.
+                    // It reads a little too much. That seems to be OK,
+                    // as long as it is used consistently. But when a
+                    // single blank line shows up, then the read below
+                    // hangs, because the wnated data has already been
+                    // read, and is waiting for us in the buffer.
+                    //
+                    // boost::asio::read(*_socket, b,
+                    //     boost::asio::transfer_exactly(_content_length));
+                    std::istream is(&b);
+                    std::string http_body;
+                    std::getline(is, http_body);
+
+                    // Send an HTTP header
+                    std::string response =
+                       // "HTTP/1.1 202 Accepted\r\n"
+                       "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: application/json\r\n"
+                       "Cache-Control: no-cache\r\n"
+                       "Connection: keep-alive\r\n"
+                       "\r\n";
+                    Send(response);
 
                     // Process the complete HTTP request.
                     OnLine(http_body);
