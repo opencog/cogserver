@@ -37,14 +37,14 @@ WebServer::~WebServer()
 // Called before any data is sent/received.
 void WebServer::OnConnection(void)
 {
-	// If the the socket didn't connect as a websocket, then just
-	// report the stats as an HTML page.
-	if (not _got_websock_header)
+	if (0 == _url.compare("/favicon.ico"))
 	{
-		if (0 == _url.compare("/favicon.ico"))
-			Send(favicon());
-		else
-			Send(html_stats());
+		Send(favicon());
+		throw SilentException();
+	}
+	if (0 == _url.compare("/stats"))
+	{
+		Send(html_stats());
 		throw SilentException();
 	}
 

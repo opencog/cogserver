@@ -504,8 +504,8 @@ void ServerSocket::handle_connection(void)
             total_line_count++;
             _status = RUN;
 
-				// Bypass until we've got the WebSocket fully open.
-				if (_is_websocket and not _do_frame_io)
+				// Bypass until we've received the full HTTP header.
+				if (not _got_http_header)
 					HandshakeLine(line);
 				else
             	OnLine(line);

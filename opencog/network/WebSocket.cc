@@ -219,10 +219,14 @@ static std::string base64_encode(unsigned char* buf, int len)
 	return out;
 }
 
-/// Perform the websockets handshake. That is, listen for the HTTP
-/// header, verify that it has an `Upgrade: websocket` line in it,
-/// and then do the magic-key exchange, etc. Upon compltion, the
-/// socket is ready to send and receive websocket frames.
+/// Process the HTTP header and optionally perform the websockets
+/// handshake. That is, listen for the HTTP header, and pick through
+/// the various fields in it. If it has an `Upgrade: websocket` line in
+/// it, then upgrade to websockets i.e. perform the magic-key exchange,
+/// etc. Upon upgrade, the socket is ready to send and receive websocket
+/// frames. Otherwise, treat the socket as an ordinary telnet-like
+/// socket, with keep-alive set. In either case, the remaining I/O gets
+/// routed to some shell handler, depending on the URL.
 void ServerSocket::HandshakeLine(const std::string& line)
 {
 	// The very first HTTP line.
@@ -230,14 +234,21 @@ void ServerSocket::HandshakeLine(const std::string& line)
 	{
 		_got_first_line = true;
 
-		if (0 != line.compare(0, 4, "GET "))
+		if (0 == line.compare(0, 4, "GET "))
+		{
+			_url = line.substr(4, line.find(" ", 4) - 4);
+		}
+		else if (0 == line.compare(0, 5, "POST "))
+		{
+			_url = line.substr(5, line.find(" ", 5) - 5);
+		}
+		else
 		{
 			Send("HTTP/1.1 501 Not Implemented\r\n"
 				"Server: CogServer\r\n"
 				"\r\n");
 			throw SilentException();
 		}
-		_url = line.substr(4, line.find(" ", 4) - 4);
 		return;
 	}
 
@@ -264,19 +275,20 @@ void ServerSocket::HandshakeLine(const std::string& line)
 
 	// If we are here, then the full HTTP header was received. This
 	// is enough to get started: call the user's OnConnection()
-	// method. The user is supposed to check two things:
+	// method. The user is supposed to handle the rest:
 	// (a) Do they like the URL in the header? If not, they
 	//     should send some response e.g. 404 Not Found
 	//     and then `throw SilentException()` to close the sock.
-	// (b) Was an actual WebSocket negotiated? If not, then the
-	//     user should send some response, e.g. 200 OK and some
-	//     HTML, and then `throw SilentException()` to close the
-	//     sock.
+	// (b) If the URL is reasonable, the socket should be piped to
+	//     the correspondng shell to handle the remaining traffic.
+	//     By default, the socket should be kept open; it can be
+	//     closed at any time with `throw SilentException()` to
+	//     close the sock.
 	OnConnection();
 
-	// In case the user blew it above, we close the sock.
+	// A websocket upgrade will not be performed. We are done.
 	if (not _got_websock_header)
-		throw SilentException();
+		return;
 
 	// If we are here, we've received an HTTP header, and it
 	// as a WebSocket header. Do the websocket reply.
