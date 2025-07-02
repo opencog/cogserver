@@ -230,14 +230,21 @@ void ServerSocket::HandshakeLine(const std::string& line)
 	{
 		_got_first_line = true;
 
-		if (0 != line.compare(0, 4, "GET "))
+		if (0 == line.compare(0, 4, "GET "))
+		{
+			_url = line.substr(4, line.find(" ", 4) - 4);
+		}
+		else if (0 == line.compare(0, 5, "POST "))
+		{
+			_url = line.substr(5, line.find(" ", 5) - 5);
+		}
+		else
 		{
 			Send("HTTP/1.1 501 Not Implemented\r\n"
 				"Server: CogServer\r\n"
 				"\r\n");
 			throw SilentException();
 		}
-		_url = line.substr(4, line.find(" ", 4) - 4);
 		return;
 	}
 
