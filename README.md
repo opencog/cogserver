@@ -67,8 +67,10 @@ This capability is useful in several different ways:
 
 * **Model Context Protocol.** An experimental MCP interface is being
   developed; this allows MCP-compatible LLM's to interact with the
-  AtomSpace. The MCP server is located at port 18888. See the
-  [MCP README](./examples/mcp/README.md) for more info.
+  AtomSpace. There are two interfaces to it; one is plain-text, as would
+  be the case for stdio MCP servers. The other is a standard HTTP
+  connection.  See the [MCP README](./examples/mcp/README.md) for more
+  info.
 
 * The `stats` command provides a `top`-like command for viewing who is
   connected to the Cogserver, and what they are doing. Type `help stats`

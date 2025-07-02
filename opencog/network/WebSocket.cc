@@ -262,6 +262,18 @@ void ServerSocket::HandshakeLine(const std::string& line)
 	// Extract stuff from the header the client is sending us.
 	if (not _got_http_header)
 	{
+		static const char* CLen = "Content-Length: ";
+		if (0 == line.compare(0, strlen(CLen), CLen))
+			{ _content_length = std::stoi(line.substr(strlen(CLen))); return; }
+
+		static const char* clen = "content-length: ";
+		if (0 == line.compare(0, strlen(clen), clen))
+			{ _content_length = std::stoi(line.substr(strlen(clen))); return; }
+
+		static const char* kpal = "connection: keep-alive";
+		if (0 == line.compare(0, strlen(kpal), kpal))
+			{ _keep_alive = true; return; }
+
 		static const char* upg = "Upgrade: websocket";
 		if (0 == line.compare(0, strlen(upg), upg))
 			{ _got_websock_header = true; return; }

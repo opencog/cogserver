@@ -151,7 +151,9 @@ std::string ServerSocket::connection_stats(void)
     char bf[132];
     snprintf(bf, 132, "%s %8d %s %5zd %s %c",
         sbuff, _tid, _status, _line_count, abuff,
-        _is_websocket?'W':(_is_mcp_socket?'M':'T'));
+        _do_frame_io?'W':
+            (_is_http_socket?'H':
+                (_is_mcp_socket?'M':'T')));
 
     return bf;
 }
@@ -212,8 +214,11 @@ ServerSocket::ServerSocket(void) :
     _got_first_line(false),
     _got_http_header(false),
     _do_frame_io(false),
-    _is_websocket(false),
-    _got_websock_header(false)
+    _is_http_socket(false),
+    _got_websock_header(false),
+    _keep_alive(false),
+    _content_length(0),
+    _is_mcp_socket(false)
 {
     if (0 == _max_open_sockets)
     {
@@ -478,8 +483,8 @@ void ServerSocket::handle_connection(void)
     _pth = pthread_self();
     logger().debug("ServerSocket::handle_connection()");
 
-    // telent sockets have no setup to do.
-    if (not _is_websocket)
+    // telnet sockets have no setup to do.
+    if (not _is_http_socket)
         OnConnection();
     boost::asio::streambuf b;
     while (true)
@@ -504,11 +509,33 @@ void ServerSocket::handle_connection(void)
             total_line_count++;
             _status = RUN;
 
-				// Bypass until we've received the full HTTP header.
-				if (not _got_http_header)
-					HandshakeLine(line);
-				else
-            	OnLine(line);
+            // If its not an http sock, then the API is simple.
+            if (not _is_http_socket)
+                OnLine(line);
+            else
+            {
+                // Bypass until we've received the full HTTP header.
+                if (not _got_http_header)
+                    HandshakeLine(line);
+                if (_got_http_header and _content_length > 0)
+                {
+                    // Read the HTTP body
+                    std::vector<char> body_buffer(_content_length);
+                    boost::asio::read(*_socket,
+                              boost::asio::buffer(body_buffer),
+                              boost::asio::transfer_exactly(_content_length));
+                    std::string http_body(body_buffer.begin(), body_buffer.end());
+
+                    // Process the complete HTTP request.
+                    OnLine(http_body);
+
+                    // Reset for next HTTP request
+                    // Hmm. We should do this only if _keep_alive == true.
+                    _got_http_header = false;
+                    _got_first_line = false;
+                    _content_length = 0;
+                }
+            }
         }
         catch (const boost::system::system_error& e)
         {
@@ -532,7 +559,7 @@ void ServerSocket::handle_connection(void)
     _status = CLOSE;
 
     // Perform cleanup at end, if in telnet mode.
-    if (not _is_websocket)
+    if (not _is_http_socket)
     {
         // If the data sent to us is not new-line terminated, then
         // there may still be some bytes sitting in the buffer. Get
