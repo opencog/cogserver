@@ -517,33 +517,34 @@ void ServerSocket::handle_connection(void)
                 // Bypass until we've received the full HTTP header.
                 if (not _got_http_header)
                     HandshakeLine(line);
-                if (_got_http_header and _content_length > 0)
+                if (_got_http_header)
                 {
-                    // Read the HTTP body.
-                    // The boost::asio::read_until() is a bit funky.
-                    // It reads a little too much. That seems to be OK,
-                    // as long as it is used consistently. But when a
-                    // single blank line shows up, then the read below
-                    // hangs, because the wnated data has already been
-                    // read, and is waiting for us in the buffer.
-                    //
-                    // boost::asio::read(*_socket, b,
-                    //     boost::asio::transfer_exactly(_content_length));
-                    std::istream is(&b);
                     std::string http_body;
-                    std::getline(is, http_body);
 
-                    // Send an HTTP header
-                    std::string response =
-                       // "HTTP/1.1 202 Accepted\r\n"
-                       "HTTP/1.1 200 OK\r\n"
-                       "Content-Type: application/json\r\n"
-                       "Cache-Control: no-cache\r\n"
-                       "Connection: keep-alive\r\n"
-                       "\r\n";
-                    Send(response);
+                    // Read the HTTP body if there is one
+                    if (_content_length > 0)
+                    {
+                        // First check if data is already in the buffer
+                        if (b.size() >= _content_length)
+                        {
+                            // Data is already in the buffer
+                            std::istream is(&b);
+                            http_body.resize(_content_length);
+                            is.read(&http_body[0], _content_length);
+                        }
+                        else
+                        {
+                            // Need to read more data
+                            size_t remaining = _content_length - b.size();
+                            boost::asio::read(*_socket, b,
+                                boost::asio::transfer_exactly(remaining));
+                            std::istream is(&b);
+                            http_body.resize(_content_length);
+                            is.read(&http_body[0], _content_length);
+                        }
+                    }
 
-                    // Process the complete HTTP request.
+                    // Process the complete HTTP request
                     OnLine(http_body);
 
                     // Reset for next HTTP request
