@@ -472,6 +472,26 @@ std::string ServerSocket::get_telnet_line(boost::asio::streambuf& b)
     return line;
 }
 
+/// Read _content_length bytes from the socket.
+std::string ServerSocket::get_http_body(boost::asio::streambuf& b)
+{
+    if (_content_length == 0) return "";
+
+    // Need to read more data
+    if (b.size() < _content_length)
+    {
+        size_t remaining = _content_length - b.size();
+        boost::asio::read(*_socket, b,
+            boost::asio::transfer_exactly(remaining));
+    }
+
+    std::string body;
+    body.resize(_content_length);
+    std::istream is(&b);
+    is.read(&body[0], _content_length);
+    return body;
+}
+
 // ==================================================================
 
 // Ths method is called in a new thread, when a new network connection is
@@ -519,30 +539,8 @@ void ServerSocket::handle_connection(void)
                     HandshakeLine(line);
                 if (_got_http_header)
                 {
-                    std::string http_body;
-
-                    // Read the HTTP body if there is one
-                    if (_content_length > 0)
-                    {
-                        // First check if data is already in the buffer
-                        if (b.size() >= _content_length)
-                        {
-                            // Data is already in the buffer
-                            std::istream is(&b);
-                            http_body.resize(_content_length);
-                            is.read(&http_body[0], _content_length);
-                        }
-                        else
-                        {
-                            // Need to read more data
-                            size_t remaining = _content_length - b.size();
-                            boost::asio::read(*_socket, b,
-                                boost::asio::transfer_exactly(remaining));
-                            std::istream is(&b);
-                            http_body.resize(_content_length);
-                            is.read(&http_body[0], _content_length);
-                        }
-                    }
+                    // XXX TODO Handle the websockets case, too.
+                    std::string http_body = get_http_body(b);
 
                     // Process the complete HTTP request
                     OnLine(http_body);
