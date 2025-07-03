@@ -15,10 +15,10 @@ are hundreds of wiki pages describing specific Atom types, Atomese, and
 the AtomSpace. Here are few places to start:
 
 * http://wiki.opencog.org/w/Atomese
-* http://wiki.opencog.org/w/Atoms
+* http://wiki.opencog.org/w/Atom
 * http://wiki.opencog.org/w/Types
 * http://wiki.opencog.org/w/Value
-* http://wiki.opencog.org/w/QueryLink
+* http://wiki.opencog.org/w/JoinLink
 
 Here is what you need to know.
 
@@ -39,6 +39,35 @@ The AtomSpace
 * The AtomSpace contents are immutable: Atoms can only be added or
   removed; the cannot be modified. That is, the name of a Node cannot
   be changed. The list of Atoms in a Link cannot be changed.
+* The idea of "global uniqueness" refers to not only the current
+  AtomSpace, but potentially all other accessible AtomSpaces.
+* The contents AtomSpaces are NOT kept in sync automatically, but
+  are up to user actions to shuttle Atoms around between them.
+* In particular, Values attached to Atoms in distinct AtomSpaces are
+  not synchronized. The Value subsystem is explained below.
+
+Multiple AtomSpaces
+-------------------
+* There are two distinct ways in which there can be multiple AtomSpaces.
+* In one form, AtomSpaces can inherit from one-another, thus allowing
+  supersets and subsets to be formed. However, the current MCP
+  interfaces do not provide an direct way of working with this, and
+  so this ability is not further explained.
+* In another form, AtomSpaces can be stored to disk, or shared over the
+  network, using the StorageNode subsystem, explained below.
+* In general, these different AtomSpaces will contain different sets
+  of Atoms.
+* When an Atom appears in two different AtomSpaces, it is supposed to
+  be understood as "the same Atom", in principle.
+* In practice, Atoms in different AtomSpaces will be different instances
+  of "the same thing", and thus will, in general, hold different Values.
+* By thinking of them as "the same thing", it becomes easier to copy
+  and share them, and to revise, update and share the attached Values.
+* The StorageNodes provide a mechanism for copying, sending and
+  receiving the attached Values. The current MCP API does not currently
+  offer any simple way of doing this, and so this won't be further
+  described.
+
 
 Using the AtomSpace
 -------------------
@@ -67,6 +96,21 @@ Atom Types
   deeper.
 * On very rare occasions, additional types might be added during
   runtime. This happens when a module specifying new types is loaded.
+* The type hierarchy is less than ten levels deep, more or less.
+* There is no performance penalty at all for using deeply nested types.
+* Different kinds of types do have different implications for the size
+  of an Atom. For example, the EvaluationLink is implemented with a C++
+  class that stores a fair amount of additional information. Thus, it is
+  a bit slower to instantiate, and uses slightly more RAM than the
+  similar EdgeLink.
+* The differences in RAM usage are rarely more than a factor of 2x.
+* The differences in CPU usage for Atom creation is rarely more than
+  a factor of 10x.
+* If you are asked to create some Atom of some type, you should in
+  general create the type that was asked for, and disregard any
+  perceived or imagined differences in performance.
+* Because different Atom types are used for different functions,
+  they are not generally interchangeable.
 
 Atomese
 -------
@@ -96,6 +140,12 @@ Atomese
 * Atoms typically use 500 bytes to 1500 bytes each, depending on the
   atom type and the graph it is in. This RAM usage includes all of the
   internal indexes and lookup tables that are invisible to the user.
+* The actual size of the Atom does depend on the number of Values
+  attached to it, and the size of the incoming set, but there is little
+  that can be done about this: the size is what it is, as needed to
+  perform whatever function is needed for that Atom.
+* The only reason that size is mentioned here is that it is sometimes
+  useful to be able to estimate AtomSpace size.
 
 Values
 ------
@@ -114,17 +164,23 @@ Values
 * The ListValue holds a vector of Values.
 * Since Atoms are Values, the ListValue can hold a mixture of Atoms
   and other kinds of Values.
-* There are specialized types of ListValue that implement thread-safe,
-  multi-reader, multi-writer queues (FIFO's). Thus, writers always
-  append to the tail, readers always read from the head. If the queue
-  is empty, the reader thread will block, until some other thread places
-  a value into the queue.
-* There are specialized types of ListValue that implement thread-safe,
-  multi-reader, multi-writer disambiguated set. A given Value can occur
-  only once in this set; adding a Value multiple times will not cause
-  it to appear more than once. Reading from this set will remove one
-  Value and return it to the reader. Which Value is actually removed and
-  returned is unspecified and is arbitrary.
+* The QueueValue is a specialized type of ListValue that implements
+  thread-safe, multi-reader, multi-writer queues (FIFO's). Thus,
+  writers always append to the tail, readers always read from the
+  head. If the queue is empty, the reader thread will block, until
+  some other thread places a value into the queue.
+* The UnisetValue is a specialized type of ListValue that implements a
+  thread-safe, multi-reader, multi-writer disambiguated set. A given
+  Value can occur only once in this set; adding a Value multiple times
+  will not cause it to appear more than once. Reading from this set
+  will remove one Value and return it to the reader. Which Value is
+  actually removed and returned is unspecified and is arbitrary.
+* The QueueValue and UnisetValue are usually created automatically,
+  as needed, by executable Atoms. They are used to hold the results
+  of execution, and thereby pass them to later stages of a pipeline
+  (described below).
+* For additional information about all the different Value types,
+  and how they work, the wiki should be consulted, as needed.
 * The `getValues` tool can be used get the Values on an Atom.
 * The `setValue` tool can be used to attach a key-value pair to an Atom.
   Note that there can only be one Value for a given key on a given Atom.
@@ -181,6 +237,8 @@ Execution
 * Execution will depend on the Atom type.
 * Different executable Atom types implement different kinds of
   algorithms and functions.
+* More info about the actions performed can be found at the wiki
+  documentation.
 * For example, `AddLink` can add together any NumberNodes that appear
   in it's outgoing set.
 * For example, `FloatValueOfLink`, when executed, will fetch the current
@@ -197,6 +255,28 @@ Execution
   is shorter than another, the returned value will be the shortest of
   all inputs. The wiki page for AddLink should be consulted for
   additional details and examples.
+
+* There is no 'dry-run' mode for execution. The execution takes effect
+  immediately.
+* Execution is normally single-threaded; however, there are specific
+  Link types that create multiple threads when executed. This includes
+  the ExecuteThreadedLink and the ThreadJoinLink.
+* Multi-threaded execution is always thread-safe, and no special efforts
+  are required to maintain thread safety.
+
+* Most executable Atoms are implemented as C++ classes, and so, when
+  executed, the `execute()` method on that classis called.
+* The `GroundedSchemaNode` can be used to call external python and
+  scheme code.
+* The name of the GroundedSchema specifies the code to be invoked. For
+  example, `py:some_python_function` names a python function that must
+  exist in the PYTHONPATH for the currently running AtomSpace. Similarly
+  `scm:some_scheme_expression` can be called.
+* The GroundedSchema must be wrapped in an ExecutionOutputLink, and
+  it is the ExecutionOutputLink that is executed.
+* The arguments to these functions are taken from the outgoing set of
+  the ExecutionOutputLink.
+* The scheme dialect is the one provided by guile.
 * All executable Atoms have wiki pages that explain what they do and
   how they work. If in doubt, the wiki pages should be consulted.
 
@@ -245,6 +325,17 @@ Querying
 * The Atomese query system can be compared to SQL. However, it is
   more powerful than SQL, and can perform complex queries that SQL
   is not capable of.
+* The indexeing needed for good query performance is handled
+  automatically by the AtomSpace; there are many indexes, but these are
+  not explictly visible, accessible or controllable.
+* There are more than a few different query optimization techniques that
+  are built into the system. These are not externally visibile,
+  controllable or accessible; they are chosen automatically, depending
+  on both the query, and th AtomSpace contents.
+* Query performance depends on the complexity of the query, and the
+  complexity of the hypergraphs being examined. It does not depend on
+  the size of the AtomSpace; exhaustive searches are never performed,
+  and a variety of indexes are always used to avoid fruitless searches.
 * There are more than a dozen different kinds of Atom types that
   specify different kinds of queries.
 * This includes a `MeetLink` that is adjoint to the `JoinLink`, where
@@ -277,7 +368,11 @@ StorageNodes and ProxyNodes
 * The simplest ProxyNodes implement mirroring. So, for example, an Atom
   written to a mirror is written to all StorageNodes specified in that
   mirror. An Atom read from a mirror is read from only one StorageNode
-  in the mirror, thus providing a form of load-sharing.
+  in the mirror, thus providing a form of load-balancing.
+* The current MCP interfaces do not yet expose the full range of
+  abilities that the StorageNode interface provides. Thus, additional
+  functions, such as atomic updates, transaction support, and remote
+  queries are not described here.
 
 The End
 -------
