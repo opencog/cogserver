@@ -1,4 +1,4 @@
-MCP For the Cogserver
+MCP For the CogServer
 ---------------------
 An experimental interface supporting the Model Context Protocol (MCP)
 has been created. In it's current form, it allows LLM's to work with
@@ -12,8 +12,8 @@ in the [atomspace-storage JSON
 directory](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/json).
 
 Some example mini-prompts include:
-* Please ask the cogserv MCP server what version it is.
-* ask the cogserv server what all the direct subtypes of type 'Node' are
+* Please ask the atomese MCP server what version it is.
+* ask the atomese server what all the direct subtypes of type 'Node' are
 * run that query again, but set subclass to true
 * ask if it has a node of type 'Concept' that is named 'foo'
 * Are there any atoms of type Node?
@@ -21,7 +21,7 @@ Some example mini-prompts include:
 * Please ask the server if it has (ListLink (Concept "foo"))
 * are there any Links that contain a ConceptNode named 'foo'
 * please make an atom called bar of type ConceptNode
-* The contents of the cogserv can change any time. If I ask to do it
+* The contents of the atomese server can change any time. If I ask to do it
   again, this is because things may have changed.
 * please get the incoming set of the ConceptNode foo
 * Please create (Concept "bar") and (Concept "foo")
@@ -57,11 +57,12 @@ need a raw JSON interface. Currently, the major application is to work
 around the open bug
 [Claude Code #1536](https://github.com/anthropics/claude-code/issues/1536).
 The work-around is given further below, and uses a pair of proxies to
-copy MCP JSON on stdio to the raw CogServer seocket.
+copy MCP JSON on stdio to the raw CogServer socket.
 
 The regular interface is located at port 18080, at the URL `/mcp`. For
 example, Claude can access this after configuring
 ```
+claude mcp list
 claude mcp add atomese -t http http://localhost:18080/mcp
 ```
 The raw interface is at port 18888; an example of how to use it is given
