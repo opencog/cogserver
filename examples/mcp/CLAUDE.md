@@ -239,7 +239,7 @@ Querying
   other system call pattern matching. In other systems, "pattern
   matching" usually referes to a regex-like query. By contrast, the
   Atomese query system is stack-based, and performs a recursive
-  traversal of teh AtomSpace. Please do not confuse the simpler
+  traversal of the AtomSpace. Please do not confuse the simpler
   regex-like pattern matching systems with what the Atomese query
   system can do.
 * The Atomese query system can be compared to SQL. However, it is
@@ -257,8 +257,30 @@ Querying
   direction: given a grounding, it asks for all patterns for which that
   could be a valid grounding. That is, if a grounding is an "answer",
   the DualLink finds all "questions" that it answers.
+* The DualLink is possible, because all query patterns are written in
+  Atomese, and are thus stored in the AtomSpace.
 
-atomese are
+StorageNodes and ProxyNodes
+---------------------------
+* The AtomSpace is an in-RAM database.  That is, all Atomese expressions
+  in the AtomSpace are in RAM.
+* It can be desirable to commit Atomese to disk, for long-term storage,
+  and to share oth with others, over the internet.
+* The StorageNode provides a generic framework for saving and loading
+  Atoms to disk, or sending and receiving them over the network.
+* There are many kinds of StorageNodes, tailored for specific actions.
+* Most important of these is RocksStorageNode, which allows Atoms and
+  AtomSpaces to be saved to disk.
+* The CogStorageNode allows Atoms to be sent to and received from remote
+  network sites running the CogServer.
+* A subclass of the StorageNodes are the various ProxyNodes.
+* The simplest ProxyNodes implement mirroring. So, for example, an Atom
+  written to a mirror is written to all StorageNodes specified in that
+  mirror. An Atom read from a mirror is read from only one Storagenode
+  in the mirror, thus providing a form of load-sharing.
 
-storage and proxy
-
+The End
+-------
+That's all, folks! Be sure to carefully read and understand what is
+written above. If there are doubts or questions, th wiki should be
+consulted.
