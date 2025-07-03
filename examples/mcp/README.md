@@ -36,6 +36,11 @@ Atomese sensorimotor interfaces. These are under development, and are
 "pre-alpha" (cough cough. Version 0.0.1 to be precise.) For now, the
 above works.
 
+Note that the above requests work just fine, even without any additional
+prompting about the AtomSpace. The [CLAUDE.md](CLAUDE.md) file contains
+a large, detailed prompt explaining the AtomSpace to Claude (or any
+other LLM with MCP support).
+
 ### TODO
 * Teach Claude how to run AtomSpace queries -- i.e. how to write
   `QueryLink` and then run it.
@@ -43,6 +48,9 @@ above works.
   Atomese needed to compute cosine similarity or mutual information
   for some collection of `EdgeLink`s, i.e. try to get it to reinvent
   the old atomspace-matrix code, but this time in pure Atomese.
+* Move the CLAUDE.md file over to an MCP "resource". That is, I think
+  this is the intended way of providing MCP documentatio. I guess.
+  I'm not sure.
 
 The MCP Servers
 ---------------
