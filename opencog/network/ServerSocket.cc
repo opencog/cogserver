@@ -472,6 +472,26 @@ std::string ServerSocket::get_telnet_line(boost::asio::streambuf& b)
     return line;
 }
 
+/// Read _content_length bytes from the socket.
+std::string ServerSocket::get_http_body(boost::asio::streambuf& b)
+{
+    if (_content_length == 0) return "";
+
+    // Need to read more data
+    if (b.size() < _content_length)
+    {
+        size_t remaining = _content_length - b.size();
+        boost::asio::read(*_socket, b,
+            boost::asio::transfer_exactly(remaining));
+    }
+
+    std::string body;
+    body.resize(_content_length);
+    std::istream is(&b);
+    is.read(&body[0], _content_length);
+    return body;
+}
+
 // ==================================================================
 
 // Ths method is called in a new thread, when a new network connection is
@@ -517,33 +537,12 @@ void ServerSocket::handle_connection(void)
                 // Bypass until we've received the full HTTP header.
                 if (not _got_http_header)
                     HandshakeLine(line);
-                if (_got_http_header and _content_length > 0)
+                if (_got_http_header)
                 {
-                    // Read the HTTP body.
-                    // The boost::asio::read_until() is a bit funky.
-                    // It reads a little too much. That seems to be OK,
-                    // as long as it is used consistently. But when a
-                    // single blank line shows up, then the read below
-                    // hangs, because the wnated data has already been
-                    // read, and is waiting for us in the buffer.
-                    //
-                    // boost::asio::read(*_socket, b,
-                    //     boost::asio::transfer_exactly(_content_length));
-                    std::istream is(&b);
-                    std::string http_body;
-                    std::getline(is, http_body);
+                    // XXX TODO Handle the websockets case, too.
+                    std::string http_body = get_http_body(b);
 
-                    // Send an HTTP header
-                    std::string response =
-                       // "HTTP/1.1 202 Accepted\r\n"
-                       "HTTP/1.1 200 OK\r\n"
-                       "Content-Type: application/json\r\n"
-                       "Cache-Control: no-cache\r\n"
-                       "Connection: keep-alive\r\n"
-                       "\r\n";
-                    Send(response);
-
-                    // Process the complete HTTP request.
+                    // Process the complete HTTP request
                     OnLine(http_body);
 
                     // Reset for next HTTP request

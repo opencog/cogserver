@@ -59,6 +59,9 @@ private:
     // Read a newline-delimited line of text from socket.
     std::string get_telnet_line(boost::asio::streambuf&);
 
+    // Read _content_length bytes
+    std::string get_http_body(boost::asio::streambuf&);
+
     // Send an asio buffer that has data in it.
     void Send(const boost::asio::const_buffer&);
 
