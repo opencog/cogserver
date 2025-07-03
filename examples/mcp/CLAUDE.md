@@ -1,6 +1,6 @@
-How to use Atomese, the AtomSpace and the Cogserver
+How to use Atomese, the AtomSpace and the CogServer
 ---------------------------------------------------
-This file explains what Atomese, the AtomSpace and the Cogserver are,
+This file explains what Atomese, the AtomSpace and the CogServer are,
 and how to use them. The are directly accessible from a Model Context
 Protocol (MCP) server.
 
@@ -85,13 +85,13 @@ Atomese
 * A way of talking about the location of an Atom in an Atomese tree
   is to talk about it's incoming set, and its outgoing set (or outgoing
   list). The outgoing set of a Link is simply the list of Atoms in that
-  Link. Nodes do not have an outoging set. The incoming set of an Atom
+  Link. Nodes do not have an outgoing set. The incoming set of an Atom
   is the set of all Links that contain that Atom. The incoming set can
   be fetched with the `getIncoming` tool.
 * Most Link types are ordered, in that the outgoing set is not actually
   a set, but a list, and the order of that list is important. A few Link
   types are unordered, in that the outgoing set is truly a set, and any
-  type of UnorderedLink having the same outoging set, written in any
+  type of UnorderedLink having the same outgoing set, written in any
   order, refers to the same globally unique Link.
 * Atoms typically use 500 bytes to 1500 bytes each, depending on the
   atom type and the graph it is in. This RAM usage includes all of the
@@ -188,8 +188,8 @@ Execution
 * These are easily chained together. Thus, for example,
 ```
   (AddLink
-     (FloatValueOf (Cocnept "foo") (Predicate "some key"))
-     (FloatValueOf (Cocnept "bar") (Predicate "some key")))
+     (FloatValueOf (Concept "foo") (Predicate "some key"))
+     (FloatValueOf (Concept "bar") (Predicate "some key")))
 ```
   when it is executed, will add together the values on the given Atoms
   at the given keys. It will return a FloatValue containing the result.
@@ -248,10 +248,10 @@ Querying
 * There are more than a dozen different kinds of Atom types that
   specify different kinds of queries.
 * This includes a `MeetLink` that is adjoint to the `JoinLink`, where
-  the adjointess relation arises when the AtomSpace is viewed as a
+  the adjointness relation arises when the AtomSpace is viewed as a
   lattice.
 * This includes a `DualLink` that is adjoint to the `JoinLink`, when
-  the adjointess relation arises by reversing the roles of "pattern"
+  the adjointness relation arises by reversing the roles of "pattern"
   and "grounding". Thus, normal queries present a pattern and ask for
   all groundings of that pattern. The DualLink goes in the reverse
   direction: given a grounding, it asks for all patterns for which that
@@ -265,7 +265,7 @@ StorageNodes and ProxyNodes
 * The AtomSpace is an in-RAM database.  That is, all Atomese expressions
   in the AtomSpace are in RAM.
 * It can be desirable to commit Atomese to disk, for long-term storage,
-  and to share oth with others, over the internet.
+  and to share them with others, over the internet.
 * The StorageNode provides a generic framework for saving and loading
   Atoms to disk, or sending and receiving them over the network.
 * There are many kinds of StorageNodes, tailored for specific actions.
@@ -276,7 +276,7 @@ StorageNodes and ProxyNodes
 * A subclass of the StorageNodes are the various ProxyNodes.
 * The simplest ProxyNodes implement mirroring. So, for example, an Atom
   written to a mirror is written to all StorageNodes specified in that
-  mirror. An Atom read from a mirror is read from only one Storagenode
+  mirror. An Atom read from a mirror is read from only one StorageNode
   in the mirror, thus providing a form of load-sharing.
 
 The End
