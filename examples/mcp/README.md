@@ -53,16 +53,16 @@ There are two ways of using MCP with the CogServer:
 The first form provides a conventional HTTP interface, as documented at
 [modelcontextprotocol.io](https://modelcontextprotocol.io/). The second
 form exists for custom applications that wrap MCP in other ways, and
-only need a raw JSON interface. Currently, the major application is to
-work around the open bug
+need a raw JSON interface. Currently, the major application is to work
+around the open bug
 [Claude Code #1536](https://github.com/anthropics/claude-code/issues/1536).
-The work-around is given further below, and uses a proxy to copy MCP
-JSON on stdio to the raw CogServer seocket.
+The work-around is given further below, and uses a pair of proxies to
+copy MCP JSON on stdio to the raw CogServer seocket.
 
 The regular interface is located at port 18080, at the URL `/mcp`. For
 example, Claude can access this after configuring
 ```
-claude mcp add foobar -t http http://localhost:18080/mcp
+claude mcp add atomese -t http http://localhost:18080/mcp
 ```
 The raw interface is at port 18888; an example of how to use it is given
 below.
@@ -83,7 +83,7 @@ to overcome/bypass these issues.
 For example, if using Claude Code, the proxy can be configured as
 ```
 claude mcp list
-clause mcp add cogserv /where/ever/stdio_to_unix_proxy.py
+clause mcp add atomese /where/ever/stdio_to_unix_proxy.py
 ```
 Then, in a distinct shell, run
 ```
@@ -97,7 +97,7 @@ The code in `mcp-checker.cc` provides a simple Model Context protocol
 (MCP) test client that can be used to verify that an MCP network server
 is available, and is responding to commands.  It will list the tools
 and resources provided by the MCP server. By default, it connects to
-`localhost:18888`, which is where the CogServer MCP port is located.
+`localhost:18888`, which is where the raw CogServer MCP port is located.
 Use the `--host` and `--port` flags to specify a different host and
 port.
 
