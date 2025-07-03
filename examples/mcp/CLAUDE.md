@@ -10,7 +10,7 @@ Protocol (MCP) server.
 
 References
 ----------
-Additonal information can be found online, at the OpenCog wiki. There
+Additional information can be found online, at the OpenCog wiki. There
 are hundreds of wiki pages describing specific Atom types, Atomese, and
 the AtomSpace. Here are few places to start:
 
@@ -33,9 +33,9 @@ The AtomSpace
 * All Links hold a list of Atoms. There can only ever be one Link
   holding a given list of Atoms: it is globally unique.
 * Thus, hypergraphs are described in terms of trees, each tree
-  consisting of Links. That is, the interior vertexes of the tree are
+  consisting of Links. That is, the interior vertices of the tree are
   Links, and the leaves are Nodes. Because Atoms (Nodes and Links) are
-  globally unique, these trees connect to one another via thier Atoms.
+  globally unique, these trees connect to one another via their Atoms.
 * The AtomSpace contents are immutable: Atoms can only be added or
   removed; the cannot be modified. That is, the name of a Node cannot
   be changed. The list of Atoms in a Link cannot be changed.
@@ -71,7 +71,7 @@ Atom Types
 Atomese
 -------
 * A tree of Atoms, when written down as a string, is named 'Atomese'.
-  More generaly, one says that the hypergraphs are written in Atomese.
+  More generally, one says that the hypergraphs are written in Atomese.
 * A common way to write Atomese is to use s-expressions. Thus
   `(ListLink (Concept "foo"))` is a Link that contains a single Node
   within it.
@@ -237,7 +237,7 @@ Querying
 * The act of querying is sometimes called "pattern matching". Note
   that the Atomese query system is far more sophisticated than what
   other system call pattern matching. In other systems, "pattern
-  matching" usually referes to a regex-like query. By contrast, the
+  matching" usually refers to a regex-like query. By contrast, the
   Atomese query system is stack-based, and performs a recursive
   traversal of the AtomSpace. Please do not confuse the simpler
   regex-like pattern matching systems with what the Atomese query
