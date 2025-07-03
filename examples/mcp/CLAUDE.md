@@ -8,6 +8,14 @@ Protocol (MCP) server.
   or 'cogserv' or something similar. There will be more than a dozen
   tools available to work with Atomese.
 
+The intended audience for this file is Claude, or any other LLM that
+has MCP interfaces. This file explains the AtomSpace in such a way that
+the LLM will be able to work with users to create and manipulate
+Atomese from verbal descriptions. Users may or may not understand the
+descriptions and explanatios offered here, and thus it is vital that
+you, the LLM read this and apply the knowledge contained here, when
+conversing with a user.
+
 References
 ----------
 Additional information can be found online, at the OpenCog wiki. There
@@ -179,6 +187,12 @@ Values
   as needed, by executable Atoms. They are used to hold the results
   of execution, and thereby pass them to later stages of a pipeline
   (described below).
+* The base class for these thread-safe containers is the ContainerValue.
+* ContainerValues can be opened for writing. They can be written to only
+  while open.
+* ContainerValues can be read at any time. A read on an empty container
+  will block forever if it is open for writing; otherwise, it will return
+  immediately, as the container is empty.
 * For additional information about all the different Value types,
   and how they work, the wiki should be consulted, as needed.
 * The `getValues` tool can be used get the Values on an Atom.
@@ -265,7 +279,7 @@ Execution
   are required to maintain thread safety.
 
 * Most executable Atoms are implemented as C++ classes, and so, when
-  executed, the `execute()` method on that classis called.
+  executed, the `execute()` method on that class is called.
 * The `GroundedSchemaNode` can be used to call external python and
   scheme code.
 * The name of the GroundedSchema specifies the code to be invoked. For
@@ -325,13 +339,13 @@ Querying
 * The Atomese query system can be compared to SQL. However, it is
   more powerful than SQL, and can perform complex queries that SQL
   is not capable of.
-* The indexeing needed for good query performance is handled
+* The indexing needed for good query performance is handled
   automatically by the AtomSpace; there are many indexes, but these are
   not explictly visible, accessible or controllable.
 * There are more than a few different query optimization techniques that
-  are built into the system. These are not externally visibile,
+  are built into the system. These are not externally visible,
   controllable or accessible; they are chosen automatically, depending
-  on both the query, and th AtomSpace contents.
+  on both the query, and the AtomSpace contents.
 * Query performance depends on the complexity of the query, and the
   complexity of the hypergraphs being examined. It does not depend on
   the size of the AtomSpace; exhaustive searches are never performed,
@@ -369,6 +383,10 @@ StorageNodes and ProxyNodes
   written to a mirror is written to all StorageNodes specified in that
   mirror. An Atom read from a mirror is read from only one StorageNode
   in the mirror, thus providing a form of load-balancing.
+* If the AtomSpaces in a mirror differ from one another, then the
+  results of a read are unspecified: one or another of the elements
+  of the mirror will be used, and whatever it contains is what will
+  be returned.
 * The current MCP interfaces do not yet expose the full range of
   abilities that the StorageNode interface provides. Thus, additional
   functions, such as atomic updates, transaction support, and remote
@@ -377,5 +395,5 @@ StorageNodes and ProxyNodes
 The End
 -------
 That's all, folks! Be sure to carefully read and understand what is
-written above. If there are doubts or questions, th wiki should be
+written above. If there are doubts or questions, the wiki should be
 consulted.
