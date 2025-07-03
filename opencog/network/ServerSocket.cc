@@ -327,6 +327,26 @@ void ServerSocket::Send(const std::string& cmd)
     // use two newlines, or a crlf.
     if (1 == cmdsize and '\n' == cmd[0]) return;
 
+    if (_is_http_socket)
+    {
+        // Build HTTP response with Content-Length
+        // XXX FIXME Content-Type is wrong for everyone but JSON,
+        // but who cares because only JSON uses HTTP.
+        std::string response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: " + std::to_string(cmdsize) + "\r\n"
+            "Cache-Control: no-cache\r\n"
+            "Connection: keep-alive\r\n"
+            "\r\n";
+
+        // Send headers
+        if (not _do_frame_io)
+            Send(boost::asio::const_buffer(response.c_str(), response.size()));
+        else
+            send_websocket(response);
+    }
+
     if (not _do_frame_io)
     {
         Send(boost::asio::const_buffer(cmd.c_str(), cmdsize));
