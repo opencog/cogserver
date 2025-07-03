@@ -93,6 +93,9 @@ Atomese
   types are unordered, in that the outgoing set is truly a set, and any
   type of UnorderedLink having the same outoging set, written in any
   order, refers to the same globally unique Link.
+* Atoms typically use 500 bytes to 1500 bytes each, depending on the
+  atom type and the graph it is in. This RAM usage includes all of the
+  internal indexes and lookup tables that are invisible to the user.
 
 Values
 ------
@@ -130,18 +133,132 @@ Values
 
 Conventional Representations
 ----------------------------
+* There are several conventional representations used for conventional
+  knowledge graph structures.
+* Directed graphs, in the sense of graph theory, are conventional
+  specified with vertices and the edges connecting them. The
+  conventional Atomese representation for a labelled, directed edge is
+```
+  (EdgeLink (PredicateNode "edge name")
+      (ListLink (ItemNode "head vertex") (ItemNode "tail vertex")))
+```
+  The vertex names and edge names can be any strings. The global
+  uniqueness of Atoms guarantees that any given vertex is always the
+  one and same vertex, and that the named edge is always this same edge.
+* On rare occasions, the EdgeLink might be used with something other
+  than a PredicateNode.
+* On rare occasions, something other than an ItemNode might be used for
+  the vertices.
+* On rare occasions, the list will contain more or fewer than two
+  vertices; in this case, it is no longer a "true graph-theoretical
+  graph edge", but is still entirely valid and usable as Atomese.
+* An older representation, sometimes in use, but discouraged, is
+```
+  (EvaluationLink (PredicateNode "edge name")
+      (ListLink (ConceptNode "head vertex") (ConceptNode "tail vertex")))
+```
+  EvaluationLinks are discouraged because the use more RAM and CPU than
+  EdgeLinks. ConceptNodes are mildly discouraged only because not all
+  graph vertices are conceptually concepts.
 
-edge
-
-Querying
---------
-* The `QueryLink` can be used to perform complex and sophisticated
-  queries against the AtomSpace. Please refer to the wiki page to learn
-  how to use it.
+Execution
+---------
+* Many, but not all Atom types are executable.
+* When an Atom is executed, it performs some action, and returns a value.
+* The outgoing set of the Atom is usually interpreted as the "arguments"
+  to a "function", and so executing an Atom can be thought of as
+  "applying" a function to some arguments. The words "arguments",
+  "function" and "apply" are in quotes, because while this is a
+  reasonable way to think about the execution of Atoms, it is not
+  formally dictated.
+* Execution might depend on the incoming set, on the contents of the
+  AtomSpace, on the Values attached to the Atom, and on external systems
+  attached to some Atoms.
+* Execution will almost always have side-effects, such as modifying
+  the AtomSpace contents, modifying the Values attached to assorted
+  Atoms, or causing some external system to perform some action or
+  change it's state.
+* Execution will depend on the Atom type.
+* Different executable Atom types implement different kinds of
+  algorithms and functions.
+* For example, `AddLink` can add together any NumberNodes that appear
+  in it's outgoing set.
+* For example, `FloatValueOfLink`, when executed, will fetch the current
+  FloatValue at the indicated key.
+* These are easily chained together. Thus, for example,
+```
+  (AddLink
+     (FloatValueOf (Cocnept "foo") (Predicate "some key"))
+     (FloatValueOf (Cocnept "bar") (Predicate "some key")))
+```
+  when it is executed, will add together the values on the given Atoms
+  at the given keys. It will return a FloatValue containing the result.
+* In the above example, the addition is vector addition. If one vector
+  is shorter than another, the returned value will be the shortest of
+  all inputs. The wiki page for AddLink should be consulted for
+  additional details and examples.
+* All executable Atoms have wiki pages that explain what they do and
+  how they work. If in doubt, the wiki pages should be consulted.
 
 Pipelines and Filters
 ---------------------
-* Teach Claude how to create a data processing pipeline: how to write
-  Atomese needed to compute cosine similarity or mutual information
-  for some collection of `EdgeLink`s, i.e. try to get it to reinvent
-  the old atomspace-matrix code, but this time in pure Atomese.
+* The above example of adding together two vectors is a very simple
+  example of an executable pipeline written in Atomese.
+* Executable Atoms can be thought of as "Abstract Syntax Trees", in
+  that the tree describes some sequence of operations to be performed.
+* A particularly important role is played by the FilterLink, which
+  can select out a subset of Atoms that it is given.
+* The wiki page for FilterLink provides many examples and points
+  to other closely related ideas.
+* Because some of the ListValue types implement thread-safe FIFOs and
+  sets, pipeline processing can be chained in such a manner that some
+  processing threads wait for input generated by other processing
+  threads.
+* There are several Link types that can create new threads, executing
+  the Atoms in their outgoing set. If these are needed, the wiki page
+  should be consulted for examples and explanations.
+
+Querying
+--------
+* The `QueryLink` and `JoinLink` can be used to perform complex and
+  sophisticated queries against the AtomSpace. Please refer to the wiki
+  page to learn how to use it.
+* The topic of querying is large and complicated. A lot can be said
+  about it. It requires careful study to be used effectively.
+* Broadly, querying in the AtomSpace can be understood to be a form of
+  (hyper-)graph rewriting. That is, all hypergraphs of a certain given
+  shape can be found, and then new hypergraphs can be created from the
+  resulting matches.
+* The arguments to queries are called "patterns", and the result of
+  performing that query are the graphs that are "groundings" of the
+  pattern.
+* The pattern can be thought of as a "question", and the groundings
+  provide the "answer".
+* The act of querying is sometimes called "pattern matching". Note
+  that the Atomese query system is far more sophisticated than what
+  other system call pattern matching. In other systems, "pattern
+  matching" usually referes to a regex-like query. By contrast, the
+  Atomese query system is stack-based, and performs a recursive
+  traversal of teh AtomSpace. Please do not confuse the simpler
+  regex-like pattern matching systems with what the Atomese query
+  system can do.
+* The Atomese query system can be compared to SQL. However, it is
+  more powerful than SQL, and can perform complex queries that SQL
+  is not capable of.
+* There are more than a dozen different kinds of Atom types that
+  specify different kinds of queries.
+* This includes a `MeetLink` that is adjoint to the `JoinLink`, where
+  the adjointess relation arises when the AtomSpace is viewed as a
+  lattice.
+* This includes a `DualLink` that is adjoint to the `JoinLink`, when
+  the adjointess relation arises by reversing the roles of "pattern"
+  and "grounding". Thus, normal queries present a pattern and ask for
+  all groundings of that pattern. The DualLink goes in the reverse
+  direction: given a grounding, it asks for all patterns for which that
+  could be a valid grounding. That is, if a grounding is an "answer",
+  the DualLink finds all "questions" that it answers.
+
+atomese are
+
+storage and proxy
+
