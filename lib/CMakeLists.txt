@@ -34,9 +34,7 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/lib/opencog-test.conf
 
 # Place a default config file in a default location
 # CONFDIR normally expands to /usr/local/etc/
-# Install `opencog.conf` for backwards-compat.
 INSTALL (FILES
 	cogserver.conf
-	opencog.conf
 	DESTINATION "${CONFDIR}"
 )
