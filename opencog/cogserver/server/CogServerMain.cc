@@ -75,6 +75,7 @@ static void usage(const char* progname)
         << "SERVER_PORT = 17001\n"
         << "WEB_PORT = 18080\n"
         << "MCP_PORT = 18888\n"
+        << "CONFDIR = /usr/local/etc\n"
         << "LOG_FILE = /tmp/cogserver.log\n"
         << "LOG_LEVEL = info\n"
         << "LOG_TO_STDOUT = false\n"
