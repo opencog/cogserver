@@ -119,15 +119,14 @@ int main(int argc, char *argv[])
     int webserver_port = 18080;
     int mcp_port = 18888;
 
-    static const char *optString = "cp:w:m:D:h";
-    int c = 0;
+    static const char *optString = "c:p:w:m:D:h";
     std::vector<std::string> configFiles;
     std::vector<std::pair<std::string, std::string>> configPairs;
     std::string progname = argv[0];
 
     // parse command line
     while (true) {
-        c = getopt (argc, argv, optString);
+        int c = getopt (argc, argv, optString);
         /* Detect end of options */
         if (c == -1) {
             break;
