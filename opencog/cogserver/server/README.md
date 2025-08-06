@@ -81,7 +81,3 @@ Additional interfaces can be created by specializing
 command processor, and passes input data over to the overloaded
 generic `eval()` method, which is then free to interpret the input
 in any way desired.
-
-TODO
-----
-Get rid of BaseServer. It's not needed any more.

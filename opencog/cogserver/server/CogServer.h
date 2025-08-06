@@ -12,10 +12,11 @@
 #ifndef _OPENCOG_COGSERVER_H
 #define _OPENCOG_COGSERVER_H
 
+#include <opencog/atomspace/AtomSpace.h>
+
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/ModuleManager.h>
 #include <opencog/network/NetworkServer.h>
-#include <opencog/cogserver/server/BaseServer.h>
 #include <opencog/cogserver/server/RequestManager.h>
 
 namespace opencog
@@ -47,11 +48,11 @@ namespace opencog
  * multi-user access.
  */
 class CogServer :
-    public BaseServer,
     public RequestManager,
     public ModuleManager
 {
 protected:
+    AtomSpacePtr _atomSpace;
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
@@ -68,6 +69,10 @@ public:
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);
+
+    /** Returns the atomspace instance. */
+    AtomSpacePtr getAtomSpace() { return _atomSpace; }
+    void setAtomSpace(const AtomSpacePtr& as) { _atomSpace = as; }
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
