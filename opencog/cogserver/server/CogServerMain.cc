@@ -30,52 +30,27 @@
 #include <signal.h>
 #include <string.h>
 
-#include <filesystem>
 #include <string>
 #include <thread>
-#include <utility>
 
 #include <boost/algorithm/string.hpp>
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
-#include <opencog/util/exceptions.h>
-#include <opencog/util/files.h>
-#include <opencog/util/misc.h>
 
 #include <opencog/cogserver/server/CogServer.h>
 
 using namespace opencog;
 
-static const char* DEFAULT_CONFIG_FILENAME = "cogserver.conf";
-static const char* DEFAULT_CONFIG_ALT_FILENAME = "opencog.conf";
-static const char* DEFAULT_CONFIG_PATHS[] =
-{
-    // Search order for the config file:
-    ".",         // First, we look in the current directory,
-    "lib",       // Next, we look in the build directory (cmake puts it here)
-    "../lib",    // Next, we look at the source directory
-    CONFDIR,     // Next, the install directory
-#ifndef WIN32
-    "/etc",      // Finally, in the standard system directory.
-#endif // !WIN32
-    NULL
-};
-
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
-        << "If multiple config files are specified, then these are\n"
-        << "loaded sequentially, with the values in later files\n"
-        << "overwriting the earlier ones. -D Option values override\n"
-        << "the options in config files."
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-DOPTION=\"VALUE\"]\n\n"
         << "\n"
         << "Supported options and default values:\n"
         << "SERVER_PORT = 17001\n"
         << "WEB_PORT = 18080\n"
         << "MCP_PORT = 18888\n"
-        << "CONFDIR = /usr/local/etc\n"
         << "LOG_FILE = /tmp/cogserver.log\n"
         << "LOG_LEVEL = info\n"
         << "LOG_TO_STDOUT = false\n"
@@ -119,8 +94,7 @@ int main(int argc, char *argv[])
     int webserver_port = 18080;
     int mcp_port = 18888;
 
-    static const char *optString = "c:p:w:m:D:h";
-    std::vector<std::string> configFiles;
+    static const char *optString = "p:w:m:D:h";
     std::vector<std::pair<std::string, std::string>> configPairs;
     std::string progname = argv[0];
 
@@ -130,8 +104,6 @@ int main(int argc, char *argv[])
         /* Detect end of options */
         if (c == -1) {
             break;
-        } else if (c == 'c') {
-            configFiles.push_back(optarg);
         } else if (c == 'D') {
             // override all previous options, e.g.
             // -DLOG_TO_STDOUT=TRUE
@@ -168,82 +140,23 @@ int main(int argc, char *argv[])
 
     }
 
-    // First, search for the standard config file.
-    if (configFiles.size() == 0) {
-        // search for configuration file on default locations
-        for (int i = 0; DEFAULT_CONFIG_PATHS[i] != NULL; ++i) {
-            std::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
-            configPath /= DEFAULT_CONFIG_FILENAME;
-            if (std::filesystem::exists(configPath)) {
-                std::cerr << "Using default config at "
-                          << configPath.string() << std::endl;
-                configFiles.push_back(configPath.string());
-
-                // Use the *first* config file found! We don't want to
-                // load both the installed system config file, and also
-                // any config file found in the build directory. We
-                // ESPECIALLY don't want to load the system config file
-                // after the development config file, thus clobbering
-                // the contents of the devel config file!
-                break;
-            }
-        }
-    }
-
-    // Next, search for alternate config file.
-    if (configFiles.size() == 0) {
-        // search for configuration file on default locations
-        for (int i = 0; DEFAULT_CONFIG_PATHS[i] != NULL; ++i) {
-            std::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
-            configPath /= DEFAULT_CONFIG_ALT_FILENAME;
-            if (std::filesystem::exists(configPath)) {
-                std::cerr << "Using default config at "
-                          << configPath.string() << std::endl;
-                configFiles.push_back(configPath.string());
-
-                // Use the *first* config file found! We don't want to
-                // load both the installed system config file, and also
-                // any config file found in the build directory. We
-                // ESPECIALLY don't want to load the system config file
-                // after the development config file, thus clobbering
-                // the contents of the devel config file!
-                break;
-            }
-        }
-    }
-
-    config().reset();
-    if (configFiles.size() == 0) {
-        std::cerr << "No config files could be found!" << std::endl;
-        exit(-1);
-    }
-
-    // Each config file sequentially overwrites the next
-    for (const std::string& configFile : configFiles) {
-        try {
-            config().load(configFile.c_str(), false);
-            break;
-        } catch (RuntimeException &e) {
-            std::cerr << e.get_message() << std::endl;
-            exit(1);
-        }
-    }
-
-    // Each specific option
+    // Copy command-line options to global cache.
+    // This is ... deprecated, and should be removed. Later.
     for (const auto& optionPair : configPairs) {
-        // std::cerr << optionPair.first << " = " << optionPair.second << std::endl;
-        config().set(optionPair.first, optionPair.second);
-    }
+        const std::string& opt = optionPair.first;
+        const std::string& val = optionPair.second;
+        // std::cerr << opt << " = " << val << std::endl;
+        config().set(opt, val);
 
-    if (config().has("LOG_LEVEL"))
-        logger().set_level(config().get("LOG_LEVEL"));
-    if (config().has("LOG_FILE"))
-        logger().set_filename(config().get("LOG_FILE"));
-    if (config().has("LOG_TO_STDOUT"))
-    {
-        std::string flg = config().get("LOG_TO_STDOUT");
-        if (not ('f' == flg[0] or 'F' == flg[0] or '0' == flg[0]))
-            logger().set_print_to_stdout_flag(true);
+        if (0 == opt.compare("LOG_LEVEL"))
+            logger().set_level(val);
+        if (0 == opt.compare("LOG_FILE"))
+            logger().set_filename(val);
+        if (0 == opt.compare("LOG_TO_STDOUT"))
+        {
+            if (not ('f' == val[0] or 'F' == val[0] or '0' == val[0]))
+                logger().set_print_to_stdout_flag(true);
+        }
     }
 
     // Start catching signals
