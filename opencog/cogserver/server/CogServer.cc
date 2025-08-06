@@ -89,7 +89,7 @@ void CogServer::enableWebServer(int port)
     _webServer = new NetworkServer(port, "WebSocket Server");
 
     auto make_console = [](void)->ServerSocket* {
-        ServerSocket* ss = new WebServer();
+        ServerSocket* ss = new WebServer(cogserver());
         ss->act_as_http_socket();
         return ss;
     };

@@ -19,7 +19,8 @@
 
 using namespace opencog;
 
-WebServer::WebServer(void) :
+WebServer::WebServer(CogServer& cs) :
+	_cserver(cs),
 	_request(nullptr)
 {
 }
@@ -52,8 +53,7 @@ void WebServer::OnConnection(void)
 	// whatever, and, stripping away the leading slash, it
 	// should be one of the supported comands.
 	std::string cmdName = _url.substr(1);
-	CogServer& cs = cogserver();
-	_request = cs.createRequest(cmdName);
+	_request = _cserver.createRequest(cmdName);
 
 	// Reject URL's we don't know about.
 	if (nullptr == _request)
@@ -113,12 +113,12 @@ std::string WebServer::html_stats(void)
 		"<body>"
 		"<h2>Loaded Modules</h2>"
 		"<pre>\n";
-	response += cogserver().listModules();
+	response += _cserver.listModules();
 	response +=
 		"</pre>"
 		"<h2>CogServer Stats</h2>"
 		"<pre>\n";
-	response += cogserver().display_web_stats();
+	response += _cserver.display_web_stats();
 	response +=
 		"</pre>"
 		"<h2>CogServer Stats Legend</h2>"
