@@ -24,6 +24,7 @@
 #define _OPENCOG_JSON_SHELL_H
 
 #include <opencog/network/GenericShell.h>
+#include <opencog/atomspace/AtomSpace.h>
 
 namespace opencog {
 /** \addtogroup grp_server
@@ -32,8 +33,10 @@ namespace opencog {
 
 class JsonShell : public GenericShell
 {
+	protected:
+		AtomSpacePtr _shellspace;
 	public:
-		JsonShell(void);
+		JsonShell(const AtomSpacePtr&);
 		virtual ~JsonShell();
 		virtual GenericEval* get_evaluator(void);
 };
