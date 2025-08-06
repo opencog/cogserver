@@ -11,7 +11,6 @@
 #include <string>
 
 #include <opencog/network/ConsoleSocket.h>
-#include <opencog/cogserver/server/Request.h>
 #include <opencog/cogserver/shell/McpEval.h>
 
 namespace opencog
