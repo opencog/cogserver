@@ -110,7 +110,7 @@ void CogServer::enableMCPServer(int port)
     _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
 
     auto make_console = [](void)->ServerSocket* {
-        ServerSocket* ss = new MCPServer();
+        ServerSocket* ss = new MCPServer(cogserver());
         ss->act_as_mcp();
         return ss;
     };
