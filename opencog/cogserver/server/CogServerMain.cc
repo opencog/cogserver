@@ -30,18 +30,13 @@
 #include <signal.h>
 #include <string.h>
 
-#include <filesystem>
 #include <string>
 #include <thread>
-#include <utility>
 
 #include <boost/algorithm/string.hpp>
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
-#include <opencog/util/exceptions.h>
-#include <opencog/util/files.h>
-#include <opencog/util/misc.h>
 
 #include <opencog/cogserver/server/CogServer.h>
 
@@ -56,7 +51,6 @@ static void usage(const char* progname)
         << "SERVER_PORT = 17001\n"
         << "WEB_PORT = 18080\n"
         << "MCP_PORT = 18888\n"
-        << "CONFDIR = /usr/local/etc\n"
         << "LOG_FILE = /tmp/cogserver.log\n"
         << "LOG_LEVEL = info\n"
         << "LOG_TO_STDOUT = false\n"
@@ -146,21 +140,23 @@ int main(int argc, char *argv[])
 
     }
 
-    // Each specific option
+    // Copy command-line options to global cache.
+    // This is ... deprecated, and should be removed. Later.
     for (const auto& optionPair : configPairs) {
-        // std::cerr << optionPair.first << " = " << optionPair.second << std::endl;
-        config().set(optionPair.first, optionPair.second);
-    }
+        const std::string& opt = optionPair.first;
+        const std::string& val = optionPair.second;
+        // std::cerr << opt << " = " << val << std::endl;
+        config().set(opt, val);
 
-    if (config().has("LOG_LEVEL"))
-        logger().set_level(config().get("LOG_LEVEL"));
-    if (config().has("LOG_FILE"))
-        logger().set_filename(config().get("LOG_FILE"));
-    if (config().has("LOG_TO_STDOUT"))
-    {
-        std::string flg = config().get("LOG_TO_STDOUT");
-        if (not ('f' == flg[0] or 'F' == flg[0] or '0' == flg[0]))
-            logger().set_print_to_stdout_flag(true);
+        if (0 == opt.compare("LOG_LEVEL"))
+            logger().set_level(val);
+        if (0 == opt.compare("LOG_FILE"))
+            logger().set_filename(val);
+        if (0 == opt.compare("LOG_TO_STDOUT"))
+        {
+            if (not ('f' == val[0] or 'F' == val[0] or '0' == val[0]))
+                logger().set_print_to_stdout_flag(true);
+        }
     }
 
     // Start catching signals
