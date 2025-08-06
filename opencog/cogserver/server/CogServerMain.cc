@@ -47,29 +47,10 @@
 
 using namespace opencog;
 
-static const char* DEFAULT_CONFIG_FILENAME = "cogserver.conf";
-static const char* DEFAULT_CONFIG_ALT_FILENAME = "opencog.conf";
-static const char* DEFAULT_CONFIG_PATHS[] =
-{
-    // Search order for the config file:
-    ".",         // First, we look in the current directory,
-    "lib",       // Next, we look in the build directory (cmake puts it here)
-    "../lib",    // Next, we look at the source directory
-    CONFDIR,     // Next, the install directory
-#ifndef WIN32
-    "/etc",      // Finally, in the standard system directory.
-#endif // !WIN32
-    NULL
-};
-
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-c <config-file>] [-DOPTION=\"VALUE\"]\n\n"
-        << "If multiple config files are specified, then these are\n"
-        << "loaded sequentially, with the values in later files\n"
-        << "overwriting the earlier ones. -D Option values override\n"
-        << "the options in config files."
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-DOPTION=\"VALUE\"]\n\n"
         << "\n"
         << "Supported options and default values:\n"
         << "SERVER_PORT = 17001\n"
@@ -119,8 +100,7 @@ int main(int argc, char *argv[])
     int webserver_port = 18080;
     int mcp_port = 18888;
 
-    static const char *optString = "c:p:w:m:D:h";
-    std::vector<std::string> configFiles;
+    static const char *optString = "p:w:m:D:h";
     std::vector<std::pair<std::string, std::string>> configPairs;
     std::string progname = argv[0];
 
@@ -130,8 +110,6 @@ int main(int argc, char *argv[])
         /* Detect end of options */
         if (c == -1) {
             break;
-        } else if (c == 'c') {
-            configFiles.push_back(optarg);
         } else if (c == 'D') {
             // override all previous options, e.g.
             // -DLOG_TO_STDOUT=TRUE
@@ -166,67 +144,6 @@ int main(int argc, char *argv[])
                 exit(1);
         }
 
-    }
-
-    // First, search for the standard config file.
-    if (configFiles.size() == 0) {
-        // search for configuration file on default locations
-        for (int i = 0; DEFAULT_CONFIG_PATHS[i] != NULL; ++i) {
-            std::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
-            configPath /= DEFAULT_CONFIG_FILENAME;
-            if (std::filesystem::exists(configPath)) {
-                std::cerr << "Using default config at "
-                          << configPath.string() << std::endl;
-                configFiles.push_back(configPath.string());
-
-                // Use the *first* config file found! We don't want to
-                // load both the installed system config file, and also
-                // any config file found in the build directory. We
-                // ESPECIALLY don't want to load the system config file
-                // after the development config file, thus clobbering
-                // the contents of the devel config file!
-                break;
-            }
-        }
-    }
-
-    // Next, search for alternate config file.
-    if (configFiles.size() == 0) {
-        // search for configuration file on default locations
-        for (int i = 0; DEFAULT_CONFIG_PATHS[i] != NULL; ++i) {
-            std::filesystem::path configPath(DEFAULT_CONFIG_PATHS[i]);
-            configPath /= DEFAULT_CONFIG_ALT_FILENAME;
-            if (std::filesystem::exists(configPath)) {
-                std::cerr << "Using default config at "
-                          << configPath.string() << std::endl;
-                configFiles.push_back(configPath.string());
-
-                // Use the *first* config file found! We don't want to
-                // load both the installed system config file, and also
-                // any config file found in the build directory. We
-                // ESPECIALLY don't want to load the system config file
-                // after the development config file, thus clobbering
-                // the contents of the devel config file!
-                break;
-            }
-        }
-    }
-
-    config().reset();
-    if (configFiles.size() == 0) {
-        std::cerr << "No config files could be found!" << std::endl;
-        exit(-1);
-    }
-
-    // Each config file sequentially overwrites the next
-    for (const std::string& configFile : configFiles) {
-        try {
-            config().load(configFile.c_str(), false);
-            break;
-        } catch (RuntimeException &e) {
-            std::cerr << e.get_message() << std::endl;
-            exit(1);
-        }
     }
 
     // Each specific option

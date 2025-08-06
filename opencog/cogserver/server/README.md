@@ -66,11 +66,6 @@ The CogServer can be extended with task-specific dynamically loadable
 modules. These can be loaded at run-time, with the `loadmodule`
 CogServer shell command.
 
-Modules can be automatically loaded on server startup by specifying
-them in a `cogserver.conf` file, and adding the module name to the
-list therein.  By default, the `/etc/cogserver.conf` file is used;
-or you can start to cogserver with `cogserver -c myconfig.conf`.
-
 Loadable modules will typically need to expose new commands. There are
 four ways of doing this: by using `DECLARE_CMD_REQUEST` (to define a
 small handful of commands), by using the `GenericShell` class (to build
