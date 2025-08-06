@@ -25,7 +25,6 @@
 #include <opencog/cogserver/server/MCPServer.h>
 
 #include "CogServer.h"
-#include "BaseServer.h"
 
 using namespace opencog;
 
@@ -38,7 +37,7 @@ CogServer::~CogServer()
 }
 
 CogServer::CogServer(void) :
-    BaseServer(),
+    _atomSpace(createAtomSpace()),
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
@@ -47,12 +46,14 @@ CogServer::CogServer(void) :
 }
 
 CogServer::CogServer(AtomSpacePtr as) :
-    BaseServer(as),
+    _atomSpace(as),
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
     _running(false)
 {
+    if (nullptr == as)
+        _atomSpace = createAtomSpace();
 }
 
 /// Allow at most `max_open_socks` concurrent connections.

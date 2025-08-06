@@ -1,7 +1,6 @@
 # ------------------------------------------------------------
 
 ADD_LIBRARY (server SHARED
-	BaseServer.cc
 	CogServer.cc
 	MCPServer.cc
 	ModuleManager.cc
@@ -69,7 +68,6 @@ INSTALL (TARGETS server
 )
 
 INSTALL (FILES
-	BaseServer.h
 	CogServer.h
 	Factory.h
 	MCPServer.h

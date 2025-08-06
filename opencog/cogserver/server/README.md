@@ -79,5 +79,4 @@ in any way desired.
 
 TODO
 ----
-* Get rid of BaseServer. It's not needed any more.
 * Get rid of `config()` and `Config.h`. Use Atomese for everything.
