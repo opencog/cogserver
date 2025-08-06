@@ -14,6 +14,7 @@
 #include <string>
 
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/cogserver/server/CogServer.h>
 
 namespace opencog
 {
@@ -36,6 +37,7 @@ private:
     static std::string _prompt;
 
 protected:
+    CogServer& _cserver;
     bool handle_telnet_iac(const std::string&);
 
     /**
@@ -65,7 +67,7 @@ public:
      * Ctor. Defines the socket's mime-type as 'text/plain' and then
      * configures the Socket to use line protocol.
      */
-    ServerConsole(void);
+    ServerConsole(CogServer&);
     ~ServerConsole();
 
     /**

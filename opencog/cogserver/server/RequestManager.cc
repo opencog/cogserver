@@ -69,7 +69,7 @@ Request* RequestManager::createRequest(const std::string& name,
         logger().debug("Cannot create unknown request \"%s\"", name.c_str());
         return nullptr;
     }
-    return it->second->create(cogserver());
+    return it->second->create(cs);
 }
 
 const RequestClassInfo& RequestManager::requestInfo(const std::string& name) const

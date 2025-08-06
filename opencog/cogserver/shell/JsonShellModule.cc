@@ -84,7 +84,7 @@ JsonShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	JsonShell *sh = new JsonShell();
+	JsonShell *sh = new JsonShell(_cogserver.getAtomSpace());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

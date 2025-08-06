@@ -75,7 +75,7 @@ void CogServer::enableNetworkServer(int port)
     _consoleServer = new NetworkServer(port, "Telnet Server");
 
     auto make_console = [](void)->ServerSocket*
-            { return new ServerConsole(); };
+            { return new ServerConsole(cogserver()); };
     _consoleServer->run(make_console);
     _running = true;
     logger().info("Network server running on port %d", port);
@@ -89,7 +89,7 @@ void CogServer::enableWebServer(int port)
     _webServer = new NetworkServer(port, "WebSocket Server");
 
     auto make_console = [](void)->ServerSocket* {
-        ServerSocket* ss = new WebServer();
+        ServerSocket* ss = new WebServer(cogserver());
         ss->act_as_http_socket();
         return ss;
     };
@@ -110,7 +110,7 @@ void CogServer::enableMCPServer(int port)
     _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
 
     auto make_console = [](void)->ServerSocket* {
-        ServerSocket* ss = new MCPServer();
+        ServerSocket* ss = new MCPServer(cogserver());
         ss->act_as_mcp();
         return ss;
     };

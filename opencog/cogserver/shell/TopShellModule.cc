@@ -78,7 +78,7 @@ TopShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	TopShell *sh = new TopShell();
+	TopShell *sh = new TopShell(_cogserver);
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

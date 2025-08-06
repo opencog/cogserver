@@ -25,7 +25,8 @@
 
 using namespace opencog;
 
-TopShell::TopShell(void)
+TopShell::TopShell(CogServer& cs) :
+	_shellserver(cs)
 {
 	normal_prompt = "top> ";
 	abort_prompt = "";
@@ -62,7 +63,7 @@ void TopShell::line_discipline(const std::string& expr)
 
 GenericEval* TopShell::get_evaluator(void)
 {
-	_top_eval = TopEval::get_evaluator();
+	_top_eval = TopEval::get_evaluator(_shellserver);
 	_top_eval->set_interval(_refresh);
 	return _top_eval;
 }

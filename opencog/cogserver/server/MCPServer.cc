@@ -20,7 +20,8 @@
 
 using namespace opencog;
 
-MCPServer::MCPServer(void)
+MCPServer::MCPServer(CogServer& cs) :
+	_cserver(cs)
 {
 	_eval = nullptr;
 }
@@ -45,7 +46,7 @@ void MCPServer::OnConnection(void)
 
 	// If there's no shell, then set up an evaluator for ourself.
 	if (nullptr == _shell)
-		_eval = McpEval::get_evaluator(cogserver().getAtomSpace());
+		_eval = McpEval::get_evaluator(_cserver.getAtomSpace());
 }
 
 // Called for each newline-terminated line received.

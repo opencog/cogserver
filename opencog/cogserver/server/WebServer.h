@@ -11,6 +11,7 @@
 #include <string>
 
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Request.h>
 
 namespace opencog
@@ -28,6 +29,7 @@ namespace opencog
 class WebServer : public ConsoleSocket
 {
 private:
+	CogServer& _cserver;
 	Request* _request;
 
 protected:
@@ -37,7 +39,7 @@ protected:
 	std::string html_stats(void);
 	std::string favicon(void);
 public:
-    WebServer(void);
+    WebServer(CogServer&);
     ~WebServer();
 
 }; // class

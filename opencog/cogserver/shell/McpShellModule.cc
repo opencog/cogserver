@@ -84,7 +84,7 @@ McpShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	McpShell *sh = new McpShell();
+	McpShell *sh = new McpShell(_cogserver.getAtomSpace());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

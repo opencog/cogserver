@@ -21,14 +21,13 @@
  */
 
 #include <opencog/persist/sexcom/SexprEval.h>
-#include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
 
 #include "SexprShell.h"
 
 using namespace opencog;
 
-SexprShell::SexprShell(void)
+SexprShell::SexprShell(const AtomSpacePtr& asp) :
+	_shellspace(asp)
 {
 	normal_prompt = "";
 	abort_prompt = "";
@@ -44,7 +43,7 @@ SexprShell::~SexprShell()
 
 GenericEval* SexprShell::get_evaluator(void)
 {
-	return SexprEval::get_evaluator(cogserver().getAtomSpace());
+	return SexprEval::get_evaluator(_shellspace);
 }
 
 /* ===================== END OF FILE ============================ */

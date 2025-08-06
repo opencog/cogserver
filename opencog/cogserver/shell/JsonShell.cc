@@ -21,14 +21,13 @@
  */
 
 #include <opencog/persist/json/JsonEval.h>
-#include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
 
 #include "JsonShell.h"
 
 using namespace opencog;
 
-JsonShell::JsonShell(void)
+JsonShell::JsonShell(const AtomSpacePtr& asp) :
+	_shellspace(asp)
 {
 	normal_prompt = "json> ";
 	abort_prompt = "json> ";
@@ -44,7 +43,7 @@ JsonShell::~JsonShell()
 
 GenericEval* JsonShell::get_evaluator(void)
 {
-	return JsonEval::get_evaluator(cogserver().getAtomSpace());
+	return JsonEval::get_evaluator(_shellspace);
 }
 
 /* ===================== END OF FILE ============================ */

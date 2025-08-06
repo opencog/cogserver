@@ -26,6 +26,7 @@
 #include <string>
 
 #include <opencog/network/GenericShell.h>
+#include <opencog/cogserver/server/CogServer.h>
 
 namespace opencog {
 /** \addtogroup grp_server
@@ -36,6 +37,7 @@ class TopEval;
 class TopShell : public GenericShell
 {
 	private:
+		CogServer& _shellserver;
 		TopEval* _top_eval;
 		double _refresh;
 
@@ -44,7 +46,7 @@ class TopShell : public GenericShell
 		virtual void line_discipline(const std::string&);
 
 	public:
-		TopShell(void);
+		TopShell(CogServer&);
 		virtual ~TopShell();
 		virtual GenericEval* get_evaluator(void);
 
