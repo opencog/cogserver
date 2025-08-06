@@ -33,7 +33,8 @@ using namespace opencog;
 
 std::string SchemeShell::_prompt;
 
-SchemeShell::SchemeShell(void)
+SchemeShell::SchemeShell(const AtomSpacePtr& asp) :
+	_shellspace(asp)
 {
 	_prompt = "[0;34mguile[1;34m> [0m";
 
@@ -53,7 +54,7 @@ SchemeShell::SchemeShell(void)
 	_name = " scm";
 
 	// Set the inital atomspace for this thread.
-	SchemeEval::set_scheme_as(cogserver().getAtomSpace().get());
+	SchemeEval::set_scheme_as(_shellspace.get());
 }
 
 SchemeShell::~SchemeShell()
@@ -67,7 +68,7 @@ SchemeShell::~SchemeShell()
 
 GenericEval* SchemeShell::get_evaluator(void)
 {
-	return SchemeEval::get_evaluator(cogserver().getAtomSpace());
+	return SchemeEval::get_evaluator(_shellspace);
 }
 
 /**
@@ -75,7 +76,7 @@ GenericEval* SchemeShell::get_evaluator(void)
  */
 void SchemeShell::thread_init(void)
 {
-	SchemeEval::set_scheme_as(cogserver().getAtomSpace().get());
+	SchemeEval::set_scheme_as(_shellspace.get());
 }
 
 #endif
