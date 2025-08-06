@@ -20,15 +20,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
-
 #include "McpEval.h"
 #include "McpShell.h"
 
 using namespace opencog;
 
-McpShell::McpShell(void)
+McpShell::McpShell(const AtomSpacePtr& asp) :
+	_shellspace(asp)
 {
 	normal_prompt = "mcp> ";
 	abort_prompt = "mcp> ";
@@ -44,7 +42,7 @@ McpShell::~McpShell()
 
 GenericEval* McpShell::get_evaluator(void)
 {
-	return McpEval::get_evaluator(cogserver().getAtomSpace());
+	return McpEval::get_evaluator(_shellspace);
 }
 
 /* ===================== END OF FILE ============================ */
