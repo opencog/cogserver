@@ -27,14 +27,3 @@ INSTALL(FILES
 	${CMAKE_CURRENT_BINARY_DIR}/CogServerConfig.cmake
 	DESTINATION ${ConfigPackageLocation}
 )
-
-# Create a test configuration file by copying the default configuration file
-CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/lib/opencog-test.conf
-	${PROJECT_BINARY_DIR}/lib/opencog-test.conf)
-
-# Place a default config file in a default location
-# CONFDIR normally expands to /usr/local/etc/
-INSTALL (FILES
-	cogserver.conf
-	DESTINATION "${CONFDIR}"
-)
