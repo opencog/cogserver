@@ -22,7 +22,8 @@ using namespace opencog;
 
 std::string ServerConsole::_prompt;
 
-ServerConsole::ServerConsole(void)
+ServerConsole::ServerConsole(CogServer& cs) :
+	_cserver(cs)
 {
     if (nullptr == &config()) {
         _prompt = "[0;32mopencog[1;32m> [0m";
@@ -317,7 +318,7 @@ void ServerConsole::OnLine(const std::string& line)
 
     // If the cogserver has stopped, then the command processor is gone,
     // and we just ... can't handle commands any longer. Self-destruct.
-    CogServer& cs = cogserver();
+    CogServer& cs = _cserver;
     if (not cs.running())
     {
         Exit();

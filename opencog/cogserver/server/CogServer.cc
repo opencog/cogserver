@@ -75,7 +75,7 @@ void CogServer::enableNetworkServer(int port)
     _consoleServer = new NetworkServer(port, "Telnet Server");
 
     auto make_console = [](void)->ServerSocket*
-            { return new ServerConsole(); };
+            { return new ServerConsole(cogserver()); };
     _consoleServer->run(make_console);
     _running = true;
     logger().info("Network server running on port %d", port);
