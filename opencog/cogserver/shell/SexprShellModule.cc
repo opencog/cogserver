@@ -55,24 +55,6 @@ SexprShellModule::~SexprShellModule()
 // This is currently unused.
 bool SexprShellModule::config(const char* cfg)
 {
-#ifdef DEAD_CODE
-	// At this time, the cfg is going to be a module name.
-	// Get the module. If we don't have it, then load it.
-	Module *ext = _cogserver.getModule(cfg);
-	if (nullptr == ext) _cogserver.loadModule(cfg);
-
-	ext = _cogserver.getModule(cfg);
-	if (nullptr == ext)
-	{
-		logger().info("[SexprShell] unable to find config module %s", cfg);
-		return false;
-	}
-
-	// Just record the config setting for now.
-	// We should check it for valid syntax, and return false if it is
-	// bad. ... but not ready for that, yet.
-	_proxy_list.push_back(cfg);
-#endif // DEAD_CODE
 	return true;
 }
 
@@ -108,29 +90,6 @@ SexprShellModule::shelloutRequest::execute(void)
 	OC_ASSERT(con, "Invalid Request object");
 
 	SexprShell *sh = new SexprShell();
-
-#ifdef DEAD_CODE
-	// We don't do this, need this any more. Its here as
-	// a coding example, I guess...
-	for (const std::string& proxy: _proxy_list)
-	{
-		Module *ext = _cogserver.getModule(proxy);
-		logger().info("[SexprShellModule] setup proxy: %p %s", ext, proxy.c_str());
-
-		if (ext)
-		{
-			Proxy* pxy = dynamic_cast<Proxy*>(ext);
-			OC_ASSERT(pxy, "Invalid Proxy object");
-
-			GenericEval* gev = sh->get_evaluator();
-			SexprEval* sev = dynamic_cast<SexprEval*>(gev);
-			OC_ASSERT(sev, "Invalid SexprEval object");
-
-			// Hand the shell over to the proxy for configuration.
-			pxy->setup(sev);
-		}
-	}
-#endif // DEAD_CODE
 
 	sh->set_socket(con);
 	send("");
