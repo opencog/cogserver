@@ -29,8 +29,9 @@
 using namespace opencog;
 using namespace std::chrono_literals;
 
-TopEval::TopEval()
-	: GenericEval()
+TopEval::TopEval(CogServer& cs)
+	: GenericEval(),
+	_cserver(cs)
 {
 	_started = false;
 	_done = false;
@@ -120,7 +121,7 @@ std::string TopEval::poll_result()
 
 	// Send the telnet clear-screen command.
 	ret += "\u001B[2J";
-	ret += cogserver().display_stats(_nlines);
+	ret += _cserver.display_stats(_nlines);
 
 	if (0 < _msg.size())
 	{
@@ -167,9 +168,9 @@ void TopEval::interrupt(void)
 
 // One evaluator per thread.  This allows multiple users to each
 // have thier own evaluator.
-TopEval* TopEval::get_evaluator()
+TopEval* TopEval::get_evaluator(CogServer& cs)
 {
-	static thread_local TopEval* evaluator = new TopEval();
+	static thread_local TopEval* evaluator = new TopEval(cs);
 
 	// The eval_dtor runs when this thread is destroyed.
 	class eval_dtor {

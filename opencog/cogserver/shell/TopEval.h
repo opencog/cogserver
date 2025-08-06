@@ -27,6 +27,7 @@
 #include <mutex>
 #include <string>
 #include <opencog/eval/GenericEval.h>
+#include <opencog/cogserver/server/CogServer.h>
 
 /**
  * The TopEval class implements a very simple API for reporting server
@@ -41,6 +42,7 @@ namespace opencog {
 class TopEval : public GenericEval
 {
 	private:
+		CogServer& _cserver;
 		std::mutex _sleep_mtx;
 		std::condition_variable _sleeper;
 		double _refresh;
@@ -49,7 +51,7 @@ class TopEval : public GenericEval
 		bool _done;
 		std::string _msg;
 
-		TopEval();
+		TopEval(CogServer&);
 
 	public:
 		virtual ~TopEval();
@@ -63,7 +65,7 @@ class TopEval : public GenericEval
 		void cmd();
 		void set_interval(double);
 
-		static TopEval* get_evaluator();
+		static TopEval* get_evaluator(CogServer&);
 };
 
 /** @}*/
