@@ -55,6 +55,7 @@ class TopEval : public GenericEval
 
 	public:
 		virtual ~TopEval();
+		virtual std::string get_name(void) const { return "TopEval"; }
 
 		virtual void begin_eval(void);
 		virtual void eval_expr(const std::string&);

@@ -56,6 +56,7 @@ class McpEval : public GenericEval
 
 	public:
 		virtual ~McpEval();
+		virtual std::string get_name(void) const { return "McpEval"; }
 
 		virtual void begin_eval(void);
 		virtual void eval_expr(const std::string&);
