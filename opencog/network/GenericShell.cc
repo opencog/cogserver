@@ -531,7 +531,8 @@ void GenericShell::eval_loop(void)
 			// Note that this pop will stall until the queue
 			// becomes non-empty.
 			evalque.pop(in);
-			logger().debug("[GenericShell] start eval of '%s'", in.c_str());
+			logger().debug("[GenericShell] start eval %s of '%s'",
+				 _evaluator->get_name().c_str(), in.c_str());
 
 			wake_poll();
 			start_eval();
