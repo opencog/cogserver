@@ -8,7 +8,12 @@
 # -- configure various config files.
 # -- print pretty summary
 #
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+
+# Python venv seems to need this.
+IF(CMAKE_VERSION VERSION_GREATER 3.31)
+	CMAKE_POLICY(SET CMP0177 NEW)
+ENDIF(CMAKE_VERSION VERSION_GREATER 3.31)
 
 PROJECT(cogserver)
 
@@ -97,7 +102,7 @@ SET(Boost_USE_MULTITHREADED ON)
 SET(MIN_BOOST 1.46)
 
 # Required boost packages
-FIND_PACKAGE(Boost ${MIN_BOOST} COMPONENTS system REQUIRED)
+FIND_PACKAGE(Boost ${MIN_BOOST} CONFIG)
 
 IF(Boost_FOUND)
 	SET(Boost_FOUND_SAVE 1)
@@ -165,14 +170,9 @@ ENDIF (VALGRIND_FOUND)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR} ${Boost_INCLUDE_DIRS}
 	${COGUTIL_INCLUDE_DIR} ${ATOMSPACE_INCLUDE_DIR})
 
-# Macros that define how atom types get declared.
-IF (NOT DEFINED ATOMSPACE_DATA_DIR)
-	SET (ATOMSPACE_DATA_DIR "${COGUTIL_DATA_DIR}")
-ENDIF (NOT DEFINED ATOMSPACE_DATA_DIR)
-
-INCLUDE("${ATOMSPACE_DATA_DIR}/cmake/OpenCogMacros.cmake")
-INCLUDE("${ATOMSPACE_DATA_DIR}/cmake/OpenCogGuile.cmake")
-INCLUDE("${ATOMSPACE_DATA_DIR}/cmake/OpenCogCython.cmake")
+INCLUDE(OpenCogMacros)
+INCLUDE(OpenCogGuile)
+INCLUDE(OpenCogCython)
 
 # ==========================================================
 # Decide what to build, based on the packages found.
