@@ -267,13 +267,13 @@ Execution
 * Values can be attached onto Atoms with the SetValueLink and Values
   can be accessed with the ValueOfLink.
 
-* For example, `AddLink` can add together any NumberNodes that appear
+* For example, `PlusLink` can add together any NumberNodes that appear
   in it's outgoing set.
 * For example, `FloatValueOfLink`, when executed, will fetch the current
   FloatValue at the indicated key.
 * These are easily chained together. Thus, for example,
 ```
-  (AddLink
+  (PlusLink
      (FloatValueOf (Concept "foo") (Predicate "some key"))
      (FloatValueOf (Concept "bar") (Predicate "some key")))
 ```
@@ -281,7 +281,7 @@ Execution
   at the given keys. It will return a FloatValue containing the result.
 * In the above example, the addition is vector addition. If one vector
   is shorter than another, the returned value will be the shortest of
-  all inputs. The wiki page for AddLink should be consulted for
+  all inputs. The wiki page for PlusLink should be consulted for
   additional details and examples.
 
 * There is no 'dry-run' mode for execution. The execution takes effect
