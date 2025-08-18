@@ -36,8 +36,8 @@ will be easier to understand what a user is asking you to do.
 * When executed, the contents of the AtomSpace may change.
 * When executed, a collection of Values may be returned.
 
-* Values can be lists of numbers (floats) or lists of strings, or lists
-  of other values.
+* Values can be lists of numbers (floats), lists of bits, lists of
+  strings, or lists of other values.
 * An Atom is a special case of a Value.
 
 * Every Atom holds a key-value database.

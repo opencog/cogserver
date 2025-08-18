@@ -169,6 +169,7 @@ Values
 * The FloatValue holds a vector of floats. This vector is of arbitrary
   length.
 * The StringValue holds a vector of strings.
+* The BoolValue holds a vector of bits.
 * The ListValue holds a vector of Values.
 * Since Atoms are Values, the ListValue can hold a mixture of Atoms
   and other kinds of Values.
@@ -249,10 +250,23 @@ Execution
   Atoms, or causing some external system to perform some action or
   change it's state.
 * Execution will depend on the Atom type.
+
 * Different executable Atom types implement different kinds of
   algorithms and functions.
+* There are two basic classes of executable Atoms: the ones that
+  perform graph queries, and the ones that implement Abstract Syntax
+  Tree (AST) pipelines. These are reviewed in greater detail further below.
 * More info about the actions performed can be found at the wiki
   documentation.
+
+* Executable graphs that have the form of AST pipelines are best
+  understood as hypergraphs that have Values flowing upwards through
+  the (Node and Link) tree.
+* Each Link of such a tree will combine (in some way) the Values
+  obtained from lower in the tree.
+* Values can be attached onto Atoms with the SetValueLink and Values
+  can be accessed with the ValueOfLink.
+
 * For example, `AddLink` can add together any NumberNodes that appear
   in it's outgoing set.
 * For example, `FloatValueOfLink`, when executed, will fetch the current
