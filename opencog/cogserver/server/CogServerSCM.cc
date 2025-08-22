@@ -149,12 +149,20 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     srvr->loadModules();
 
     // Enable the network server and run the server's main loop
-    if (0 < telnet_port)
-        srvr->enableNetworkServer(telnet_port);
-    if (0 < websocket_port)
-        srvr->enableWebServer(websocket_port);
-    if (0 < mcp_port)
-        srvr->enableMCPServer(mcp_port);
+    try
+    {
+        if (0 < telnet_port)
+            srvr->enableNetworkServer(telnet_port);
+        if (0 < websocket_port)
+            srvr->enableWebServer(websocket_port);
+        if (0 < mcp_port)
+            srvr->enableMCPServer(mcp_port);
+    }
+    catch (const std::exception& ex)
+    {
+        srvr = nullptr;
+        std::rethrow_exception(std::current_exception());
+    }
     main_loop = new std::thread(&CogServer::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;
