@@ -61,10 +61,17 @@ void WebServer::OnConnection(void)
 		logger().info("[WebServer] Unsupported request %s", _url.c_str());
 		Send("HTTP/1.1 404 Not Found\r\n"
 			"Server: CogServer\r\n"
-			"Content-Type: text/plain\r\n"
+			"Content-Type: text/html\r\n"
 			"\r\n"
-			"404 Not Found\n"
-			"The Cogserver doesn't know about " + _url + "\n");
+			"<!DOCTYPE html>\n"
+			"<html lang=\"en\">\n"
+			"<head><meta charset=\"UTF-8\">\n"
+			"<link rel=\"stylesheet\" href=\"styles.css\"></head>\n"
+			"<body><h1>404 Not Found</h1>\n"
+			"The Cogserver doesn't know about " + _url + "\n"
+			"<p>The <a href=\"stats\">stats page is here</a>.\n"
+			"<p>The RESTful URL's include json, python and scm.\n"
+			"</body</html>\n");
 		throw SilentException();
 	}
 
