@@ -391,23 +391,23 @@ footer a:hover {
     header h1 {
         font-size: 2rem;
     }
-    
+
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .status-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .container {
         padding: 10px;
     }
-    
+
     section {
         padding: 20px;
     }
-    
+
     .refresh-panel {
         flex-direction: column;
         gap: 15px;
