@@ -333,6 +333,8 @@ void ServerSocket::Send(const std::string& cmd)
         return;
     }
 
+#if 0
+    // ??? Why is this here? Who uses this? Is this for MCP?
     if (_is_http_socket)
     {
         // Build HTTP response with Content-Length
@@ -349,6 +351,7 @@ void ServerSocket::Send(const std::string& cmd)
         // Send headers
         send_websocket(response);
     }
+#endif
 
     // If we are here, we have to perform websockets framing.
     send_websocket(cmd);
