@@ -62,9 +62,12 @@ Take a moment to visit the stats page at
     Command: <input type="text" id="outgoing"><br>
     CogServer Reply: <span id="reply"></span><br>
   </div>
- <h2>Suggested Mesages</h2>
+ <h2>Suggested Messages</h2>
  Try sending these messages:
  <h3>JSON</h3>
+   The /json endpoint supports fifteen different commands for creating
+   Atoms and Values, executing them, fetching them and so on. The
+   reply messages are all formatted in JSON style.
    See the <a href="https://github.com/opencog/atomspace/tree/master/opencog/persist/json">JSON README</a>
    for full documentation.
      <table>
@@ -78,6 +81,8 @@ Take a moment to visit the stats page at
          <td><tt>AtomSpace.getSubTypes("TopType", true)</tt></td></tr>
      </table>
  <h3>Scheme</h3>
+   The /scm endpoint is connected to an instance of the guile REPL
+   shell. It runs all valid guile scheme expressions.
    See the <a href="https://wiki.opencog.org/w/Scheme">OpenCog Wiki</a>
    for full documentation.
      <table>
@@ -93,9 +98,11 @@ Take a moment to visit the stats page at
          <td><tt>(cog-report-counts)</tt></td></tr>
      </table>
  <h3>S-Expressions</h3>
-   The S-Expressions are similar to the Scheme API, except that
-   only 15 commands are supported. However, these run extremely fast;
-   the API is designed for high-throughput.  Syntax errors fail
+   The /sexpr endpoint provides a custom set of fifteen commands
+   Atoms and Values, executing them, fetching them and so on. The
+   command names are identical to the equivalent Scheme API, commands
+   except that these are written to run extremely fast.
+   This endpoint is designed for high-throughput.  Syntax errors fail
    silently, and many successful commands do not return anything!
    See the <a href="https://github.com/opencog/atomspace/tree/master/opencog/persist/sexpr">Sexpr README</a>
    for full documentation.
@@ -112,18 +119,27 @@ Take a moment to visit the stats page at
          <td><tt>(cog-value (Concept "foo") (Predicate "key"))</tt></td></tr>
      </table>
  <h3>Python</h3>
+   The /py endpoint is attached to a full Python3 REPL shell. It accepts
+   and will run all valid Python3 expressions. Note that most python
+   expressions produce no output, and so running this demo can be
+   a bit confusing. The default Python3 REPL does NOT import any of
+   OpenCog python modules; you have to import them yourself.
    See the <a href="https://wiki.opencog.org/w/Python">OpenCog Wiki</a>
    for full documentation.
      <table>
      <tr><td>Hello, World!</td>
          <td><tt>print("Hello, World!\n")</tt></td></tr>
+     <tr><td>Python initialization:</td>
+         <td><tt>from opencog.atomspace import *<br>
+                 from opencog.type_constructors import *<br>
+                 set_default_atomspace(AtomSpace())</tt></td></tr>
      <tr><td>Create a ConceptNode:</td>
-         <td><tt>Concept("foo")</tt></td></tr>
+         <td><tt>cc = Concept("foo")<br>
+                 print("Created this:", cc)</tt></td></tr>
      <tr><td>Fetch all Atoms:</td>
-         <td><tt>from opencog.atomspace import AtomSpace, types<br>
-                 spacey = AtomSpace()<br>
-                 spacey.add_node(types.ConceptNode, 'Apple')
-                 spacey.get_atoms_by_type(types.Atom, True)</tt></td></tr>
+         <td><tt>spacey = AtomSpace()<br>
+                 all = spacey.get_atoms_by_type(types.Atom, True)<br>
+                 print("All of them", all)</tt></td></tr>
      </table>
 <hr>
 <h3>The End</h3>
