@@ -13,15 +13,25 @@ The [websockets](./websockets) subdirectory contains a web page that
 shows how to interact with a running cogserver.  Just load the
 [demo.html](./websockets/demo.html) page in a browser, and go.
 All the actual network i/o is done with the
-[script.js](./websockets/script.js) javascript file.
+[script.js](./websockets/script.js) javascript file. The
+[json-test.html](./websockets/json-test.html) page shows network
+traffic for a basic JSON session.
+
+The [visualizer](./visualizer) subdirectory contains a web page that
+provides some basic info about the contents of the AtomSpace. This
+includes the total counts for various atom types, and some basic
+browsing ability.
 
 The [mcp](./mcp) subdirectory contains a Model Context Protocol (MCP)
-checker that can connecto to any MCP server, verify that it responds to
-commands, and then list the tools and resources provided by that server.
-By default, it checks `localhost:18888`, which is where the CogServer
-MCP port is located. Use the `--port` and `--host` flags to specify
-a different location. The binary is in the
-[`build/examples/mcp`](../build/examples/mcp) directory.
+several prompts, originally written for Claude, that explain what the
+AtomSpace is, and how to use it. Claude, or any other LLM capable of
+chatting the MCP protocol can connect to the CogServer at port 18888
+and work directly with the Atoms in the AtomSpace.
+
+The mcp subdirectory also includes some debug and checking tools.
+One of these verifies that the CogServer is responding corrrectly.
+Two more are network proxies that can be used to escape network
+sandboxes. These are useful when running Claude over TOR or a VPN.
 
 The [module](./module) subdirectory provides a template for creating
 a custom module. Most developers should NOT be interested in this
