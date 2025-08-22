@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AtomSpace Visualizer</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+        }
+        #log {
+            background: #f0f0f0;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>AtomSpace Connection Test</h1>
+    <p>This page tests the JSON WebSocket connection to the CogServer</p>
+
+    <div>
+        <label>Server URL: <input type="text" id="url" value="ws://localhost:18080/json" style="width: 300px;"></label>
+        <button id="connect">Connect</button>
+        <button id="test" disabled>Run Tests</button>
+    </div>
+
+    <h2>Test Log:</h2>
+    <div id="log"></div>
+
+    <script>
+        let socket = null;
+        const log = document.getElementById('log');
+        const urlInput = document.getElementById('url');
+        const connectBtn = document.getElementById('connect');
+        const testBtn = document.getElementById('test');
+        let testQueue = [];
+
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toTimeString().split(' ')[0]}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        connectBtn.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+                return;
+            }
+
+            const url = urlInput.value;
+            addLog(`Connecting to ${url}...`, 'info');
+
+            socket = new WebSocket(url);
+
+            socket.onopen = () => {
+                addLog('Connected successfully!', 'success');
+                connectBtn.textContent = 'Disconnect';
+                testBtn.disabled = false;
+            };
+
+            socket.onclose = () => {
+                addLog('Disconnected', 'info');
+                connectBtn.textContent = 'Connect';
+                testBtn.disabled = true;
+            };
+
+            socket.onerror = (e) => {
+                addLog(`Connection error: ${e.type}`, 'error');
+            };
+
+            socket.onmessage = (event) => {
+                addLog(`Received: ${event.data.substring(0, 200)}${event.data.length > 200 ? '...' : ''}`, 'info');
+
+                try {
+                    const data = JSON.parse(event.data);
+
+                    // Handle the new wrapped response format
+                    if (data.success === true && data.result !== undefined) {
+                        const result = data.result;
+
+                        if (typeof result === 'string') {
+                            addLog(`  → String result: ${result}`, 'success');
+                        } else if (Array.isArray(result)) {
+                            addLog(`  → Received array with ${result.length} items`, 'success');
+
+                            // Only count nodes/links if it's an atom array
+                            if (result.length > 0 && typeof result[0] === 'object') {
+                                let nodes = 0, links = 0;
+                                result.forEach(atom => {
+                                    if (atom.outgoing && atom.outgoing.length > 0) {
+                                        links++;
+                                    } else {
+                                        nodes++;
+                                    }
+                                });
+                                addLog(`  → Stats: ${result.length} total, ${nodes} nodes, ${links} links`, 'success');
+                            } else if (result.length > 0 && typeof result[0] === 'string') {
+                                addLog(`  → Type list with ${result.length} types`, 'success');
+                            }
+                        } else if (result === null || result === "") {
+                            addLog(`  → Empty result`, 'info');
+                        } else if (typeof result === 'boolean') {
+                            addLog(`  → Boolean result: ${result}`, 'success');
+                        } else {
+                            addLog(`  → Result type: ${typeof result}`, 'info');
+                        }
+                    } else if (data.success === false) {
+                        const errorMsg = data.error?.message || data.error || 'Unknown error';
+                        addLog(`  → Error: ${errorMsg}`, 'error');
+                    } else {
+                        addLog(`  → Unknown format - keys: ${Object.keys(data).join(', ')}`, 'info');
+                    }
+                } catch (e) {
+                    addLog(`  → Failed to parse JSON: ${e.message}`, 'error');
+                }
+
+                // Process next test if any
+                if (testQueue.length > 0) {
+                    setTimeout(() => {
+                        const next = testQueue.shift();
+                        next();
+                    }, 500);
+                }
+            };
+        });
+
+        testBtn.addEventListener('click', () => {
+            addLog('Starting tests...', 'info');
+
+            // Queue up tests
+            testQueue = [
+                () => {
+                    const cmd = 'AtomSpace.version()';
+                    addLog(`Sending: ${cmd}`, 'info');
+                    socket.send(cmd);
+                },
+                () => {
+                    const cmd = 'AtomSpace.getAtoms("Atom", true)';
+                    addLog(`Sending: ${cmd}`, 'info');
+                    socket.send(cmd);
+                },
+                () => {
+                    const cmd = 'AtomSpace.getSubTypes("TopType", true)';
+                    addLog(`Sending: ${cmd}`, 'info');
+                    socket.send(cmd);
+                },
+                () => {
+                    // Try to create an atom
+                    const cmd = 'AtomSpace.makeAtom({"type": "Concept", "name": "test-atom"})';
+                    addLog(`Sending: ${cmd}`, 'info');
+                    socket.send(cmd);
+                },
+                () => {
+                    // Get atoms again to see if our test atom is there
+                    const cmd = 'AtomSpace.getAtoms("Atom", true)';
+                    addLog(`Sending: ${cmd} (after creating test atom)`, 'info');
+                    socket.send(cmd);
+                }
+            ];
+
+            // Start first test
+            const first = testQueue.shift();
+            first();
+        });
+    </script>
+</body>
+</html>
