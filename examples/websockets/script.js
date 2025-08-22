@@ -152,5 +152,61 @@ function sendMessage()
   }
 }
 
+// Function to run a specific command with the correct endpoint
+function runCommand(command, requiredEndpoint)
+{
+  console.log("Running command: " + command + " with endpoint: " + requiredEndpoint);
+  
+  // Set the command in the textarea
+  outgoingText.value = command;
+  
+  // Check if we need to switch endpoints
+  if (endpoint !== requiredEndpoint) {
+    // Update the endpoint
+    endpoint = requiredEndpoint;
+    endpointMenu.value = requiredEndpoint;
+    
+    // If connected, disconnect first to reconnect with new endpoint
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      console.log("Switching endpoint, disconnecting first");
+      socket.close();
+      // Wait a bit for close to complete, then reconnect
+      setTimeout(function() {
+        connectAndSend();
+      }, 500);
+    } else {
+      // Not connected, just connect and send
+      connectAndSend();
+    }
+  } else if (socket && socket.readyState === WebSocket.OPEN) {
+    // Already connected to the right endpoint, just send
+    sendMessage();
+  } else {
+    // Right endpoint but not connected
+    connectAndSend();
+  }
+}
+
+// Helper function to connect and send after connection
+function connectAndSend()
+{
+  server = serverText.value;
+  endpoint = endpointMenu.value;
+  serverURL = server + endpoint;
+  console.log("Connecting to " + serverURL + " to send command");
+  
+  // Create a one-time listener for the open event
+  var tempSocket = new WebSocket(serverURL);
+  tempSocket.addEventListener('open', function() {
+    socket = tempSocket;
+    openConnection();
+    // Send the command after a short delay to ensure connection is ready
+    setTimeout(sendMessage, 100);
+  });
+  tempSocket.addEventListener('close', closeConnection);
+  tempSocket.addEventListener('message', readReplyMessage);
+  tempSocket.addEventListener('error', reportError);
+}
+
 // add a listener for the page to load:
 window.addEventListener('load', setup);
