@@ -6,8 +6,8 @@ let isConnected = false;
 let atomData = {};
 
 // DOM elements
-let serverInput, endpointSelect, connectBtn;
-let connectionStatus, serverDisplay, endpointDisplay;
+let serverInput, connectBtn;
+let connectionStatus, serverDisplay;
 let atomspaceStats, errorPanel, errorMessage;
 let atomCount, nodeCount, linkCount, typeCount;
 let refreshBtn, lastUpdate;
@@ -19,12 +19,10 @@ document.addEventListener('DOMContentLoaded', init);
 function init() {
     // Get DOM elements
     serverInput = document.getElementById('server-url');
-    endpointSelect = document.getElementById('endpoint');
     connectBtn = document.getElementById('connect-btn');
     
     connectionStatus = document.getElementById('connection-status');
     serverDisplay = document.getElementById('server-display');
-    endpointDisplay = document.getElementById('endpoint-display');
     
     atomspaceStats = document.getElementById('atomspace-stats');
     errorPanel = document.getElementById('error-panel');
@@ -64,7 +62,7 @@ function toggleConnection() {
 
 function connect() {
     const baseURL = serverInput.value.trim();
-    const endpoint = endpointSelect.value;
+    const endpoint = 'json'; // Always use JSON endpoint
     
     if (!baseURL) {
         showError('Please enter a CogServer URL');
@@ -114,12 +112,10 @@ function onConnect() {
     connectionStatus.textContent = 'Connected';
     connectionStatus.className = 'status-value connected';
     
-    serverDisplay.textContent = serverInput.value;
-    endpointDisplay.textContent = endpointSelect.options[endpointSelect.selectedIndex].text;
+    serverDisplay.textContent = serverInput.value + 'json';
     
     // Enable controls
     serverInput.disabled = true;
-    endpointSelect.disabled = true;
     refreshBtn.disabled = false;
     debugCommand.disabled = false;
     sendCommand.disabled = false;
@@ -144,11 +140,9 @@ function onDisconnect() {
     connectionStatus.className = 'status-value disconnected';
     
     serverDisplay.textContent = 'Not connected';
-    endpointDisplay.textContent = '-';
     
     // Disable controls
     serverInput.disabled = false;
-    endpointSelect.disabled = false;
     refreshBtn.disabled = true;
     debugCommand.disabled = true;
     sendCommand.disabled = true;
@@ -163,16 +157,12 @@ function onMessage(event) {
     console.log('Received message:', event.data);
     
     try {
-        // Try to parse as JSON for JSON endpoint
-        if (endpointSelect.value === 'json') {
-            const data = JSON.parse(event.data);
-            handleJSONResponse(data);
-        } else {
-            // For other endpoints, display raw response
-            debugResponse.textContent = event.data;
-        }
+        // Parse JSON response (we're always using JSON endpoint)
+        const data = JSON.parse(event.data);
+        handleJSONResponse(data);
     } catch (err) {
         // If not JSON, just display the raw message
+        console.error('Failed to parse JSON:', err);
         debugResponse.textContent = event.data;
     }
 }
@@ -264,34 +254,14 @@ function fetchAtomSpaceStats() {
     
     console.log('Fetching AtomSpace stats...');
     
-    // Different commands based on endpoint
-    let command;
-    switch (endpointSelect.value) {
-        case 'json':
-            // Fetch all atoms with recursive flag
-            command = 'AtomSpace.getAtoms("Atom", true)';
-            break;
-        case 'scm':
-            command = '(cog-get-atoms \'Atom #t)';
-            break;
-        case 'sexpr':
-            command = '(cog-get-atoms \'Atom #t)';
-            break;
-        case 'py':
-            command = 'all = AtomSpace().get_atoms_by_type(types.Atom, True)\nprint(len(all))';
-            break;
-        default:
-            command = 'AtomSpace.getAtoms("Atom", true)';
-    }
-    
+    // Always use JSON commands
+    const command = 'AtomSpace.getAtoms("Atom", true)';
     sendMessage(command);
     
-    // Also fetch types if using JSON endpoint
-    if (endpointSelect.value === 'json') {
-        setTimeout(() => {
-            sendMessage('AtomSpace.getSubTypes("TopType", true)');
-        }, 500);
-    }
+    // Also fetch types
+    setTimeout(() => {
+        sendMessage('AtomSpace.getSubTypes("TopType", true)');
+    }, 500);
 }
 
 function sendDebugCommand() {
