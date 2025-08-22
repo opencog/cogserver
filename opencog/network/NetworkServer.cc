@@ -121,7 +121,7 @@ void NetworkServer::run(ServerSocket* (*handler)(void))
 
     try {
         _io_service.run();
-    } catch (boost::system::system_error& e) {
+    } catch (const boost::system::system_error& e) {
         logger().error("Error in boost::asio io_service::run() => %s", e.what());
     }
 

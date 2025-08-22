@@ -72,7 +72,18 @@ void CogServer::set_max_open_sockets(int max_open_socks)
 void CogServer::enableNetworkServer(int port)
 {
     if (_consoleServer) return;
-    _consoleServer = new NetworkServer(port, "Telnet Server");
+    try
+    {
+        _consoleServer = new NetworkServer(port, "Telnet Server");
+    }
+    catch (const boost::system::system_error& ex)
+    {
+        fprintf(stderr, "Error: Cannot enable network server at port %d: %s\n",
+            port, ex.what());
+        logger().info("Error: Cannot enable network server at port %d: %s\n",
+            port, ex.what());
+        std::rethrow_exception(std::current_exception());
+    }
 
     auto make_console = [](void)->ServerSocket*
             { return new ServerConsole(cogserver()); };
@@ -86,7 +97,18 @@ void CogServer::enableWebServer(int port)
 {
 #ifdef HAVE_OPENSSL
     if (_webServer) return;
-    _webServer = new NetworkServer(port, "WebSocket Server");
+    try
+    {
+        _webServer = new NetworkServer(port, "WebSocket Server");
+    }
+    catch (const boost::system::system_error& ex)
+    {
+        fprintf(stderr, "Error: Cannot enable web server at port %d: %s\n",
+            port, ex.what());
+        logger().info("Error: Cannot enable web server at port %d: %s\n",
+            port, ex.what());
+        std::rethrow_exception(std::current_exception());
+    }
 
     auto make_console = [](void)->ServerSocket* {
         ServerSocket* ss = new WebServer(cogserver());
@@ -107,7 +129,18 @@ void CogServer::enableMCPServer(int port)
 {
 #if HAVE_MCP
     if (_mcpServer) return;
-    _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
+    try
+    {
+        _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
+    }
+    catch (const boost::system::system_error& ex)
+    {
+        fprintf(stderr, "Error: Cannot enable MCP server at port %d: %s\n",
+            port, ex.what());
+        logger().info("Error: Cannot enable MCP server at port %d: %s\n",
+            port, ex.what());
+        std::rethrow_exception(std::current_exception());
+    }
 
     auto make_console = [](void)->ServerSocket* {
         ServerSocket* ss = new MCPServer(cogserver());

@@ -174,12 +174,20 @@ int main(int argc, char *argv[])
     cogserve.loadModules();
 
     // Enable the network server and run the server's main loop.
-    if (0 < console_port)
-        cogserve.enableNetworkServer(console_port);
-    if (0 < webserver_port)
-        cogserve.enableWebServer(webserver_port);
-    if (0 < mcp_port)
-        cogserve.enableMCPServer(mcp_port);
+    try
+    {
+        if (0 < console_port)
+            cogserve.enableNetworkServer(console_port);
+        if (0 < webserver_port)
+            cogserve.enableWebServer(webserver_port);
+        if (0 < mcp_port)
+            cogserve.enableMCPServer(mcp_port);
+    }
+    catch (const std::exception& ex)
+    {
+        fprintf(stderr, "Error exit: %s\n", ex.what());
+        exit(-1);
+    }
     cogserve.serverLoop();
     exit(0);
 }
