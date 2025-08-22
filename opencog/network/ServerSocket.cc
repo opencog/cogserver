@@ -535,6 +535,12 @@ void ServerSocket::handle_connection(void)
             else
                line = get_websocket_line();
 
+            // Some local Linux D-Bus daemon desperately wants to
+            // talk to us, sending us binary garbage of some kind.
+            // Desperately ignore it.
+            if (1 < line.size() and
+                0x1 == line.c_str()[0] and 0x21 == line.c_str()[1]) break;
+
             // Strip off carriage returns. The line already stripped
             // newlines.
             if (not line.empty() and line[line.length()-1] == '\r') {
@@ -556,17 +562,22 @@ void ServerSocket::handle_connection(void)
                     HandshakeLine(line);
                 if (_got_http_header)
                 {
-                    // XXX TODO Handle the websockets case, too.
-                    std::string http_body = get_http_body(b);
-
                     // Process the complete HTTP request
-                    OnLine(http_body);
+                    // If we're running websockets, then we're doing
+                    // frame I/O and we've already got the line.
+                    // Otherwise, we use http Content-Length.
+                    if (_do_frame_io)
+                        OnLine(line);
+                    else
+                    {
+                        std::string http_body(get_http_body(b));
+                        OnLine(http_body);
 
-                    // Reset for next HTTP request
-                    // Hmm. We should do this only if _keep_alive == true.
-                    _got_http_header = false;
-                    _got_first_line = false;
-                    _content_length = 0;
+                        // Reset for next HTTP request.
+                        _got_http_header = false;
+                        _got_first_line = false;
+                        _content_length = 0;
+                    }
                 }
             }
         }
