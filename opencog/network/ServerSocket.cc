@@ -327,6 +327,12 @@ void ServerSocket::Send(const std::string& cmd)
     // use two newlines, or a crlf.
     if (1 == cmdsize and '\n' == cmd[0]) return;
 
+    if (not _do_frame_io)
+    {
+        Send(boost::asio::const_buffer(cmd.c_str(), cmdsize));
+        return;
+    }
+
     if (_is_http_socket)
     {
         // Build HTTP response with Content-Length
@@ -341,16 +347,7 @@ void ServerSocket::Send(const std::string& cmd)
             "\r\n";
 
         // Send headers
-        if (not _do_frame_io)
-            Send(boost::asio::const_buffer(response.c_str(), response.size()));
-        else
-            send_websocket(response);
-    }
-
-    if (not _do_frame_io)
-    {
-        Send(boost::asio::const_buffer(cmd.c_str(), cmdsize));
-        return;
+        send_websocket(response);
     }
 
     // If we are here, we have to perform websockets framing.
