@@ -139,7 +139,7 @@ function readReplyMessage(event)
   replySpan.innerHTML = event.data;
 }
 
-function sendMessage()
+function sendMessage(keepCommand)
 {
   console.log("enter sendmsg; socket state=" + socket.readyState + " vs open=" + WebSocket.OPEN);
   // If the socket's open, send a message:
@@ -147,8 +147,10 @@ function sendMessage()
     winl = outgoingText.value;
     console.log("going to send this" + winl + "<<");
     socket.send(winl);
-    // Clear the textarea after sending
-    outgoingText.value = '';
+    // Clear the textarea after sending (unless keepCommand is true)
+    if (!keepCommand) {
+      outgoingText.value = '';
+    }
   }
 }
 
@@ -156,22 +158,24 @@ function sendMessage()
 function runCommand(command, requiredEndpoint)
 {
   console.log("Running command: " + command + " with endpoint: " + requiredEndpoint);
-  
-  // Set the command in the textarea
+
+  // Always set the command in the textarea first so user can see it
   outgoingText.value = command;
-  
+
   // Check if we need to switch endpoints
   if (endpoint !== requiredEndpoint) {
     // Update the endpoint
     endpoint = requiredEndpoint;
     endpointMenu.value = requiredEndpoint;
-    
+
     // If connected, disconnect first to reconnect with new endpoint
     if (socket && socket.readyState === WebSocket.OPEN) {
       console.log("Switching endpoint, disconnecting first");
       socket.close();
       // Wait a bit for close to complete, then reconnect
       setTimeout(function() {
+        // Re-set the command since connectAndSend might clear it
+        outgoingText.value = command;
         connectAndSend();
       }, 500);
     } else {
@@ -180,7 +184,7 @@ function runCommand(command, requiredEndpoint)
     }
   } else if (socket && socket.readyState === WebSocket.OPEN) {
     // Already connected to the right endpoint, just send
-    sendMessage();
+    sendMessage(true); // Keep command in textarea
   } else {
     // Right endpoint but not connected
     connectAndSend();
@@ -194,14 +198,20 @@ function connectAndSend()
   endpoint = endpointMenu.value;
   serverURL = server + endpoint;
   console.log("Connecting to " + serverURL + " to send command");
-  
+
+  // Save the command before connecting since sendMessage will clear it
+  var commandToSend = outgoingText.value;
+
   // Create a one-time listener for the open event
   var tempSocket = new WebSocket(serverURL);
   tempSocket.addEventListener('open', function() {
     socket = tempSocket;
     openConnection();
-    // Send the command after a short delay to ensure connection is ready
-    setTimeout(sendMessage, 100);
+    // Restore the command and send it after a short delay to ensure connection is ready
+    setTimeout(function() {
+      outgoingText.value = commandToSend;
+      sendMessage(true); // Keep command in textarea
+    }, 100);
   });
   tempSocket.addEventListener('close', closeConnection);
   tempSocket.addEventListener('message', readReplyMessage);
