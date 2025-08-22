@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomSpace Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="visualizer.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AtomSpace Visualizer</h1>
+            <p class="subtitle">Real-time visualization of the AtomSpace in-RAM database</p>
+        </header>
+
+        <main>
+            <section class="connection-panel">
+                <h2>Connection Settings</h2>
+                <div class="connection-form">
+                    <div class="form-group">
+                        <label for="server-url">CogServer URL:</label>
+                        <input type="text" 
+                               id="server-url" 
+                               placeholder="ws://172.17.0.2:18080/"
+                               value="ws://localhost:18080/">
+                        <span class="hint">Enter the WebSocket URL of your CogServer</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="endpoint">Endpoint:</label>
+                        <select id="endpoint">
+                            <option value="json" selected>JSON</option>
+                            <option value="scm">Scheme</option>
+                            <option value="py">Python</option>
+                            <option value="sexpr">S-Expressions</option>
+                        </select>
+                        <span class="hint">JSON endpoint recommended for visualization</span>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="connect-btn" class="btn-primary">
+                            <span class="btn-icon">⚡</span>
+                            <span class="btn-text">Connect</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="status-panel">
+                <h2>Connection Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span id="connection-status" class="status-value disconnected">Disconnected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Server:</span>
+                        <span id="server-display" class="status-value">Not connected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Endpoint Type:</span>
+                        <span id="endpoint-display" class="status-value">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="atomspace-stats" class="stats-panel hidden">
+                <h2>AtomSpace Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="atom-count">-</div>
+                        <div class="stat-label">Total Atoms</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="node-count">-</div>
+                        <div class="stat-label">Nodes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="link-count">-</div>
+                        <div class="stat-label">Links</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="type-count">-</div>
+                        <div class="stat-label">Atom Types</div>
+                    </div>
+                </div>
+                
+                <div class="refresh-panel">
+                    <button id="refresh-stats" class="btn-secondary" disabled>
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">Refresh Statistics</span>
+                    </button>
+                    <span id="last-update" class="last-update"></span>
+                </div>
+            </section>
+
+            <section id="error-panel" class="error-panel hidden">
+                <div class="error-content">
+                    <span class="error-icon">⚠️</span>
+                    <span id="error-message"></span>
+                </div>
+            </section>
+
+            <section id="debug-panel" class="debug-panel">
+                <details>
+                    <summary>Debug Console</summary>
+                    <div class="debug-content">
+                        <div class="debug-input">
+                            <input type="text" 
+                                   id="debug-command" 
+                                   placeholder="Enter command (e.g., AtomSpace.version())"
+                                   disabled>
+                            <button id="send-command" class="btn-secondary" disabled>Send</button>
+                        </div>
+                        <div class="debug-output">
+                            <label>Response:</label>
+                            <pre id="debug-response"></pre>
+                        </div>
+                    </div>
+                </details>
+            </section>
+        </main>
+
+        <footer>
+            <p>AtomSpace Visualizer • <a href="https://wiki.opencog.org/w/AtomSpace" target="_blank">Documentation</a></p>
+        </footer>
+    </div>
+</body>
+</html>
