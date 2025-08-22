@@ -39,7 +39,13 @@ function setup()
 
   // Set the listeners.
   serverText.addEventListener('change', setServer);
-  outgoingText.addEventListener('change', sendMessage);
+  // For textarea, listen to keydown to catch Enter key (but not Shift+Enter)
+  outgoingText.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault(); // Prevent default newline
+      sendMessage();
+    }
+  });
   connectButton.addEventListener('click', changeConnection);
 
   // Initial server and endpoint.
@@ -141,6 +147,8 @@ function sendMessage()
     winl = outgoingText.value;
     console.log("going to send this" + winl + "<<");
     socket.send(winl);
+    // Clear the textarea after sending
+    outgoingText.value = '';
   }
 }
 

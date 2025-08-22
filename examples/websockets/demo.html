@@ -203,7 +203,9 @@ $ python3
       CogServer URL: <span id="full-url">none</span>
     </div>
     <div class="status-line">
-      <label style="display: block;">Command: <input type="text" id="outgoing" style="width: 70%; margin-top: 5px;"></label>
+      <label style="display: block;">Command:
+        <textarea id="outgoing" style="width: 90%; margin-top: 5px; font-family: monospace; padding: 5px; border: 1px solid #ccc; border-radius: 3px; min-height: 60px; resize: vertical;"></textarea>
+      </label>
     </div>
     <div class="status-line">
       <label style="display: block;">CogServer Reply:</label>
@@ -218,9 +220,6 @@ $ python3
    reply messages are all formatted in JSON style.
    See the <a href="https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/json">JSON README</a>
    for full documentation.
-   <p>
-   The <a href="json-test.html">JSON Test page</a> displays the network
-   traffic for some of the commands below.</p>
      <table>
      <tr><td>JSON API Version:</td>
          <td><tt>AtomSpace.version()</tt></td></tr>
@@ -277,6 +276,9 @@ $ python3
    OpenCog python modules; you have to import them yourself.
    See the <a href="https://wiki.opencog.org/w/Python">OpenCog Wiki</a>
    for full documentation.
+   <p>
+   The <a href="json-test.html">JSON Test page</a> displays the network
+   traffic for some of the commands below.</p>
      <table>
      <tr><td>Hello, World!</td>
          <td><tt>print("Hello, World!\n")</tt></td></tr>
