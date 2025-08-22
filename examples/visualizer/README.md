@@ -64,6 +64,13 @@ opencog.cogserver.startCogserver()
 - **Refresh Button**: Manually update statistics
 - **Last Update**: Timestamp of most recent data fetch
 
+### Atoms by Type
+- Displays a breakdown of all atoms grouped by their type
+- Shows the count for each atom type
+- Sorted by count (highest first) and then alphabetically
+- Only displays types with at least one atom (zero counts are excluded)
+- Updates automatically when fetching atom statistics
+
 ### Debug Console
 - Send JSON commands to the CogServer
 - View raw responses from the server

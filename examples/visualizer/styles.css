@@ -282,6 +282,56 @@ button:disabled {
     font-size: 1.5rem;
 }
 
+/* Atom Types Breakdown Panel */
+.types-breakdown-panel {
+    margin-top: 20px;
+}
+
+.types-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.type-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: var(--background);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.type-item:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-color);
+    transform: translateX(5px);
+}
+
+.type-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+    margin-right: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.type-count {
+    font-weight: 700;
+    color: var(--primary-dark);
+    background: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    min-width: 30px;
+    text-align: center;
+}
+
 /* Debug Panel */
 .debug-panel details {
     cursor: pointer;
@@ -397,6 +447,10 @@ footer a:hover {
     }
 
     .status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .types-list {
         grid-template-columns: 1fr;
     }
 

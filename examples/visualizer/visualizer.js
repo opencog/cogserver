@@ -12,6 +12,7 @@ let atomspaceStats, errorPanel, errorMessage;
 let atomCount, nodeCount, linkCount, typeCount;
 let refreshBtn, lastUpdate;
 let debugCommand, sendCommand, debugResponse;
+let atomTypesBreakdown, typesList;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
@@ -39,6 +40,9 @@ function init() {
     debugCommand = document.getElementById('debug-command');
     sendCommand = document.getElementById('send-command');
     debugResponse = document.getElementById('debug-response');
+
+    atomTypesBreakdown = document.getElementById('atom-types-breakdown');
+    typesList = document.getElementById('types-list');
 
     // Set up event listeners
     connectBtn.addEventListener('click', toggleConnection);
@@ -153,8 +157,9 @@ function onDisconnect() {
     debugCommand.disabled = true;
     sendCommand.disabled = true;
 
-    // Hide stats panel
+    // Hide stats panel and types breakdown
     atomspaceStats.classList.add('hidden');
+    atomTypesBreakdown.classList.add('hidden');
 
     socket = null;
 }
@@ -239,14 +244,18 @@ function processAtomList(atoms) {
     atomData.atoms = atoms;
     atomData.totalCount = atoms.length;
 
-    // Count nodes and links
+    // Count nodes and links, and track types
     let nodes = 0;
     let links = 0;
     const types = new Set();
+    const typeCountMap = new Map();
 
     atoms.forEach(atom => {
         if (atom.type) {
             types.add(atom.type);
+            // Count atoms by type
+            const currentCount = typeCountMap.get(atom.type) || 0;
+            typeCountMap.set(atom.type, currentCount + 1);
         }
 
         // Check if it's a node or link
@@ -268,6 +277,9 @@ function processAtomList(atoms) {
         links: links,
         types: types.size
     });
+
+    // Update atom types breakdown
+    updateAtomTypesBreakdown(typeCountMap);
 }
 
 function processTypeList(types) {
@@ -297,6 +309,50 @@ function updateStats(stats) {
         elem.parentElement.classList.add('pulse');
         setTimeout(() => elem.parentElement.classList.remove('pulse'), 2000);
     });
+}
+
+function updateAtomTypesBreakdown(typeCountMap) {
+    // Clear existing content
+    typesList.innerHTML = '';
+
+    if (typeCountMap.size === 0) {
+        // Hide the breakdown panel if no types
+        atomTypesBreakdown.classList.add('hidden');
+        return;
+    }
+
+    // Show the breakdown panel
+    atomTypesBreakdown.classList.remove('hidden');
+
+    // Sort types by count (descending) and then by name
+    const sortedTypes = Array.from(typeCountMap.entries())
+        .filter(([type, count]) => count > 0) // Only include types with count > 0
+        .sort((a, b) => {
+            if (b[1] !== a[1]) {
+                return b[1] - a[1]; // Sort by count descending
+            }
+            return a[0].localeCompare(b[0]); // Then by name ascending
+        });
+
+    // Create type items
+    sortedTypes.forEach(([type, count]) => {
+        const typeItem = document.createElement('div');
+        typeItem.className = 'type-item';
+
+        const typeName = document.createElement('span');
+        typeName.className = 'type-name';
+        typeName.textContent = type;
+
+        const typeCount = document.createElement('span');
+        typeCount.className = 'type-count';
+        typeCount.textContent = count.toLocaleString();
+
+        typeItem.appendChild(typeName);
+        typeItem.appendChild(typeCount);
+        typesList.appendChild(typeItem);
+    });
+
+    console.log(`Displayed ${sortedTypes.length} atom types`);
 }
 
 function fetchAtomSpaceStats() {
