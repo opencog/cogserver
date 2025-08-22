@@ -102,7 +102,7 @@ function openConnection()
     endpointType.innerHTML = "JSON";
   else if (endpoint == 'scm')
     endpointType.innerHTML = "Guile Scheme";
-  else if (endpoint == 'python')
+  else if (endpoint == 'py')
     endpointType.innerHTML = "Python";
   else if (endpoint == 'sexpr')
     endpointType.innerHTML = "S-Expressions";

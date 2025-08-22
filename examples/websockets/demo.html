@@ -120,7 +120,10 @@ Take a moment to visit the stats page at
      <tr><td>Create a ConceptNode:</td>
          <td><tt>Concept("foo")</tt></td></tr>
      <tr><td>Fetch all Atoms:</td>
-         <td><tt>atomspace.get_atoms_by_type(types.Atom, true)</tt></td></tr>
+         <td><tt>from opencog.atomspace import AtomSpace, types<br>
+                 spacey = AtomSpace()<br>
+                 spacey.add_node(types.ConceptNode, 'Apple')
+                 spacey.get_atoms_by_type(types.Atom, True)</tt></td></tr>
      </table>
 <hr>
 <h3>The End</h3>
