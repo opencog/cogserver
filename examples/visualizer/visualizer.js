@@ -13,6 +13,7 @@ let atomCount, nodeCount, linkCount, typeCount;
 let refreshBtn, lastUpdate;
 let debugCommand, sendCommand, debugResponse;
 let atomTypesBreakdown, typesList;
+let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
@@ -44,8 +45,14 @@ function init() {
     atomTypesBreakdown = document.getElementById('atom-types-breakdown');
     typesList = document.getElementById('types-list');
 
+    atomListingPanel = document.getElementById('atom-listing-panel');
+    atomListingTitle = document.getElementById('atom-listing-title');
+    atomListingContent = document.getElementById('atom-listing-content');
+    closeAtomListing = document.getElementById('close-atom-listing');
+
     // Set up event listeners
     connectBtn.addEventListener('click', toggleConnection);
+    closeAtomListing.addEventListener('click', hideAtomListing);
     refreshBtn.addEventListener('click', fetchAtomSpaceStats);
     sendCommand.addEventListener('click', sendDebugCommand);
     debugCommand.addEventListener('keypress', (e) => {
@@ -157,9 +164,10 @@ function onDisconnect() {
     debugCommand.disabled = true;
     sendCommand.disabled = true;
 
-    // Hide stats panel and types breakdown
+    // Hide stats panel, types breakdown, and atom listing
     atomspaceStats.classList.add('hidden');
     atomTypesBreakdown.classList.add('hidden');
+    atomListingPanel.classList.add('hidden');
 
     socket = null;
 }
@@ -334,10 +342,12 @@ function updateAtomTypesBreakdown(typeCountMap) {
             return a[0].localeCompare(b[0]); // Then by name ascending
         });
 
-    // Create type items
+    // Create type items as buttons
     sortedTypes.forEach(([type, count]) => {
-        const typeItem = document.createElement('div');
-        typeItem.className = 'type-item';
+        const typeButton = document.createElement('button');
+        typeButton.className = 'type-item-button';
+        typeButton.setAttribute('data-type', type);
+        typeButton.addEventListener('click', () => showAtomsOfType(type));
 
         const typeName = document.createElement('span');
         typeName.className = 'type-name';
@@ -347,9 +357,9 @@ function updateAtomTypesBreakdown(typeCountMap) {
         typeCount.className = 'type-count';
         typeCount.textContent = count.toLocaleString();
 
-        typeItem.appendChild(typeName);
-        typeItem.appendChild(typeCount);
-        typesList.appendChild(typeItem);
+        typeButton.appendChild(typeName);
+        typeButton.appendChild(typeCount);
+        typesList.appendChild(typeButton);
     });
 
     console.log(`Displayed ${sortedTypes.length} atom types`);
@@ -404,4 +414,70 @@ function showError(message) {
 
 function hideError() {
     errorPanel.classList.add('hidden');
+}
+
+function atomToSExpression(atom) {
+    // Convert an atom to s-expression format
+    // Remove "Node" suffix from type for s-expression format
+    const typeBase = atom.type.replace(/Node$/, '');
+
+    if (!atom.outgoing || atom.outgoing.length === 0) {
+        // It's a node
+        if (atom.name !== undefined) {
+            // Quote the name if it contains spaces or special characters
+            const quotedName = JSON.stringify(atom.name);
+            return `(${typeBase} ${quotedName})`;
+        } else {
+            return `(${typeBase})`;
+        }
+    } else {
+        // It's a link - we need to show its outgoing connections
+        // For now, just show the handles as placeholders
+        const outgoingStr = atom.outgoing.map(handle => {
+            // Try to find the referenced atom
+            const referencedAtom = atomData.atoms?.find(a =>
+                (a.handle === handle) || (a.uuid === handle) || (a.id === handle)
+            );
+            if (referencedAtom) {
+                return atomToSExpression(referencedAtom);
+            }
+            return `<handle:${handle}>`;
+        }).join(' ');
+        return `(${typeBase} ${outgoingStr})`;
+    }
+}
+
+function showAtomsOfType(type) {
+    console.log(`Showing atoms of type: ${type}`);
+
+    // Filter atoms by type
+    const atomsOfType = atomData.atoms?.filter(atom => atom.type === type) || [];
+
+    // Update title
+    atomListingTitle.textContent = `${type} Atoms (${atomsOfType.length})`;
+
+    // Clear content
+    atomListingContent.innerHTML = '';
+
+    if (atomsOfType.length === 0) {
+        atomListingContent.innerHTML = '<div class="no-atoms">No atoms of this type found</div>';
+    } else {
+        // Create a pre element for the s-expression listing
+        const preElement = document.createElement('pre');
+        preElement.className = 'atom-sexpr-list';
+
+        // Convert each atom to s-expression and add to the listing
+        const sExpressions = atomsOfType.map(atom => atomToSExpression(atom));
+        preElement.textContent = sExpressions.join('\n');
+
+        atomListingContent.appendChild(preElement);
+    }
+
+    // Show the panel
+    atomListingPanel.classList.remove('hidden');
+}
+
+function hideAtomListing() {
+    atomListingPanel.classList.add('hidden');
+    atomListingContent.innerHTML = '';
 }

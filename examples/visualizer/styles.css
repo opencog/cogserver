@@ -294,7 +294,7 @@ button:disabled {
     margin-top: 15px;
 }
 
-.type-item {
+.type-item-button {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -303,12 +303,22 @@ button:disabled {
     border-radius: 6px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
 }
 
-.type-item:hover {
+.type-item-button:hover {
     background: var(--primary-light);
     border-color: var(--primary-color);
     transform: translateX(5px);
+    box-shadow: var(--shadow-sm);
+}
+
+.type-item-button:active {
+    transform: translateX(3px);
 }
 
 .type-name {
@@ -330,6 +340,53 @@ button:disabled {
     font-size: 0.9rem;
     min-width: 30px;
     text-align: center;
+}
+
+/* Atom Listing Panel */
+.atom-listing-panel {
+    margin-top: 20px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.atom-listing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--primary-light);
+    margin-bottom: 15px;
+}
+
+.atom-listing-content {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--background);
+    border-radius: 6px;
+    padding: 15px;
+    max-height: 400px;
+}
+
+.atom-sexpr-list {
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    padding: 10px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.no-atoms {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 20px;
 }
 
 /* Debug Panel */
@@ -452,6 +509,15 @@ footer a:hover {
 
     .types-list {
         grid-template-columns: 1fr;
+    }
+
+    .atom-listing-content {
+        max-height: 300px;
+    }
+
+    .atom-listing-header {
+        flex-direction: column;
+        gap: 10px;
     }
 
     .container {
