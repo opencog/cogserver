@@ -4,33 +4,166 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="script.js"></script>
-  <link rel="stylesheet" href="styles.css">
   <title>CogServer WebSocket Demo</title>
+  <style>
+    body {
+      font-family: monospace;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    h1, h2, h3 {
+      font-family: monospace;
+    }
+    h1 {
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+    }
+    h2 {
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+      margin-top: 30px;
+    }
+    h3 {
+      color: #333;
+      margin-top: 20px;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .connection-panel {
+      background: #f8f8f8;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .connection-panel input[type="text"] {
+      font-family: monospace;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      width: 300px;
+    }
+    .connection-panel select {
+      font-family: monospace;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+    .connection-panel input[type="button"] {
+      font-family: monospace;
+      padding: 5px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .connection-panel input[type="button"]:hover {
+      background: #0056b3;
+    }
+    .status-line {
+      margin: 5px 0;
+      padding: 5px;
+      background: white;
+      border-left: 3px solid #007bff;
+      padding-left: 10px;
+    }
+    #connection {
+      font-weight: bold;
+      color: #d9534f;
+    }
+    #connection.connected {
+      color: #5cb85c;
+    }
+    #endpoint, #full-url {
+      font-weight: bold;
+      color: #333;
+    }
+    #reply {
+      display: block;
+      margin-top: 5px;
+      padding: 10px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      min-height: 40px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: monospace;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 15px 0;
+      width: 100%;
+    }
+    table td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      vertical-align: top;
+    }
+    table td:first-child {
+      background: #f8f8f8;
+      width: 30%;
+      font-weight: bold;
+    }
+    table tt {
+      background: #fff;
+      padding: 2px 4px;
+      border: 1px solid #e0e0e0;
+      border-radius: 3px;
+      display: inline-block;
+      margin: 2px 0;
+    }
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #ccc;
+      margin: 40px 0;
+    }
+    .intro-section {
+      background: #f9f9f9;
+      padding: 15px;
+      border-left: 4px solid #5bc0de;
+      margin: 20px 0;
+    }
+  </style>
 </head>
 <body>
   <h1>CogServer WebSocket Demo</h1>
- <p>You can interact with a running CogServer with this web page.
-    Be sure to start a cogserver first!  Try running it either from
-    the command line:
-<pre>
+ <div class="intro-section">
+    <p>You can interact with a running CogServer with this web page.
+       Be sure to start a cogserver first!  Try running it either from
+       the command line:</p>
+    <pre>
 $ /usr/local/bin/cogserver
 </pre>
-    or from guile:
-<pre>
+    <p>or from guile:</p>
+    <pre>
 $ guile
 > (use-modules (opencog) (opencog cogserver))
 > (start-cogserver)
 </pre>
-    or from python:
-<pre>
+    <p>or from python:</p>
+    <pre>
 $ python3
 > import opencog, opencog.cogserver
 > opencog.cogserver.startCogserver()
 </pre>
-
-Take a moment to visit the stats page at
-<a href="http://localhost:18080/">http://localhost:18080/stats</a>.
- </p>
+    <p>Take a moment to visit the stats page at
+    <a href="http://localhost:18080/stats">http://localhost:18080/stats</a>.</p>
+ </div>
  <h2>Interact</h2>
  <p>
     You can interact with the websockets server below. There
@@ -39,31 +172,46 @@ Take a moment to visit the stats page at
     the "Connect" button. Change the mode by disconnecting and
     reconnecting.
  </p>
-  <div>
-    CogServer: <input type="text" id="server-box"><br>
-    Endpoint:
-      <select id="endpoint-menu">
-        <option value="json">JSON</option>
-        <option value="scm">Scheme</option>
-        <option value="py">Python</option>
-        <option value="sexpr">S-Expressions</option>
-      </select>
-    <br>
-    Connected to server: <span id="connection">false</span><br>
-    <input type="button" id="connectButton" value="Connect"><br>
-    <br>
-    <br>
-    Type a command message in the text box, and then hit "enter".
-    Some suggested messages are just below.
-    <br>
-    <br>
-    Connection Type: <span id="endpoint"></span></br>
-    CogServer URL: <span id="full-url"></span><br>
-    Command: <input type="text" id="outgoing"><br>
-    CogServer Reply: <span id="reply"></span><br>
+  <div class="connection-panel">
+    <div class="status-line">
+      <label>CogServer: <input type="text" id="server-box"></label>
+    </div>
+    <div class="status-line">
+      <label>Endpoint:
+        <select id="endpoint-menu">
+          <option value="json">JSON</option>
+          <option value="scm">Scheme</option>
+          <option value="py">Python</option>
+          <option value="sexpr">S-Expressions</option>
+        </select>
+      </label>
+    </div>
+    <div class="status-line">
+      Connected to server: <span id="connection">false</span>
+    </div>
+    <input type="button" id="connectButton" value="Connect">
+
+    <hr style="margin: 15px 0;">
+
+    <p style="margin: 10px 0;">Type a command message in the text box, and then hit "enter".
+    Some suggested messages are just below.</p>
+
+    <div class="status-line">
+      Connection Type: <span id="endpoint">none</span>
+    </div>
+    <div class="status-line">
+      CogServer URL: <span id="full-url">none</span>
+    </div>
+    <div class="status-line">
+      <label style="display: block;">Command: <input type="text" id="outgoing" style="width: 70%; margin-top: 5px;"></label>
+    </div>
+    <div class="status-line">
+      <label style="display: block;">CogServer Reply:</label>
+      <span id="reply"></span>
+    </div>
   </div>
  <h2>Suggested Messages</h2>
- Try sending these messages:
+ <p>Try sending these messages:</p>
  <h3>JSON</h3>
    The /json endpoint supports fifteen different commands for creating
    Atoms and Values, executing them, fetching them and so on. The
@@ -72,7 +220,7 @@ Take a moment to visit the stats page at
    for full documentation.
    <p>
    The <a href="json-test.html">JSON Test page</a> displays the network
-   traffic for some of the commands below.
+   traffic for some of the commands below.</p>
      <table>
      <tr><td>JSON API Version:</td>
          <td><tt>AtomSpace.version()</tt></td></tr>

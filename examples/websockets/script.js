@@ -96,6 +96,7 @@ function openConnection()
   serverText.value = server;
   urlSpan.innerHTML = serverURL;
   connectionSpan.innerHTML = "true";
+  connectionSpan.className = "connected";
   connectButton.value = "Disconnect";
 
   if (endpoint == 'json')
@@ -113,6 +114,7 @@ function closeConnection()
   // Display the change of state:
   urlSpan.innerHTML = "none";
   connectionSpan.innerHTML = "false" + errorState;
+  connectionSpan.className = "";
   connectButton.value = "Connect";
   endpointType.innerHTML = "none";
   replySpan.innerHTML = "";
