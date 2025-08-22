@@ -33,8 +33,11 @@ Take a moment to visit the stats page at
  </p>
  <h2>Interact</h2>
  <p>
-    Changes do not take effect until the current connection
-    is disconnected and a new connection is made.
+    You can interact with the websockets server below. There
+    are four styles of interaction: JSON, Scheme, Python and
+    bare s-expressions. Select the interaction mode and hit
+    the "Connect" button. Change the mode by disconnecting and
+    reconnecting.
  </p>
   <div>
     CogServer: <input type="text" id="server-box"><br>
@@ -48,6 +51,10 @@ Take a moment to visit the stats page at
     <br>
     Connected to server: <span id="connection">false</span><br>
     <input type="button" id="connectButton" value="Connect"><br>
+    <br>
+    <br>
+    Type a command message in the text box, and then hit "enter".
+    Some suggested messages are just below.
     <br>
     <br>
     Connection Type: <span id="endpoint"></span></br>
