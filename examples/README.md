@@ -12,19 +12,19 @@ showing all connected clients, and the network status for each client.
 The [websockets](./websockets) subdirectory contains a web page that
 shows how to interact with a running cogserver.  Just load the
 [demo.html](./websockets/demo.html) page in a browser,
-[like this](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/websockets/demo.html),
+[***like this***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/websockets/demo.html),
 and go.
 All the actual network i/o is done with the
 [script.js](./websockets/script.js) javascript file. The
 [json-test.html](./websockets/json-test.html) page shows network
 traffic for a basic JSON session.
-[Run it here](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/websockets/json-test.html).
+[***Run it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/websockets/json-test.html).
 
 The [visualizer](./visualizer) subdirectory contains a web page that
 provides some basic info about the contents of the AtomSpace. This
 includes the total counts for various atom types, and some basic
 browsing ability.
-[Run it here](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visualizer/index.html)
+[***Run it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visualizer/index.html).
 
 
 The [mcp](./mcp) subdirectory contains a Model Context Protocol (MCP)
