@@ -150,11 +150,20 @@ function initializeGraph() {
 
     // Add network event handlers
     network.on('click', function(params) {
+        // Handle node clicks
         if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
             const node = nodes.get(nodeId);
             if (node && node.atom) {
                 fetchIncomingSet(node.atom, nodeId);
+            }
+        }
+        // Handle edge clicks
+        else if (params.edges.length > 0) {
+            const edgeId = params.edges[0];
+            const edge = edges.get(edgeId);
+            if (edge) {
+                removeNodeAndParents(edge.from);
             }
         }
     });
@@ -339,6 +348,64 @@ function updateChildrenLevels(nodeId, parentLevel) {
             updateChildrenLevels(edge.to, newChildLevel);
         }
     });
+}
+
+function removeNodeAndParents(nodeId) {
+    // Collect all nodes to remove (this node and all its parents)
+    const nodesToRemove = new Set();
+    const edgesToRemove = new Set();
+
+    // Recursive function to find all parent nodes
+    function collectParents(currentNodeId) {
+        if (nodesToRemove.has(currentNodeId)) {
+            return; // Already processed
+        }
+
+        nodesToRemove.add(currentNodeId);
+
+        // Find all edges where this node is the parent (from)
+        const childEdges = edges.get({
+            filter: function(edge) {
+                return edge.from === currentNodeId;
+            }
+        });
+        childEdges.forEach(edge => {
+            edgesToRemove.add(edge.id);
+        });
+
+        // Find all edges where this node is the child (to)
+        const parentEdges = edges.get({
+            filter: function(edge) {
+                return edge.to === currentNodeId;
+            }
+        });
+
+        // For each parent edge, recursively collect the parent node
+        parentEdges.forEach(edge => {
+            edgesToRemove.add(edge.id);
+            collectParents(edge.from);
+        });
+    }
+
+    // Start collection from the clicked node
+    collectParents(nodeId);
+
+    // Remove all collected edges
+    edges.remove(Array.from(edgesToRemove));
+
+    // Remove all collected nodes
+    const nodeIdsToRemove = Array.from(nodesToRemove);
+    nodes.remove(nodeIdsToRemove);
+
+    // Clean up atomNodeMap
+    atomNodeMap.forEach((value, key) => {
+        if (nodesToRemove.has(value)) {
+            atomNodeMap.delete(key);
+        }
+    });
+
+    // Update status
+    updateStatus(`Removed ${nodesToRemove.size} node(s)`, 'connected');
 }
 
 function addEdgeIfNotExists(from, to) {
