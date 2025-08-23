@@ -369,9 +369,10 @@ function atomToSExpression(atom, indent = 0) {
         }
         return `(${typeBase})`;
     } else {
-        // Links with proper indentation
+        // Links with proper indentation using non-breaking spaces
         const nextIndent = indent + 1;
-        const nextIndentStr = '  '.repeat(nextIndent);
+        // Use non-breaking spaces (\u00A0) for indentation to preserve it in tooltips
+        const nextIndentStr = '\u00A0\u00A0'.repeat(nextIndent);
         const outgoingStrs = atom.outgoing.map(item => {
             if (typeof item === 'object' && item !== null) {
                 return nextIndentStr + atomToSExpression(item, nextIndent);
