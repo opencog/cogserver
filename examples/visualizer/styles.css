@@ -359,6 +359,12 @@ button:disabled {
     margin-bottom: 15px;
 }
 
+.header-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 .atom-listing-content {
     flex: 1;
     overflow-y: auto;
@@ -394,6 +400,14 @@ button:disabled {
     margin-bottom: 8px;
     display: flex;
     align-items: flex-start;
+}
+
+/* Graph visualization checkbox */
+.graph-checkbox {
+    margin-right: 8px;
+    margin-top: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .atom-clickable {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AtomSpace Visualizer</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="visualizer.js"></script>
+    <script src="landing.js"></script>
 </head>
 <body>
     <div class="container">
@@ -94,10 +94,16 @@
             <section id="atom-listing-panel" class="atom-listing-panel hidden">
                 <div class="atom-listing-header">
                     <h2 id="atom-listing-title">Atoms of Type</h2>
-                    <button id="close-atom-listing" class="btn-secondary">
-                        <span class="btn-icon">✕</span>
-                        <span class="btn-text">Close</span>
-                    </button>
+                    <div class="header-buttons">
+                        <button id="visualize-checked" class="btn-primary">
+                            <span class="btn-icon">🔗</span>
+                            <span class="btn-text">Visualize Checked</span>
+                        </button>
+                        <button id="close-atom-listing" class="btn-secondary">
+                            <span class="btn-icon">✕</span>
+                            <span class="btn-text">Close</span>
+                        </button>
+                    </div>
                 </div>
                 <div id="atom-listing-content" class="atom-listing-content">
                     <!-- Atom listings will be displayed here -->

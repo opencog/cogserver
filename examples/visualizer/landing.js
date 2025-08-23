@@ -4,6 +4,7 @@ let socket = null;
 let serverURL = '';
 let isConnected = false;
 let atomData = {};
+let checkedAtoms = new Map(); // Track checked atoms
 
 // DOM elements
 let serverInput, connectBtn;
@@ -13,7 +14,7 @@ let atomCount, nodeCount, linkCount, typeCount;
 let refreshBtn, lastUpdate;
 let debugCommand, sendCommand, debugResponse;
 let atomTypesBreakdown, typesList;
-let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing;
+let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing, visualizeCheckedBtn;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
@@ -49,10 +50,12 @@ function init() {
     atomListingTitle = document.getElementById('atom-listing-title');
     atomListingContent = document.getElementById('atom-listing-content');
     closeAtomListing = document.getElementById('close-atom-listing');
+    visualizeCheckedBtn = document.getElementById('visualize-checked');
 
     // Set up event listeners
     connectBtn.addEventListener('click', toggleConnection);
     closeAtomListing.addEventListener('click', hideAtomListing);
+    visualizeCheckedBtn.addEventListener('click', visualizeCheckedAtoms);
     refreshBtn.addEventListener('click', fetchAtomSpaceStats);
     sendCommand.addEventListener('click', sendDebugCommand);
     debugCommand.addEventListener('keypress', (e) => {
@@ -530,6 +533,24 @@ function createClickableAtom(atom) {
     const atomContainer = document.createElement('div');
     atomContainer.className = 'atom-container';
 
+    // Create graph visualization checkbox
+    const graphCheckbox = document.createElement('input');
+    graphCheckbox.type = 'checkbox';
+    graphCheckbox.className = 'graph-checkbox';
+    graphCheckbox.title = 'Select for graph visualization';
+
+    // Generate unique ID for tracking
+    const checkboxId = `checkbox-${atom.type}-${atom.name || 'link'}-${Math.random().toString(36).substr(2, 9)}`;
+    graphCheckbox.id = checkboxId;
+
+    graphCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            checkedAtoms.set(checkboxId, atom);
+        } else {
+            checkedAtoms.delete(checkboxId);
+        }
+    });
+
     // Create the clickable atom element
     const atomElement = document.createElement('div');
     atomElement.className = 'atom-clickable';
@@ -552,7 +573,8 @@ function createClickableAtom(atom) {
         handleAtomClick(atom, keysDisplay, atomElement);
     });
 
-    // Add both elements to container
+    // Add all elements to container
+    atomContainer.appendChild(graphCheckbox);
     atomContainer.appendChild(atomElement);
     atomContainer.appendChild(keysDisplay);
 
@@ -853,4 +875,32 @@ function openStatsPage() {
 
     // Open in new tab
     window.open(statsUrl, '_blank');
+}
+
+function openGraphVisualization(atom) {
+    // Encode the atom data in the URL
+    const atomData = encodeURIComponent(JSON.stringify(atom));
+    const graphUrl = `tree-view.html?atom=${atomData}&server=${encodeURIComponent(serverInput.value)}`;
+
+    // Open in new tab
+    window.open(graphUrl, '_blank');
+}
+
+function visualizeCheckedAtoms() {
+    if (checkedAtoms.size === 0) {
+        showError('No atoms selected. Please check some atoms first.');
+        return;
+    }
+
+    // Convert Map values to array
+    const atoms = Array.from(checkedAtoms.values());
+
+    // Encode the atoms data in the URL
+    const atomsData = encodeURIComponent(JSON.stringify(atoms));
+    const graphUrl = `tree-view.html?atoms=${atomsData}&server=${encodeURIComponent(serverInput.value)}`;
+
+    // Open in new tab
+    window.open(graphUrl, '_blank');
+
+    // Keep checkboxes checked - don't clear them
 }

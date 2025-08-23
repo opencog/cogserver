@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomSpace Graph Visualization</title>
+    <script type="text/javascript" src="vis-network/vis-network.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+        #controls {
+            background: white;
+            padding: 10px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #controls button {
+            padding: 8px 16px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #controls button:hover {
+            background: #1976D2;
+        }
+        #controls label {
+            font-size: 14px;
+            color: #666;
+        }
+        #controls input, #controls select {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #mynetwork {
+            width: 100%;
+            height: calc(100vh - 120px);
+            border: none;
+        }
+        #status {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+        .loading {
+            color: #FF9800;
+        }
+        .connected {
+            color: #4CAF50;
+        }
+        .error {
+            color: #F44336;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>AtomSpace Graph Visualization</h1>
+        <ul style="text-align: left; display: inline-block; margin-top: 10px; font-size: 14px;">
+            <li>Click on Atom to fetch and display its incoming set</li>
+            <li>Click on arrow to stop displaying the atoms it comes from</li>
+        </ul>
+    </div>
+    <div id="controls">
+        <button id="expandBtn">Expand Graph</button>
+        <button id="resetBtn">Reset View</button>
+        <label>Depth: <input type="number" id="depthInput" value="2" min="1" max="5" style="width: 50px;"></label>
+        <label>Layout:
+            <select id="layoutSelect">
+                <option value="hierarchical" selected>Hierarchical</option>
+                <option value="network">Network</option>
+            </select>
+        </label>
+        <button id="refreshBtn">Refresh</button>
+    </div>
+    <div id="mynetwork"></div>
+    <div id="status" class="loading">Initializing...</div>
+
+    <script src="tree-view.js"></script>
+</body>
+</html>
