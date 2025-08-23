@@ -214,8 +214,15 @@ function onMessage(event) {
                 // Response from makeAtom or other boolean operations
                 console.log('Received boolean result:', result);
             } else if (typeof result === 'object' && result !== null) {
-                // Could be a single atom
-                console.log('Received object result:', result);
+                // Check if it's the reportCounts response (object with type names as keys)
+                const keys = Object.keys(result);
+                if (keys.length > 0 && keys.every(key => typeof result[key] === 'number')) {
+                    console.log('Received atom counts:', result);
+                    processAtomCounts(result);
+                } else {
+                    // Could be a single atom
+                    console.log('Received object result:', result);
+                }
             }
         } else if (data.success === false) {
             // Error response
@@ -249,6 +256,40 @@ function processAtomList(atoms) {
 
     console.log('Processing atom list:', atoms.length, 'atoms');
 
+    // Check if this is for displaying atoms of a specific type
+    if (atomData.pendingTypeDisplay) {
+        const type = atomData.pendingTypeDisplay;
+        atomData.pendingTypeDisplay = null;
+
+        // Update the listing panel with the atoms
+        if (atoms.length === 0) {
+            atomListingContent.innerHTML = '<div class="no-atoms">No atoms of this type found</div>';
+        } else {
+            // Create a pre element for the s-expression listing
+            const preElement = document.createElement('pre');
+            preElement.className = 'atom-sexpr-list';
+
+            // Store these atoms temporarily for s-expression conversion
+            const tempAtoms = atomData.atoms;
+            atomData.atoms = atoms;
+
+            // Convert each atom to s-expression and add to the listing
+            const sExpressions = atoms.map(atom => atomToSExpression(atom));
+            preElement.textContent = sExpressions.join('\n');
+
+            // Restore the original atoms
+            atomData.atoms = tempAtoms;
+
+            atomListingContent.innerHTML = '';
+            atomListingContent.appendChild(preElement);
+        }
+
+        console.log(`Displayed ${atoms.length} atoms of type ${type}`);
+        return;
+    }
+
+    // This is the old full atom list processing - keeping for backward compatibility
+    // but it shouldn't be called anymore since we're using reportCounts()
     atomData.atoms = atoms;
     atomData.totalCount = atoms.length;
 
@@ -300,6 +341,50 @@ function processTypeList(types) {
 
     atomData.types = types;
     typeCount.textContent = types.length.toLocaleString();
+}
+
+function processAtomCounts(counts) {
+    console.log('Processing atom counts from reportCounts()');
+
+    // Calculate totals
+    let totalAtoms = 0;
+    let nodes = 0;
+    let links = 0;
+    const typeCountMap = new Map();
+
+    for (const [typeName, count] of Object.entries(counts)) {
+        totalAtoms += count;
+        typeCountMap.set(typeName, count);
+
+        // Determine if it's a Node or Link based on the type name
+        if (typeName.endsWith('Node')) {
+            nodes += count;
+        } else if (typeName.endsWith('Link')) {
+            links += count;
+        } else {
+            // For types that don't follow the naming convention,
+            // we'll need to check the type hierarchy
+            // For now, assume it's a node if not explicitly a link
+            nodes += count;
+        }
+    }
+
+    console.log(`Stats from reportCounts - Total: ${totalAtoms}, Nodes: ${nodes}, Links: ${links}, Types: ${typeCountMap.size}`);
+
+    // Update UI
+    updateStats({
+        total: totalAtoms,
+        nodes: nodes,
+        links: links,
+        types: typeCountMap.size
+    });
+
+    // Update atom types breakdown
+    updateAtomTypesBreakdown(typeCountMap);
+
+    // Store the counts for later use
+    atomData.counts = counts;
+    atomData.totalCount = totalAtoms;
 }
 
 function updateStats(stats) {
@@ -373,12 +458,12 @@ function fetchAtomSpaceStats() {
 
     console.log('Fetching AtomSpace stats...');
 
-    // Send the command as a plain string - this is what the demo shows
-    const command = 'AtomSpace.getAtoms("Atom", true)';
+    // Use the new reportCounts() command for efficient stats gathering
+    const command = 'AtomSpace.reportCounts()';
     console.log('Sending command:', command);
     sendMessage(command);
 
-    // Also fetch types after a short delay
+    // Also fetch types after a short delay for additional type information
     setTimeout(() => {
         const typesCommand = 'AtomSpace.getSubTypes("TopType", true)';
         console.log('Sending types command:', typesCommand);
@@ -477,31 +562,32 @@ function atomToSExpression(atom) {
 function showAtomsOfType(type) {
     console.log(`Showing atoms of type: ${type}`);
 
-    // Filter atoms by type
-    const atomsOfType = atomData.atoms?.filter(atom => atom.type === type) || [];
-
-    // Update title
-    atomListingTitle.textContent = `${type} Atoms (${atomsOfType.length})`;
+    // Update title with count from reportCounts if available
+    const count = atomData.counts?.[type] || 0;
+    atomListingTitle.textContent = `${type} Atoms (${count})`;
 
     // Clear content
     atomListingContent.innerHTML = '';
 
-    if (atomsOfType.length === 0) {
-        atomListingContent.innerHTML = '<div class="no-atoms">No atoms of this type found</div>';
-    } else {
-        // Create a pre element for the s-expression listing
-        const preElement = document.createElement('pre');
-        preElement.className = 'atom-sexpr-list';
-
-        // Convert each atom to s-expression and add to the listing
-        const sExpressions = atomsOfType.map(atom => atomToSExpression(atom));
-        preElement.textContent = sExpressions.join('\n');
-
-        atomListingContent.appendChild(preElement);
-    }
+    // Show loading message
+    atomListingContent.innerHTML = '<div class="loading">Loading atoms...</div>';
 
     // Show the panel
     atomListingPanel.classList.remove('hidden');
+
+    // Fetch atoms of this specific type
+    const command = `AtomSpace.getAtoms("${type}", false)`;
+    console.log('Fetching atoms of type:', type);
+
+    // Store the type we're fetching for later processing
+    atomData.pendingTypeDisplay = type;
+
+    // Send the command
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(command);
+    } else {
+        atomListingContent.innerHTML = '<div class="error">Not connected to server</div>';
+    }
 }
 
 function hideAtomListing() {

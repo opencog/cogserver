@@ -476,6 +476,19 @@ footer a:hover {
     display: none !important;
 }
 
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.error {
+    text-align: center;
+    padding: 20px;
+    color: var(--error-color);
+}
+
 /* Animations */
 @keyframes pulse {
     0% {
