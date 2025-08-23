@@ -149,12 +149,12 @@ function initializeGraph() {
     network = new vis.Network(container, data, options);
 
     // Add network event handlers
-    network.on('doubleClick', function(params) {
+    network.on('click', function(params) {
         if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
             const node = nodes.get(nodeId);
             if (node && node.atom) {
-                expandNode(node.atom);
+                fetchIncomingSet(node.atom, nodeId);
             }
         }
     });
@@ -412,30 +412,6 @@ function getNodeColor(type) {
     };
 }
 
-function expandNode(atom) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        updateStatus('Not connected to server', 'error');
-        return;
-    }
-
-    // Get incoming and outgoing links for this atom
-    updateStatus('Expanding node...', 'loading');
-
-    // For now, just expand the existing atom's connections
-    // In a full implementation, we'd query the server for more connections
-    const nodeKey = atomToKey(atom);
-    const nodeId = atomNodeMap.get(nodeKey);
-
-    if (nodeId && atom.outgoing) {
-        atom.outgoing.forEach((outgoing, index) => {
-            if (typeof outgoing === 'object' && outgoing !== null) {
-                addAtomToGraph(outgoing, nodeId, 1);
-            }
-        });
-        network.fit();
-        updateStatus('Node expanded', 'connected');
-    }
-}
 
 function setupEventHandlers() {
     // Expand button
@@ -444,7 +420,7 @@ function setupEventHandlers() {
         if (selectedNodes.length > 0) {
             const node = nodes.get(selectedNodes[0]);
             if (node && node.atom) {
-                expandNode(node.atom);
+                fetchIncomingSet(node.atom, selectedNodes[0]);
             }
         } else {
             updateStatus('Select a node to expand', 'error');
@@ -559,6 +535,88 @@ function updateStatus(message, className) {
 
 function handleServerResponse(response) {
     // Handle responses from the server
-    // This would be extended to handle various query responses
     console.log('Server response:', response);
+
+    // Check if this is a response to getIncomingSet
+    if (pendingIncomingRequest) {
+        if (response.success && response.result) {
+            const incomingAtoms = response.result;
+            const targetNodeId = pendingIncomingRequest.nodeId;
+
+            // Add each incoming atom to the graph
+            incomingAtoms.forEach(atom => {
+                // Add the incoming atom to the graph
+                const incomingNodeId = addAtomToGraph(atom, null, 0);
+
+                // Find which outgoing atom matches our target and connect to it
+                if (atom.outgoing) {
+                    atom.outgoing.forEach((outgoing, index) => {
+                        // Check if this outgoing matches our target atom
+                        if (isMatchingAtom(outgoing, pendingIncomingRequest.atom)) {
+                            // Connect the incoming atom to the existing node
+                            addEdgeIfNotExists(incomingNodeId, targetNodeId);
+                        }
+                    });
+                }
+            });
+
+            // Refit the network to show the new nodes
+            network.fit();
+            updateStatus(`Added ${incomingAtoms.length} incoming links`, 'connected');
+        } else {
+            updateStatus('No incoming links found', 'connected');
+        }
+
+        pendingIncomingRequest = null;
+    }
+}
+
+// Helper function to check if two atoms match
+function isMatchingAtom(atom1, atom2) {
+    if (typeof atom1 === 'string' || typeof atom2 === 'string') {
+        return false; // Can't match string references accurately
+    }
+    if (atom1.type !== atom2.type) {
+        return false;
+    }
+    if (atom1.name !== undefined && atom2.name !== undefined) {
+        return atom1.name === atom2.name;
+    }
+    // For links, would need to compare outgoing, but that gets complex
+    return atomToKey(atom1) === atomToKey(atom2);
+}
+
+// Global variable to track pending incoming set request
+let pendingIncomingRequest = null;
+
+function fetchIncomingSet(atom, nodeId) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        updateStatus('Not connected to server', 'error');
+        return;
+    }
+
+    updateStatus('Fetching incoming links...', 'loading');
+
+    // Construct the command to get incoming set
+    let atomSpec;
+    if (atom.name !== undefined) {
+        // It's a node - escape the name properly for JSON
+        const escapedName = JSON.stringify(atom.name);
+        atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
+    } else {
+        // It's a link or complex atom - use full JSON serialization
+        atomSpec = JSON.stringify(atom);
+    }
+
+    const command = `AtomSpace.getIncomingSet(${atomSpec})`;
+    console.log('Getting incoming set for atom:', command);
+
+    // Store request info for when we receive the response
+    pendingIncomingRequest = {
+        atom: atom,
+        nodeId: nodeId
+    };
+
+    // Send the command
+    socket.send(command);
 }
