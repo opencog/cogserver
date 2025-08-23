@@ -420,7 +420,9 @@ button:disabled {
 /* Keys display styles */
 .atom-keys-display {
     display: inline-block;
-    margin-left: 20px;
+    margin-left: 15px;
+    padding-left: 15px;
+    border-left: 3px solid var(--primary-color);
     vertical-align: top;
 }
 
@@ -439,7 +441,6 @@ button:disabled {
 
 .key-row {
     display: block;
-    margin-left: 28px;  /* Indent to align with first key after arrow */
     margin-bottom: 4px;
 }
 

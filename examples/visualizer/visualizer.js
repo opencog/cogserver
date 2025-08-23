@@ -568,7 +568,7 @@ function handleAtomClick(atom, keysDisplay, atomElement) {
     }
 
     // Show loading state
-    keysDisplay.innerHTML = '<span class="loading-keys">→ Loading...</span>';
+    keysDisplay.innerHTML = '<span class="loading-keys">Loading...</span>';
     keysDisplay.classList.remove('hidden');
     atomElement.classList.add('expanded');
 
@@ -618,14 +618,6 @@ function displayAtomKeys(keys, keysDisplay, parentAtom) {
             // Create a container for each key and its value
             const keyRow = document.createElement('div');
             keyRow.className = index === 0 ? 'key-row-first' : 'key-row';
-
-            // Add arrow for first key only
-            if (index === 0) {
-                const arrow = document.createElement('span');
-                arrow.className = 'keys-arrow';
-                arrow.textContent = '→ ';
-                keyRow.appendChild(arrow);
-            }
 
             // Create a clickable key element
             const keyElement = document.createElement('span');
