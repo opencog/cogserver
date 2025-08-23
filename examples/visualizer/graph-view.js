@@ -249,6 +249,130 @@ function processAtomForGraphView(atom, visited = new Set(), parent = null) {
     }
 }
 
+// Fetch incoming set for graph view with special handling for ListLinks
+function fetchIncomingSetForGraph(atom, nodeId) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        updateStatus('Not connected to server', 'error');
+        return;
+    }
+
+    updateStatus('Fetching incoming links...', 'loading');
+
+    // Construct the command to get incoming set
+    let atomSpec;
+    if (atom.name !== undefined) {
+        // It's a node - escape the name properly for JSON
+        const escapedName = JSON.stringify(atom.name);
+        atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
+    } else {
+        // It's a link or complex atom - use full JSON serialization
+        atomSpec = JSON.stringify(atom);
+    }
+
+    const command = `AtomSpace.getIncoming(${atomSpec})`;
+    console.log('Getting incoming set for atom (graph view):', command);
+
+    // Store request info for when we receive the response
+    pendingIncomingRequest = {
+        atom: atom,
+        nodeId: nodeId,
+        isGraphView: true  // Flag to indicate graph view processing
+    };
+
+    // Send the command
+    socket.send(command);
+}
+
+// Process incoming set response for graph view
+function processIncomingSetForGraph(incomingAtoms, targetNodeId) {
+    if (!incomingAtoms || !Array.isArray(incomingAtoms)) {
+        updateStatus('No incoming links found', 'connected');
+        return;
+    }
+
+    // Track ListLinks that need their incoming set fetched
+    const listLinksToFetch = [];
+
+    // First pass: add all incoming atoms and identify ListLinks with 2 nodes
+    incomingAtoms.forEach(atom => {
+        if (atom && typeof atom === 'object') {
+            // Check if it's a ListLink with exactly 2 nodes
+            if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
+                // Check if both outgoing atoms are nodes
+                const firstIsNode = atom.outgoing[0] && typeof atom.outgoing[0] === 'object' &&
+                                  atom.outgoing[0].type && atom.outgoing[0].type.endsWith('Node');
+                const secondIsNode = atom.outgoing[1] && typeof atom.outgoing[1] === 'object' &&
+                                   atom.outgoing[1].type && atom.outgoing[1].type.endsWith('Node');
+
+                if (firstIsNode && secondIsNode) {
+                    listLinksToFetch.push(atom);
+                }
+            }
+
+            // Process this atom (might be an Edge/EvaluationLink pattern)
+            processAtomForGraphView(atom);
+        }
+    });
+
+    // Now fetch incoming sets for qualifying ListLinks
+    if (listLinksToFetch.length > 0) {
+        fetchListLinkIncomingSets(listLinksToFetch);
+    }
+
+    // Refresh the graph
+    if (network) {
+        network.fit();
+    }
+
+    updateStatus(`Added ${incomingAtoms.length} incoming link(s)`, 'connected');
+}
+
+// Fetch incoming sets for multiple ListLinks
+function fetchListLinkIncomingSets(listLinks) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return;
+    }
+
+    // Process each ListLink
+    listLinks.forEach(listLink => {
+        const atomSpec = JSON.stringify(listLink);
+        const command = `AtomSpace.getIncoming(${atomSpec})`;
+        console.log('Getting incoming set for ListLink:', command);
+
+        // Create a temporary handler for this specific request
+        const messageHandler = function(event) {
+            try {
+                const response = JSON.parse(event.data);
+                if (response && Array.isArray(response)) {
+                    // Process the incoming atoms for this ListLink
+                    response.forEach(atom => {
+                        if (atom && typeof atom === 'object') {
+                            // Check if it's an Edge/EvaluationLink pattern
+                            if (isGraphEdgePattern(atom)) {
+                                processAtomForGraphView(atom);
+                            }
+                        }
+                    });
+
+                    // Update the network
+                    if (network) {
+                        network.fit();
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing ListLink incoming set:', error);
+            }
+
+            // Remove this handler after processing
+            socket.removeEventListener('message', messageHandler);
+        };
+
+        // Add the handler and send the command
+        socket.addEventListener('message', messageHandler);
+        socket.send(command);
+    });
+}
+
 // Get graph view layout options
 function getGraphViewOptions() {
     return {

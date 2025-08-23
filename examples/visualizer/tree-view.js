@@ -155,7 +155,16 @@ function initializeGraph() {
             const nodeId = params.nodes[0];
             const node = nodes.get(nodeId);
             if (node && node.atom) {
-                fetchIncomingSet(node.atom, nodeId);
+                // Check if we're in graph view mode
+                const layoutSelect = document.getElementById('layoutSelect');
+                const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+                if (layoutType === 'graph' && typeof fetchIncomingSetForGraph === 'function') {
+                    // Use graph view's special fetch function
+                    fetchIncomingSetForGraph(node.atom, nodeId);
+                } else {
+                    // Use regular fetch function
+                    fetchIncomingSet(node.atom, nodeId);
+                }
             }
         }
         // Handle edge clicks
@@ -682,26 +691,32 @@ function handleServerResponse(response) {
             const incomingAtoms = response.result;
             const targetNodeId = pendingIncomingRequest.nodeId;
 
-            // Add each incoming atom to the graph
-            incomingAtoms.forEach(atom => {
-                // Add the incoming atom to the graph
-                const incomingNodeId = addAtomToGraph(atom, null, 0);
+            // Check if this is a graph view request
+            if (pendingIncomingRequest.isGraphView && typeof processIncomingSetForGraph === 'function') {
+                // Use graph view's special processing
+                processIncomingSetForGraph(incomingAtoms, targetNodeId);
+            } else {
+                // Regular tree view processing
+                incomingAtoms.forEach(atom => {
+                    // Add the incoming atom to the graph
+                    const incomingNodeId = addAtomToGraph(atom, null, 0);
 
-                // Find which outgoing atom matches our target and connect to it
-                if (atom.outgoing) {
-                    atom.outgoing.forEach((outgoing, index) => {
-                        // Check if this outgoing matches our target atom
-                        if (isMatchingAtom(outgoing, pendingIncomingRequest.atom)) {
-                            // Connect the incoming atom to the existing node
-                            addEdgeIfNotExists(incomingNodeId, targetNodeId);
-                        }
-                    });
-                }
-            });
+                    // Find which outgoing atom matches our target and connect to it
+                    if (atom.outgoing) {
+                        atom.outgoing.forEach((outgoing, index) => {
+                            // Check if this outgoing matches our target atom
+                            if (isMatchingAtom(outgoing, pendingIncomingRequest.atom)) {
+                                // Connect the incoming atom to the existing node
+                                addEdgeIfNotExists(incomingNodeId, targetNodeId);
+                            }
+                        });
+                    }
+                });
 
-            // Refit the network to show the new nodes
-            network.fit();
-            updateStatus(`Added ${incomingAtoms.length} incoming links`, 'connected');
+                // Refit the network to show the new nodes
+                network.fit();
+                updateStatus(`Added ${incomingAtoms.length} incoming links`, 'connected');
+            }
         } else {
             updateStatus('No incoming links found', 'connected');
         }
