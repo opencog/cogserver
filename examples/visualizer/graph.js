@@ -359,7 +359,7 @@ function atomToKey(atom) {
     }
 }
 
-function atomToSExpression(atom) {
+function atomToSExpression(atom, indent = 0) {
     const typeBase = atom.type.replace(/Node$/, '').replace(/Link$/, '');
 
     if (!atom.outgoing || atom.outgoing.length === 0) {
@@ -369,17 +369,20 @@ function atomToSExpression(atom) {
         }
         return `(${typeBase})`;
     } else {
-        // Full format for tooltips
+        // Links with proper indentation
+        const nextIndent = indent + 1;
+        const nextIndentStr = '  '.repeat(nextIndent);
         const outgoingStrs = atom.outgoing.map(item => {
             if (typeof item === 'object' && item !== null) {
-                return atomToSExpression(item);
+                return nextIndentStr + atomToSExpression(item, nextIndent);
             } else if (typeof item === 'string') {
-                return `(Atom "${item}")`;
+                // It's a reference to another atom by ID or handle
+                return nextIndentStr + `(Atom "${item}")`;
             } else {
-                return String(item);
+                return nextIndentStr + String(item);
             }
         });
-        return `(${typeBase} ${outgoingStrs.join(' ')})`;
+        return `(${typeBase}\n${outgoingStrs.join('\n')})`;
     }
 }
 
