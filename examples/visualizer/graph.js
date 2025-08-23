@@ -132,11 +132,12 @@ function initializeGraph() {
             hierarchical: {
                 enabled: true,
                 direction: 'UD',  // Up-Down: root at top, nodes at bottom
-                sortMethod: 'directed',
-                shakeTowards: 'leaves',
+                sortMethod: 'hubsize',  // This preserves insertion order better
                 levelSeparation: 150,
                 nodeSpacing: 100,
-                treeSpacing: 200
+                treeSpacing: 200,
+                blockShifting: false,  // Prevent reordering of siblings
+                edgeMinimization: false  // Don't minimize edge crossings to preserve order
             }
         },
         interaction: {
@@ -207,7 +208,7 @@ function connectToServer() {
     };
 }
 
-function addAtomToGraph(atom, parentId, depth) {
+function addAtomToGraph(atom, parentId, depth, order = 0) {
     // Create a unique identifier for this atom
     const atomKey = atomToKey(atom);
 
@@ -252,6 +253,7 @@ function addAtomToGraph(atom, parentId, depth) {
         color: nodeColor,
         atom: atom,
         level: depth,
+        x: order * 150,  // Use order to hint at horizontal position
         title: atomToSExpression(atom) // Full format for tooltip
     });
 
@@ -274,7 +276,7 @@ function addAtomToGraph(atom, parentId, depth) {
     if (atom.outgoing && atom.outgoing.length > 0 && depth < currentDepth) {
         atom.outgoing.forEach((outgoing, index) => {
             if (typeof outgoing === 'object' && outgoing !== null) {
-                addAtomToGraph(outgoing, nodeId, depth + 1);
+                addAtomToGraph(outgoing, nodeId, depth + 1, index);
             }
         });
     }
@@ -483,11 +485,12 @@ function setupEventHandlers() {
                     hierarchical: {
                         enabled: true,
                         direction: 'UD',  // Up-Down: root at top, nodes at bottom
-                        sortMethod: 'directed',
-                        shakeTowards: 'leaves',
+                        sortMethod: 'hubsize',  // This preserves insertion order better
                         levelSeparation: 150,
                         nodeSpacing: 100,
-                        treeSpacing: 200
+                        treeSpacing: 200,
+                        blockShifting: false,  // Prevent reordering of siblings
+                        edgeMinimization: false  // Don't minimize edge crossings to preserve order
                     }
                 }
             };
