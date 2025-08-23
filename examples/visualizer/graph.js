@@ -179,9 +179,25 @@ function connectToServer() {
         return;
     }
 
+    // Ensure the URL ends with /json for the JSON endpoint
+    let jsonUrl = serverUrl;
+    if (!jsonUrl.endsWith('/json')) {
+        if (!jsonUrl.endsWith('/')) {
+            jsonUrl += '/';
+        }
+        jsonUrl += 'json';
+    }
+
+    console.log('Attempting to connect to:', jsonUrl);
     updateStatus('Connecting to server...', 'loading');
 
-    socket = new WebSocket(serverUrl);
+    try {
+        socket = new WebSocket(jsonUrl);
+    } catch (e) {
+        console.error('Failed to create WebSocket:', e);
+        updateStatus('Failed to create connection', 'error');
+        return;
+    }
 
     socket.onopen = function() {
         console.log('WebSocket connected');
@@ -191,9 +207,18 @@ function connectToServer() {
     socket.onmessage = function(event) {
         try {
             const response = JSON.parse(event.data);
-            handleServerResponse(response);
+            console.log('Raw server response:', response);
+
+            // Handle wrapped response format {success: true/false, result: ...}
+            if (response.hasOwnProperty('success')) {
+                handleServerResponse(response);
+            } else {
+                // Handle unwrapped response for backward compatibility
+                handleServerResponse({success: true, result: response});
+            }
         } catch (e) {
             console.error('Failed to parse server response:', e);
+            console.error('Raw data:', event.data);
         }
     };
 
@@ -202,10 +227,19 @@ function connectToServer() {
         updateStatus('Connection error', 'error');
     };
 
-    socket.onclose = function() {
-        console.log('WebSocket disconnected');
+    socket.onclose = function(event) {
+        console.log('WebSocket disconnected:', event.code, event.reason);
         updateStatus('Disconnected from server', 'error');
     };
+
+    // Add a timeout to detect if connection fails
+    setTimeout(function() {
+        if (socket.readyState === WebSocket.CONNECTING) {
+            console.warn('Connection timeout - still connecting after 5 seconds');
+            updateStatus('Connection timeout', 'error');
+            socket.close();
+        }
+    }, 5000);
 }
 
 function addAtomToGraph(atom, parentId, depth, order = 0) {
