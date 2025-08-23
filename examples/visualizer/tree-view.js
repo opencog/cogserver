@@ -544,68 +544,93 @@ function setupEventHandlers() {
         const layoutType = e.target.value;
         let options = {};
 
-        if (layoutType === 'hierarchical') {
-            options = {
-                edges: {
-                    smooth: {
-                        enabled: false  // Straight lines
-                    }
-                },
-                physics: {
-                    enabled: true,
-                    solver: 'hierarchicalRepulsion',
-                    hierarchicalRepulsion: {
-                        nodeDistance: 150,
-                        centralGravity: 0.0,
-                        springLength: 100,
-                        springConstant: 0.01,
-                        damping: 0.09
-                    }
-                },
-                layout: {
-                    hierarchical: {
-                        enabled: true,
-                        direction: 'UD',  // Up-Down: root at top, nodes at bottom
-                        sortMethod: 'hubsize',  // This preserves insertion order better
-                        levelSeparation: 150,
-                        nodeSpacing: 100,
-                        treeSpacing: 200,
-                        blockShifting: false,  // Prevent reordering of siblings
-                        edgeMinimization: false  // Don't minimize edge crossings to preserve order
-                    }
-                }
-            };
-        } else if (layoutType === 'graph') {
+        if (layoutType === 'graph') {
+            // Switch to graph view mode - need to redraw everything
+            nodes.clear();
+            edges.clear();
+            atomNodeMap.clear();
+            nodeIdCounter = 1;
+
             // Use graph view mode with special edge handling
             initializeGraphView();
             options = getGraphViewOptions();
         } else {
-            options = {
-                edges: {
-                    smooth: {
-                        enabled: true,  // Allow curves in network mode
-                        type: 'dynamic'
-                    }
-                },
-                physics: {
-                    enabled: true,
-                    solver: 'forceAtlas2Based',
-                    forceAtlas2Based: {
-                        gravitationalConstant: -50,
-                        centralGravity: 0.01,
-                        springLength: 100,
-                        springConstant: 0.08
-                    }
-                },
-                layout: {
-                    hierarchical: {
-                        enabled: false
-                    }
+            // If switching from graph mode to another mode, need to redraw
+            const previousLayout = this.getAttribute('data-previous-layout');
+            if (previousLayout === 'graph') {
+                nodes.clear();
+                edges.clear();
+                atomNodeMap.clear();
+                nodeIdCounter = 1;
+
+                // Re-add the root atoms using normal tree view
+                if (rootAtoms && rootAtoms.length > 0) {
+                    rootAtoms.forEach(atom => {
+                        addAtomToGraph(atom, null, 0);
+                    });
                 }
-            };
+            }
+
+            if (layoutType === 'hierarchical') {
+                options = {
+                    edges: {
+                        smooth: {
+                            enabled: false  // Straight lines
+                        }
+                    },
+                    physics: {
+                        enabled: true,
+                        solver: 'hierarchicalRepulsion',
+                        hierarchicalRepulsion: {
+                            nodeDistance: 150,
+                            centralGravity: 0.0,
+                            springLength: 100,
+                            springConstant: 0.01,
+                            damping: 0.09
+                        }
+                    },
+                    layout: {
+                        hierarchical: {
+                            enabled: true,
+                            direction: 'UD',  // Up-Down: root at top, nodes at bottom
+                            sortMethod: 'hubsize',  // This preserves insertion order better
+                            levelSeparation: 150,
+                            nodeSpacing: 100,
+                            treeSpacing: 200,
+                            blockShifting: false,  // Prevent reordering of siblings
+                            edgeMinimization: false  // Don't minimize edge crossings to preserve order
+                        }
+                    }
+                };
+            } else {
+                options = {
+                    edges: {
+                        smooth: {
+                            enabled: true,  // Allow curves in network mode
+                            type: 'dynamic'
+                        }
+                    },
+                    physics: {
+                        enabled: true,
+                        solver: 'forceAtlas2Based',
+                        forceAtlas2Based: {
+                            gravitationalConstant: -50,
+                            centralGravity: 0.01,
+                            springLength: 100,
+                            springConstant: 0.08
+                        }
+                    },
+                    layout: {
+                        hierarchical: {
+                            enabled: false
+                        }
+                    }
+                };
+            }
         }
 
         network.setOptions(options);
+        this.setAttribute('data-previous-layout', layoutType);
     });
 
     // Refresh button

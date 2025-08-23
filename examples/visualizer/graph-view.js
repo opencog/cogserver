@@ -210,16 +210,19 @@ function processAtomForGraphView(atom, visited = new Set(), parent = null) {
         // Add labeled edge
         addLabeledEdge(fromNodeId, toNodeId, edgeInfo.edgeLabel, edgeInfo.edgeType);
 
-        // Mark the ListLink as visited so it won't be processed separately
+        // Mark the ListLink and PredicateNode as visited so they won't be processed separately
+        const predicate = atom.outgoing[0];
         const list = atom.outgoing[1];
+        if (predicate && typeof predicate === 'object') {
+            const predicateKey = atomToKey(predicate);
+            visited.add(predicateKey);
+        }
         if (list && typeof list === 'object') {
             const listKey = atomToKey(list);
             visited.add(listKey);
         }
 
-        // Process the nodes themselves for any nested content
-        processAtomForGraphView(edgeInfo.fromNode, visited, atom);
-        processAtomForGraphView(edgeInfo.toNode, visited, atom);
+        // Don't recurse into the nodes - they're already added
     } else if (!isListLinkInEdgePattern(atom, parent)) {
         // Regular atom - add as node only if not a ListLink in edge pattern
         const nodeId = addNodeToGraph(atom);
@@ -228,12 +231,17 @@ function processAtomForGraphView(atom, visited = new Set(), parent = null) {
         if (atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(outgoing => {
                 if (typeof outgoing === 'object' && outgoing !== null) {
+                    // First process the child
                     processAtomForGraphView(outgoing, visited, atom);
 
-                    // Add regular edge if not a special pattern and not a ListLink in edge pattern
+                    // Then add edge only if the child is not a special pattern
                     if (!isGraphEdgePattern(outgoing) && !isListLinkInEdgePattern(outgoing, atom)) {
-                        const childId = addNodeToGraph(outgoing);
-                        addEdgeIfNotExists(nodeId, childId);
+                        // Check if the outgoing was actually added as a node
+                        const outgoingKey = atomToKey(outgoing);
+                        if (atomNodeMap.has(outgoingKey)) {
+                            const childId = atomNodeMap.get(outgoingKey);
+                            addEdgeIfNotExists(nodeId, childId);
+                        }
                     }
                 }
             });
