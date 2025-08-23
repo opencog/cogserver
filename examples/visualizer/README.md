@@ -2,7 +2,7 @@
 
 A web-based visualization tool for the AtomSpace in-RAM database, providing real-time statistics and monitoring through WebSocket connections to the CogServer using the JSON protocol.
 
-[***Try it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visutalizer/index.html).
+[***Try it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visualizer/index.html).
 You must have a CogServer running somewhere; you will need to type the
 URL into the connection box.
 
