@@ -683,11 +683,11 @@ function displayKeyValue(value, valueDisplay) {
     if (!value || value === null) {
         valueDisplay.innerHTML = '<span class="no-value">No value</span>';
     } else {
-        valueDisplay.innerHTML = '<div class="value-header">Value:</div>';
-        const valueContent = document.createElement('pre');
-        valueContent.className = 'value-content';
-        // Display the value in s-expression format
-        valueContent.textContent = valueToSExpression(value);
+        // Display the value in s-expression format inline
+        const valueContent = document.createElement('span');
+        valueContent.className = 'value-content-inline';
+        valueContent.textContent = '→ ' + valueToSExpression(value);
+        valueDisplay.innerHTML = '';
         valueDisplay.appendChild(valueContent);
     }
 }
