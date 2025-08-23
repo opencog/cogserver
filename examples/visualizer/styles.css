@@ -359,6 +359,12 @@ button:disabled {
     margin-bottom: 15px;
 }
 
+.header-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 .atom-listing-content {
     flex: 1;
     overflow-y: auto;

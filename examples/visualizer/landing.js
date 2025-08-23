@@ -4,6 +4,7 @@ let socket = null;
 let serverURL = '';
 let isConnected = false;
 let atomData = {};
+let checkedAtoms = new Map(); // Track checked atoms
 
 // DOM elements
 let serverInput, connectBtn;
@@ -13,7 +14,7 @@ let atomCount, nodeCount, linkCount, typeCount;
 let refreshBtn, lastUpdate;
 let debugCommand, sendCommand, debugResponse;
 let atomTypesBreakdown, typesList;
-let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing;
+let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing, visualizeCheckedBtn;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
@@ -49,10 +50,12 @@ function init() {
     atomListingTitle = document.getElementById('atom-listing-title');
     atomListingContent = document.getElementById('atom-listing-content');
     closeAtomListing = document.getElementById('close-atom-listing');
+    visualizeCheckedBtn = document.getElementById('visualize-checked');
 
     // Set up event listeners
     connectBtn.addEventListener('click', toggleConnection);
     closeAtomListing.addEventListener('click', hideAtomListing);
+    visualizeCheckedBtn.addEventListener('click', visualizeCheckedAtoms);
     refreshBtn.addEventListener('click', fetchAtomSpaceStats);
     sendCommand.addEventListener('click', sendDebugCommand);
     debugCommand.addEventListener('keypress', (e) => {
@@ -534,11 +537,17 @@ function createClickableAtom(atom) {
     const graphCheckbox = document.createElement('input');
     graphCheckbox.type = 'checkbox';
     graphCheckbox.className = 'graph-checkbox';
-    graphCheckbox.title = 'Visualize in graph';
+    graphCheckbox.title = 'Select for graph visualization';
+
+    // Generate unique ID for tracking
+    const checkboxId = `checkbox-${atom.type}-${atom.name || 'link'}-${Math.random().toString(36).substr(2, 9)}`;
+    graphCheckbox.id = checkboxId;
+
     graphCheckbox.addEventListener('change', (e) => {
         if (e.target.checked) {
-            openGraphVisualization(atom);
-            e.target.checked = false; // Reset checkbox after opening
+            checkedAtoms.set(checkboxId, atom);
+        } else {
+            checkedAtoms.delete(checkboxId);
         }
     });
 
@@ -871,8 +880,34 @@ function openStatsPage() {
 function openGraphVisualization(atom) {
     // Encode the atom data in the URL
     const atomData = encodeURIComponent(JSON.stringify(atom));
-    const graphUrl = `graph.html?atom=${atomData}&server=${encodeURIComponent(serverUrlInput.value)}`;
+    const graphUrl = `graph.html?atom=${atomData}&server=${encodeURIComponent(serverInput.value)}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');
+}
+
+function visualizeCheckedAtoms() {
+    if (checkedAtoms.size === 0) {
+        showError('No atoms selected. Please check some atoms first.');
+        return;
+    }
+
+    // Convert Map values to array
+    const atoms = Array.from(checkedAtoms.values());
+
+    // Encode the atoms data in the URL
+    const atomsData = encodeURIComponent(JSON.stringify(atoms));
+    const graphUrl = `graph.html?atoms=${atomsData}&server=${encodeURIComponent(serverInput.value)}`;
+
+    // Open in new tab
+    window.open(graphUrl, '_blank');
+
+    // Clear the checkboxes
+    checkedAtoms.forEach((atom, checkboxId) => {
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+    });
+    checkedAtoms.clear();
 }

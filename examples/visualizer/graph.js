@@ -6,7 +6,7 @@ let network = null;
 let nodes = null;
 let edges = null;
 let socket = null;
-let rootAtom = null;
+let rootAtoms = [];
 let serverUrl = null;
 let currentDepth = 2;
 let processedAtoms = new Set();
@@ -18,15 +18,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Parse URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const atomParam = urlParams.get('atom');
+    const atomsParam = urlParams.get('atoms');
     const serverParam = urlParams.get('server');
 
+    // Handle single atom parameter
     if (atomParam) {
         try {
-            rootAtom = JSON.parse(decodeURIComponent(atomParam));
-            console.log('Root atom:', rootAtom);
+            const atom = JSON.parse(decodeURIComponent(atomParam));
+            rootAtoms = [atom];
+            console.log('Root atom:', atom);
         } catch (e) {
             console.error('Failed to parse atom data:', e);
             updateStatus('Failed to parse atom data', 'error');
+            return;
+        }
+    }
+
+    // Handle multiple atoms parameter
+    if (atomsParam) {
+        try {
+            rootAtoms = JSON.parse(decodeURIComponent(atomsParam));
+            console.log('Root atoms:', rootAtoms);
+        } catch (e) {
+            console.error('Failed to parse atoms data:', e);
+            updateStatus('Failed to parse atoms data', 'error');
             return;
         }
     }
@@ -122,9 +137,11 @@ function initializeGraph() {
         }
     });
 
-    // Add the root atom to the graph
-    if (rootAtom) {
-        addAtomToGraph(rootAtom, null, 0);
+    // Add the root atoms to the graph
+    if (rootAtoms && rootAtoms.length > 0) {
+        rootAtoms.forEach(atom => {
+            addAtomToGraph(atom, null, 0);
+        });
         network.fit();
     }
 
@@ -387,9 +404,11 @@ function refreshGraph() {
     atomNodeMap.clear();
     nodeIdCounter = 1;
 
-    // Re-add the root atom
-    if (rootAtom) {
-        addAtomToGraph(rootAtom, null, 0);
+    // Re-add the root atoms
+    if (rootAtoms && rootAtoms.length > 0) {
+        rootAtoms.forEach(atom => {
+            addAtomToGraph(atom, null, 0);
+        });
         network.fit();
     }
 
