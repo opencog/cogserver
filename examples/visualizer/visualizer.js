@@ -508,3 +508,29 @@ function hideAtomListing() {
     atomListingPanel.classList.add('hidden');
     atomListingContent.innerHTML = '';
 }
+
+function openStatsPage() {
+    // Get the current server URL from the input field
+    const serverUrl = serverInput.value.trim();
+
+    if (!serverUrl) {
+        showError('Please enter a CogServer URL first');
+        return;
+    }
+
+    // Convert ws:// to http:// and remove trailing slash if present
+    let statsUrl = serverUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+
+    // Remove trailing slash
+    if (statsUrl.endsWith('/')) {
+        statsUrl = statsUrl.slice(0, -1);
+    }
+
+    // Add /stats path
+    statsUrl = statsUrl + '/stats';
+
+    console.log('Opening stats page:', statsUrl);
+
+    // Open in new tab
+    window.open(statsUrl, '_blank');
+}
