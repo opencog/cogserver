@@ -880,7 +880,7 @@ function openStatsPage() {
 function openGraphVisualization(atom) {
     // Encode the atom data in the URL
     const atomData = encodeURIComponent(JSON.stringify(atom));
-    const graphUrl = `graph.html?atom=${atomData}&server=${encodeURIComponent(serverInput.value)}`;
+    const graphUrl = `tree-view.html?atom=${atomData}&server=${encodeURIComponent(serverInput.value)}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');
@@ -897,7 +897,7 @@ function visualizeCheckedAtoms() {
 
     // Encode the atoms data in the URL
     const atomsData = encodeURIComponent(JSON.stringify(atoms));
-    const graphUrl = `graph.html?atoms=${atomsData}&server=${encodeURIComponent(serverInput.value)}`;
+    const graphUrl = `tree-view.html?atoms=${atomsData}&server=${encodeURIComponent(serverInput.value)}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');
