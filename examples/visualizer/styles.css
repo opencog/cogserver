@@ -389,6 +389,128 @@ button:disabled {
     padding: 20px;
 }
 
+/* Clickable atom styles */
+.atom-container {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.atom-clickable {
+    display: inline-block;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-family: monospace;
+    white-space: pre;
+    flex-shrink: 0;
+}
+
+.atom-clickable:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: var(--primary-color);
+}
+
+.atom-clickable.expanded {
+    background-color: rgba(0, 123, 255, 0.15);
+    font-weight: bold;
+}
+
+/* Keys display styles */
+.atom-keys-display {
+    display: inline-block;
+    margin-left: 15px;
+    padding-left: 15px;
+    border-left: 3px solid var(--primary-color);
+    vertical-align: top;
+}
+
+.atom-keys-display.hidden {
+    display: none;
+}
+
+.keys-container {
+    display: inline-block;
+}
+
+.key-row-first {
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.key-row {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.keys-arrow {
+    color: var(--text-secondary);
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+/* Clickable key styles */
+.key-clickable {
+    cursor: pointer;
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.key-clickable:hover {
+    background-color: rgba(0, 123, 255, 0.15);
+    color: var(--primary-color);
+}
+
+.key-clickable.expanded {
+    background-color: rgba(0, 123, 255, 0.2);
+    font-weight: bold;
+}
+
+/* Value display for keys */
+.key-value-display {
+    display: inline;
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+.key-value-display.hidden {
+    display: none;
+}
+
+.value-content-inline {
+    font-family: monospace;
+    color: #28a745;
+    font-weight: 500;
+}
+
+.no-value {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.85em;
+}
+
+.loading-value {
+    color: var(--text-secondary);
+    font-style: italic;
+    animation: pulse 1s infinite;
+}
+
+.no-keys {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.loading-keys {
+    color: var(--text-secondary);
+    font-style: italic;
+    animation: pulse 1s infinite;
+}
+
 /* Debug Panel */
 .debug-panel details {
     cursor: pointer;
@@ -474,6 +596,19 @@ footer a:hover {
 /* Utility Classes */
 .hidden {
     display: none !important;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.error {
+    text-align: center;
+    padding: 20px;
+    color: var(--error-color);
 }
 
 /* Animations */
