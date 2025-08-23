@@ -94,12 +94,13 @@ function initializeGraph() {
         nodes: {
             shape: 'box',
             font: {
-                size: 12,
+                size: 14,
                 face: 'monospace'
             },
             margin: 5,
             widthConstraint: {
-                maximum: 80
+                maximum: 150,
+                minimum: 40
             }
         },
         edges: {
@@ -110,9 +111,7 @@ function initializeGraph() {
                 }
             },
             smooth: {
-                type: 'cubicBezier',
-                forceDirection: 'vertical',
-                roundness: 0.4
+                enabled: false  // Straight lines
             }
         },
         physics: {
@@ -214,10 +213,15 @@ function addAtomToGraph(atom, parentId, depth) {
 
     // Check if we've already processed this atom
     if (atomNodeMap.has(atomKey)) {
-        // If we have a parent, just add an edge
+        // If we have a parent, add edge only if it won't create upward arrow
         if (parentId !== null) {
             const existingNodeId = atomNodeMap.get(atomKey);
-            addEdgeIfNotExists(parentId, existingNodeId);
+            // Only add edge if the existing node is not an ancestor (to prevent upward arrows)
+            const parentNode = nodes.get(parentId);
+            const existingNode = nodes.get(existingNodeId);
+            if (!parentNode || !existingNode || parentNode.level >= existingNode.level) {
+                addEdgeIfNotExists(parentId, existingNodeId);
+            }
         }
         return atomNodeMap.get(atomKey);
     }
@@ -242,7 +246,12 @@ function addAtomToGraph(atom, parentId, depth) {
     if (parentId !== null) {
         edges.add({
             from: parentId,
-            to: nodeId
+            to: nodeId,
+            arrows: {
+                to: {
+                    enabled: true
+                }
+            }
         });
     }
 
@@ -268,7 +277,12 @@ function addEdgeIfNotExists(from, to) {
     if (existingEdges.length === 0) {
         edges.add({
             from: from,
-            to: to
+            to: to,
+            arrows: {
+                to: {
+                    enabled: true
+                }
+            }
         });
     }
 }
@@ -280,12 +294,12 @@ function createCompactLabel(atom) {
     if (!atom.outgoing || atom.outgoing.length === 0) {
         // It's a Node
         if (atom.name !== undefined) {
-            // Show only first 10 characters of the name, without quotes
+            // Show only first 14 characters of the name, without quotes
             const name = String(atom.name);
-            return name.length > 10 ? name.substring(0, 10) : name;
+            return name.length > 14 ? name.substring(0, 14) : name;
         }
         // If no name, show truncated type
-        return typeBase.length > 10 ? typeBase.substring(0, 10) : typeBase;
+        return typeBase.length > 14 ? typeBase.substring(0, 14) : typeBase;
     } else {
         // It's a Link - show only first 4 letters without parenthesis
         return typeBase.length > 4 ? typeBase.substring(0, 4) : typeBase;
@@ -411,6 +425,11 @@ function setupEventHandlers() {
 
         if (layoutType === 'hierarchical') {
             options = {
+                edges: {
+                    smooth: {
+                        enabled: false  // Straight lines
+                    }
+                },
                 physics: {
                     enabled: true,
                     solver: 'hierarchicalRepulsion',
@@ -436,6 +455,12 @@ function setupEventHandlers() {
             };
         } else {
             options = {
+                edges: {
+                    smooth: {
+                        enabled: true,  // Allow curves in network mode
+                        type: 'dynamic'
+                    }
+                },
                 physics: {
                     enabled: true,
                     solver: 'forceAtlas2Based',
