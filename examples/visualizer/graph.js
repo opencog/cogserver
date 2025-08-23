@@ -215,19 +215,24 @@ function addAtomToGraph(atom, parentId, depth) {
     if (atomNodeMap.has(atomKey)) {
         const existingNodeId = atomNodeMap.get(atomKey);
 
-        // If we have a parent, check if we need to update the node's level
+        // If we have a parent, we need to ensure proper hierarchy
         if (parentId !== null) {
             const parentNode = nodes.get(parentId);
             const existingNode = nodes.get(existingNodeId);
 
             if (parentNode && existingNode) {
-                // If this node would be at a deeper level, update it
-                if (depth > existingNode.level) {
-                    // Update the node's level to the new depth
+                // If this node's current level is not deeper than parent's level,
+                // we need to move it down to maintain hierarchy
+                if (existingNode.level <= parentNode.level) {
+                    // Place it one level below the parent
+                    const newLevel = parentNode.level + 1;
                     nodes.update({
                         id: existingNodeId,
-                        level: depth
+                        level: newLevel
                     });
+
+                    // Recursively update all children of this node to maintain hierarchy
+                    updateChildrenLevels(existingNodeId, newLevel);
                 }
                 // Always add the edge from parent to child
                 addEdgeIfNotExists(parentId, existingNodeId);
@@ -275,6 +280,29 @@ function addAtomToGraph(atom, parentId, depth) {
     }
 
     return nodeId;
+}
+
+function updateChildrenLevels(nodeId, parentLevel) {
+    // Find all edges where this node is the parent
+    const childEdges = edges.get({
+        filter: function(edge) {
+            return edge.from === nodeId;
+        }
+    });
+
+    // Update each child's level if needed
+    childEdges.forEach(edge => {
+        const childNode = nodes.get(edge.to);
+        if (childNode && childNode.level <= parentLevel) {
+            const newChildLevel = parentLevel + 1;
+            nodes.update({
+                id: edge.to,
+                level: newChildLevel
+            });
+            // Recursively update this child's children
+            updateChildrenLevels(edge.to, newChildLevel);
+        }
+    });
 }
 
 function addEdgeIfNotExists(from, to) {
