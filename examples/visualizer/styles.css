@@ -392,6 +392,8 @@ button:disabled {
 /* Clickable atom styles */
 .atom-container {
     margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
 }
 
 .atom-clickable {
@@ -402,6 +404,7 @@ button:disabled {
     transition: all 0.2s ease;
     font-family: monospace;
     white-space: pre;
+    flex-shrink: 0;
 }
 
 .atom-clickable:hover {
@@ -416,9 +419,9 @@ button:disabled {
 
 /* Keys display styles */
 .atom-keys-display {
-    margin-left: 30px;
-    margin-top: 8px;
-    padding: 10px;
+    display: inline-block;
+    margin-left: 20px;
+    padding: 4px 10px;
     background: rgba(0, 123, 255, 0.05);
     border-left: 3px solid var(--primary-color);
     border-radius: 4px;
@@ -428,25 +431,23 @@ button:disabled {
     display: none;
 }
 
-.keys-header {
-    font-weight: bold;
+.keys-arrow {
     color: var(--text-secondary);
-    margin-bottom: 8px;
-    font-size: 0.9em;
+    font-weight: bold;
+    margin-right: 8px;
 }
 
-.keys-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.keys-list-inline {
+    display: inline;
 }
 
-.key-item {
-    padding: 4px 0;
-    font-family: monospace;
-    color: var(--text-primary);
-    display: flex;
-    align-items: flex-start;
+.key-item-inline {
+    display: inline;
+}
+
+.key-separator {
+    color: var(--text-secondary);
+    margin: 0 2px;
 }
 
 /* Clickable key styles */
@@ -471,12 +472,8 @@ button:disabled {
 
 /* Value display for keys */
 .key-value-display {
-    display: inline-block;
-    margin-left: 15px;
-    padding: 2px 8px;
-    background: rgba(40, 167, 69, 0.05);
-    border-left: 3px solid #28a745;
-    border-radius: 3px;
+    display: inline;
+    margin-left: 8px;
     font-size: 0.9em;
 }
 

@@ -568,7 +568,7 @@ function handleAtomClick(atom, keysDisplay, atomElement) {
     }
 
     // Show loading state
-    keysDisplay.innerHTML = '<span class="loading-keys">Loading keys...</span>';
+    keysDisplay.innerHTML = '<span class="loading-keys">→ Loading...</span>';
     keysDisplay.classList.remove('hidden');
     atomElement.classList.add('expanded');
 
@@ -607,13 +607,22 @@ function displayAtomKeys(keys, keysDisplay, parentAtom) {
     if (!keys || keys.length === 0) {
         keysDisplay.innerHTML = '<span class="no-keys">No keys</span>';
     } else {
-        keysDisplay.innerHTML = '<div class="keys-header">Keys:</div>';
-        const keysList = document.createElement('ul');
-        keysList.className = 'keys-list';
+        keysDisplay.innerHTML = '<span class="keys-arrow">→ Keys: </span>';
+        const keysList = document.createElement('span');
+        keysList.className = 'keys-list-inline';
 
-        keys.forEach(key => {
-            const keyItem = document.createElement('li');
-            keyItem.className = 'key-item';
+        keys.forEach((key, index) => {
+            // Add separator between keys
+            if (index > 0) {
+                const separator = document.createElement('span');
+                separator.className = 'key-separator';
+                separator.textContent = ', ';
+                keysList.appendChild(separator);
+            }
+
+            // Create a container for key and its value
+            const keyContainer = document.createElement('span');
+            keyContainer.className = 'key-item-inline';
 
             // Create a clickable key element
             const keyElement = document.createElement('span');
@@ -621,7 +630,7 @@ function displayAtomKeys(keys, keysDisplay, parentAtom) {
             keyElement.textContent = atomToSExpression(key);
 
             // Create value display area (initially hidden)
-            const valueDisplay = document.createElement('div');
+            const valueDisplay = document.createElement('span');
             valueDisplay.className = 'key-value-display hidden';
 
             // Add click handler to fetch value at this key
@@ -629,9 +638,9 @@ function displayAtomKeys(keys, keysDisplay, parentAtom) {
                 handleKeyClick(parentAtom, key, valueDisplay, keyElement);
             });
 
-            keyItem.appendChild(keyElement);
-            keyItem.appendChild(valueDisplay);
-            keysList.appendChild(keyItem);
+            keyContainer.appendChild(keyElement);
+            keyContainer.appendChild(valueDisplay);
+            keysList.appendChild(keyContainer);
         });
 
         keysDisplay.appendChild(keysList);
@@ -647,7 +656,7 @@ function handleKeyClick(atom, key, valueDisplay, keyElement) {
     }
 
     // Show loading state
-    valueDisplay.innerHTML = '<span class="loading-value">Loading value...</span>';
+    valueDisplay.innerHTML = '<span class="loading-value">...</span>';
     valueDisplay.classList.remove('hidden');
     keyElement.classList.add('expanded');
 
