@@ -575,6 +575,10 @@ function setupEventHandlers() {
                     }
                 }
             };
+        } else if (layoutType === 'graph') {
+            // Use graph view mode with special edge handling
+            initializeGraphView();
+            options = getGraphViewOptions();
         } else {
             options = {
                 edges: {
@@ -617,12 +621,21 @@ function refreshGraph() {
     atomNodeMap.clear();
     nodeIdCounter = 1;
 
-    // Re-add the root atoms
-    if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach(atom => {
-            addAtomToGraph(atom, null, 0);
-        });
-        network.fit();
+    // Check current layout mode
+    const layoutSelect = document.getElementById('layoutSelect');
+    const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+    if (layoutType === 'graph') {
+        // Use graph view refresh
+        initializeGraphView();
+    } else {
+        // Re-add the root atoms using normal tree view
+        if (rootAtoms && rootAtoms.length > 0) {
+            rootAtoms.forEach(atom => {
+                addAtomToGraph(atom, null, 0);
+            });
+            network.fit();
+        }
     }
 
     updateStatus('Graph refreshed', 'connected');
