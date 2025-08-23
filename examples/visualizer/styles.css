@@ -403,7 +403,7 @@ button:disabled {
     border-radius: 4px;
     transition: all 0.2s ease;
     font-family: monospace;
-    white-space: pre;
+    white-space: pre-wrap;
     flex-shrink: 0;
 }
 

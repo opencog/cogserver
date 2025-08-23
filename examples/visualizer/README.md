@@ -2,6 +2,10 @@
 
 A web-based visualization tool for the AtomSpace in-RAM database, providing real-time statistics and monitoring through WebSocket connections to the CogServer using the JSON protocol.
 
+[***Try it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visualizer/index.html).
+You must have a CogServer running somewhere; you will need to type the
+URL into the connection box.
+
 ## Features
 
 - **WebSocket Connection Management**: Connect to any running CogServer instance via WebSocket
@@ -41,7 +45,8 @@ opencog.cogserver.startCogserver()
 
 ### Using the Visualizer
 
-1. Open `index.html` in a web browser
+1. Open `index.html` in a web browser.
+   [***Try it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visutalizer/index.html).
 2. Enter the WebSocket URL of your CogServer (default: `ws://localhost:18080/`)
 3. Click "Connect" (the JSON endpoint will be automatically appended)
 4. Once connected, the visualizer will automatically fetch and display AtomSpace statistics
@@ -92,13 +97,6 @@ The visualizer consists of three main components:
 2. **styles.css**: Comprehensive styling with modern CSS features
 3. **visualizer.js**: WebSocket management and JSON data processing logic
 
-## Browser Compatibility
-
-- Chrome/Edge 79+
-- Firefox 75+
-- Safari 13+
-- Opera 66+
-
 ## Troubleshooting
 
 ### Connection Issues
@@ -107,6 +105,9 @@ The visualizer consists of three main components:
 - The visualizer will automatically append `/json` to connect to the JSON endpoint
 - Ensure no firewall is blocking the WebSocket port
 - Check browser console for detailed error messages
+- Try the
+  [../websockets/json-test.html](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/websockets/json-test.html)
+  page and check for errors.
 
 ### No Data Displayed
 - Confirm the CogServer has JSON endpoint enabled
