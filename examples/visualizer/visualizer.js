@@ -196,9 +196,15 @@ function onMessage(event) {
                     console.log('CogServer JSON API version:', result);
                 }
             } else if (Array.isArray(result)) {
-                // Could be atoms or types
-                if (result.length === 0) {
-                    // Empty array - treat as empty atom list
+                // Check if this is a keys response
+                if (atomData.pendingKeysRequest) {
+                    console.log('Received keys response:', result);
+                    const { display } = atomData.pendingKeysRequest;
+                    displayAtomKeys(result, display);
+                    atomData.pendingKeysRequest = null;
+                    return; // Don't process further
+                } else if (result.length === 0) {
+                    // Empty array - could be empty atom list
                     console.log('Received empty array');
                     processAtomList(result);
                 } else if (typeof result[0] === 'string') {
@@ -265,23 +271,25 @@ function processAtomList(atoms) {
         if (atoms.length === 0) {
             atomListingContent.innerHTML = '<div class="no-atoms">No atoms of this type found</div>';
         } else {
-            // Create a pre element for the s-expression listing
-            const preElement = document.createElement('pre');
-            preElement.className = 'atom-sexpr-list';
+            // Create a container for the clickable atoms
+            const container = document.createElement('div');
+            container.className = 'atom-sexpr-list';
 
             // Store these atoms temporarily for s-expression conversion
             const tempAtoms = atomData.atoms;
             atomData.atoms = atoms;
 
-            // Convert each atom to s-expression and add to the listing
-            const sExpressions = atoms.map(atom => atomToSExpression(atom));
-            preElement.textContent = sExpressions.join('\n');
+            // Create clickable atom elements
+            atoms.forEach(atom => {
+                const atomElement = createClickableAtom(atom);
+                container.appendChild(atomElement);
+            });
 
             // Restore the original atoms
             atomData.atoms = tempAtoms;
 
             atomListingContent.innerHTML = '';
-            atomListingContent.appendChild(preElement);
+            atomListingContent.appendChild(container);
         }
 
         console.log(`Displayed ${atoms.length} atoms of type ${type}`);
@@ -499,6 +507,104 @@ function showError(message) {
 
 function hideError() {
     errorPanel.classList.add('hidden');
+}
+
+function createClickableAtom(atom) {
+    // Create a container for the atom and its keys
+    const atomContainer = document.createElement('div');
+    atomContainer.className = 'atom-container';
+
+    // Create the clickable atom element
+    const atomElement = document.createElement('div');
+    atomElement.className = 'atom-clickable';
+
+    // Generate unique ID for this atom display
+    const atomId = `atom-${atom.type}-${atom.name || 'link'}-${Math.random().toString(36).substr(2, 9)}`;
+    atomElement.setAttribute('data-atom-id', atomId);
+
+    // Set the s-expression as the content
+    const sexpr = atomToSExpression(atom);
+    atomElement.textContent = sexpr;
+
+    // Create keys display area (initially hidden)
+    const keysDisplay = document.createElement('div');
+    keysDisplay.className = 'atom-keys-display hidden';
+    keysDisplay.id = `keys-${atomId}`;
+
+    // Add click handler
+    atomElement.addEventListener('click', () => {
+        handleAtomClick(atom, keysDisplay, atomElement);
+    });
+
+    // Add both elements to container
+    atomContainer.appendChild(atomElement);
+    atomContainer.appendChild(keysDisplay);
+
+    return atomContainer;
+}
+
+function handleAtomClick(atom, keysDisplay, atomElement) {
+    // Toggle keys display
+    if (!keysDisplay.classList.contains('hidden')) {
+        keysDisplay.classList.add('hidden');
+        atomElement.classList.remove('expanded');
+        return;
+    }
+
+    // Show loading state
+    keysDisplay.innerHTML = '<span class="loading-keys">Loading keys...</span>';
+    keysDisplay.classList.remove('hidden');
+    atomElement.classList.add('expanded');
+
+    // Construct the command to get keys
+    // For nodes with names, create the atom specification
+    // For links, we need to include the full outgoing set
+    let atomSpec;
+    if (atom.name !== undefined) {
+        // It's a node - escape the name properly for JSON
+        const escapedName = JSON.stringify(atom.name);
+        atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
+    } else {
+        // It's a link or complex atom - use full JSON serialization
+        atomSpec = JSON.stringify(atom);
+    }
+
+    const command = `AtomSpace.getKeys(${atomSpec})`;
+    console.log('Getting keys for atom:', command);
+
+    // Store callback for when we receive the response
+    atomData.pendingKeysRequest = {
+        atom: atom,
+        display: keysDisplay,
+        element: atomElement
+    };
+
+    // Send the command
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(command);
+    } else {
+        keysDisplay.innerHTML = '<span class="error">Not connected to server</span>';
+    }
+}
+
+function displayAtomKeys(keys, keysDisplay) {
+    if (!keys || keys.length === 0) {
+        keysDisplay.innerHTML = '<span class="no-keys">No keys</span>';
+    } else {
+        keysDisplay.innerHTML = '<div class="keys-header">Keys:</div>';
+        const keysList = document.createElement('ul');
+        keysList.className = 'keys-list';
+
+        keys.forEach(key => {
+            const keyItem = document.createElement('li');
+            keyItem.className = 'key-item';
+            // Display the key as an s-expression
+            keyItem.textContent = atomToSExpression(key);
+            keysList.appendChild(keyItem);
+        });
+
+        keysDisplay.appendChild(keysList);
+    }
 }
 
 function atomToSExpression(atom) {

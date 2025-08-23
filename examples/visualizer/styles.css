@@ -389,6 +389,76 @@ button:disabled {
     padding: 20px;
 }
 
+/* Clickable atom styles */
+.atom-container {
+    margin-bottom: 8px;
+}
+
+.atom-clickable {
+    display: inline-block;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-family: monospace;
+    white-space: pre;
+}
+
+.atom-clickable:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: var(--primary-color);
+}
+
+.atom-clickable.expanded {
+    background-color: rgba(0, 123, 255, 0.15);
+    font-weight: bold;
+}
+
+/* Keys display styles */
+.atom-keys-display {
+    margin-left: 30px;
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(0, 123, 255, 0.05);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 4px;
+}
+
+.atom-keys-display.hidden {
+    display: none;
+}
+
+.keys-header {
+    font-weight: bold;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.keys-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.key-item {
+    padding: 4px 0;
+    font-family: monospace;
+    color: var(--text-primary);
+}
+
+.no-keys {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.loading-keys {
+    color: var(--text-secondary);
+    font-style: italic;
+    animation: pulse 1s infinite;
+}
+
 /* Debug Panel */
 .debug-panel details {
     cursor: pointer;
