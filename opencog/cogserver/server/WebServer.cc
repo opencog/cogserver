@@ -113,25 +113,67 @@ std::string WebServer::html_stats(void)
 		"Server: CogServer\r\n"
 		"Content-Type: text/html\r\n"
 		"\r\n"
-		"<!DOCTYPE html>"
-		"<html>"
-		"<head><title>CogServer Stats</title>"
-		"  <meta charset=\"UTF-8\"></head>"
-		"<body>"
-		"<h2>Loaded Modules</h2>"
-		"<pre>\n";
+		"<!DOCTYPE html>\n"
+		"<html lang=\"en\">\n"
+		"<head>\n"
+		"  <meta charset=\"UTF-8\">\n"
+		"  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+		"  <title>CogServer Stats</title>\n"
+		"  <style>\n"
+		"    body {\n"
+		"      font-family: monospace;\n"
+		"      margin: 20px;\n"
+		"      line-height: 1.6;\n"
+		"      background: #fafafa;\n"
+		"    }\n"
+		"    h1 {\n"
+		"      border-bottom: 2px solid #333;\n"
+		"      padding-bottom: 10px;\n"
+		"      color: #333;\n"
+		"    }\n"
+		"    h2 {\n"
+		"      border-bottom: 1px solid #ccc;\n"
+		"      padding-bottom: 5px;\n"
+		"      margin-top: 30px;\n"
+		"      color: #444;\n"
+		"    }\n"
+		"    pre {\n"
+		"      background: #f0f0f0;\n"
+		"      padding: 15px;\n"
+		"      border: 1px solid #ccc;\n"
+		"      border-radius: 4px;\n"
+		"      overflow-x: auto;\n"
+		"      font-size: 14px;\n"
+		"      line-height: 1.4;\n"
+		"    }\n"
+		"    a {\n"
+		"      color: #007bff;\n"
+		"      text-decoration: none;\n"
+		"    }\n"
+		"    a:hover {\n"
+		"      text-decoration: underline;\n"
+		"    }\n"
+		"  </style>\n"
+		"</head>\n"
+		"<body>\n"
+		"  <h1>CogServer Statistics</h1>\n"
+		"  <h2>Loaded Modules</h2>\n"
+		"  <pre>\n";
 	response += _cserver.listModules();
 	response +=
-		"</pre>"
-		"<h2>CogServer Stats</h2>"
-		"<pre>\n";
+		"</pre>\n"
+		"  <h2>CogServer Stats</h2>\n"
+		"  <pre>\n";
 	response += _cserver.display_web_stats();
 	response +=
-		"</pre>"
-		"<h2>CogServer Stats Legend</h2>"
-		"<pre>";
+		"</pre>\n"
+		"  <h2>CogServer Stats Legend</h2>\n"
+		"  <pre>";
 	response += CogServer::stats_legend();
-	response += "</pre></body></html>";
+	response +=
+		"</pre>\n"
+		"</body>\n"
+		"</html>";
 
 	return response;
 }
