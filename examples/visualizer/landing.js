@@ -530,6 +530,18 @@ function createClickableAtom(atom) {
     const atomContainer = document.createElement('div');
     atomContainer.className = 'atom-container';
 
+    // Create graph visualization checkbox
+    const graphCheckbox = document.createElement('input');
+    graphCheckbox.type = 'checkbox';
+    graphCheckbox.className = 'graph-checkbox';
+    graphCheckbox.title = 'Visualize in graph';
+    graphCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            openGraphVisualization(atom);
+            e.target.checked = false; // Reset checkbox after opening
+        }
+    });
+
     // Create the clickable atom element
     const atomElement = document.createElement('div');
     atomElement.className = 'atom-clickable';
@@ -552,7 +564,8 @@ function createClickableAtom(atom) {
         handleAtomClick(atom, keysDisplay, atomElement);
     });
 
-    // Add both elements to container
+    // Add all elements to container
+    atomContainer.appendChild(graphCheckbox);
     atomContainer.appendChild(atomElement);
     atomContainer.appendChild(keysDisplay);
 
@@ -853,4 +866,13 @@ function openStatsPage() {
 
     // Open in new tab
     window.open(statsUrl, '_blank');
+}
+
+function openGraphVisualization(atom) {
+    // Encode the atom data in the URL
+    const atomData = encodeURIComponent(JSON.stringify(atom));
+    const graphUrl = `graph.html?atom=${atomData}&server=${encodeURIComponent(serverUrlInput.value)}`;
+
+    // Open in new tab
+    window.open(graphUrl, '_blank');
 }

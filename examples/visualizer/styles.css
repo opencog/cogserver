@@ -396,6 +396,14 @@ button:disabled {
     align-items: flex-start;
 }
 
+/* Graph visualization checkbox */
+.graph-checkbox {
+    margin-right: 8px;
+    margin-top: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 .atom-clickable {
     display: inline-block;
     cursor: pointer;
