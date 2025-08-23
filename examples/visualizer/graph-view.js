@@ -171,8 +171,27 @@ function initializeGraphView() {
     }
 }
 
+// Check if this is a ListLink that belongs to an Edge/EvaluationLink pattern
+function isListLinkInEdgePattern(atom, parent) {
+    if (!atom || atom.type !== 'ListLink') {
+        return false;
+    }
+    // Check if parent is an Edge/EvaluationLink with this ListLink as second argument
+    if (parent && (parent.type === 'EdgeLink' || parent.type === 'EvaluationLink')) {
+        if (parent.outgoing && parent.outgoing.length === 2 && parent.outgoing[1] === atom) {
+            // Check if first argument is a PredicateNode
+            const predicate = parent.outgoing[0];
+            if (predicate && typeof predicate === 'object' && predicate.type === 'PredicateNode') {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 // Process an atom and its children for graph view
-function processAtomForGraphView(atom, visited = new Set()) {
+function processAtomForGraphView(atom, visited = new Set(), parent = null) {
     const atomKey = atomToKey(atom);
 
     if (visited.has(atomKey)) {
@@ -191,21 +210,28 @@ function processAtomForGraphView(atom, visited = new Set()) {
         // Add labeled edge
         addLabeledEdge(fromNodeId, toNodeId, edgeInfo.edgeLabel, edgeInfo.edgeType);
 
+        // Mark the ListLink as visited so it won't be processed separately
+        const list = atom.outgoing[1];
+        if (list && typeof list === 'object') {
+            const listKey = atomToKey(list);
+            visited.add(listKey);
+        }
+
         // Process the nodes themselves for any nested content
-        processAtomForGraphView(edgeInfo.fromNode, visited);
-        processAtomForGraphView(edgeInfo.toNode, visited);
-    } else {
-        // Regular atom - add as node
+        processAtomForGraphView(edgeInfo.fromNode, visited, atom);
+        processAtomForGraphView(edgeInfo.toNode, visited, atom);
+    } else if (!isListLinkInEdgePattern(atom, parent)) {
+        // Regular atom - add as node only if not a ListLink in edge pattern
         const nodeId = addNodeToGraph(atom);
 
         // Process outgoing links
         if (atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(outgoing => {
                 if (typeof outgoing === 'object' && outgoing !== null) {
-                    processAtomForGraphView(outgoing, visited);
+                    processAtomForGraphView(outgoing, visited, atom);
 
-                    // Add regular edge if not a special pattern
-                    if (!isGraphEdgePattern(outgoing)) {
+                    // Add regular edge if not a special pattern and not a ListLink in edge pattern
+                    if (!isGraphEdgePattern(outgoing) && !isListLinkInEdgePattern(outgoing, atom)) {
                         const childId = addNodeToGraph(outgoing);
                         addEdgeIfNotExists(nodeId, childId);
                     }
