@@ -117,19 +117,28 @@ function initializeGraph() {
         },
         physics: {
             enabled: true,
-            solver: 'forceAtlas2Based',
-            forceAtlas2Based: {
-                gravitationalConstant: -50,
-                centralGravity: 0.01,
+            solver: 'hierarchicalRepulsion',
+            hierarchicalRepulsion: {
+                nodeDistance: 150,
+                centralGravity: 0.0,
                 springLength: 100,
-                springConstant: 0.08
+                springConstant: 0.01,
+                damping: 0.09
             },
             stabilization: {
                 iterations: 150
             }
         },
         layout: {
-            improvedLayout: true
+            hierarchical: {
+                enabled: true,
+                direction: 'UD',  // Up-Down: root at top, nodes at bottom
+                sortMethod: 'directed',
+                shakeTowards: 'leaves',
+                levelSeparation: 150,
+                nodeSpacing: 100,
+                treeSpacing: 200
+            }
         },
         interaction: {
             hover: true,
@@ -388,18 +397,45 @@ function setupEventHandlers() {
 
         if (layoutType === 'hierarchical') {
             options = {
+                physics: {
+                    enabled: true,
+                    solver: 'hierarchicalRepulsion',
+                    hierarchicalRepulsion: {
+                        nodeDistance: 150,
+                        centralGravity: 0.0,
+                        springLength: 100,
+                        springConstant: 0.01,
+                        damping: 0.09
+                    }
+                },
                 layout: {
                     hierarchical: {
-                        direction: 'UD',
+                        enabled: true,
+                        direction: 'UD',  // Up-Down: root at top, nodes at bottom
                         sortMethod: 'directed',
-                        shakeTowards: 'roots'
+                        shakeTowards: 'leaves',
+                        levelSeparation: 150,
+                        nodeSpacing: 100,
+                        treeSpacing: 200
                     }
                 }
             };
         } else {
             options = {
+                physics: {
+                    enabled: true,
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -50,
+                        centralGravity: 0.01,
+                        springLength: 100,
+                        springConstant: 0.08
+                    }
+                },
                 layout: {
-                    hierarchical: false
+                    hierarchical: {
+                        enabled: false
+                    }
                 }
             };
         }
