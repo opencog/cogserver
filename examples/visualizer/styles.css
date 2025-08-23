@@ -447,6 +447,71 @@ button:disabled {
     color: var(--text-primary);
 }
 
+/* Clickable key styles */
+.key-clickable {
+    cursor: pointer;
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.key-clickable:hover {
+    background-color: rgba(0, 123, 255, 0.15);
+    color: var(--primary-color);
+}
+
+.key-clickable.expanded {
+    background-color: rgba(0, 123, 255, 0.2);
+    font-weight: bold;
+}
+
+/* Value display for keys */
+.key-value-display {
+    margin-left: 20px;
+    margin-top: 6px;
+    padding: 8px;
+    background: rgba(40, 167, 69, 0.05);
+    border-left: 3px solid #28a745;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.key-value-display.hidden {
+    display: none;
+}
+
+.value-header {
+    font-weight: bold;
+    color: #28a745;
+    margin-bottom: 6px;
+    font-size: 0.85em;
+}
+
+.value-content {
+    font-family: monospace;
+    font-size: 0.9em;
+    background: white;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.no-value {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.85em;
+}
+
+.loading-value {
+    color: var(--text-secondary);
+    font-style: italic;
+    animation: pulse 1s infinite;
+}
+
 .no-keys {
     color: var(--text-secondary);
     font-style: italic;

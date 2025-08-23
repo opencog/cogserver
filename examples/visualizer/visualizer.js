@@ -189,18 +189,26 @@ function onMessage(event) {
 
             // Handle different result types
             if (typeof result === 'string') {
-                // Version response or other string results
-                console.log('Received string result:', result);
-                // If it looks like a version number, just log it
-                if (result.match(/^\d+\.\d+\.\d+/)) {
-                    console.log('CogServer JSON API version:', result);
+                // Check if this is a null value response for getValueAtKey
+                if (atomData.pendingValueRequest && result === 'null') {
+                    console.log('Received null value at key');
+                    const { display } = atomData.pendingValueRequest;
+                    displayKeyValue(null, display);
+                    atomData.pendingValueRequest = null;
+                } else {
+                    // Version response or other string results
+                    console.log('Received string result:', result);
+                    // If it looks like a version number, just log it
+                    if (result.match(/^\d+\.\d+\.\d+/)) {
+                        console.log('CogServer JSON API version:', result);
+                    }
                 }
             } else if (Array.isArray(result)) {
                 // Check if this is a keys response
                 if (atomData.pendingKeysRequest) {
                     console.log('Received keys response:', result);
-                    const { display } = atomData.pendingKeysRequest;
-                    displayAtomKeys(result, display);
+                    const { display, atom } = atomData.pendingKeysRequest;
+                    displayAtomKeys(result, display, atom);
                     atomData.pendingKeysRequest = null;
                     return; // Don't process further
                 } else if (result.length === 0) {
@@ -220,14 +228,22 @@ function onMessage(event) {
                 // Response from makeAtom or other boolean operations
                 console.log('Received boolean result:', result);
             } else if (typeof result === 'object' && result !== null) {
-                // Check if it's the reportCounts response (object with type names as keys)
-                const keys = Object.keys(result);
-                if (keys.length > 0 && keys.every(key => typeof result[key] === 'number')) {
-                    console.log('Received atom counts:', result);
-                    processAtomCounts(result);
+                // Check if this is a value response for getValueAtKey
+                if (atomData.pendingValueRequest) {
+                    console.log('Received value at key:', result);
+                    const { display } = atomData.pendingValueRequest;
+                    displayKeyValue(result, display);
+                    atomData.pendingValueRequest = null;
                 } else {
-                    // Could be a single atom
-                    console.log('Received object result:', result);
+                    // Check if it's the reportCounts response (object with type names as keys)
+                    const keys = Object.keys(result);
+                    if (keys.length > 0 && keys.every(key => typeof result[key] === 'number')) {
+                        console.log('Received atom counts:', result);
+                        processAtomCounts(result);
+                    } else {
+                        // Could be a single atom or other object
+                        console.log('Received object result:', result);
+                    }
                 }
             }
         } else if (data.success === false) {
@@ -587,7 +603,7 @@ function handleAtomClick(atom, keysDisplay, atomElement) {
     }
 }
 
-function displayAtomKeys(keys, keysDisplay) {
+function displayAtomKeys(keys, keysDisplay, parentAtom) {
     if (!keys || keys.length === 0) {
         keysDisplay.innerHTML = '<span class="no-keys">No keys</span>';
     } else {
@@ -598,12 +614,111 @@ function displayAtomKeys(keys, keysDisplay) {
         keys.forEach(key => {
             const keyItem = document.createElement('li');
             keyItem.className = 'key-item';
-            // Display the key as an s-expression
-            keyItem.textContent = atomToSExpression(key);
+
+            // Create a clickable key element
+            const keyElement = document.createElement('span');
+            keyElement.className = 'key-clickable';
+            keyElement.textContent = atomToSExpression(key);
+
+            // Create value display area (initially hidden)
+            const valueDisplay = document.createElement('div');
+            valueDisplay.className = 'key-value-display hidden';
+
+            // Add click handler to fetch value at this key
+            keyElement.addEventListener('click', () => {
+                handleKeyClick(parentAtom, key, valueDisplay, keyElement);
+            });
+
+            keyItem.appendChild(keyElement);
+            keyItem.appendChild(valueDisplay);
             keysList.appendChild(keyItem);
         });
 
         keysDisplay.appendChild(keysList);
+    }
+}
+
+function handleKeyClick(atom, key, valueDisplay, keyElement) {
+    // Toggle value display
+    if (!valueDisplay.classList.contains('hidden')) {
+        valueDisplay.classList.add('hidden');
+        keyElement.classList.remove('expanded');
+        return;
+    }
+
+    // Show loading state
+    valueDisplay.innerHTML = '<span class="loading-value">Loading value...</span>';
+    valueDisplay.classList.remove('hidden');
+    keyElement.classList.add('expanded');
+
+    // Construct the getValueAtKey command
+    const atomSpec = atom.name !== undefined ?
+        `{"type": "${atom.type}", "name": ${JSON.stringify(atom.name)}` :
+        JSON.stringify(atom).slice(0, -1);  // Remove closing brace to add key
+
+    const keySpec = key.name !== undefined ?
+        `{"type": "${key.type}", "name": ${JSON.stringify(key.name)}}` :
+        JSON.stringify(key);
+
+    const command = `AtomSpace.getValueAtKey(${atomSpec}, "key": ${keySpec}})`;
+    console.log('Getting value at key:', command);
+
+    // Store callback for when we receive the response
+    atomData.pendingValueRequest = {
+        atom: atom,
+        key: key,
+        display: valueDisplay,
+        element: keyElement
+    };
+
+    // Send the command
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(command);
+    } else {
+        valueDisplay.innerHTML = '<span class="error">Not connected to server</span>';
+    }
+}
+
+function displayKeyValue(value, valueDisplay) {
+    if (!value || value === null) {
+        valueDisplay.innerHTML = '<span class="no-value">No value</span>';
+    } else {
+        valueDisplay.innerHTML = '<div class="value-header">Value:</div>';
+        const valueContent = document.createElement('pre');
+        valueContent.className = 'value-content';
+        // Display the value in s-expression format
+        valueContent.textContent = valueToSExpression(value);
+        valueDisplay.appendChild(valueContent);
+    }
+}
+
+function valueToSExpression(value) {
+    // Convert a value object to s-expression format
+    if (!value || !value.type) {
+        return String(value);
+    }
+
+    // Get the value type
+    const valueType = value.type;
+
+    // Get the actual values
+    let values = value.value;
+
+    // Handle different value types
+    if (valueType === 'StringValue' && Array.isArray(values)) {
+        // StringValue: quote each string
+        const quotedValues = values.map(v => JSON.stringify(v));
+        return `(${valueType} ${quotedValues.join(' ')})`;
+    } else if (Array.isArray(values)) {
+        // FloatValue, LinkValue, etc.: just space-separated values
+        return `(${valueType} ${values.join(' ')})`;
+    } else if (valueType === 'TruthValue' && values && Array.isArray(values.value)) {
+        // TruthValue has nested structure
+        return `(${valueType} ${values.value.join(' ')})`;
+    } else {
+        // Fallback: try to stringify the value part
+        const valueStr = typeof values === 'object' ? JSON.stringify(values) : String(values);
+        return `(${valueType} ${valueStr})`;
     }
 }
 
