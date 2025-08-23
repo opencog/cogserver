@@ -213,17 +213,27 @@ function addAtomToGraph(atom, parentId, depth) {
 
     // Check if we've already processed this atom
     if (atomNodeMap.has(atomKey)) {
-        // If we have a parent, add edge only if it won't create upward arrow
+        const existingNodeId = atomNodeMap.get(atomKey);
+
+        // If we have a parent, check if we need to update the node's level
         if (parentId !== null) {
-            const existingNodeId = atomNodeMap.get(atomKey);
-            // Only add edge if the existing node is not an ancestor (to prevent upward arrows)
             const parentNode = nodes.get(parentId);
             const existingNode = nodes.get(existingNodeId);
-            if (!parentNode || !existingNode || parentNode.level >= existingNode.level) {
+
+            if (parentNode && existingNode) {
+                // If this node would be at a deeper level, update it
+                if (depth > existingNode.level) {
+                    // Update the node's level to the new depth
+                    nodes.update({
+                        id: existingNodeId,
+                        level: depth
+                    });
+                }
+                // Always add the edge from parent to child
                 addEdgeIfNotExists(parentId, existingNodeId);
             }
         }
-        return atomNodeMap.get(atomKey);
+        return existingNodeId;
     }
 
     // Create a new node
