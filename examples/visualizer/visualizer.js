@@ -726,10 +726,11 @@ function valueToSExpression(value) {
     }
 }
 
-function atomToSExpression(atom) {
-    // Convert an atom to s-expression format
+function atomToSExpression(atom, indent = 0) {
+    // Convert an atom to s-expression format with proper indentation
     // Remove "Node" and "Link" suffixes from type for s-expression format
     const typeBase = atom.type.replace(/Node$/, '').replace(/Link$/, '');
+    const indentStr = '  '.repeat(indent);
 
     if (!atom.outgoing || atom.outgoing.length === 0) {
         // It's a node
@@ -741,43 +742,51 @@ function atomToSExpression(atom) {
             return `(${typeBase})`;
         }
     } else {
-        // It's a link - recursively show its outgoing connections
-        const outgoingStr = atom.outgoing.map(outgoingItem => {
+        // It's a link - recursively show its outgoing connections with indentation
+        const nextIndent = indent + 1;
+        const nextIndentStr = '  '.repeat(nextIndent);
+
+        const outgoingStrs = atom.outgoing.map(outgoingItem => {
             // The outgoing item could be:
             // 1. An atom object directly (nested atom)
             // 2. A reference/handle to another atom
             // 3. A UUID/ID string
 
+            let result;
             if (typeof outgoingItem === 'object' && outgoingItem !== null) {
                 // It's already an atom object, convert it directly
                 if (outgoingItem.type) {
-                    return atomToSExpression(outgoingItem);
+                    result = atomToSExpression(outgoingItem, nextIndent);
                 }
             }
 
-            // Try to find the referenced atom in our data
-            const referencedAtom = atomData.atoms?.find(a => {
-                // Check various possible handle/id formats
-                if (typeof outgoingItem === 'string' || typeof outgoingItem === 'number') {
-                    return (a.handle === outgoingItem) ||
-                           (a.uuid === outgoingItem) ||
-                           (a.id === outgoingItem) ||
-                           (a.name === outgoingItem); // Sometimes might reference by name
+            if (!result) {
+                // Try to find the referenced atom in our data
+                const referencedAtom = atomData.atoms?.find(a => {
+                    // Check various possible handle/id formats
+                    if (typeof outgoingItem === 'string' || typeof outgoingItem === 'number') {
+                        return (a.handle === outgoingItem) ||
+                               (a.uuid === outgoingItem) ||
+                               (a.id === outgoingItem) ||
+                               (a.name === outgoingItem); // Sometimes might reference by name
+                    }
+                    return false;
+                });
+
+                if (referencedAtom) {
+                    result = atomToSExpression(referencedAtom, nextIndent);
+                } else {
+                    // Fallback for unresolved references
+                    result = `<unresolved:${JSON.stringify(outgoingItem)}>`;
                 }
-                return false;
-            });
-
-            if (referencedAtom) {
-                return atomToSExpression(referencedAtom);
-            } else {
-                // Fallback for unresolved references
-                return `<unresolved:${JSON.stringify(outgoingItem)}>`;
             }
-        }).join(' ');
 
-        // Return the link with its nested s-expressions
-        if (outgoingStr) {
-            return `(${typeBase} ${outgoingStr})`;
+            return nextIndentStr + result;
+        });
+
+        // Return the link with its nested s-expressions on separate lines
+        if (outgoingStrs.length > 0) {
+            return `(${typeBase}\n${outgoingStrs.join('\n')})`;
         } else {
             return `(${typeBase})`;
         }
