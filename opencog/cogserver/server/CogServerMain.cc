@@ -157,6 +157,12 @@ int main(int argc, char *argv[])
             if (not ('f' == val[0] or 'F' == val[0] or '0' == val[0]))
                 logger().set_print_to_stdout_flag(true);
         }
+        if (0 == opt.compare("SERVER_PORT"))
+            console_port = atoi(val.c_str());
+        if (0 == opt.compare("WEB_PORT"))
+            webserver_port = atoi(val.c_str());
+        if (0 == opt.compare("MCP_PORT"))
+            mcp_port = atoi(val.c_str());
     }
 
     // Start catching signals
@@ -174,12 +180,20 @@ int main(int argc, char *argv[])
     cogserve.loadModules();
 
     // Enable the network server and run the server's main loop.
-    if (0 < console_port)
-        cogserve.enableNetworkServer(console_port);
-    if (0 < webserver_port)
-        cogserve.enableWebServer(webserver_port);
-    if (0 < mcp_port)
-        cogserve.enableMCPServer(mcp_port);
+    try
+    {
+        if (0 < console_port)
+            cogserve.enableNetworkServer(console_port);
+        if (0 < webserver_port)
+            cogserve.enableWebServer(webserver_port);
+        if (0 < mcp_port)
+            cogserve.enableMCPServer(mcp_port);
+    }
+    catch (const std::exception& ex)
+    {
+        fprintf(stderr, "Error exit: %s\n", ex.what());
+        exit(-1);
+    }
     cogserve.serverLoop();
     exit(0);
 }

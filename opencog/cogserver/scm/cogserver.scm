@@ -17,8 +17,7 @@
 (export set-cogserver-atomspace!)
 
 ; config path name is optional.
-(define* (start-cogserver #:optional (config-path "")
-                          #:key (port 17001)
+(define* (start-cogserver #:key (port 17001)
                                 (web  18080)
                                 (mcp  18888)
                                 (logfile   "/tmp/cogserver.log")
@@ -34,7 +33,6 @@
   start-cogserver #:prompt \"\\x1b[0;32mopencog\\x1b[1;32m> \\x1b[0m\"
   start-cogserver #:scmprompt \"[0;34mguile[1;34m> [0m\"
   start-cogserver #:scmprompt \"\\x1b[0;34mguile\\x1b[1;34m> \\x1b[0m\"
-  start-cogserver [config-file]
 
   Start the cogserver, optionally specifying a telnet port, websocket
   port, logfile, telnet prompt and telnet scheme prompt (or any
@@ -42,12 +40,8 @@
   used. The defaults are as shown.  Additional logging options can
   be found in the (opencog logger) module.
 
-  Alternately, a config file can be specified. If a config file is
-  given, as well as the above parameters, then the above parameters take
-  precedence.  The use of a config file is deprecated.
-
-  If either port is set to zero, then that server will not be started.
-  At least one of the two must be non-zero.
+  If any of the ports ares set to zero, then the corresponding server
+  will not be started.  At least one must be non-zero.
 
   The prompts may be ANSI colorized prompts. The ANSI escape sequence
   uses the ESC char, which is written as \\x1b in guile.
@@ -56,7 +50,7 @@
 "
 	(cog-logger-set-filename! logfile)
 	(if (string? port) (set! port (string->number port)))
-	(c-start-cogserver (cog-atomspace) port web mcp prompt scmprompt config-path)
+	(c-start-cogserver (cog-atomspace) port web mcp prompt scmprompt)
 )
 
 ; To stop the repl server..

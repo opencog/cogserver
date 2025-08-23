@@ -40,7 +40,7 @@ private:
     void init(void);
 
     std::string start_server(AtomSpace*, int, int, int, const std::string&,
-                             const std::string&, const std::string&);
+                             const std::string&);
     std::string stop_server(void);
     Handle set_server_space(AtomSpace*);
     Handle get_server_space(void);
@@ -68,9 +68,11 @@ void opencog_cogserver_init(void);
 /**
  * Implement a dynamically-loadable cogserver guile module.
  *
- * This is a bare-bones implementation. Things like the server
- * port number, and maybe even the server atomspace, should be
- * configurable from guile, instead of the conf file.
+ * An interesting idea for the future is to convert this to
+ * an instance of ObjectNode, so that the configurable parameters
+ * could be set with Atomese-- i.e. with SetValue or cog-set-value!
+ * by sending messages such as (Predicate "*-web-port-number-"")
+ * and similar.
  */
 
 using namespace opencog;
@@ -121,22 +123,12 @@ std::string CogServerSCM::start_server(AtomSpace* as,
                                        int websocket_port,
                                        int mcp_port,
                                        const std::string& prompt,
-                                       const std::string& scmprompt,
-                                       const std::string& cfg)
+                                       const std::string& scmprompt)
 {
     static std::string rc;
 
     // Singleton instance. Maybe we should throw, here?
     if (srvr) { rc = "CogServer already running!"; return rc; }
-
-    // Use the config file, if specified.
-    if (0 < cfg.size())
-    {
-        config().load(cfg.c_str(), true);
-        telnet_port = config().get_int("SERVER_PORT", telnet_port);
-        websocket_port = config().get_int("WEBSOCKET_PORT", websocket_port);
-        mcp_port = config().get_int("MCP_PORT", mcp_port);
-    }
 
     // Pass parameters non-locally.
     config().set("ANSI_PROMPT", prompt);
@@ -149,12 +141,20 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     srvr->loadModules();
 
     // Enable the network server and run the server's main loop
-    if (0 < telnet_port)
-        srvr->enableNetworkServer(telnet_port);
-    if (0 < websocket_port)
-        srvr->enableWebServer(websocket_port);
-    if (0 < mcp_port)
-        srvr->enableMCPServer(mcp_port);
+    try
+    {
+        if (0 < telnet_port)
+            srvr->enableNetworkServer(telnet_port);
+        if (0 < websocket_port)
+            srvr->enableWebServer(websocket_port);
+        if (0 < mcp_port)
+            srvr->enableMCPServer(mcp_port);
+    }
+    catch (const std::exception& ex)
+    {
+        srvr = nullptr;
+        std::rethrow_exception(std::current_exception());
+    }
     main_loop = new std::thread(&CogServer::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;
