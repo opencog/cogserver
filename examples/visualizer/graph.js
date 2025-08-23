@@ -571,7 +571,7 @@ function handleServerResponse(response) {
     // Handle responses from the server
     console.log('Server response:', response);
 
-    // Check if this is a response to getIncomingSet
+    // Check if this is a response to getIncoming
     if (pendingIncomingRequest) {
         if (response.success && response.result) {
             const incomingAtoms = response.result;
@@ -642,7 +642,7 @@ function fetchIncomingSet(atom, nodeId) {
         atomSpec = JSON.stringify(atom);
     }
 
-    const command = `AtomSpace.getIncomingSet(${atomSpec})`;
+    const command = `AtomSpace.getIncoming(${atomSpec})`;
     console.log('Getting incoming set for atom:', command);
 
     // Store request info for when we receive the response
