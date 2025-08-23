@@ -94,12 +94,12 @@ function initializeGraph() {
         nodes: {
             shape: 'box',
             font: {
-                size: 14,
+                size: 12,
                 face: 'monospace'
             },
-            margin: 10,
+            margin: 5,
             widthConstraint: {
-                maximum: 200
+                maximum: 80
             }
         },
         edges: {
@@ -224,7 +224,7 @@ function addAtomToGraph(atom, parentId, depth) {
 
     // Create a new node
     const nodeId = nodeIdCounter++;
-    const nodeLabel = atomToSExpression(atom, true); // true for compact format
+    const nodeLabel = createCompactLabel(atom);
     const nodeColor = getNodeColor(atom.type);
 
     nodes.add({
@@ -233,7 +233,7 @@ function addAtomToGraph(atom, parentId, depth) {
         color: nodeColor,
         atom: atom,
         level: depth,
-        title: atomToSExpression(atom, false) // Full format for tooltip
+        title: atomToSExpression(atom) // Full format for tooltip
     });
 
     atomNodeMap.set(atomKey, nodeId);
@@ -273,6 +273,25 @@ function addEdgeIfNotExists(from, to) {
     }
 }
 
+function createCompactLabel(atom) {
+    // Create a compact label for display in the graph
+    const typeBase = atom.type.replace(/Node$/, '').replace(/Link$/, '');
+
+    if (!atom.outgoing || atom.outgoing.length === 0) {
+        // It's a Node
+        if (atom.name !== undefined) {
+            // Show only first 10 characters of the name, without quotes
+            const name = String(atom.name);
+            return name.length > 10 ? name.substring(0, 10) : name;
+        }
+        // If no name, show truncated type
+        return typeBase.length > 10 ? typeBase.substring(0, 10) : typeBase;
+    } else {
+        // It's a Link - show only first 4 letters without parenthesis
+        return typeBase.length > 4 ? typeBase.substring(0, 4) : typeBase;
+    }
+}
+
 function atomToKey(atom) {
     // Create a unique key for an atom
     if (atom.name !== undefined) {
@@ -286,7 +305,7 @@ function atomToKey(atom) {
     }
 }
 
-function atomToSExpression(atom, compact = false) {
+function atomToSExpression(atom) {
     const typeBase = atom.type.replace(/Node$/, '').replace(/Link$/, '');
 
     if (!atom.outgoing || atom.outgoing.length === 0) {
@@ -296,22 +315,17 @@ function atomToSExpression(atom, compact = false) {
         }
         return `(${typeBase})`;
     } else {
-        if (compact) {
-            // Compact format for node labels
-            return `(${typeBase} ...)`;
-        } else {
-            // Full format for tooltips
-            const outgoingStrs = atom.outgoing.map(item => {
-                if (typeof item === 'object' && item !== null) {
-                    return atomToSExpression(item, false);
-                } else if (typeof item === 'string') {
-                    return `(Atom "${item}")`;
-                } else {
-                    return String(item);
-                }
-            });
-            return `(${typeBase} ${outgoingStrs.join(' ')})`;
-        }
+        // Full format for tooltips
+        const outgoingStrs = atom.outgoing.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                return atomToSExpression(item);
+            } else if (typeof item === 'string') {
+                return `(Atom "${item}")`;
+            } else {
+                return String(item);
+            }
+        });
+        return `(${typeBase} ${outgoingStrs.join(' ')})`;
     }
 }
 
