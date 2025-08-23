@@ -421,33 +421,32 @@ button:disabled {
 .atom-keys-display {
     display: inline-block;
     margin-left: 20px;
-    padding: 4px 10px;
-    background: rgba(0, 123, 255, 0.05);
-    border-left: 3px solid var(--primary-color);
-    border-radius: 4px;
+    vertical-align: top;
 }
 
 .atom-keys-display.hidden {
     display: none;
 }
 
+.keys-container {
+    display: inline-block;
+}
+
+.key-row-first {
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.key-row {
+    display: block;
+    margin-left: 28px;  /* Indent to align with first key after arrow */
+    margin-bottom: 4px;
+}
+
 .keys-arrow {
     color: var(--text-secondary);
     font-weight: bold;
     margin-right: 8px;
-}
-
-.keys-list-inline {
-    display: inline;
-}
-
-.key-item-inline {
-    display: inline;
-}
-
-.key-separator {
-    color: var(--text-secondary);
-    margin: 0 2px;
 }
 
 /* Clickable key styles */

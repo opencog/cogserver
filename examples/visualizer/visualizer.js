@@ -607,22 +607,25 @@ function displayAtomKeys(keys, keysDisplay, parentAtom) {
     if (!keys || keys.length === 0) {
         keysDisplay.innerHTML = '<span class="no-keys">No keys</span>';
     } else {
-        keysDisplay.innerHTML = '<span class="keys-arrow">→ Keys: </span>';
-        const keysList = document.createElement('span');
-        keysList.className = 'keys-list-inline';
+        // Clear the display
+        keysDisplay.innerHTML = '';
+
+        // Create container for all keys
+        const keysContainer = document.createElement('div');
+        keysContainer.className = 'keys-container';
 
         keys.forEach((key, index) => {
-            // Add separator between keys
-            if (index > 0) {
-                const separator = document.createElement('span');
-                separator.className = 'key-separator';
-                separator.textContent = ', ';
-                keysList.appendChild(separator);
-            }
+            // Create a container for each key and its value
+            const keyRow = document.createElement('div');
+            keyRow.className = index === 0 ? 'key-row-first' : 'key-row';
 
-            // Create a container for key and its value
-            const keyContainer = document.createElement('span');
-            keyContainer.className = 'key-item-inline';
+            // Add arrow for first key only
+            if (index === 0) {
+                const arrow = document.createElement('span');
+                arrow.className = 'keys-arrow';
+                arrow.textContent = '→ ';
+                keyRow.appendChild(arrow);
+            }
 
             // Create a clickable key element
             const keyElement = document.createElement('span');
@@ -638,12 +641,12 @@ function displayAtomKeys(keys, keysDisplay, parentAtom) {
                 handleKeyClick(parentAtom, key, valueDisplay, keyElement);
             });
 
-            keyContainer.appendChild(keyElement);
-            keyContainer.appendChild(valueDisplay);
-            keysList.appendChild(keyContainer);
+            keyRow.appendChild(keyElement);
+            keyRow.appendChild(valueDisplay);
+            keysContainer.appendChild(keyRow);
         });
 
-        keysDisplay.appendChild(keysList);
+        keysDisplay.appendChild(keysContainer);
     }
 }
 
