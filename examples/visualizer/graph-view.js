@@ -190,6 +190,32 @@ function isListLinkInEdgePattern(atom, parent) {
     return false;
 }
 
+// Check if this is a PredicateNode that belongs to an Edge/EvaluationLink pattern
+function isPredicateInEdgePattern(atom, parent) {
+    if (!atom || atom.type !== 'PredicateNode') {
+        return false;
+    }
+    // Check if parent is an Edge/EvaluationLink with this PredicateNode as first argument
+    if (parent && (parent.type === 'EdgeLink' || parent.type === 'EvaluationLink')) {
+        if (parent.outgoing && parent.outgoing.length === 2 && parent.outgoing[0] === atom) {
+            // Check if second argument is a ListLink with 2 nodes
+            const list = parent.outgoing[1];
+            if (list && typeof list === 'object' && list.type === 'ListLink') {
+                if (list.outgoing && list.outgoing.length === 2) {
+                    const first = list.outgoing[0];
+                    const second = list.outgoing[1];
+                    if (first && typeof first === 'object' && first.type.endsWith('Node') &&
+                        second && typeof second === 'object' && second.type.endsWith('Node')) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 // Process an atom and its children for graph view
 function processAtomForGraphView(atom, visited = new Set(), parent = null) {
     const atomKey = atomToKey(atom);
@@ -220,11 +246,20 @@ function processAtomForGraphView(atom, visited = new Set(), parent = null) {
         if (list && typeof list === 'object') {
             const listKey = atomToKey(list);
             visited.add(listKey);
+            // Also mark the nodes inside the ListLink as visited since we already added them
+            if (list.outgoing) {
+                list.outgoing.forEach(node => {
+                    if (typeof node === 'object') {
+                        visited.add(atomToKey(node));
+                    }
+                });
+            }
         }
 
-        // Don't recurse into the nodes - they're already added
-    } else if (!isListLinkInEdgePattern(atom, parent)) {
-        // Regular atom - add as node only if not a ListLink in edge pattern
+        // Don't recurse or add anything else
+        return;
+    } else if (!isListLinkInEdgePattern(atom, parent) && !isPredicateInEdgePattern(atom, parent)) {
+        // Regular atom - add as node only if not part of an edge pattern
         const nodeId = addNodeToGraph(atom);
 
         // Process outgoing links
@@ -235,7 +270,7 @@ function processAtomForGraphView(atom, visited = new Set(), parent = null) {
                     processAtomForGraphView(outgoing, visited, atom);
 
                     // Then add edge only if the child is not a special pattern
-                    if (!isGraphEdgePattern(outgoing) && !isListLinkInEdgePattern(outgoing, atom)) {
+                    if (!isGraphEdgePattern(outgoing) && !isListLinkInEdgePattern(outgoing, atom) && !isPredicateInEdgePattern(outgoing, atom)) {
                         // Check if the outgoing was actually added as a node
                         const outgoingKey = atomToKey(outgoing);
                         if (atomNodeMap.has(outgoingKey)) {
