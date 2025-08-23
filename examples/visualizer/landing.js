@@ -902,12 +902,5 @@ function visualizeCheckedAtoms() {
     // Open in new tab
     window.open(graphUrl, '_blank');
 
-    // Clear the checkboxes
-    checkedAtoms.forEach((atom, checkboxId) => {
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox) {
-            checkbox.checked = false;
-        }
-    });
-    checkedAtoms.clear();
+    // Keep checkboxes checked - don't clear them
 }

@@ -64,12 +64,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeGraph() {
+    // Check if vis is loaded
+    if (typeof vis === 'undefined') {
+        console.error('vis-network library not loaded');
+        updateStatus('Error: vis-network library not loaded', 'error');
+        return;
+    }
+
     // Create initial nodes and edges arrays
     nodes = new vis.DataSet();
     edges = new vis.DataSet();
 
     // Get the container
     const container = document.getElementById('mynetwork');
+
+    if (!container) {
+        console.error('Container element #mynetwork not found');
+        updateStatus('Error: Container element not found', 'error');
+        return;
+    }
 
     // Create the network
     const data = {
@@ -139,13 +152,16 @@ function initializeGraph() {
 
     // Add the root atoms to the graph
     if (rootAtoms && rootAtoms.length > 0) {
+        console.log('Adding root atoms to graph:', rootAtoms);
         rootAtoms.forEach(atom => {
             addAtomToGraph(atom, null, 0);
         });
         network.fit();
+        updateStatus(`Graph initialized with ${rootAtoms.length} atom(s)`, 'connected');
+    } else {
+        updateStatus('No atoms to display', 'error');
+        console.warn('No root atoms found');
     }
-
-    updateStatus('Graph initialized', 'connected');
 }
 
 function connectToServer() {
