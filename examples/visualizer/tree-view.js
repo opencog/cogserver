@@ -493,40 +493,43 @@ function setupEventHandlers() {
             const parent = event.detail.parent;
             const atoms = event.detail.atoms;
 
-            // Find the parent node in our graph
-            const parentKey = atomSpaceCache.atomToKey(parent);
-            const parentNodeId = atomNodeMap.get(parentKey);
+            // Check current layout mode
+            const layoutSelect = document.getElementById('layoutSelect');
+            const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
 
-            if (parentNodeId !== undefined) {
-                // Check current layout mode
-                const layoutSelect = document.getElementById('layoutSelect');
-                const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+            if (layoutType === 'graph') {
+                // For graph view, rebuild the entire graph from cache
+                initializeGraphViewWithAtomCache();
+            } else {
+                // For hierarchical/network view, ensure parent is in graph first
+                const parentKey = atomSpaceCache.atomToKey(parent);
+                let parentNodeId = atomNodeMap.get(parentKey);
 
-                if (layoutType === 'graph') {
-                    // For graph view, rebuild the entire graph from cache
-                    initializeGraphViewWithAtomCache();
-                } else {
-                    // For hierarchical/network view, add new atoms
-                    atoms.forEach(atom => {
-                        // Add the incoming atom to the graph
-                        const incomingNodeId = addAtomToGraph(atom, null, 0);
-
-                        // Find which outgoing atom matches our target and connect to it
-                        if (atom.outgoing) {
-                            atom.outgoing.forEach((outgoing, index) => {
-                                // Check if this outgoing matches our target atom
-                                if (isMatchingAtom(outgoing, parent)) {
-                                    // Connect the incoming atom to the existing node
-                                    addEdgeIfNotExists(incomingNodeId, parentNodeId);
-                                }
-                            });
-                        }
-                    });
-
-                    // Refit the network to show the new nodes
-                    network.fit();
-                    updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+                // If parent is not in the graph yet, add it
+                if (parentNodeId === undefined) {
+                    parentNodeId = addAtomToGraph(parent, null, 0);
                 }
+
+                // Add new atoms
+                atoms.forEach(atom => {
+                    // Add the incoming atom to the graph
+                    const incomingNodeId = addAtomToGraph(atom, null, 0);
+
+                    // Find which outgoing atom matches our target and connect to it
+                    if (atom.outgoing) {
+                        atom.outgoing.forEach((outgoing, index) => {
+                            // Check if this outgoing matches our target atom
+                            if (isMatchingAtom(outgoing, parent)) {
+                                // Connect the incoming atom to the existing node
+                                addEdgeIfNotExists(incomingNodeId, parentNodeId);
+                            }
+                        });
+                    }
+                });
+
+                // Refit the network to show the new nodes
+                network.fit();
+                updateStatus(`Added ${atoms.length} incoming links`, 'connected');
             }
         } else if (updateType === 'listlinks-complete') {
             updateStatus('Ready', 'connected');

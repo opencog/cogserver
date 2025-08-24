@@ -355,6 +355,9 @@ class AtomSpaceCache extends EventTarget {
             // Process the response based on what we're waiting for
             if (this.isProcessingListLink && response && Array.isArray(response)) {
                 this.processListLinkResponse(response);
+            } else if (this.pendingRegularRequest && response && Array.isArray(response)) {
+                // Process regular atom response
+                this.processRegularAtomResponse(response);
             }
         } catch (error) {
             console.error('Error parsing WebSocket message:', error);
@@ -382,20 +385,23 @@ class AtomSpaceCache extends EventTarget {
         const command = `AtomSpace.getIncoming(${atomSpec})`;
         console.log('Getting incoming set:', command);
 
-        // For regular atoms, send immediately
-        if (atom.type !== 'ListLink') {
-            this.socket.send(command);
-            return;
-        }
-
         // For ListLinks, queue for sequential processing
-        this.pendingListLinkRequests.push({
-            atom: atom,
-            command: command
-        });
+        if (atom.type === 'ListLink') {
+            this.pendingListLinkRequests.push({
+                atom: atom,
+                command: command
+            });
 
-        if (!this.isProcessingListLink) {
-            this.processNextListLink();
+            if (!this.isProcessingListLink) {
+                this.processNextListLink();
+            }
+        } else {
+            // For regular atoms, track the request and send
+            this.pendingRegularRequest = {
+                atom: atom,
+                command: command
+            };
+            this.socket.send(command);
         }
     }
 
@@ -440,6 +446,32 @@ class AtomSpaceCache extends EventTarget {
         // Process next ListLink
         this.currentListLinkRequest = null;
         setTimeout(() => this.processNextListLink(), 10);
+    }
+
+    // Process regular atom response
+    processRegularAtomResponse(response) {
+        if (!this.pendingRegularRequest) return;
+
+        const parentAtom = this.pendingRegularRequest.atom;
+
+        // Add all atoms from the response
+        response.forEach(atom => {
+            if (atom && typeof atom === 'object') {
+                this.addAtom(atom, parentAtom);
+            }
+        });
+
+        // Notify that cache has been updated
+        this.dispatchEvent(new CustomEvent('update', {
+            detail: {
+                type: 'incoming-set',
+                parent: parentAtom,
+                atoms: response
+            }
+        }));
+
+        // Clear the pending request
+        this.pendingRegularRequest = null;
     }
 
     // Remove an atom and its incoming edges
