@@ -820,8 +820,24 @@ function showAtomsOfType(type) {
     // Clear all checked atoms when switching panes
     checkedAtoms.clear();
 
-    // Update title with count from reportCounts if available
+    // Get the count from reportCounts if available
     const count = atomData.counts?.[type] || 0;
+
+    // Check if the count exceeds safe limits
+    const isNode = type.endsWith('Node');
+    const isLink = type.endsWith('Link');
+    const maxNodes = 10000;
+    const maxLinks = 5000;
+
+    if ((isNode && count > maxNodes) || (isLink && count > maxLinks)) {
+        const maxAllowed = isNode ? maxNodes : maxLinks;
+        const atomType = isNode ? 'nodes' : 'links';
+        showError(`Cannot download ${count} ${atomType}. Maximum allowed is ${maxAllowed}. ` +
+                  `Downloading this many atoms would take too long and overwhelm the browser.`);
+        return;
+    }
+
+    // Update title with count
     atomListingTitle.textContent = `${type} Atoms (${count})`;
 
     // Clear content
