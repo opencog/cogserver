@@ -11,9 +11,9 @@ function isGraphEdgePattern(atom) {
         return false;
     }
 
-    // First outgoing must be a Predicate
+    // First outgoing must be a PredicateNode or BondNode
     const predicate = atom.outgoing[0];
-    if (typeof predicate !== 'object' || predicate.type !== 'PredicateNode') {
+    if (typeof predicate !== 'object' || (predicate.type !== 'PredicateNode' && predicate.type !== 'BondNode')) {
         return false;
     }
 
@@ -106,48 +106,49 @@ function addNodeToGraph(atom) {
 
 // Add a labeled edge between two nodes
 function addLabeledEdge(fromId, toId, label, edgeType) {
-    // Check if edge already exists
+    // Every Atom is unique in AtomSpace - always add the edge
+    // Different style for graph edges
+    const edgeColor = edgeType === 'EdgeLink' ? '#FF6B6B' : '#4ECDC4';
+
+    // Count existing edges between these nodes to offset curves
     const existingEdges = edges.get({
-        filter: function(edge) {
-            return edge.from === fromId && edge.to === toId && edge.label === label;
+        filter: function(item) {
+            return (item.from === fromId && item.to === toId) ||
+                   (item.from === toId && item.to === fromId);
         }
     });
+    const curveOffset = existingEdges.length;
 
-    if (existingEdges.length === 0) {
-        // Different style for graph edges
-        const edgeColor = edgeType === 'EdgeLink' ? '#FF6B6B' : '#4ECDC4';
-
-        edges.add({
-            from: fromId,
-            to: toId,
-            label: label,
-            arrows: {
-                to: {
-                    enabled: true,
-                    scaleFactor: 0.7
-                }
-            },
-            color: {
-                color: edgeColor,
-                highlight: '#FFD93D',
-                hover: '#FFD93D'
-            },
-            font: {
-                color: '#333333',
-                size: 12,
-                background: 'rgba(255, 255, 255, 0.8)',
-                strokeWidth: 0,
-                align: 'middle'
-            },
-            smooth: {
+    edges.add({
+        from: fromId,
+        to: toId,
+        label: label,
+        arrows: {
+            to: {
                 enabled: true,
-                type: 'curvedCW',
-                roundness: 0.2
-            },
-            width: 2,
-            dashes: edgeType === 'EvaluationLink' ? [5, 5] : false
-        });
-    }
+                scaleFactor: 0.7
+            }
+        },
+        color: {
+            color: edgeColor,
+            highlight: '#FFD93D',
+            hover: '#FFD93D'
+        },
+        font: {
+            color: '#333333',
+            size: 12,
+            background: 'rgba(255, 255, 255, 0.8)',
+            strokeWidth: 0,
+            align: 'middle'
+        },
+        smooth: {
+            enabled: true,
+            type: curveOffset === 0 ? 'dynamic' : 'curvedCW',
+            roundness: 0.2 + (curveOffset * 0.15) // Increase curve for each additional edge
+        },
+        width: 2,
+        dashes: edgeType === 'EvaluationLink' ? [5, 5] : false
+    });
 }
 
 // Initialize graph view mode
@@ -171,6 +172,36 @@ function initializeGraphView() {
     }
 }
 
+// Initialize graph view with all stored atoms
+function initializeGraphViewWithAllAtoms() {
+    // Clear any existing data
+    if (nodes) nodes.clear();
+    if (edges) edges.clear();
+    atomNodeMap.clear();
+    nodeIdCounter = 1;
+
+    // Use a shared visited set for regular atoms, but EdgeLinks bypass it
+    const visited = new Set();
+
+    // Process root atoms first
+    if (rootAtoms && rootAtoms.length > 0) {
+        rootAtoms.forEach(atom => {
+            processAtomForGraphView(atom, visited);
+        });
+    }
+
+    // Then process all stored atoms
+    if (typeof allStoredAtoms !== 'undefined') {
+        allStoredAtoms.forEach(atomData => {
+            processAtomForGraphView(atomData.atom, visited);
+        });
+    }
+
+    if (network) {
+        network.fit();
+    }
+}
+
 // Check if this is a ListLink that belongs to an Edge/EvaluationLink pattern
 function isListLinkInEdgePattern(atom, parent) {
     if (!atom || atom.type !== 'ListLink') {
@@ -179,9 +210,10 @@ function isListLinkInEdgePattern(atom, parent) {
     // Check if parent is an Edge/EvaluationLink with this ListLink as second argument
     if (parent && (parent.type === 'EdgeLink' || parent.type === 'EvaluationLink')) {
         if (parent.outgoing && parent.outgoing.length === 2 && parent.outgoing[1] === atom) {
-            // Check if first argument is a PredicateNode
+            // Check if first argument is a PredicateNode or BondNode
             const predicate = parent.outgoing[0];
-            if (predicate && typeof predicate === 'object' && predicate.type === 'PredicateNode') {
+            if (predicate && typeof predicate === 'object' &&
+                (predicate.type === 'PredicateNode' || predicate.type === 'BondNode')) {
                 return true;
             }
         }
@@ -190,12 +222,12 @@ function isListLinkInEdgePattern(atom, parent) {
     return false;
 }
 
-// Check if this is a PredicateNode that belongs to an Edge/EvaluationLink pattern
+// Check if this is a PredicateNode/BondNode that belongs to an Edge/EvaluationLink pattern
 function isPredicateInEdgePattern(atom, parent) {
-    if (!atom || atom.type !== 'PredicateNode') {
+    if (!atom || (atom.type !== 'PredicateNode' && atom.type !== 'BondNode')) {
         return false;
     }
-    // Check if parent is an Edge/EvaluationLink with this PredicateNode as first argument
+    // Check if parent is an Edge/EvaluationLink with this PredicateNode/BondNode as first argument
     if (parent && (parent.type === 'EdgeLink' || parent.type === 'EvaluationLink')) {
         if (parent.outgoing && parent.outgoing.length === 2 && parent.outgoing[0] === atom) {
             // Check if second argument is a ListLink with 2 nodes
@@ -216,71 +248,105 @@ function isPredicateInEdgePattern(atom, parent) {
     return false;
 }
 
+// Check if an atom should be skipped in graph view
+function shouldSkipInGraphView(atom) {
+    if (!atom || typeof atom !== 'object') {
+        return true;
+    }
+
+    // Skip ListLinks that could be part of Edge/EvaluationLink patterns
+    if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
+        const first = atom.outgoing[0];
+        const second = atom.outgoing[1];
+        // If it has exactly 2 nodes, it might be part of a pattern - skip it
+        if (first && typeof first === 'object' && first.type.endsWith('Node') &&
+            second && typeof second === 'object' && second.type.endsWith('Node')) {
+            return true;
+        }
+    }
+
+    // Skip PredicateNode and BondNode as they're used as labels in EdgeLinks
+    if (atom.type === 'PredicateNode' || atom.type === 'BondNode') {
+        return true;
+    }
+
+    return false;
+}
+
 // Process an atom and its children for graph view
-function processAtomForGraphView(atom, visited = new Set(), parent = null) {
+function processAtomForGraphView(atom, visited = new Set()) {
+    if (!atom || typeof atom !== 'object') {
+        return;
+    }
+
+    // Check if this is an Edge/EvaluationLink with the special pattern FIRST
+    // Don't use visited set for EdgeLinks - process them all
+    if (isGraphEdgePattern(atom)) {
+        const edgeInfo = extractGraphEdgeInfo(atom);
+
+        // Add only the two endpoint nodes (or reuse if they exist)
+        const fromNodeId = addNodeToGraph(edgeInfo.fromNode);
+        const toNodeId = addNodeToGraph(edgeInfo.toNode);
+
+        // Add labeled edge between them
+        addLabeledEdge(fromNodeId, toNodeId, edgeInfo.edgeLabel, edgeInfo.edgeType);
+
+        // Don't process this atom's children as regular nodes
+        return;
+    }
+
+    // For non-EdgeLink atoms, use the visited set normally
     const atomKey = atomToKey(atom);
 
     if (visited.has(atomKey)) {
         return;
     }
-    visited.add(atomKey);
 
-    // Handle special edge patterns
-    if (isGraphEdgePattern(atom)) {
-        const edgeInfo = extractGraphEdgeInfo(atom);
-
-        // Add nodes
-        const fromNodeId = addNodeToGraph(edgeInfo.fromNode);
-        const toNodeId = addNodeToGraph(edgeInfo.toNode);
-
-        // Add labeled edge
-        addLabeledEdge(fromNodeId, toNodeId, edgeInfo.edgeLabel, edgeInfo.edgeType);
-
-        // Mark the ListLink and PredicateNode as visited so they won't be processed separately
-        const predicate = atom.outgoing[0];
-        const list = atom.outgoing[1];
-        if (predicate && typeof predicate === 'object') {
-            const predicateKey = atomToKey(predicate);
-            visited.add(predicateKey);
+    // Skip atoms that shouldn't be shown in graph view
+    if (shouldSkipInGraphView(atom)) {
+        // Don't mark certain atoms as visited as they can be shared by multiple EdgeLinks
+        if ((atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) ||
+            atom.type === 'PredicateNode' ||
+            atom.type === 'BondNode') {
+            // These can be shared by multiple EdgeLinks - don't mark as visited
+        } else {
+            // Mark other skipped atoms as visited
+            visited.add(atomKey);
         }
-        if (list && typeof list === 'object') {
-            const listKey = atomToKey(list);
-            visited.add(listKey);
-            // Also mark the nodes inside the ListLink as visited since we already added them
-            if (list.outgoing) {
-                list.outgoing.forEach(node => {
-                    if (typeof node === 'object') {
-                        visited.add(atomToKey(node));
-                    }
-                });
-            }
-        }
-
-        // Don't recurse or add anything else
-        return;
-    } else if (!isListLinkInEdgePattern(atom, parent) && !isPredicateInEdgePattern(atom, parent)) {
-        // Regular atom - add as node only if not part of an edge pattern
-        const nodeId = addNodeToGraph(atom);
-
-        // Process outgoing links
+        // Still process children to find patterns
         if (atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(outgoing => {
                 if (typeof outgoing === 'object' && outgoing !== null) {
-                    // First process the child
-                    processAtomForGraphView(outgoing, visited, atom);
-
-                    // Then add edge only if the child is not a special pattern
-                    if (!isGraphEdgePattern(outgoing) && !isListLinkInEdgePattern(outgoing, atom) && !isPredicateInEdgePattern(outgoing, atom)) {
-                        // Check if the outgoing was actually added as a node
-                        const outgoingKey = atomToKey(outgoing);
-                        if (atomNodeMap.has(outgoingKey)) {
-                            const childId = atomNodeMap.get(outgoingKey);
-                            addEdgeIfNotExists(nodeId, childId);
-                        }
-                    }
+                    processAtomForGraphView(outgoing, visited);
                 }
             });
         }
+        return;
+    }
+
+    // Mark as visited for regular atoms
+    visited.add(atomKey);
+
+    // Regular atom - add as node and process children
+    const nodeId = addNodeToGraph(atom);
+
+    // Process outgoing links
+    if (atom.outgoing && atom.outgoing.length > 0) {
+        atom.outgoing.forEach(outgoing => {
+            if (typeof outgoing === 'object' && outgoing !== null) {
+                // Process the child
+                processAtomForGraphView(outgoing, visited);
+
+                // Add edge only if the child was actually added as a node
+                if (!isGraphEdgePattern(outgoing) && !shouldSkipInGraphView(outgoing)) {
+                    const outgoingKey = atomToKey(outgoing);
+                    if (atomNodeMap.has(outgoingKey)) {
+                        const childId = atomNodeMap.get(outgoingKey);
+                        addEdgeIfNotExists(nodeId, childId);
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -305,7 +371,6 @@ function fetchIncomingSetForGraph(atom, nodeId) {
     }
 
     const command = `AtomSpace.getIncoming(${atomSpec})`;
-    console.log('Getting incoming set for atom (graph view):', command);
 
     // Store request info for when we receive the response
     pendingIncomingRequest = {
@@ -328,6 +393,9 @@ function processIncomingSetForGraph(incomingAtoms, targetNodeId) {
     // Track ListLinks that need their incoming set fetched
     const listLinksToFetch = [];
 
+    // Use a shared visited set for all processing
+    const visited = new Set();
+
     // First pass: add all incoming atoms and identify ListLinks with 2 nodes
     incomingAtoms.forEach(atom => {
         if (atom && typeof atom === 'object') {
@@ -345,13 +413,13 @@ function processIncomingSetForGraph(incomingAtoms, targetNodeId) {
             }
 
             // Process this atom (might be an Edge/EvaluationLink pattern)
-            processAtomForGraphView(atom);
+            processAtomForGraphView(atom, visited);
         }
     });
 
     // Now fetch incoming sets for qualifying ListLinks
     if (listLinksToFetch.length > 0) {
-        fetchListLinkIncomingSets(listLinksToFetch);
+        fetchListLinkIncomingSets(listLinksToFetch, visited);
     }
 
     // Refresh the graph
@@ -362,50 +430,80 @@ function processIncomingSetForGraph(incomingAtoms, targetNodeId) {
     updateStatus(`Added ${incomingAtoms.length} incoming link(s)`, 'connected');
 }
 
-// Fetch incoming sets for multiple ListLinks
-function fetchListLinkIncomingSets(listLinks) {
+// Fetch incoming sets for multiple ListLinks sequentially
+function fetchListLinkIncomingSets(listLinks, visited = new Set()) {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         return;
     }
 
-    // Process each ListLink
-    listLinks.forEach(listLink => {
+    // Process ListLinks sequentially to avoid response confusion
+    let currentIndex = 0;
+
+    function processNextListLink() {
+        if (currentIndex >= listLinks.length) {
+            // All requests completed, update the network
+            if (network) {
+                network.fit();
+            }
+            return;
+        }
+
+        const listLink = listLinks[currentIndex];
         const atomSpec = JSON.stringify(listLink);
         const command = `AtomSpace.getIncoming(${atomSpec})`;
-        console.log('Getting incoming set for ListLink:', command);
 
-        // Create a temporary handler for this specific request
+        // Create a handler for this specific request
         const messageHandler = function(event) {
             try {
-                const response = JSON.parse(event.data);
+                const rawResponse = JSON.parse(event.data);
+                let response;
+
+                // Handle wrapped response format
+                if (rawResponse.hasOwnProperty('success')) {
+                    if (rawResponse.success && rawResponse.result) {
+                        response = rawResponse.result;
+                    }
+                } else {
+                    response = rawResponse;
+                }
+
                 if (response && Array.isArray(response)) {
-                    // Process the incoming atoms for this ListLink
-                    response.forEach(atom => {
+
+                    // Process ALL atoms from the response
+                    response.forEach((atom, idx) => {
                         if (atom && typeof atom === 'object') {
-                            // Check if it's an Edge/EvaluationLink pattern
-                            if (isGraphEdgePattern(atom)) {
-                                processAtomForGraphView(atom);
+                            // Store for persistence
+                            if (typeof allStoredAtoms !== 'undefined') {
+                                allStoredAtoms.add({
+                                    atom: atom,
+                                    parent: listLink
+                                });
                             }
+
+                            // Process the atom - EdgeLinks will be drawn as arrows
+                            processAtomForGraphView(atom, visited);
                         }
                     });
-
-                    // Update the network
-                    if (network) {
-                        network.fit();
-                    }
                 }
             } catch (error) {
-                console.error('Error processing ListLink incoming set:', error);
+                // Error processing ListLink incoming set
             }
 
             // Remove this handler after processing
             socket.removeEventListener('message', messageHandler);
+
+            // Process next ListLink
+            currentIndex++;
+            processNextListLink();
         };
 
         // Add the handler and send the command
         socket.addEventListener('message', messageHandler);
         socket.send(command);
-    });
+    }
+
+    // Start processing the first ListLink
+    processNextListLink();
 }
 
 // Get graph view layout options

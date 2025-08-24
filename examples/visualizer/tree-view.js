@@ -12,6 +12,7 @@ let currentDepth = 2;
 let processedAtoms = new Set();
 let atomNodeMap = new Map();
 let nodeIdCounter = 1;
+let allStoredAtoms = new Set(); // Store all atoms fetched, regardless of display mode
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -551,34 +552,22 @@ function setupEventHandlers() {
     // Layout select
     document.getElementById('layoutSelect').addEventListener('change', function(e) {
         const layoutType = e.target.value;
+        const previousLayout = this.getAttribute('data-previous-layout');
         let options = {};
 
-        if (layoutType === 'graph') {
-            // Switch to graph view mode - need to redraw everything
-            nodes.clear();
-            edges.clear();
-            atomNodeMap.clear();
-            nodeIdCounter = 1;
+        // Always clear and redraw when switching layouts
+        nodes.clear();
+        edges.clear();
+        atomNodeMap.clear();
+        nodeIdCounter = 1;
 
+        if (layoutType === 'graph') {
             // Use graph view mode with special edge handling
-            initializeGraphView();
+            initializeGraphViewWithAllAtoms();
             options = getGraphViewOptions();
         } else {
-            // If switching from graph mode to another mode, need to redraw
-            const previousLayout = this.getAttribute('data-previous-layout');
-            if (previousLayout === 'graph') {
-                nodes.clear();
-                edges.clear();
-                atomNodeMap.clear();
-                nodeIdCounter = 1;
-
-                // Re-add the root atoms using normal tree view
-                if (rootAtoms && rootAtoms.length > 0) {
-                    rootAtoms.forEach(atom => {
-                        addAtomToGraph(atom, null, 0);
-                    });
-                }
-            }
+            // Re-add all stored atoms using normal tree view
+            redrawAllAtomsInTreeMode();
 
             if (layoutType === 'hierarchical') {
                 options = {
@@ -660,16 +649,12 @@ function refreshGraph() {
     const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
 
     if (layoutType === 'graph') {
-        // Use graph view refresh
-        initializeGraphView();
+        // Use graph view refresh with all atoms
+        initializeGraphViewWithAllAtoms();
     } else {
-        // Re-add the root atoms using normal tree view
-        if (rootAtoms && rootAtoms.length > 0) {
-            rootAtoms.forEach(atom => {
-                addAtomToGraph(atom, null, 0);
-            });
-            network.fit();
-        }
+        // Re-add all atoms using normal tree view
+        redrawAllAtomsInTreeMode();
+        network.fit();
     }
 
     updateStatus('Graph refreshed', 'connected');
@@ -690,6 +675,14 @@ function handleServerResponse(response) {
         if (response.success && response.result) {
             const incomingAtoms = response.result;
             const targetNodeId = pendingIncomingRequest.nodeId;
+
+            // Store all incoming atoms for later use
+            incomingAtoms.forEach(atom => {
+                allStoredAtoms.add({
+                    atom: atom,
+                    parent: pendingIncomingRequest.atom
+                });
+            });
 
             // Check if this is a graph view request
             if (pendingIncomingRequest.isGraphView && typeof processIncomingSetForGraph === 'function') {
@@ -742,6 +735,39 @@ function isMatchingAtom(atom1, atom2) {
 
 // Global variable to track pending incoming set request
 let pendingIncomingRequest = null;
+
+// Redraw all stored atoms in tree mode (hierarchical or network)
+function redrawAllAtomsInTreeMode() {
+    // First add root atoms
+    if (rootAtoms && rootAtoms.length > 0) {
+        rootAtoms.forEach(atom => {
+            addAtomToGraph(atom, null, 0);
+        });
+    }
+
+    // Then add all other stored atoms
+    allStoredAtoms.forEach(atomData => {
+        const atom = atomData.atom;
+        const parentAtom = atomData.parent;
+
+        // Add the atom if not already added
+        const atomKey = atomToKey(atom);
+        if (!atomNodeMap.has(atomKey)) {
+            const nodeId = addAtomToGraph(atom, null, 0);
+        }
+
+        // If there's a parent connection, add it
+        if (parentAtom) {
+            const parentKey = atomToKey(parentAtom);
+            const childKey = atomToKey(atom);
+            if (atomNodeMap.has(parentKey) && atomNodeMap.has(childKey)) {
+                const parentId = atomNodeMap.get(parentKey);
+                const childId = atomNodeMap.get(childKey);
+                addEdgeIfNotExists(parentId, childId);
+            }
+        }
+    });
+}
 
 function fetchIncomingSet(atom, nodeId) {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
