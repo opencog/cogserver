@@ -118,7 +118,7 @@ std::string WebServer::html_stats(void)
 		"<head>\n"
 		"  <meta charset=\"UTF-8\">\n"
 		"  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-		"  <title>CogServer Stats</title>\n"
+		"  <title>CogServer Status</title>\n"
 		"  <style>\n"
 		"    body {\n"
 		"      font-family: monospace;\n"
@@ -156,18 +156,18 @@ std::string WebServer::html_stats(void)
 		"  </style>\n"
 		"</head>\n"
 		"<body>\n"
-		"  <h1>CogServer Statistics</h1>\n"
+		"  <h1>CogServer Status</h1>\n"
 		"  <h2>Loaded Modules</h2>\n"
 		"  <pre>\n";
 	response += _cserver.listModules();
 	response +=
 		"</pre>\n"
-		"  <h2>CogServer Stats</h2>\n"
+		"  <h2>Connection Statistics</h2>\n"
 		"  <pre>\n";
 	response += _cserver.display_web_stats();
 	response +=
 		"</pre>\n"
-		"  <h2>CogServer Stats Legend</h2>\n"
+		"  <h2>Connection Stats Legend</h2>\n"
 		"  <pre>";
 	response += CogServer::stats_legend();
 	response +=
