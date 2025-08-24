@@ -196,6 +196,7 @@ const MIN_UPDATE_INTERVAL = 100; // Minimum ms between graph updates
 const AGGRESSIVE_THROTTLE_INTERVAL = 500; // Much longer delay when cache is full
 let isProcessingBatch = false; // Track if we're in a batch of updates
 let batchUpdateTimer = null; // Timer for batch completion
+let wasNearFull = false; // Track if cache was near full recently
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
@@ -214,14 +215,30 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
-    // Check if cache has pending operations (it might have resumed after cache size increase)
+    // Check cache status
+    const cacheNearFull = atomSpaceCache.isCacheNearFull();
     const hasPendingOps = atomSpaceCache.hasPendingOperations();
+
+    // Detect if cache was previously near full but now has room (cache size increased)
+    // AND we're getting new updates with pending operations
+    const cacheResumedAfterIncrease = wasNearFull && !cacheNearFull && hasPendingOps;
+
+    // Update the tracking variable
+    if (cacheNearFull) {
+        wasNearFull = true;
+    } else if (!hasPendingOps) {
+        // Only clear this flag when operations are complete
+        wasNearFull = false;
+    }
 
     // Check if we should enter or stay in batch processing mode
     // This happens when:
     // 1. Cache is full and atoms are being skipped, OR
-    // 2. Cache has pending operations (including after cache size increase)
-    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0) || hasPendingOps;
+    // 2. We're already in batch mode (to complete the current batch), OR
+    // 3. Cache size was increased and operations resumed
+    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && cacheNearFull) ||
+                        isProcessingBatch ||
+                        cacheResumedAfterIncrease;
 
     if (shouldBatch) {
         // Mark that we're in a batch processing mode
@@ -237,8 +254,8 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
             batchUpdateTimer = null;
         }
 
-        // Use aggressive throttling if cache was recently full
-        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) ?
+        // Use aggressive throttling if cache was recently full or resumed after increase
+        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) || cacheResumedAfterIncrease ?
                              AGGRESSIVE_THROTTLE_INTERVAL : MIN_UPDATE_INTERVAL;
 
         // Set a timer for the batch to complete
