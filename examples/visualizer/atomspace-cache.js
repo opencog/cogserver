@@ -144,42 +144,6 @@ class AtomSpaceCache extends EventTarget {
         return Array.from(this.roots).map(key => this.atoms.get(key)).filter(a => a);
     }
 
-    // Get roots for hierarchical display (atoms with no parent or only EdgeLink/EvaluationLink parents)
-    getHierarchicalRoots() {
-        const hierarchicalRoots = [];
-
-        this.atoms.forEach((atom, atomKey) => {
-            // Skip EdgeLink and EvaluationLink themselves
-            if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') {
-                return;
-            }
-
-            const parents = this.parents.get(atomKey);
-
-            // If no parents, it's a root
-            if (!parents || parents.size === 0) {
-                hierarchicalRoots.push(atom);
-            } else {
-                // Check if all parents are EdgeLink/EvaluationLink
-                let hasNonEdgeParent = false;
-                for (const parentKey of parents) {
-                    const parent = this.atoms.get(parentKey);
-                    if (parent && parent.type !== 'EdgeLink' && parent.type !== 'EvaluationLink') {
-                        hasNonEdgeParent = true;
-                        break;
-                    }
-                }
-
-                // If all parents are EdgeLink/EvaluationLink, treat as root for hierarchical view
-                if (!hasNonEdgeParent) {
-                    hierarchicalRoots.push(atom);
-                }
-            }
-        });
-
-        return hierarchicalRoots;
-    }
-
     // Get atom by key
     getAtom(atomKey) {
         return this.atoms.get(atomKey);

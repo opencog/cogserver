@@ -772,22 +772,18 @@ function isMatchingAtom(atom1, atom2) {
 
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
-    // Get hierarchical roots from cache - atoms with no parent or only EdgeLink/EvaluationLink parents
-    const hierarchicalRoots = atomSpaceCache.getHierarchicalRoots();
+    // Get all root atoms from cache
+    const rootAtoms = atomSpaceCache.getRootAtoms();
 
     // Add each root atom - this will recursively add all children
-    hierarchicalRoots.forEach((atom, index) => {
+    // In hierarchical view, ALL atoms including EdgeLink/EvaluationLink are shown as nodes
+    rootAtoms.forEach((atom, index) => {
         addAtomToGraph(atom, null, 0, index);
     });
 
     // Also add any atoms that might not be connected to any roots
     const allAtoms = atomSpaceCache.getAllAtoms();
     allAtoms.forEach(atom => {
-        // Skip EdgeLink and EvaluationLink themselves
-        if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') {
-            return;
-        }
-
         const atomKey = atomSpaceCache.atomToKey(atom);
         // If not already added, add it as a standalone atom
         if (!atomNodeMap.has(atomKey)) {
