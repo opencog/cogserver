@@ -772,63 +772,74 @@ function isMatchingAtom(atom1, atom2) {
 
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
-    const rootAtoms = atomSpaceCache.getRootAtoms();
+    // Clear existing graph
+    nodes.clear();
+    edges.clear();
+    atomNodeMap.clear();
+    nodeIdCounter = 1;
 
-    // Add root atoms
-    rootAtoms.forEach((atom, index) => {
-        if (atom.type !== 'EdgeLink' && atom.type !== 'EvaluationLink') {
-            addAtomToGraph(atom, null, 0, index);
-        }
-    });
-
-    // Process all atoms and add them with proper hierarchy
+    // Get all atoms from cache
     const allAtoms = atomSpaceCache.getAllAtoms();
     const processed = new Set();
 
-    // Add atoms with limited depth
+    // First pass: Add all atoms except EdgeLink/EvaluationLink patterns
     allAtoms.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
         if (processed.has(atomKey)) return;
 
-        // Skip EdgeLink components in hierarchical view
-        if (atom.type === 'EdgeLink' ||
-            atom.type === 'EvaluationLink' ||
-            atom.type === 'BondNode' ||
-            atom.type === 'PredicateNode') {
+        // Skip only EdgeLink and EvaluationLink themselves
+        // But show everything else including ListLinks, BondNodes, PredicateNodes
+        if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') {
+            // Don't display EdgeLink/EvaluationLink in hierarchical view
+            // They are represented as edges in graph view only
             return;
         }
 
-        // Skip ListLinks that are part of EdgeLink patterns
-        if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-            const bothNodes = atom.outgoing.every(child =>
-                child && typeof child === 'object' && child.type && child.type.endsWith('Node')
-            );
-            if (bothNodes) return;
-        }
+        processed.add(atomKey);
 
-        // Add atom if not already added
-        if (!atomNodeMap.has(atomKey)) {
-            const parents = atomSpaceCache.getParents(atom);
-            let parentId = null;
-            let depth = 1;
+        // Determine parent and depth
+        const parents = atomSpaceCache.getParents(atom);
+        let parentId = null;
+        let depth = 0;
 
-            // Find first valid parent
-            for (const parent of parents) {
+        // Find first valid parent that's not an EdgeLink/EvaluationLink
+        for (const parent of parents) {
+            if (parent.type !== 'EdgeLink' && parent.type !== 'EvaluationLink') {
                 const parentKey = atomSpaceCache.atomToKey(parent);
                 if (atomNodeMap.has(parentKey)) {
                     parentId = atomNodeMap.get(parentKey);
                     const parentNode = nodes.get(parentId);
                     if (parentNode) {
-                        depth = Math.min(parentNode.level + 1, 2); // Limit depth
+                        depth = parentNode.level + 1;
                     }
                     break;
                 }
             }
-
-            addAtomToGraph(atom, parentId, depth, 0);
         }
 
-        processed.add(atomKey);
+        // Add the atom to the graph
+        addAtomToGraph(atom, parentId, depth, 0);
+    });
+
+    // Second pass: Ensure all parent-child relationships are represented
+    allAtoms.forEach(atom => {
+        if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') return;
+
+        const atomKey = atomSpaceCache.atomToKey(atom);
+        const nodeId = atomNodeMap.get(atomKey);
+        if (!nodeId) return;
+
+        // Add edges for all parent relationships
+        const parents = atomSpaceCache.getParents(atom);
+        parents.forEach(parent => {
+            if (parent.type !== 'EdgeLink' && parent.type !== 'EvaluationLink') {
+                const parentKey = atomSpaceCache.atomToKey(parent);
+                const parentNodeId = atomNodeMap.get(parentKey);
+                if (parentNodeId) {
+                    addEdgeIfNotExists(parentNodeId, nodeId);
+                }
+            }
+        });
     });
 }
 
