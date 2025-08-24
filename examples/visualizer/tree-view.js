@@ -589,15 +589,14 @@ function setupEventHandlers() {
                     layout: {
                         hierarchical: {
                             enabled: true,
-                            direction: 'UD',  // Up-Down: root at top, nodes at bottom
-                            sortMethod: 'directed',  // Use directed to respect parent-child relationships
-                            levelSeparation: 100,  // Reduced for more compact layout
-                            nodeSpacing: 80,  // Reduced for denser packing
-                            treeSpacing: 150,  // Reduced tree spacing
-                            blockShifting: true,  // Allow shifting to compact the layout
-                            edgeMinimization: true,  // Minimize edge crossings
-                            parentCentralization: true,  // Center parents over children
-                            shakeTowards: 'leaves'  // Compress towards leaves for deep trees
+                            direction: 'LR',  // Left-Right layout for flat structures
+                            sortMethod: 'hubsize',
+                            levelSeparation: 150,
+                            nodeSpacing: 100,
+                            treeSpacing: 200,
+                            blockShifting: true,
+                            edgeMinimization: true,
+                            parentCentralization: false
                         }
                     }
                 };
@@ -754,18 +753,44 @@ let pendingIncomingRequest = null;
 function redrawAllAtomsInTreeMode() {
     const processedAtoms = new Set();
 
-    // First add root atoms at depth 0
+    // For hierarchical view with EdgeLinks, we need a different approach
+    // Only show nodes that aren't EdgeLinks, BondNodes, or the ListLinks used in EdgeLinks
+
+    // First, collect all nodes (not links or EdgeLink components)
+    const nodesToShow = new Set();
+
+    // Add root atoms that are nodes
     if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach((atom, index) => {
-            const atomKey = atomToKey(atom);
-            processedAtoms.add(atomKey);
-            addAtomToGraph(atom, null, 0, index);
-            // Process children recursively
-            processAtomChildren(atom, 1, processedAtoms);
+        rootAtoms.forEach(atom => {
+            if (atom.type && atom.type.endsWith('Node') &&
+                atom.type !== 'BondNode' && atom.type !== 'PredicateNode') {
+                nodesToShow.add(atom);
+            }
         });
     }
 
-    // Then add any remaining stored atoms that weren't processed
+    // Add nodes from stored atoms
+    allStoredAtoms.forEach(atomData => {
+        const atom = atomData.atom;
+        // Only add actual nodes (not links, not BondNode/PredicateNode)
+        if (atom.type && atom.type.endsWith('Node') &&
+            atom.type !== 'BondNode' && atom.type !== 'PredicateNode') {
+            nodesToShow.add(atom);
+        }
+    });
+
+    // Now add all collected nodes at depth 0 (flat layout)
+    // Since your data is just EdgeLinks connecting nodes, there's no real hierarchy
+    let index = 0;
+    nodesToShow.forEach(atom => {
+        const atomKey = atomToKey(atom);
+        if (!processedAtoms.has(atomKey)) {
+            processedAtoms.add(atomKey);
+            addAtomToGraph(atom, null, 0, index++);
+        }
+    });
+
+    // Add any remaining non-EdgeLink atoms that might exist
     allStoredAtoms.forEach(atomData => {
         const atom = atomData.atom;
         const atomKey = atomToKey(atom);
@@ -775,38 +800,17 @@ function redrawAllAtomsInTreeMode() {
             return;
         }
 
-        // Skip EdgeLinks and EvaluationLinks in tree mode
-        if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') {
+        // Skip EdgeLinks, EvaluationLinks, and their components
+        if (atom.type === 'EdgeLink' ||
+            atom.type === 'EvaluationLink' ||
+            atom.type === 'BondNode' ||
+            atom.type === 'PredicateNode' ||
+            (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2)) {
             return;
         }
 
-        const parentAtom = atomData.parent;
-
-        // Try to determine proper depth
-        let depth = 1;
-        let parentId = null;
-        const maxDepth = 10;  // Limit depth to prevent extremely tall layouts
-
-        if (parentAtom) {
-            // Skip ListLink parents (they come from graph view EdgeLink processing)
-            if (parentAtom.type === 'ListLink') {
-                // These nodes were from EdgeLinks - add them as orphans at depth 1
-                depth = 1;
-                parentId = null;
-            } else {
-                const parentKey = atomToKey(parentAtom);
-                if (atomNodeMap.has(parentKey)) {
-                    parentId = atomNodeMap.get(parentKey);
-                    const parentNode = nodes.get(parentId);
-                    if (parentNode) {
-                        depth = Math.min(parentNode.level + 1, maxDepth);
-                    }
-                }
-            }
-        }
-
-        // Add the atom with proper depth
-        const nodeId = addAtomToGraph(atom, parentId, depth);
+        // Add other atoms at depth 1
+        addAtomToGraph(atom, null, 1, 0);
         processedAtoms.add(atomKey);
     });
 }
