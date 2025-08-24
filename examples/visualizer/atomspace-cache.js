@@ -377,7 +377,8 @@ class AtomSpaceCache extends EventTarget {
 
     // Get atoms for graph view (only nodes and EdgeLink relationships)
     getAtomsForGraphView() {
-        const nodes = [];
+        // Use Map to track nodes efficiently (key -> node)
+        const nodeMap = new Map();
         const edges = [];
 
         this.atoms.forEach(atom => {
@@ -413,24 +414,21 @@ class AtomSpaceCache extends EventTarget {
                             type: atom.type
                         });
 
-                        // Add nodes if not already present
-                        if (!nodes.some(n => this.atomToKey(n) === this.atomToKey(fromNode))) {
-                            nodes.push(fromNode);
-                        }
-                        if (!nodes.some(n => this.atomToKey(n) === this.atomToKey(toNode))) {
-                            nodes.push(toNode);
-                        }
+                        // Add nodes to map (O(1) operation)
+                        nodeMap.set(fromKey, fromNode);
+                        nodeMap.set(toKey, toNode);
                     }
                 }
             } else if (atom.type && atom.type.endsWith('Node') &&
                        atom.type !== 'BondNode' && atom.type !== 'PredicateNode') {
-                // Add standalone nodes
-                if (!nodes.some(n => this.atomToKey(n) === this.atomToKey(atom))) {
-                    nodes.push(atom);
-                }
+                // Add standalone nodes (O(1) operation)
+                const atomKey = this.atomToKey(atom);
+                nodeMap.set(atomKey, atom);
             }
         });
 
+        // Convert map values to array for return
+        const nodes = Array.from(nodeMap.values());
         return { nodes, edges };
     }
 
