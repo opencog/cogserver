@@ -235,8 +235,8 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
     const atomKey = atomToKey(atom);
 
     // Check if we've already processed this atom
-    if (atomNodeMap.has(atomKey)) {
-        const existingNodeId = atomNodeMap.get(atomKey);
+    if (atomVertexMap.has(atomKey)) {
+        const existingVertexId = atomVertexMap.get(atomKey);
 
         // If we have a parent, we need to ensure proper hierarchy
         if (parentId !== null) {
@@ -250,7 +250,7 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
                     // Place it one level below the parent
                     const newLevel = parentVertex.level + 1;
                     vertices.update({
-                        id: existingNodeId,
+                        id: existingVertexId,
                         level: newLevel
                     });
 
