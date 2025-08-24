@@ -252,7 +252,7 @@ function handleGraphViewCacheUpdate(parent, atoms) {
                 pendingListLinkFetches = 0;  // Reset counter
                 initializeGraphViewWithAtomCache();
             }
-            // Always end operation when timeout completes
+            // End operation when timeout completes
             if (typeof endOperation === 'function') {
                 endOperation();
             }
@@ -263,9 +263,11 @@ function handleGraphViewCacheUpdate(parent, atoms) {
         if (typeof operationCancelled === 'undefined' || !operationCancelled) {
             initializeGraphViewWithAtomCache();
         }
-        // End operation only if there are no more pending operations
-        // This handles the case where the initial atom had no ListLinks
-        if (typeof endOperation === 'function' && !atomSpaceCache.hasPendingOperations()) {
+        // End operation if this is the initial fetch with no ListLinks to follow
+        // The cache's operations-complete event doesn't know about our double-fetch logic
+        if (typeof endOperation === 'function' &&
+            pendingListLinkFetches === 0 &&
+            !atomSpaceCache.hasPendingOperations()) {
             endOperation();
         }
     }

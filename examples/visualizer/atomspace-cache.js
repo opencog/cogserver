@@ -513,6 +513,10 @@ class AtomSpaceCache extends EventTarget {
             }
         });
 
+        // Clear the pending request BEFORE dispatching event
+        // This ensures hasPendingOperations() returns correct value in event handlers
+        this.pendingRegularRequest = null;
+
         // Notify that cache has been updated
         this.dispatchEvent(new CustomEvent('update', {
             detail: {
@@ -522,8 +526,12 @@ class AtomSpaceCache extends EventTarget {
             }
         }));
 
-        // Clear the pending request
-        this.pendingRegularRequest = null;
+        // If there are no more pending operations, dispatch completion event
+        if (!this.hasPendingOperations()) {
+            this.dispatchEvent(new CustomEvent('update', {
+                detail: { type: 'operations-complete' }
+            }));
+        }
     }
 
     // Cancel all pending operations

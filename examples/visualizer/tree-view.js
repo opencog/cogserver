@@ -559,14 +559,10 @@ function setupEventHandlers() {
                     network.fit();
                     updateStatus(`Added ${atoms.length} incoming links`, 'connected');
 
-                    // End operation if there are no more pending operations
-                    // Otherwise wait for listlinks-complete event
-                    if (!atomSpaceCache.hasPendingOperations()) {
-                        endOperation();
-                    }
+                    // The operations-complete event will handle calling endOperation
                 }
             }
-        } else if (updateType === 'listlinks-complete') {
+        } else if (updateType === 'listlinks-complete' || updateType === 'operations-complete') {
             endOperation();
             updateStatus('Ready', 'connected');
         }
