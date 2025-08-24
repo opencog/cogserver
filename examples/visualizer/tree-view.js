@@ -5,11 +5,8 @@
 let network = null;
 let nodes = null;
 let edges = null;
-let socket = null;
 let rootAtoms = [];
 let serverUrl = null;
-let currentDepth = 2;
-let processedAtoms = new Set();
 let atomNodeMap = new Map();
 let nodeIdCounter = 1;
 
@@ -26,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const atom = JSON.parse(decodeURIComponent(atomParam));
             rootAtoms = [atom];
+            // Add to atom cache
+            atomSpaceCache.clear();
+            atomSpaceCache.addAtom(atom);
             console.log('Root atom:', atom);
         } catch (e) {
             console.error('Failed to parse atom data:', e);
@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (atomsParam) {
         try {
             rootAtoms = JSON.parse(decodeURIComponent(atomsParam));
+            // Add to atom cache
+            atomSpaceCache.clear();
+            rootAtoms.forEach(atom => atomSpaceCache.addAtom(atom));
             console.log('Root atoms:', rootAtoms);
         } catch (e) {
             console.error('Failed to parse atoms data:', e);
@@ -155,7 +158,11 @@ function initializeGraph() {
             const nodeId = params.nodes[0];
             const node = nodes.get(nodeId);
             if (node && node.atom) {
-                fetchIncomingSet(node.atom, nodeId);
+                // Check if we're in graph view mode
+                const layoutSelect = document.getElementById('layoutSelect');
+                const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+                // Fetch incoming set via cache
+                atomSpaceCache.fetchIncomingSet(node.atom);
             }
         }
         // Handle edge clicks
@@ -200,55 +207,8 @@ function connectToServer() {
     console.log('Attempting to connect to:', jsonUrl);
     updateStatus('Connecting to server...', 'loading');
 
-    try {
-        socket = new WebSocket(jsonUrl);
-    } catch (e) {
-        console.error('Failed to create WebSocket:', e);
-        updateStatus('Failed to create connection', 'error');
-        return;
-    }
-
-    socket.onopen = function() {
-        console.log('WebSocket connected');
-        updateStatus('Connected to server', 'connected');
-    };
-
-    socket.onmessage = function(event) {
-        try {
-            const response = JSON.parse(event.data);
-            console.log('Raw server response:', response);
-
-            // Handle wrapped response format {success: true/false, result: ...}
-            if (response.hasOwnProperty('success')) {
-                handleServerResponse(response);
-            } else {
-                // Handle unwrapped response for backward compatibility
-                handleServerResponse({success: true, result: response});
-            }
-        } catch (e) {
-            console.error('Failed to parse server response:', e);
-            console.error('Raw data:', event.data);
-        }
-    };
-
-    socket.onerror = function(error) {
-        console.error('WebSocket error:', error);
-        updateStatus('Connection error', 'error');
-    };
-
-    socket.onclose = function(event) {
-        console.log('WebSocket disconnected:', event.code, event.reason);
-        updateStatus('Disconnected from server', 'error');
-    };
-
-    // Add a timeout to detect if connection fails
-    setTimeout(function() {
-        if (socket.readyState === WebSocket.CONNECTING) {
-            console.warn('Connection timeout - still connecting after 5 seconds');
-            updateStatus('Connection timeout', 'error');
-            socket.close();
-        }
-    }, 5000);
+    // Connect via atom cache
+    atomSpaceCache.connect(jsonUrl);
 }
 
 function addAtomToGraph(atom, parentId, depth, order = 0) {
@@ -315,8 +275,8 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
         });
     }
 
-    // Process outgoing links if this is a link and we haven't reached max depth
-    if (atom.outgoing && atom.outgoing.length > 0 && depth < currentDepth) {
+    // Process outgoing links if this is a link (no depth limit)
+    if (atom.outgoing && atom.outgoing.length > 0) {
         atom.outgoing.forEach((outgoing, index) => {
             if (typeof outgoing === 'object' && outgoing !== null) {
                 addAtomToGraph(outgoing, nodeId, depth + 1, index);
@@ -515,13 +475,59 @@ function getNodeColor(type) {
 
 
 function setupEventHandlers() {
+    // Set up cache event listeners
+    atomSpaceCache.addEventListener('connection', function(event) {
+        const status = event.detail.status;
+        const message = event.detail.message;
+        if (status === 'connected') {
+            updateStatus(message, 'connected');
+        } else if (status === 'disconnected' || status === 'error') {
+            updateStatus(message, 'error');
+        }
+    });
+
+    atomSpaceCache.addEventListener('update', function(event) {
+        const updateType = event.detail.type;
+
+        if (updateType === 'incoming-set') {
+            const parent = event.detail.parent;
+            const atoms = event.detail.atoms;
+
+            // Check current layout mode
+            const layoutSelect = document.getElementById('layoutSelect');
+            const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+            if (layoutType === 'graph') {
+                // For graph view, delegate to graph-view.js handler
+                if (typeof handleGraphViewCacheUpdate === 'function') {
+                    handleGraphViewCacheUpdate(parent, atoms);
+                }
+            } else {
+                // For hierarchical/network view, rebuild the entire graph with new atoms
+                // This ensures proper bottom-up level calculation
+                rebuildFromAtomCache();
+
+                // Refit the network to show the new nodes
+                network.fit();
+                updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+            }
+        } else if (updateType === 'listlinks-complete') {
+            updateStatus('Ready', 'connected');
+        }
+    });
+
+    atomSpaceCache.addEventListener('error', function(event) {
+        updateStatus(event.detail.message, 'error');
+    });
+
     // Expand button
     document.getElementById('expandBtn').addEventListener('click', function() {
         const selectedNodes = network.getSelectedNodes();
         if (selectedNodes.length > 0) {
             const node = nodes.get(selectedNodes[0]);
             if (node && node.atom) {
-                fetchIncomingSet(node.atom, selectedNodes[0]);
+                // Fetch via cache
+                atomSpaceCache.fetchIncomingSet(node.atom);
             }
         } else {
             updateStatus('Select a node to expand', 'error');
@@ -533,79 +539,161 @@ function setupEventHandlers() {
         network.fit();
     });
 
-    // Depth input
-    document.getElementById('depthInput').addEventListener('change', function(e) {
-        currentDepth = parseInt(e.target.value);
-        refreshGraph();
-    });
 
     // Layout select
     document.getElementById('layoutSelect').addEventListener('change', function(e) {
         const layoutType = e.target.value;
-        let options = {};
+        const previousLayout = this.getAttribute('data-previous-layout');
 
-        if (layoutType === 'hierarchical') {
-            options = {
-                edges: {
-                    smooth: {
-                        enabled: false  // Straight lines
-                    }
-                },
-                physics: {
-                    enabled: true,
-                    solver: 'hierarchicalRepulsion',
-                    hierarchicalRepulsion: {
-                        nodeDistance: 150,
-                        centralGravity: 0.0,
-                        springLength: 100,
-                        springConstant: 0.01,
-                        damping: 0.09
-                    }
-                },
-                layout: {
-                    hierarchical: {
-                        enabled: true,
-                        direction: 'UD',  // Up-Down: root at top, nodes at bottom
-                        sortMethod: 'hubsize',  // This preserves insertion order better
-                        levelSeparation: 150,
-                        nodeSpacing: 100,
-                        treeSpacing: 200,
-                        blockShifting: false,  // Prevent reordering of siblings
-                        edgeMinimization: false  // Don't minimize edge crossings to preserve order
-                    }
-                }
-            };
-        } else if (layoutType === 'graph') {
-            // Use graph view mode with special edge handling
-            initializeGraphView();
-            options = getGraphViewOptions();
-        } else {
-            options = {
-                edges: {
-                    smooth: {
-                        enabled: true,  // Allow curves in network mode
-                        type: 'dynamic'
-                    }
-                },
-                physics: {
-                    enabled: true,
-                    solver: 'forceAtlas2Based',
-                    forceAtlas2Based: {
-                        gravitationalConstant: -50,
-                        centralGravity: 0.01,
-                        springLength: 100,
-                        springConstant: 0.08
-                    }
-                },
-                layout: {
-                    hierarchical: {
-                        enabled: false
-                    }
-                }
-            };
+        // Destroy and recreate network to ensure clean state
+        if (network) {
+            network.destroy();
+            network = null;
         }
 
-        network.setOptions(options);
+        // Clear all data structures
+        nodes = new vis.DataSet();
+        edges = new vis.DataSet();
+        atomNodeMap.clear();
+        nodeIdCounter = 1;
+
+        // Recreate network with fresh options
+        const container = document.getElementById('mynetwork');
+        let options = {};
+
+        if (layoutType === 'graph') {
+            // Use graph view mode with special edge handling
+            initializeGraphViewWithAtomCache();
+            options = getGraphViewOptions();
+        } else {
+            // Rebuild from cache for hierarchical/network view
+            rebuildFromAtomCache();
+
+            if (layoutType === 'hierarchical') {
+                options = {
+                    nodes: {
+                        shape: 'box',
+                        font: {
+                            size: 14,
+                            face: 'monospace'
+                        },
+                        margin: 5,
+                        widthConstraint: {
+                            maximum: 150,
+                            minimum: 40
+                        }
+                    },
+                    edges: {
+                        smooth: {
+                            enabled: false  // Straight lines
+                        },
+                        arrows: {
+                            to: {
+                                enabled: true,
+                                scaleFactor: 0.5
+                            }
+                        }
+                    },
+                    physics: {
+                        enabled: true,
+                        solver: 'hierarchicalRepulsion',
+                        hierarchicalRepulsion: {
+                            nodeDistance: 150,
+                            centralGravity: 0.0,
+                            springLength: 100,
+                            springConstant: 0.01,
+                            damping: 0.09
+                        },
+                        stabilization: {
+                            enabled: true,
+                            iterations: 1000,
+                            updateInterval: 100
+                        }
+                    },
+                    layout: {
+                        hierarchical: {
+                            enabled: true,
+                            direction: 'UD',  // Up-Down: root at top, nodes at bottom
+                            sortMethod: 'hubsize',
+                            levelSeparation: 150,
+                            nodeSpacing: 100,
+                            treeSpacing: 200,
+                            blockShifting: true,
+                            edgeMinimization: true,
+                            parentCentralization: true
+                        }
+                    }
+                };
+            } else {
+                // Network view
+                options = {
+                    nodes: {
+                        shape: 'box',
+                        font: {
+                            size: 14,
+                            face: 'monospace'
+                        },
+                        margin: 5,
+                        widthConstraint: {
+                            maximum: 150,
+                            minimum: 40
+                        }
+                    },
+                    edges: {
+                        smooth: {
+                            enabled: true,  // Allow curves in network mode
+                            type: 'dynamic'
+                        },
+                        arrows: {
+                            to: {
+                                enabled: true,
+                                scaleFactor: 0.5
+                            }
+                        }
+                    },
+                    physics: {
+                        enabled: true,
+                        solver: 'forceAtlas2Based',
+                        forceAtlas2Based: {
+                            gravitationalConstant: -50,
+                            centralGravity: 0.01,
+                            springLength: 100,
+                            springConstant: 0.08
+                        }
+                    },
+                    layout: {
+                        hierarchical: {
+                            enabled: false
+                        }
+                    }
+                };
+            }
+        }
+
+        // Create new network with the appropriate options
+        const data = { nodes: nodes, edges: edges };
+        network = new vis.Network(container, data, options);
+
+        // Re-attach event handlers
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const node = nodes.get(nodeId);
+                if (node && node.atom) {
+                    // Fetch via cache
+                    atomSpaceCache.fetchIncomingSet(node.atom);
+                }
+            } else if (params.edges.length > 0) {
+                const edgeId = params.edges[0];
+                removeIncomingSubgraph(edgeId);
+            }
+        });
+
+        this.setAttribute('data-previous-layout', layoutType);
+
+        // Stabilize and fit
+        network.stabilize();
+        network.fit();
     });
 
     // Refresh button
@@ -626,16 +714,12 @@ function refreshGraph() {
     const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
 
     if (layoutType === 'graph') {
-        // Use graph view refresh
-        initializeGraphView();
+        // Use graph view with atom cache
+        initializeGraphViewWithAtomCache();
     } else {
-        // Re-add the root atoms using normal tree view
-        if (rootAtoms && rootAtoms.length > 0) {
-            rootAtoms.forEach(atom => {
-                addAtomToGraph(atom, null, 0);
-            });
-            network.fit();
-        }
+        // Rebuild from cache for hierarchical/network view
+        rebuildFromAtomCache();
+        network.fit();
     }
 
     updateStatus('Graph refreshed', 'connected');
@@ -647,43 +731,7 @@ function updateStatus(message, className) {
     statusElement.className = className || '';
 }
 
-function handleServerResponse(response) {
-    // Handle responses from the server
-    console.log('Server response:', response);
-
-    // Check if this is a response to getIncoming
-    if (pendingIncomingRequest) {
-        if (response.success && response.result) {
-            const incomingAtoms = response.result;
-            const targetNodeId = pendingIncomingRequest.nodeId;
-
-            // Add each incoming atom to the graph
-            incomingAtoms.forEach(atom => {
-                // Add the incoming atom to the graph
-                const incomingNodeId = addAtomToGraph(atom, null, 0);
-
-                // Find which outgoing atom matches our target and connect to it
-                if (atom.outgoing) {
-                    atom.outgoing.forEach((outgoing, index) => {
-                        // Check if this outgoing matches our target atom
-                        if (isMatchingAtom(outgoing, pendingIncomingRequest.atom)) {
-                            // Connect the incoming atom to the existing node
-                            addEdgeIfNotExists(incomingNodeId, targetNodeId);
-                        }
-                    });
-                }
-            });
-
-            // Refit the network to show the new nodes
-            network.fit();
-            updateStatus(`Added ${incomingAtoms.length} incoming links`, 'connected');
-        } else {
-            updateStatus('No incoming links found', 'connected');
-        }
-
-        pendingIncomingRequest = null;
-    }
-}
+// Removed handleServerResponse - now handled via cache events
 
 // Helper function to check if two atoms match
 function isMatchingAtom(atom1, atom2) {
@@ -700,37 +748,196 @@ function isMatchingAtom(atom1, atom2) {
     return atomToKey(atom1) === atomToKey(atom2);
 }
 
-// Global variable to track pending incoming set request
-let pendingIncomingRequest = null;
+// Removed pendingIncomingRequest - now handled by cache
 
-function fetchIncomingSet(atom, nodeId) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        updateStatus('Not connected to server', 'error');
-        return;
+// Calculate the maximum depth of an atom (distance to its deepest leaf)
+function calculateMaxDepth(atom, depthCache = new Map()) {
+    const atomKey = atomSpaceCache.atomToKey(atom);
+
+    // Check cache
+    if (depthCache.has(atomKey)) {
+        return depthCache.get(atomKey);
     }
 
-    updateStatus('Fetching incoming links...', 'loading');
+    let maxDepth = 0;
 
-    // Construct the command to get incoming set
-    let atomSpec;
-    if (atom.name !== undefined) {
-        // It's a node - escape the name properly for JSON
-        const escapedName = JSON.stringify(atom.name);
-        atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
-    } else {
-        // It's a link or complex atom - use full JSON serialization
-        atomSpec = JSON.stringify(atom);
+    // For Links, check their outgoing atoms
+    if (atom.outgoing && atom.outgoing.length > 0) {
+        // Has children, so depth is 1 + max depth of children
+        atom.outgoing.forEach(child => {
+            if (typeof child === 'object' && child !== null) {
+                const childDepth = calculateMaxDepth(child, depthCache);
+                maxDepth = Math.max(maxDepth, childDepth + 1);
+            }
+        });
     }
+    // For Nodes or empty Links, depth is 0 (they are leaves)
 
-    const command = `AtomSpace.getIncoming(${atomSpec})`;
-    console.log('Getting incoming set for atom:', command);
-
-    // Store request info for when we receive the response
-    pendingIncomingRequest = {
-        atom: atom,
-        nodeId: nodeId
-    };
-
-    // Send the command
-    socket.send(command);
+    depthCache.set(atomKey, maxDepth);
+    return maxDepth;
 }
+
+// Rebuild visualization from atom cache for hierarchical/network view
+function rebuildFromAtomCache() {
+    // Clear existing
+    nodes.clear();
+    edges.clear();
+    atomNodeMap.clear();
+    nodeIdCounter = 1;
+
+    // Calculate depths for all atoms
+    const depthCache = new Map();
+    const allAtoms = atomSpaceCache.getAllAtoms();
+    let maxDepthInGraph = 0;
+
+    // First pass: calculate max depth for each atom
+    allAtoms.forEach(atom => {
+        const depth = calculateMaxDepth(atom, depthCache);
+        maxDepthInGraph = Math.max(maxDepthInGraph, depth);
+    });
+
+    // Second pass: add all atoms with inverted levels (bottom-up)
+    allAtoms.forEach(atom => {
+        const atomKey = atomSpaceCache.atomToKey(atom);
+        if (atomNodeMap.has(atomKey)) {
+            return; // Already added
+        }
+
+        const maxDepth = depthCache.get(atomKey);
+        // Invert the level: leaves at bottom (high level number), roots at top (level 0)
+        const level = maxDepthInGraph - maxDepth;
+
+        // Create node
+        const nodeId = nodeIdCounter++;
+        const nodeLabel = createCompactLabel(atom);
+        const nodeColor = getNodeColor(atom.type);
+
+        nodes.add({
+            id: nodeId,
+            label: nodeLabel,
+            color: nodeColor,
+            atom: atom,
+            level: level,
+            title: atomToSExpression(atom)
+        });
+
+        atomNodeMap.set(atomKey, nodeId);
+    });
+
+    // Third pass: add edges for parent-child relationships
+    allAtoms.forEach(atom => {
+        const atomKey = atomSpaceCache.atomToKey(atom);
+        const parentNodeId = atomNodeMap.get(atomKey);
+
+        if (parentNodeId && atom.outgoing && atom.outgoing.length > 0) {
+            atom.outgoing.forEach(child => {
+                if (typeof child === 'object' && child !== null) {
+                    const childKey = atomSpaceCache.atomToKey(child);
+                    const childNodeId = atomNodeMap.get(childKey);
+
+                    if (childNodeId) {
+                        edges.add({
+                            from: parentNodeId,
+                            to: childNodeId,
+                            arrows: {
+                                to: {
+                                    enabled: true,
+                                    scaleFactor: 0.5
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
+}
+
+// Initialize graph view from atom cache
+function initializeGraphViewWithAtomCache() {
+    const graphData = atomSpaceCache.getAtomsForGraphView();
+
+    // Add all nodes
+    graphData.nodes.forEach((atom, index) => {
+        addNodeToGraph(atom);
+    });
+
+    // Add all edges
+    graphData.edges.forEach(edge => {
+        const fromKey = atomSpaceCache.atomToKey(edge.from);
+        const toKey = atomSpaceCache.atomToKey(edge.to);
+
+        if (atomNodeMap.has(fromKey) && atomNodeMap.has(toKey)) {
+            const fromId = atomNodeMap.get(fromKey);
+            const toId = atomNodeMap.get(toKey);
+            addLabeledEdge(fromId, toId, edge.label, edge.type);
+        }
+    });
+}
+
+// Old function for compatibility - will be removed
+function redrawAllAtomsInTreeMode() {
+    const processedAtoms = new Set();
+    const depthMap = new Map(); // Track depth of each atom to prevent inconsistencies
+
+    // First pass: Add root atoms and establish base hierarchy
+    if (rootAtoms && rootAtoms.length > 0) {
+        rootAtoms.forEach((atom, index) => {
+            const atomKey = atomToKey(atom);
+            if (!processedAtoms.has(atomKey)) {
+                processedAtoms.add(atomKey);
+                depthMap.set(atomKey, 0);
+                // Add root at depth 0
+                const nodeId = addAtomToGraph(atom, null, 0, index);
+                // Process only immediate children, not recursive
+                if (atom.outgoing && atom.outgoing.length > 0) {
+                    atom.outgoing.forEach((child, childIndex) => {
+                        if (typeof child === 'object' && child !== null) {
+                            const childKey = atomToKey(child);
+                            if (!processedAtoms.has(childKey)) {
+                                processedAtoms.add(childKey);
+                                depthMap.set(childKey, 1);
+                                const childId = addAtomToGraph(child, nodeId, 1, childIndex);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    // Second pass: Add remaining atoms from stored collection
+    allStoredAtoms.forEach(atomData => {
+        const atom = atomData.atom;
+        const atomKey = atomToKey(atom);
+
+        // Skip if already processed
+        if (processedAtoms.has(atomKey)) {
+            return;
+        }
+
+        // Determine appropriate depth
+        let depth = 1;
+        let parentId = null;
+
+        // Check if this atom has a valid parent in the graph
+        const parentAtom = atomData.parent;
+        if (parentAtom && parentAtom.type !== 'ListLink') {
+            // Don't use ListLink as parent (it comes from graph view EdgeLink processing)
+            const parentKey = atomToKey(parentAtom);
+            if (atomNodeMap.has(parentKey)) {
+                parentId = atomNodeMap.get(parentKey);
+                const parentDepth = depthMap.get(parentKey) || 0;
+                depth = Math.min(parentDepth + 1, 2); // Max depth of 2 to prevent tall layouts
+            }
+        }
+
+        // Add the atom
+        processedAtoms.add(atomKey);
+        depthMap.set(atomKey, depth);
+        addAtomToGraph(atom, parentId, depth, 0);
+    });
+}
+
+
+// Removed fetchIncomingSet - now handled by atomspace-cache
