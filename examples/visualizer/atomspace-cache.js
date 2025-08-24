@@ -482,12 +482,26 @@ class AtomSpaceCache extends EventTarget {
             return;
         }
 
-        const parentAtom = this.currentListLinkRequest.atom;
+        const targetAtom = this.currentListLinkRequest.atom;
 
         // Add all atoms from the response
+        // These atoms are in the incoming set of targetAtom, meaning they contain/reference it
+        // So THEY are parents of targetAtom, not the other way around
         response.forEach(atom => {
             if (atom && typeof atom === 'object') {
-                this.addAtom(atom, parentAtom);
+                // First add the atom to cache
+                this.addAtom(atom, null);
+                // Then mark it as a parent of the target atom
+                const atomKey = this.atomToKey(atom);
+                const targetKey = this.atomToKey(targetAtom);
+                if (!this.parents.has(targetKey)) {
+                    this.parents.set(targetKey, new Set());
+                }
+                this.parents.get(targetKey).add(atomKey);
+                if (!this.children.has(atomKey)) {
+                    this.children.set(atomKey, new Set());
+                }
+                this.children.get(atomKey).add(targetKey);
             }
         });
 
@@ -497,7 +511,7 @@ class AtomSpaceCache extends EventTarget {
             this.dispatchEvent(new CustomEvent('update', {
                 detail: {
                     type: 'incoming-set',
-                    parent: parentAtom,
+                    parent: targetAtom,
                     atoms: response
                 }
             }));
@@ -512,12 +526,26 @@ class AtomSpaceCache extends EventTarget {
     processRegularAtomResponse(response) {
         if (!this.pendingRegularRequest) return;
 
-        const parentAtom = this.pendingRegularRequest.atom;
+        const targetAtom = this.pendingRegularRequest.atom;
 
         // Add all atoms from the response
+        // These atoms are in the incoming set of targetAtom, meaning they contain/reference it
+        // So THEY are parents of targetAtom, not the other way around
         response.forEach(atom => {
             if (atom && typeof atom === 'object') {
-                this.addAtom(atom, parentAtom);
+                // First add the atom to cache
+                this.addAtom(atom, null);
+                // Then mark it as a parent of the target atom
+                const atomKey = this.atomToKey(atom);
+                const targetKey = this.atomToKey(targetAtom);
+                if (!this.parents.has(targetKey)) {
+                    this.parents.set(targetKey, new Set());
+                }
+                this.parents.get(targetKey).add(atomKey);
+                if (!this.children.has(atomKey)) {
+                    this.children.set(atomKey, new Set());
+                }
+                this.children.get(atomKey).add(targetKey);
             }
         });
 
@@ -529,7 +557,7 @@ class AtomSpaceCache extends EventTarget {
         this.dispatchEvent(new CustomEvent('update', {
             detail: {
                 type: 'incoming-set',
-                parent: parentAtom,
+                parent: targetAtom,
                 atoms: response
             }
         }));
