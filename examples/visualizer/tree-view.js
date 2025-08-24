@@ -585,18 +585,24 @@ function setupEventHandlers() {
                             springLength: 100,
                             springConstant: 0.01,
                             damping: 0.09
+                        },
+                        stabilization: {
+                            enabled: true,
+                            iterations: 1000,
+                            updateInterval: 100
                         }
                     },
                     layout: {
                         hierarchical: {
                             enabled: true,
                             direction: 'UD',  // Up-Down: root at top, nodes at bottom
-                            sortMethod: 'hubsize',  // This preserves insertion order better
+                            sortMethod: 'directed',  // Use directed to respect parent-child relationships
                             levelSeparation: 150,
                             nodeSpacing: 100,
                             treeSpacing: 200,
-                            blockShifting: false,  // Prevent reordering of siblings
-                            edgeMinimization: false  // Don't minimize edge crossings to preserve order
+                            blockShifting: true,  // Allow shifting to compact the layout
+                            edgeMinimization: true,  // Minimize edge crossings
+                            parentCentralization: true  // Center parents over children
                         }
                     }
                 };
@@ -629,6 +635,19 @@ function setupEventHandlers() {
 
         network.setOptions(options);
         this.setAttribute('data-previous-layout', layoutType);
+
+        // Force a fit after layout change to ensure proper view
+        setTimeout(() => {
+            if (network) {
+                network.fit({
+                    animation: {
+                        duration: 500,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+                network.stabilize();
+            }
+        }, 100);
     });
 
     // Refresh button
@@ -738,33 +757,97 @@ let pendingIncomingRequest = null;
 
 // Redraw all stored atoms in tree mode (hierarchical or network)
 function redrawAllAtomsInTreeMode() {
-    // First add root atoms
+    const processedAtoms = new Set();
+
+    // First add root atoms at depth 0
     if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach(atom => {
-            addAtomToGraph(atom, null, 0);
+        rootAtoms.forEach((atom, index) => {
+            const atomKey = atomToKey(atom);
+            processedAtoms.add(atomKey);
+            addAtomToGraph(atom, null, 0, index);
+            // Process children recursively
+            processAtomChildren(atom, 1, processedAtoms);
         });
     }
 
-    // Then add all other stored atoms
+    // Then add any remaining stored atoms that weren't processed
     allStoredAtoms.forEach(atomData => {
         const atom = atomData.atom;
-        const parentAtom = atomData.parent;
-
-        // Add the atom if not already added
         const atomKey = atomToKey(atom);
-        if (!atomNodeMap.has(atomKey)) {
-            const nodeId = addAtomToGraph(atom, null, 0);
+
+        // Skip if already processed
+        if (processedAtoms.has(atomKey)) {
+            return;
         }
 
-        // If there's a parent connection, add it
+        // Skip EdgeLinks and EvaluationLinks in tree mode
+        if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') {
+            return;
+        }
+
+        const parentAtom = atomData.parent;
+
+        // Try to determine proper depth
+        let depth = 1;
+        let parentId = null;
+
         if (parentAtom) {
-            const parentKey = atomToKey(parentAtom);
-            const childKey = atomToKey(atom);
-            if (atomNodeMap.has(parentKey) && atomNodeMap.has(childKey)) {
-                const parentId = atomNodeMap.get(parentKey);
-                const childId = atomNodeMap.get(childKey);
-                addEdgeIfNotExists(parentId, childId);
+            // Skip ListLink parents (they come from graph view EdgeLink processing)
+            if (parentAtom.type === 'ListLink') {
+                // These nodes were from EdgeLinks - add them as orphans at depth 1
+                depth = 1;
+                parentId = null;
+            } else {
+                const parentKey = atomToKey(parentAtom);
+                if (atomNodeMap.has(parentKey)) {
+                    parentId = atomNodeMap.get(parentKey);
+                    const parentNode = nodes.get(parentId);
+                    if (parentNode) {
+                        depth = parentNode.level + 1;
+                    }
+                }
             }
+        }
+
+        // Add the atom with proper depth
+        const nodeId = addAtomToGraph(atom, parentId, depth);
+        processedAtoms.add(atomKey);
+    });
+}
+
+// Helper function to recursively process atom children
+function processAtomChildren(atom, depth, processedAtoms) {
+    if (!atom.outgoing || atom.outgoing.length === 0) {
+        return;
+    }
+
+    const parentKey = atomToKey(atom);
+    if (!atomNodeMap.has(parentKey)) {
+        return;
+    }
+
+    const parentId = atomNodeMap.get(parentKey);
+
+    atom.outgoing.forEach((child, index) => {
+        if (typeof child === 'object' && child !== null) {
+            const childKey = atomToKey(child);
+
+            // Skip if already processed
+            if (processedAtoms.has(childKey)) {
+                // Still add the edge if not present
+                if (atomNodeMap.has(childKey)) {
+                    const childId = atomNodeMap.get(childKey);
+                    addEdgeIfNotExists(parentId, childId);
+                }
+                return;
+            }
+
+            // Add child and mark as processed
+            processedAtoms.add(childKey);
+            const childId = addAtomToGraph(child, parentId, depth, index);
+
+            // Recursively process children
+            processAtomChildren(child, depth + 1, processedAtoms);
         }
     });
 }
