@@ -8,7 +8,6 @@ let edges = null;
 let socket = null;
 let rootAtoms = [];
 let serverUrl = null;
-let currentDepth = 2;
 let processedAtoms = new Set();
 let atomNodeMap = new Map();
 let nodeIdCounter = 1;
@@ -325,8 +324,8 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
         });
     }
 
-    // Process outgoing links if this is a link and we haven't reached max depth
-    if (atom.outgoing && atom.outgoing.length > 0 && depth < currentDepth) {
+    // Process outgoing links if this is a link (no depth limit)
+    if (atom.outgoing && atom.outgoing.length > 0) {
         atom.outgoing.forEach((outgoing, index) => {
             if (typeof outgoing === 'object' && outgoing !== null) {
                 addAtomToGraph(outgoing, nodeId, depth + 1, index);
@@ -543,11 +542,6 @@ function setupEventHandlers() {
         network.fit();
     });
 
-    // Depth input
-    document.getElementById('depthInput').addEventListener('change', function(e) {
-        currentDepth = parseInt(e.target.value);
-        refreshGraph();
-    });
 
     // Layout select
     document.getElementById('layoutSelect').addEventListener('change', function(e) {
@@ -597,12 +591,13 @@ function setupEventHandlers() {
                             enabled: true,
                             direction: 'UD',  // Up-Down: root at top, nodes at bottom
                             sortMethod: 'directed',  // Use directed to respect parent-child relationships
-                            levelSeparation: 150,
-                            nodeSpacing: 100,
-                            treeSpacing: 200,
+                            levelSeparation: 100,  // Reduced for more compact layout
+                            nodeSpacing: 80,  // Reduced for denser packing
+                            treeSpacing: 150,  // Reduced tree spacing
                             blockShifting: true,  // Allow shifting to compact the layout
                             edgeMinimization: true,  // Minimize edge crossings
-                            parentCentralization: true  // Center parents over children
+                            parentCentralization: true,  // Center parents over children
+                            shakeTowards: 'leaves'  // Compress towards leaves for deep trees
                         }
                     }
                 };
@@ -790,6 +785,7 @@ function redrawAllAtomsInTreeMode() {
         // Try to determine proper depth
         let depth = 1;
         let parentId = null;
+        const maxDepth = 10;  // Limit depth to prevent extremely tall layouts
 
         if (parentAtom) {
             // Skip ListLink parents (they come from graph view EdgeLink processing)
@@ -803,7 +799,7 @@ function redrawAllAtomsInTreeMode() {
                     parentId = atomNodeMap.get(parentKey);
                     const parentNode = nodes.get(parentId);
                     if (parentNode) {
-                        depth = parentNode.level + 1;
+                        depth = Math.min(parentNode.level + 1, maxDepth);
                     }
                 }
             }
@@ -820,6 +816,11 @@ function processAtomChildren(atom, depth, processedAtoms) {
     if (!atom.outgoing || atom.outgoing.length === 0) {
         return;
     }
+
+    // Limit depth to prevent extremely tall layouts
+    // After depth 10, nodes will be at the same level as their parents
+    const maxDepth = 10;
+    const effectiveDepth = Math.min(depth, maxDepth);
 
     const parentKey = atomToKey(atom);
     if (!atomNodeMap.has(parentKey)) {
@@ -844,9 +845,9 @@ function processAtomChildren(atom, depth, processedAtoms) {
 
             // Add child and mark as processed
             processedAtoms.add(childKey);
-            const childId = addAtomToGraph(child, parentId, depth, index);
+            const childId = addAtomToGraph(child, parentId, effectiveDepth, index);
 
-            // Recursively process children
+            // Recursively process children (pass actual depth for tracking, not effective depth)
             processAtomChildren(child, depth + 1, processedAtoms);
         }
     });
