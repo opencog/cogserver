@@ -520,20 +520,6 @@ function setupEventHandlers() {
         updateStatus(event.detail.message, 'error');
     });
 
-    // Expand button
-    document.getElementById('expandBtn').addEventListener('click', function() {
-        const selectedNodes = network.getSelectedNodes();
-        if (selectedNodes.length > 0) {
-            const node = nodes.get(selectedNodes[0]);
-            if (node && node.atom) {
-                // Fetch via cache
-                atomSpaceCache.fetchIncomingSet(node.atom);
-            }
-        } else {
-            updateStatus('Select a node to expand', 'error');
-        }
-    });
-
     // Reset view button
     document.getElementById('resetBtn').addEventListener('click', function() {
         network.fit();
