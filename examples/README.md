@@ -1,12 +1,10 @@
-
 Examples
 --------
-
 Every running CogServer provides a web page showing the current status
 of the server. This can be viewed by opening port 18080 in a web browser.
 If the CogServer is running on the local machine, then it can be accessed
-as [http://localhost:18080/](http://localhost:18080/). The status
-includes a list of the currently loaded modules, and a `top`-like display,
+as [http://localhost:18080/stats](http://localhost:18080/stats). The status
+page includes a list of the currently loaded modules, and a `top`-like display,
 showing all connected clients, and the network status for each client.
 
 The [websockets](./websockets) subdirectory contains a web page that
@@ -25,7 +23,6 @@ provides some basic info about the contents of the AtomSpace. This
 includes the total counts for various atom types, and some basic
 browsing ability.
 [***Run it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visualizer/index.html).
-
 
 The [mcp](./mcp) subdirectory contains a Model Context Protocol (MCP)
 several prompts, originally written for Claude, that explain what the
