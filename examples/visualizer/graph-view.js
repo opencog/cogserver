@@ -196,6 +196,7 @@ const MIN_UPDATE_INTERVAL = 100; // Minimum ms between graph updates
 const AGGRESSIVE_THROTTLE_INTERVAL = 500; // Much longer delay when cache is full
 let isProcessingBatch = false; // Track if we're in a batch of updates
 let batchUpdateTimer = null; // Timer for batch completion
+let lastKnownPendingOps = false; // Track if operations were pending in last check
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
@@ -214,12 +215,25 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
+    // Check current pending operations status
+    const currentlyHasPendingOps = atomSpaceCache.hasPendingOperations();
+
+    // Detect if operations resumed (e.g., after cache size increase)
+    // This happens when we weren't in batch mode, but suddenly have pending ops
+    const operationsResumed = !isProcessingBatch && currentlyHasPendingOps && !lastKnownPendingOps;
+
     // Check if we should enter or stay in batch processing mode
     // This happens when:
     // 1. Cache is full and atoms are being skipped, OR
-    // 2. We're already in batch mode and there are still pending operations
+    // 2. We're already in batch mode and there are still pending operations, OR
+    // 3. Operations just resumed (e.g., after cache size increase)
     const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && atomSpaceCache.isCacheNearFull()) ||
-                        (isProcessingBatch && atomSpaceCache.hasPendingOperations());
+                        (isProcessingBatch && currentlyHasPendingOps) ||
+                        operationsResumed ||
+                        (currentlyHasPendingOps && pendingListLinkFetches > 0);
+
+    // Update tracking variable
+    lastKnownPendingOps = currentlyHasPendingOps;
 
     if (shouldBatch) {
         // Mark that we're in a batch processing mode
@@ -235,13 +249,23 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
             batchUpdateTimer = null;
         }
 
-        // Use aggressive throttling if cache was recently full, normal otherwise
-        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) ?
+        // Use aggressive throttling if cache was recently full or operations resumed
+        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) || operationsResumed ?
                              AGGRESSIVE_THROTTLE_INTERVAL : MIN_UPDATE_INTERVAL;
 
         // Set a timer for the batch to complete
         // This will only redraw once after no updates for the specified interval
-        batchUpdateTimer = setTimeout(() => {
+        const checkBatchComplete = () => {
+            // Check one more time if there are still pending operations
+            if (atomSpaceCache.hasPendingOperations()) {
+                // Still have pending ops, stay in batch mode
+                isProcessingBatch = true;
+                // Reschedule the timer
+                batchUpdateTimer = setTimeout(checkBatchComplete, batchInterval);
+                return;
+            }
+
+            // No more pending operations, do the final redraw
             if (typeof operationCancelled === 'undefined' || !operationCancelled) {
                 initializeGraphViewWithAtomCache();
                 lastUpdateTime = Date.now();
@@ -249,6 +273,7 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
             isProcessingBatch = false;
             batchUpdateTimer = null;
             pendingGraphUpdate = null;
+            lastKnownPendingOps = false;
 
             // End operation if no more pending work
             if (typeof endOperation === 'function' &&
@@ -256,7 +281,8 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
                 !atomSpaceCache.hasPendingOperations()) {
                 endOperation();
             }
-        }, batchInterval);
+        };
+        batchUpdateTimer = setTimeout(checkBatchComplete, batchInterval);
 
         // Skip all processing below when in batch mode
         return;
