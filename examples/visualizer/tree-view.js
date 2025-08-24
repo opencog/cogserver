@@ -189,7 +189,17 @@ function initializeGraph() {
             const edgeId = params.edges[0];
             const edge = edges.get(edgeId);
             if (edge) {
-                removeVertexAndParents(edge.from);
+                // Check if we're in graph view mode
+                const layoutSelect = document.getElementById('layoutSelect');
+                const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+                if (layoutType === 'graph') {
+                    // In graph view, only remove the tail (source) vertex
+                    removeSingleVertex(edge.from);
+                } else {
+                    // In tree view, remove the vertex and its parents
+                    removeVertexAndParents(edge.from);
+                }
             }
         }
     });
@@ -396,6 +406,39 @@ function removeVertexAndParents(vertexId) {
     updateStatus(`Removed ${verticesToRemove.size} vertex/vertices from display and ${removedCount} atom(s) from cache`, 'connected');
 }
 
+// Remove only a single vertex (used in graph view for edge clicks)
+function removeSingleVertex(vertexId) {
+    // Get the atom associated with this vertex
+    const vertex = vertices.get(vertexId);
+    if (!vertex || !vertex.atom) {
+        return;
+    }
+
+    // Remove only this atom from the cache
+    const removedCount = atomSpaceCache.removeAtom(vertex.atom);
+
+    // Find all edges connected to this vertex
+    const edgesToRemove = edges.get({
+        filter: function(edge) {
+            return edge.from === vertexId || edge.to === vertexId;
+        }
+    });
+
+    // Remove the edges
+    const edgeIds = edgesToRemove.map(edge => edge.id);
+    edges.remove(edgeIds);
+
+    // Remove the vertex
+    vertices.remove(vertexId);
+
+    // Clean up atomVertexMap
+    const atomKey = atomToKey(vertex.atom);
+    atomVertexMap.delete(atomKey);
+
+    // Update status
+    updateStatus(`Removed 1 vertex from display and ${removedCount} atom(s) from cache`, 'connected');
+}
+
 function addEdgeIfNotExists(from, to) {
     const existingEdges = edges.get({
         filter: function(edge) {
@@ -503,6 +546,36 @@ function getVertexColor(type) {
 
 
 function setupEventHandlers() {
+    // Set up cache status listener
+    atomSpaceCache.addEventListener('cache-status', function(event) {
+        const { size, maxSize, nearFull, skippedAtoms } = event.detail;
+
+        // Update cache count display and color
+        const cacheCountElement = document.getElementById('cacheCount');
+        if (cacheCountElement) {
+            cacheCountElement.textContent = size + '/' + maxSize;
+            // Turn red when above 96% full, otherwise use normal color
+            if (nearFull) {
+                cacheCountElement.style.color = '#F44336';  // Red
+            } else {
+                cacheCountElement.style.color = '#2196F3';  // Normal blue
+            }
+        }
+
+        // Show/hide warning
+        const warningElement = document.getElementById('cacheWarning');
+        const networkElement = document.getElementById('mynetwork');
+        if (warningElement && networkElement) {
+            if (nearFull && skippedAtoms) {
+                warningElement.classList.add('visible');
+                networkElement.classList.add('with-warning');
+            } else {
+                warningElement.classList.remove('visible');
+                networkElement.classList.remove('with-warning');
+            }
+        }
+    });
+
     // Set up cache event listeners
     atomSpaceCache.addEventListener('connection', function(event) {
         const status = event.detail.status;
@@ -733,10 +806,19 @@ function setupEventHandlers() {
                 }
             } else if (params.edges.length > 0) {
                 const edgeId = params.edges[0];
-                // Edge click - remove parent nodes
                 const edge = edges.get(edgeId);
                 if (edge) {
-                    removeVertexAndParents(edge.from);
+                    // Check current layout mode
+                    const layoutSelect = document.getElementById('layoutSelect');
+                    const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+                    if (layoutType === 'graph') {
+                        // In graph view, only remove the tail (source) vertex
+                        removeSingleVertex(edge.from);
+                    } else {
+                        // In tree view, remove the vertex and its parents
+                        removeVertexAndParents(edge.from);
+                    }
                 }
             }
         });
@@ -752,6 +834,22 @@ function setupEventHandlers() {
     document.getElementById('refreshBtn').addEventListener('click', function() {
         refreshGraph();
     });
+
+    // Cache limit input
+    const cacheLimitInput = document.getElementById('cacheLimit');
+    if (cacheLimitInput) {
+        cacheLimitInput.addEventListener('change', function() {
+            const newLimit = parseInt(this.value, 10);
+            if (!isNaN(newLimit) && newLimit > 0) {
+                atomSpaceCache.setMaxCacheSize(newLimit);
+            }
+        });
+        // Set initial value
+        atomSpaceCache.setMaxCacheSize(parseInt(cacheLimitInput.value, 10));
+    }
+
+    // Trigger initial cache status update
+    atomSpaceCache.checkCacheWarning();
 }
 
 function refreshGraph() {

@@ -22,6 +22,10 @@ class AtomSpaceCache extends EventTarget {
         this.pendingListLinkRequests = [];
         this.isProcessingListLink = false;
         this.operationsCancelled = false;
+
+        // Cache size management
+        this.maxCacheSize = 250;  // Default max size
+        this.skippedAtoms = false;  // Track if atoms were skipped due to limit
     }
 
     // Generate unique key for an atom
@@ -40,17 +44,52 @@ class AtomSpaceCache extends EventTarget {
         return `${atom.type}:${JSON.stringify(atom)}`;
     }
 
+    // Set the maximum cache size
+    setMaxCacheSize(size) {
+        this.maxCacheSize = Math.max(10, size);  // Minimum size of 10
+        this.checkCacheWarning();
+    }
+
+    // Check if we can add more atoms without exceeding limit
+    canAddAtom() {
+        return this.atoms.size < this.maxCacheSize;
+    }
+
+    // Check if cache is near full (96% or more)
+    isCacheNearFull() {
+        return this.atoms.size >= (this.maxCacheSize * 0.96);
+    }
+
+    // Check and update cache warning status
+    checkCacheWarning() {
+        const nearFull = this.isCacheNearFull();
+        this.dispatchEvent(new CustomEvent('cache-status', {
+            detail: {
+                size: this.atoms.size,
+                maxSize: this.maxCacheSize,
+                nearFull: nearFull,
+                skippedAtoms: this.skippedAtoms
+            }
+        }));
+    }
+
     // Add an atom to the cache
     addAtom(atom, parentAtom = null) {
         if (!atom) return null;
 
         const atomKey = this.atomToKey(atom);
 
-        // Store the atom
+        // Store the atom if not already present and we have space
         if (!this.atoms.has(atomKey)) {
+            // Check cache limit
+            if (!this.canAddAtom()) {
+                this.skippedAtoms = true;
+                return null;  // Can't add due to cache limit
+            }
             this.atoms.set(atomKey, atom);
             this.parents.set(atomKey, new Set());
             this.children.set(atomKey, new Set());
+            this.checkCacheWarning();  // Update warning status
         }
 
         // Update parent-child relationships
@@ -74,11 +113,13 @@ class AtomSpaceCache extends EventTarget {
             }
         }
 
-        // Process atom's outgoing links as children
+        // Process atom's outgoing links as structural children
+        // Note: We don't pass 'atom' as parent here because structural containment
+        // is different from incoming-set parent relationship
         if (atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(child => {
                 if (typeof child === 'object' && child !== null) {
-                    this.addAtom(child, atom);
+                    this.addAtom(child, null);  // No parent relationship for structural children
                 }
             });
         }
@@ -89,7 +130,36 @@ class AtomSpaceCache extends EventTarget {
     // Remove an atom and optionally its descendants
     removeAtom(atom, removeDescendants = false) {
         const atomKey = this.atomToKey(atom);
-        if (!this.atoms.has(atomKey)) return;
+        if (!this.atoms.has(atomKey)) return 0;
+
+        let removedCount = 0;
+
+        // First, find and remove all Links that contain this atom
+        const linksToRemove = new Set();
+        this.atoms.forEach((candidateAtom, candidateKey) => {
+            // Check if this is a Link that contains the atom being removed
+            if (candidateAtom.outgoing && candidateAtom.outgoing.length > 0) {
+                // Check if any outgoing atom matches the one being removed
+                const containsAtom = candidateAtom.outgoing.some(outgoingAtom => {
+                    if (typeof outgoingAtom === 'object' && outgoingAtom !== null) {
+                        return this.atomToKey(outgoingAtom) === atomKey;
+                    }
+                    return false;
+                });
+
+                if (containsAtom) {
+                    linksToRemove.add(candidateKey);
+                }
+            }
+        });
+
+        // Recursively remove all dependent Links
+        linksToRemove.forEach(linkKey => {
+            const linkAtom = this.atoms.get(linkKey);
+            if (linkAtom) {
+                removedCount += this.removeAtom(linkAtom, false);
+            }
+        });
 
         // If removing descendants, remove all children first
         if (removeDescendants) {
@@ -97,9 +167,14 @@ class AtomSpaceCache extends EventTarget {
             children.forEach(childKey => {
                 const childAtom = this.atoms.get(childKey);
                 if (childAtom) {
-                    this.removeAtom(childAtom, true);
+                    removedCount += this.removeAtom(childAtom, true);
                 }
             });
+        }
+
+        // Only proceed if the atom still exists (might have been removed as a dependent)
+        if (!this.atoms.has(atomKey)) {
+            return removedCount;
         }
 
         // Remove from parent's children
@@ -133,6 +208,9 @@ class AtomSpaceCache extends EventTarget {
         this.parents.delete(atomKey);
         this.children.delete(atomKey);
         this.roots.delete(atomKey);
+        removedCount++;
+
+        return removedCount;
     }
 
     // Get all atoms
@@ -175,7 +253,7 @@ class AtomSpaceCache extends EventTarget {
     // Clear all atoms
     // Remove an atom and its parent chain from the cache
     removeAtomAndParents(atom) {
-        if (!atom) return;
+        if (!atom) return 0;
 
         const atomsToRemove = new Set();
         const atomKey = this.atomToKey(atom);
@@ -199,6 +277,37 @@ class AtomSpaceCache extends EventTarget {
 
         // Start collection from the given atom
         collectAtomsToRemove(atomKey);
+
+        // For each atom to remove, also find dependent Links
+        const dependentLinks = new Set();
+        atomsToRemove.forEach(keyToRemove => {
+            this.atoms.forEach((candidateAtom, candidateKey) => {
+                // Skip if already marked for removal
+                if (atomsToRemove.has(candidateKey) || dependentLinks.has(candidateKey)) {
+                    return;
+                }
+
+                // Check if this is a Link that contains any atom being removed
+                if (candidateAtom.outgoing && candidateAtom.outgoing.length > 0) {
+                    const containsRemovedAtom = candidateAtom.outgoing.some(outgoingAtom => {
+                        if (typeof outgoingAtom === 'object' && outgoingAtom !== null) {
+                            const outgoingKey = this.atomToKey(outgoingAtom);
+                            return atomsToRemove.has(outgoingKey);
+                        }
+                        return false;
+                    });
+
+                    if (containsRemovedAtom) {
+                        dependentLinks.add(candidateKey);
+                    }
+                }
+            });
+        });
+
+        // Add dependent Links to removal set
+        dependentLinks.forEach(linkKey => {
+            atomsToRemove.add(linkKey);
+        });
 
         // Remove all collected atoms
         atomsToRemove.forEach(key => {
@@ -240,6 +349,11 @@ class AtomSpaceCache extends EventTarget {
             this.roots.delete(key);
         });
 
+        // Check if we're below the warning threshold after removal
+        if (this.skippedAtoms && !this.isCacheNearFull()) {
+            this.skippedAtoms = false;
+        }
+
         // Notify that cache has been updated
         this.dispatchEvent(new CustomEvent('update', {
             detail: {
@@ -248,6 +362,7 @@ class AtomSpaceCache extends EventTarget {
             }
         }));
 
+        this.checkCacheWarning();  // Update cache status
         return atomsToRemove.size;
     }
 
@@ -256,6 +371,8 @@ class AtomSpaceCache extends EventTarget {
         this.parents.clear();
         this.children.clear();
         this.roots.clear();
+        this.skippedAtoms = false;
+        this.checkCacheWarning();
     }
 
     // Get atoms for graph view (only nodes and EdgeLink relationships)
@@ -271,16 +388,22 @@ class AtomSpaceCache extends EventTarget {
                 const predicate = atom.outgoing[0];
                 const list = atom.outgoing[1];
 
-                // Validate the pattern
+                // Validate the pattern AND check if the ListLink is still in cache
+                const listKey = this.atomToKey(list);
                 if (predicate && (predicate.type === 'PredicateNode' || predicate.type === 'BondNode') &&
                     list && list.type === 'ListLink' &&
-                    list.outgoing && list.outgoing.length === 2) {
+                    list.outgoing && list.outgoing.length === 2 &&
+                    this.atoms.has(listKey)) {  // Make sure ListLink still exists in cache
 
                     const fromNode = list.outgoing[0];
                     const toNode = list.outgoing[1];
+                    const fromKey = this.atomToKey(fromNode);
+                    const toKey = this.atomToKey(toNode);
 
+                    // Check nodes exist and are still in cache
                     if (fromNode && fromNode.type && fromNode.type.endsWith('Node') &&
-                        toNode && toNode.type && toNode.type.endsWith('Node')) {
+                        toNode && toNode.type && toNode.type.endsWith('Node') &&
+                        this.atoms.has(fromKey) && this.atoms.has(toKey)) {
 
                         // Add edge info
                         edges.push({
@@ -474,12 +597,33 @@ class AtomSpaceCache extends EventTarget {
             return;
         }
 
-        const parentAtom = this.currentListLinkRequest.atom;
+        const targetAtom = this.currentListLinkRequest.atom;
 
         // Add all atoms from the response
+        // These atoms are in the incoming set of targetAtom, meaning they contain/reference it
+        // So THEY are parents of targetAtom, not the other way around
+        let addedCount = 0;
+        let skippedCount = 0;
         response.forEach(atom => {
             if (atom && typeof atom === 'object') {
-                this.addAtom(atom, parentAtom);
+                // First add the atom to cache
+                const result = this.addAtom(atom, null);
+                if (result !== null) {
+                    addedCount++;
+                    // Then mark it as a parent of the target atom
+                    const atomKey = this.atomToKey(atom);
+                    const targetKey = this.atomToKey(targetAtom);
+                    if (!this.parents.has(targetKey)) {
+                        this.parents.set(targetKey, new Set());
+                    }
+                    this.parents.get(targetKey).add(atomKey);
+                    if (!this.children.has(atomKey)) {
+                        this.children.set(atomKey, new Set());
+                    }
+                    this.children.get(atomKey).add(targetKey);
+                } else {
+                    skippedCount++;
+                }
             }
         });
 
@@ -489,7 +633,7 @@ class AtomSpaceCache extends EventTarget {
             this.dispatchEvent(new CustomEvent('update', {
                 detail: {
                     type: 'incoming-set',
-                    parent: parentAtom,
+                    parent: targetAtom,
                     atoms: response
                 }
             }));
@@ -504,12 +648,33 @@ class AtomSpaceCache extends EventTarget {
     processRegularAtomResponse(response) {
         if (!this.pendingRegularRequest) return;
 
-        const parentAtom = this.pendingRegularRequest.atom;
+        const targetAtom = this.pendingRegularRequest.atom;
 
         // Add all atoms from the response
+        // These atoms are in the incoming set of targetAtom, meaning they contain/reference it
+        // So THEY are parents of targetAtom, not the other way around
+        let addedCount = 0;
+        let skippedCount = 0;
         response.forEach(atom => {
             if (atom && typeof atom === 'object') {
-                this.addAtom(atom, parentAtom);
+                // First add the atom to cache
+                const result = this.addAtom(atom, null);
+                if (result !== null) {
+                    addedCount++;
+                    // Then mark it as a parent of the target atom
+                    const atomKey = this.atomToKey(atom);
+                    const targetKey = this.atomToKey(targetAtom);
+                    if (!this.parents.has(targetKey)) {
+                        this.parents.set(targetKey, new Set());
+                    }
+                    this.parents.get(targetKey).add(atomKey);
+                    if (!this.children.has(atomKey)) {
+                        this.children.set(atomKey, new Set());
+                    }
+                    this.children.get(atomKey).add(targetKey);
+                } else {
+                    skippedCount++;
+                }
             }
         });
 
@@ -521,7 +686,7 @@ class AtomSpaceCache extends EventTarget {
         this.dispatchEvent(new CustomEvent('update', {
             detail: {
                 type: 'incoming-set',
-                parent: parentAtom,
+                parent: targetAtom,
                 atoms: response
             }
         }));

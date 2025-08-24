@@ -91,7 +91,6 @@ function connect() {
 
     try {
         socket = new WebSocket(serverURL);
-
         socket.addEventListener('open', onConnect);
         socket.addEventListener('close', onDisconnect);
         socket.addEventListener('message', onMessage);
@@ -818,8 +817,27 @@ function atomToSExpression(atom, indent = 0) {
 function showAtomsOfType(type) {
     console.log(`Showing atoms of type: ${type}`);
 
-    // Update title with count from reportCounts if available
+    // Clear all checked atoms when switching panes
+    checkedAtoms.clear();
+
+    // Get the count from reportCounts if available
     const count = atomData.counts?.[type] || 0;
+
+    // Check if the count exceeds safe limits
+    const isNode = type.endsWith('Node');
+    const isLink = type.endsWith('Link');
+    const maxNodes = 10000;
+    const maxLinks = 5000;
+
+    if ((isNode && count > maxNodes) || (isLink && count > maxLinks)) {
+        const maxAllowed = isNode ? maxNodes : maxLinks;
+        const atomType = isNode ? 'nodes' : 'links';
+        showError(`Cannot download ${count} ${atomType}. Maximum allowed is ${maxAllowed}. ` +
+                  `Downloading this many atoms would take too long and overwhelm the browser.`);
+        return;
+    }
+
+    // Update title with count
     atomListingTitle.textContent = `${type} Atoms (${count})`;
 
     // Clear content
@@ -849,6 +867,8 @@ function showAtomsOfType(type) {
 function hideAtomListing() {
     atomListingPanel.classList.add('hidden');
     atomListingContent.innerHTML = '';
+    // Clear all checked atoms when closing the panel
+    checkedAtoms.clear();
 }
 
 function openStatsPage() {

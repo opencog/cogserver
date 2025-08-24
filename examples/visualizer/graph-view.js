@@ -314,13 +314,18 @@ function getGraphViewOptions() {
                 centralGravity: 0.01,
                 springLength: 150,
                 springConstant: 0.08,
-                damping: 0.4,
+                damping: 0.9,  // Increased damping to reduce oscillation
                 avoidOverlap: 0.5
             },
             stabilization: {
-                iterations: 150,
-                updateInterval: 25
-            }
+                enabled: true,
+                iterations: 1000,  // Increased iterations for better initial stabilization
+                updateInterval: 50,
+                fit: true
+            },
+            maxVelocity: 50,  // Limit maximum velocity to prevent runaway movement
+            minVelocity: 0.75,  // Stop physics when movement is minimal
+            timestep: 0.5  // Smaller timesteps for more stable simulation
         },
         layout: {
             randomSeed: 2,
