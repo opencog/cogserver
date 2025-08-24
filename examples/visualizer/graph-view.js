@@ -196,7 +196,6 @@ const MIN_UPDATE_INTERVAL = 100; // Minimum ms between graph updates
 const AGGRESSIVE_THROTTLE_INTERVAL = 500; // Much longer delay when cache is full
 let isProcessingBatch = false; // Track if we're in a batch of updates
 let batchUpdateTimer = null; // Timer for batch completion
-let lastKnownPendingOps = false; // Track if operations were pending in last check
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
@@ -215,65 +214,49 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
-    // Check current pending operations status
-    const currentlyHasPendingOps = atomSpaceCache.hasPendingOperations();
+    // Always clear any existing batch timer when we get a new update
+    if (batchUpdateTimer) {
+        clearTimeout(batchUpdateTimer);
+        batchUpdateTimer = null;
+    }
 
-    // Detect if operations resumed (e.g., after cache size increase)
-    // This happens when we weren't in batch mode, but suddenly have pending ops
-    const operationsResumed = !isProcessingBatch && currentlyHasPendingOps && !lastKnownPendingOps;
+    // Check cache status
+    const cacheNearFull = atomSpaceCache.isCacheNearFull();
+    const hasPendingOps = atomSpaceCache.hasPendingOperations();
 
-    // Check if we should enter or stay in batch processing mode
+    // Check if we should be in batch mode
     // This happens when:
     // 1. Cache is full and atoms are being skipped, OR
-    // 2. We're already in batch mode and there are still pending operations, OR
-    // 3. Operations just resumed (e.g., after cache size increase)
-    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && atomSpaceCache.isCacheNearFull()) ||
-                        (isProcessingBatch && currentlyHasPendingOps) ||
-                        operationsResumed ||
-                        (currentlyHasPendingOps && pendingListLinkFetches > 0);
-
-    // Update tracking variable
-    lastKnownPendingOps = currentlyHasPendingOps;
+    // 2. We're already in batch mode, OR
+    // 3. There are any pending operations (downloads in progress)
+    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && cacheNearFull) ||
+                        isProcessingBatch ||
+                        hasPendingOps;
 
     if (shouldBatch) {
-        // Mark that we're in a batch processing mode
+        // Enter or stay in batch mode
         isProcessingBatch = true;
 
-        // Clear any existing timers
+        // Clear any immediate update timer
         if (pendingGraphUpdate) {
             clearTimeout(pendingGraphUpdate);
             pendingGraphUpdate = null;
         }
-        if (batchUpdateTimer) {
-            clearTimeout(batchUpdateTimer);
+
+        // Set a new batch timer - this will only fire after no updates for this period
+        // Use longer delay (1 second) to ensure all downloads complete
+        const batchInterval = 1000;
+
+        batchUpdateTimer = setTimeout(() => {
+            // Only NOW do we exit batch mode and redraw
+            isProcessingBatch = false;
             batchUpdateTimer = null;
-        }
 
-        // Use aggressive throttling if cache was recently full or operations resumed
-        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) || operationsResumed ?
-                             AGGRESSIVE_THROTTLE_INTERVAL : MIN_UPDATE_INTERVAL;
-
-        // Set a timer for the batch to complete
-        // This will only redraw once after no updates for the specified interval
-        const checkBatchComplete = () => {
-            // Check one more time if there are still pending operations
-            if (atomSpaceCache.hasPendingOperations()) {
-                // Still have pending ops, stay in batch mode
-                isProcessingBatch = true;
-                // Reschedule the timer
-                batchUpdateTimer = setTimeout(checkBatchComplete, batchInterval);
-                return;
-            }
-
-            // No more pending operations, do the final redraw
+            // Do the final redraw
             if (typeof operationCancelled === 'undefined' || !operationCancelled) {
                 initializeGraphViewWithAtomCache();
                 lastUpdateTime = Date.now();
             }
-            isProcessingBatch = false;
-            batchUpdateTimer = null;
-            pendingGraphUpdate = null;
-            lastKnownPendingOps = false;
 
             // End operation if no more pending work
             if (typeof endOperation === 'function' &&
@@ -281,14 +264,22 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
                 !atomSpaceCache.hasPendingOperations()) {
                 endOperation();
             }
-        };
-        batchUpdateTimer = setTimeout(checkBatchComplete, batchInterval);
+        }, batchInterval);
 
         // Skip all processing below when in batch mode
         return;
     }
 
-    // Not in batch mode - process normally
+    // Not in batch mode - check if we need to process immediately or defer
+
+    // If we have a pending batch timer but are not in batch mode anymore,
+    // this is likely a straggler update after cache size increase
+    // Clear any lingering timers and process immediately
+    if (batchUpdateTimer) {
+        clearTimeout(batchUpdateTimer);
+        batchUpdateTimer = null;
+    }
+
     // Check if we need to fetch incoming sets for ListLinks
     const listLinksToFetch = [];
 
