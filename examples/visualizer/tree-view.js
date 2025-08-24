@@ -8,10 +8,8 @@ let edges = null;
 let socket = null;
 let rootAtoms = [];
 let serverUrl = null;
-let processedAtoms = new Set();
 let atomNodeMap = new Map();
 let nodeIdCounter = 1;
-let allStoredAtoms = new Set(); // Store all atoms fetched, regardless of display mode
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -26,6 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const atom = JSON.parse(decodeURIComponent(atomParam));
             rootAtoms = [atom];
+            // Add to atom cache
+            atomSpaceCache.clear();
+            atomSpaceCache.addAtom(atom);
             console.log('Root atom:', atom);
         } catch (e) {
             console.error('Failed to parse atom data:', e);
@@ -38,6 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (atomsParam) {
         try {
             rootAtoms = JSON.parse(decodeURIComponent(atomsParam));
+            // Add to atom cache
+            atomSpaceCache.clear();
+            rootAtoms.forEach(atom => atomSpaceCache.addAtom(atom));
             console.log('Root atoms:', rootAtoms);
         } catch (e) {
             console.error('Failed to parse atoms data:', e);
@@ -547,21 +551,30 @@ function setupEventHandlers() {
     document.getElementById('layoutSelect').addEventListener('change', function(e) {
         const layoutType = e.target.value;
         const previousLayout = this.getAttribute('data-previous-layout');
-        let options = {};
 
-        // Always clear and redraw when switching layouts
-        nodes.clear();
-        edges.clear();
+        // Destroy and recreate network to ensure clean state
+        if (network) {
+            network.destroy();
+            network = null;
+        }
+
+        // Clear all data structures
+        nodes = new vis.DataSet();
+        edges = new vis.DataSet();
         atomNodeMap.clear();
         nodeIdCounter = 1;
 
+        // Recreate network with fresh options
+        const container = document.getElementById('mynetwork');
+        let options = {};
+
         if (layoutType === 'graph') {
             // Use graph view mode with special edge handling
-            initializeGraphViewWithAllAtoms();
+            initializeGraphViewWithAtomCache();
             options = getGraphViewOptions();
         } else {
-            // Re-add all stored atoms using normal tree view
-            redrawAllAtomsInTreeMode();
+            // Rebuild from cache for hierarchical/network view
+            rebuildFromAtomCache();
 
             if (layoutType === 'hierarchical') {
                 options = {
@@ -627,21 +640,29 @@ function setupEventHandlers() {
             }
         }
 
-        network.setOptions(options);
+        // Create new network with the appropriate options
+        const data = { nodes: nodes, edges: edges };
+        network = new vis.Network(container, data, options);
+
+        // Re-attach event handlers
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const node = nodes.get(nodeId);
+                if (node && node.atom) {
+                    fetchIncomingSet(node.atom, nodeId);
+                }
+            } else if (params.edges.length > 0) {
+                const edgeId = params.edges[0];
+                removeIncomingSubgraph(edgeId);
+            }
+        });
+
         this.setAttribute('data-previous-layout', layoutType);
 
-        // Force a fit after layout change to ensure proper view
-        setTimeout(() => {
-            if (network) {
-                network.fit({
-                    animation: {
-                        duration: 500,
-                        easingFunction: 'easeInOutQuad'
-                    }
-                });
-                network.stabilize();
-            }
-        }, 100);
+        // Stabilize and fit
+        network.stabilize();
+        network.fit();
     });
 
     // Refresh button
@@ -749,7 +770,91 @@ function isMatchingAtom(atom1, atom2) {
 // Global variable to track pending incoming set request
 let pendingIncomingRequest = null;
 
-// Redraw all stored atoms in tree mode (hierarchical or network)
+// Rebuild visualization from atom cache for hierarchical/network view
+function rebuildFromAtomCache() {
+    const rootAtoms = atomSpaceCache.getRootAtoms();
+
+    // Add root atoms
+    rootAtoms.forEach((atom, index) => {
+        if (atom.type !== 'EdgeLink' && atom.type !== 'EvaluationLink') {
+            addAtomToGraph(atom, null, 0, index);
+        }
+    });
+
+    // Process all atoms and add them with proper hierarchy
+    const allAtoms = atomSpaceCache.getAllAtoms();
+    const processed = new Set();
+
+    // Add atoms with limited depth
+    allAtoms.forEach(atom => {
+        const atomKey = atomSpaceCache.atomToKey(atom);
+        if (processed.has(atomKey)) return;
+
+        // Skip EdgeLink components in hierarchical view
+        if (atom.type === 'EdgeLink' ||
+            atom.type === 'EvaluationLink' ||
+            atom.type === 'BondNode' ||
+            atom.type === 'PredicateNode') {
+            return;
+        }
+
+        // Skip ListLinks that are part of EdgeLink patterns
+        if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
+            const bothNodes = atom.outgoing.every(child =>
+                child && typeof child === 'object' && child.type && child.type.endsWith('Node')
+            );
+            if (bothNodes) return;
+        }
+
+        // Add atom if not already added
+        if (!atomNodeMap.has(atomKey)) {
+            const parents = atomSpaceCache.getParents(atom);
+            let parentId = null;
+            let depth = 1;
+
+            // Find first valid parent
+            for (const parent of parents) {
+                const parentKey = atomSpaceCache.atomToKey(parent);
+                if (atomNodeMap.has(parentKey)) {
+                    parentId = atomNodeMap.get(parentKey);
+                    const parentNode = nodes.get(parentId);
+                    if (parentNode) {
+                        depth = Math.min(parentNode.level + 1, 2); // Limit depth
+                    }
+                    break;
+                }
+            }
+
+            addAtomToGraph(atom, parentId, depth, 0);
+        }
+
+        processed.add(atomKey);
+    });
+}
+
+// Initialize graph view from atom cache
+function initializeGraphViewWithAtomCache() {
+    const graphData = atomSpaceCache.getAtomsForGraphView();
+
+    // Add all nodes
+    graphData.nodes.forEach((atom, index) => {
+        addNodeToGraph(atom);
+    });
+
+    // Add all edges
+    graphData.edges.forEach(edge => {
+        const fromKey = atomSpaceCache.atomToKey(edge.from);
+        const toKey = atomSpaceCache.atomToKey(edge.to);
+
+        if (atomNodeMap.has(fromKey) && atomNodeMap.has(toKey)) {
+            const fromId = atomNodeMap.get(fromKey);
+            const toId = atomNodeMap.get(toKey);
+            addLabeledEdge(fromId, toId, edge.label, edge.type);
+        }
+    });
+}
+
+// Old function for compatibility - will be removed
 function redrawAllAtomsInTreeMode() {
     const processedAtoms = new Set();
     const depthMap = new Map(); // Track depth of each atom to prevent inconsistencies
