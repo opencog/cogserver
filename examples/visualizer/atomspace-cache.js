@@ -21,6 +21,7 @@ class AtomSpaceCache extends EventTarget {
         // Queue for sequential processing of ListLink requests
         this.pendingListLinkRequests = [];
         this.isProcessingListLink = false;
+        this.operationsCancelled = false;
     }
 
     // Generate unique key for an atom
@@ -316,6 +317,11 @@ class AtomSpaceCache extends EventTarget {
 
     // Fetch incoming set for an atom
     fetchIncomingSet(atom) {
+        // Check if operations were cancelled
+        if (this.operationsCancelled) {
+            return;
+        }
+
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
             this.dispatchEvent(new CustomEvent('error', {
                 detail: { message: 'Not connected to server' }
@@ -357,6 +363,13 @@ class AtomSpaceCache extends EventTarget {
 
     // Process ListLink requests sequentially
     processNextListLink() {
+        // Check if operations were cancelled
+        if (this.operationsCancelled) {
+            this.pendingListLinkRequests = [];
+            this.isProcessingListLink = false;
+            return;
+        }
+
         if (this.pendingListLinkRequests.length === 0) {
             this.isProcessingListLink = false;
             this.dispatchEvent(new CustomEvent('update', {
@@ -375,6 +388,14 @@ class AtomSpaceCache extends EventTarget {
     processListLinkResponse(response) {
         if (!this.currentListLinkRequest) return;
 
+        // Check if operations were cancelled
+        if (this.operationsCancelled) {
+            this.currentListLinkRequest = null;
+            this.pendingListLinkRequests = [];
+            this.isProcessingListLink = false;
+            return;
+        }
+
         const parentAtom = this.currentListLinkRequest.atom;
 
         // Add all atoms from the response
@@ -384,14 +405,17 @@ class AtomSpaceCache extends EventTarget {
             }
         });
 
-        // Notify that cache has been updated
-        this.dispatchEvent(new CustomEvent('update', {
-            detail: {
-                type: 'incoming-set',
-                parent: parentAtom,
-                atoms: response
-            }
-        }));
+        // Only dispatch update if not cancelled
+        if (!this.operationsCancelled) {
+            // Notify that cache has been updated
+            this.dispatchEvent(new CustomEvent('update', {
+                detail: {
+                    type: 'incoming-set',
+                    parent: parentAtom,
+                    atoms: response
+                }
+            }));
+        }
 
         // Process next ListLink
         this.currentListLinkRequest = null;
@@ -422,6 +446,30 @@ class AtomSpaceCache extends EventTarget {
 
         // Clear the pending request
         this.pendingRegularRequest = null;
+    }
+
+    // Cancel all pending operations
+    cancelAllOperations() {
+        // Set cancellation flag
+        this.operationsCancelled = true;
+
+        // Clear ListLink queue
+        this.pendingListLinkRequests = [];
+        this.isProcessingListLink = false;
+        this.currentListLinkRequest = null;
+
+        // Clear regular request
+        this.pendingRegularRequest = null;
+
+        // Notify that operations were cancelled
+        this.dispatchEvent(new CustomEvent('update', {
+            detail: { type: 'operations-cancelled' }
+        }));
+    }
+
+    // Reset cancellation flag (call when starting new operation)
+    resetCancellation() {
+        this.operationsCancelled = false;
     }
 
     // Disconnect from server

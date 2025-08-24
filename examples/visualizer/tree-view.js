@@ -508,6 +508,12 @@ function setupEventHandlers() {
     atomSpaceCache.addEventListener('update', function(event) {
         const updateType = event.detail.type;
 
+        // Handle cancellation event
+        if (updateType === 'operations-cancelled') {
+            endOperation();
+            return;
+        }
+
         // Check if operation was cancelled
         if (operationCancelled) {
             endOperation();
@@ -792,7 +798,7 @@ function proceedWithLargeOperation() {
     overlay.style.display = 'none';
 
     if (pendingOperation) {
-        startOperation();
+        startOperation();  // This will reset cancellation flag in cache
         pendingOperation();
         pendingOperation = null;
     }
@@ -801,6 +807,9 @@ function proceedWithLargeOperation() {
 function startOperation() {
     operationCancelled = false;
     operationStartTime = Date.now();
+
+    // Reset cancellation flag in cache
+    atomSpaceCache.resetCancellation();
 
     // Show stop button after a delay
     stopButtonTimer = setTimeout(() => {
@@ -812,6 +821,9 @@ function startOperation() {
 
 function stopCurrentOperation() {
     operationCancelled = true;
+
+    // Cancel all pending operations in the cache
+    atomSpaceCache.cancelAllOperations();
 
     // Hide stop button
     document.getElementById('stopButton').style.display = 'none';
