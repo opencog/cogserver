@@ -188,6 +188,10 @@ function initializeGraphViewWithAtomCache() {
     });
 }
 
+// Batching mechanism for graph updates
+let pendingGraphUpdate = null;
+let pendingListLinkFetches = 0;
+
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms) {
     // Check if we need to fetch incoming sets for ListLinks
@@ -208,15 +212,39 @@ function handleGraphViewCacheUpdate(parent, atoms) {
         }
     });
 
-    // Fetch incoming sets for qualifying ListLinks (second-level fetch)
+    // Track how many ListLink fetches we're about to start
     if (listLinksToFetch.length > 0) {
+        pendingListLinkFetches += listLinksToFetch.length;
+
+        // Fetch incoming sets for qualifying ListLinks (second-level fetch)
         listLinksToFetch.forEach(listLink => {
             atomSpaceCache.fetchIncomingSet(listLink);
         });
     }
 
-    // Rebuild the graph to show current state
-    initializeGraphViewWithAtomCache();
+    // If this was a ListLink response, decrement the counter
+    if (parent && parent.type === 'ListLink') {
+        pendingListLinkFetches = Math.max(0, pendingListLinkFetches - 1);
+    }
+
+    // Clear any existing update timer
+    if (pendingGraphUpdate) {
+        clearTimeout(pendingGraphUpdate);
+        pendingGraphUpdate = null;
+    }
+
+    // If we're waiting for ListLink fetches, defer the update
+    if (pendingListLinkFetches > 0) {
+        // Set a timeout as a fallback in case some fetches fail
+        pendingGraphUpdate = setTimeout(() => {
+            pendingListLinkFetches = 0;  // Reset counter
+            initializeGraphViewWithAtomCache();
+            pendingGraphUpdate = null;
+        }, 1000);  // 1 second timeout
+    } else {
+        // No pending fetches, update immediately
+        initializeGraphViewWithAtomCache();
+    }
 }
 
 // NOTE: Old atom processing functions removed - now handled by atomspace-cache
