@@ -53,10 +53,44 @@
             border-radius: 4px;
             font-size: 14px;
         }
+        #controls input[type="number"] {
+            width: 80px;
+        }
+        #cacheInfo {
+            margin-left: auto;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 14px;
+        }
+        #cacheCount {
+            font-weight: bold;
+            color: #2196F3;
+        }
+        #cacheWarning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #FFF3CD;
+            color: #856404;
+            padding: 10px 20px;
+            border-bottom: 2px solid #FFE69C;
+            font-size: 14px;
+            z-index: 500;
+        }
+        #cacheWarning.visible {
+            display: block;
+        }
         #mynetwork {
             width: 100%;
             height: calc(100vh - 120px);
             border: none;
+        }
+        #mynetwork.with-warning {
+            height: calc(100vh - 160px);
+            margin-top: 40px;
         }
         #status {
             position: absolute;
@@ -163,6 +197,10 @@
 
     <!-- Stop Button -->
     <button id="stopButton" onclick="stopCurrentOperation()">Stop Processing</button>
+    <!-- Cache Warning -->
+    <div id="cacheWarning">
+        <strong>Warning:</strong> Cache limit reached. Not all atoms from incoming sets are being displayed. Some atoms were skipped to maintain performance.
+    </div>
     <div id="header">
         <h1>AtomSpace Graph Visualization</h1>
         <ul style="text-align: left; display: inline-block; margin-top: 10px; font-size: 14px;">
@@ -180,6 +218,12 @@
             </select>
         </label>
         <button id="refreshBtn">Refresh</button>
+        <label>Cache limit:
+            <input type="number" id="cacheLimit" value="250" min="10" max="10000">
+        </label>
+        <div id="cacheInfo">
+            <span>Cache size: <span id="cacheCount">0</span></span>
+        </div>
     </div>
     <div id="mynetwork"></div>
     <div id="status" class="loading">Initializing...</div>

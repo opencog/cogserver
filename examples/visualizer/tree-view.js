@@ -503,6 +503,30 @@ function getVertexColor(type) {
 
 
 function setupEventHandlers() {
+    // Set up cache status listener
+    atomSpaceCache.addEventListener('cache-status', function(event) {
+        const { size, maxSize, nearFull, skippedAtoms } = event.detail;
+
+        // Update cache count display
+        const cacheCountElement = document.getElementById('cacheCount');
+        if (cacheCountElement) {
+            cacheCountElement.textContent = size + '/' + maxSize;
+        }
+
+        // Show/hide warning
+        const warningElement = document.getElementById('cacheWarning');
+        const networkElement = document.getElementById('mynetwork');
+        if (warningElement && networkElement) {
+            if (nearFull && skippedAtoms) {
+                warningElement.classList.add('visible');
+                networkElement.classList.add('with-warning');
+            } else {
+                warningElement.classList.remove('visible');
+                networkElement.classList.remove('with-warning');
+            }
+        }
+    });
+
     // Set up cache event listeners
     atomSpaceCache.addEventListener('connection', function(event) {
         const status = event.detail.status;
@@ -752,6 +776,22 @@ function setupEventHandlers() {
     document.getElementById('refreshBtn').addEventListener('click', function() {
         refreshGraph();
     });
+
+    // Cache limit input
+    const cacheLimitInput = document.getElementById('cacheLimit');
+    if (cacheLimitInput) {
+        cacheLimitInput.addEventListener('change', function() {
+            const newLimit = parseInt(this.value, 10);
+            if (!isNaN(newLimit) && newLimit > 0) {
+                atomSpaceCache.setMaxCacheSize(newLimit);
+            }
+        });
+        // Set initial value
+        atomSpaceCache.setMaxCacheSize(parseInt(cacheLimitInput.value, 10));
+    }
+
+    // Trigger initial cache status update
+    atomSpaceCache.checkCacheWarning();
 }
 
 function refreshGraph() {

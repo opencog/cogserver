@@ -22,6 +22,10 @@ class AtomSpaceCache extends EventTarget {
         this.pendingListLinkRequests = [];
         this.isProcessingListLink = false;
         this.operationsCancelled = false;
+
+        // Cache size management
+        this.maxCacheSize = 250;  // Default max size
+        this.skippedAtoms = false;  // Track if atoms were skipped due to limit
     }
 
     // Generate unique key for an atom
@@ -40,17 +44,52 @@ class AtomSpaceCache extends EventTarget {
         return `${atom.type}:${JSON.stringify(atom)}`;
     }
 
+    // Set the maximum cache size
+    setMaxCacheSize(size) {
+        this.maxCacheSize = Math.max(10, size);  // Minimum size of 10
+        this.checkCacheWarning();
+    }
+
+    // Check if we can add more atoms without exceeding limit
+    canAddAtom() {
+        return this.atoms.size < this.maxCacheSize;
+    }
+
+    // Check if cache is near full (96% or more)
+    isCacheNearFull() {
+        return this.atoms.size >= (this.maxCacheSize * 0.96);
+    }
+
+    // Check and update cache warning status
+    checkCacheWarning() {
+        const nearFull = this.isCacheNearFull();
+        this.dispatchEvent(new CustomEvent('cache-status', {
+            detail: {
+                size: this.atoms.size,
+                maxSize: this.maxCacheSize,
+                nearFull: nearFull,
+                skippedAtoms: this.skippedAtoms
+            }
+        }));
+    }
+
     // Add an atom to the cache
     addAtom(atom, parentAtom = null) {
         if (!atom) return null;
 
         const atomKey = this.atomToKey(atom);
 
-        // Store the atom
+        // Store the atom if not already present and we have space
         if (!this.atoms.has(atomKey)) {
+            // Check cache limit
+            if (!this.canAddAtom()) {
+                this.skippedAtoms = true;
+                return null;  // Can't add due to cache limit
+            }
             this.atoms.set(atomKey, atom);
             this.parents.set(atomKey, new Set());
             this.children.set(atomKey, new Set());
+            this.checkCacheWarning();  // Update warning status
         }
 
         // Update parent-child relationships
@@ -242,6 +281,11 @@ class AtomSpaceCache extends EventTarget {
             this.roots.delete(key);
         });
 
+        // Check if we're below the warning threshold after removal
+        if (this.skippedAtoms && !this.isCacheNearFull()) {
+            this.skippedAtoms = false;
+        }
+
         // Notify that cache has been updated
         this.dispatchEvent(new CustomEvent('update', {
             detail: {
@@ -250,6 +294,7 @@ class AtomSpaceCache extends EventTarget {
             }
         }));
 
+        this.checkCacheWarning();  // Update cache status
         return atomsToRemove.size;
     }
 
@@ -258,6 +303,8 @@ class AtomSpaceCache extends EventTarget {
         this.parents.clear();
         this.children.clear();
         this.roots.clear();
+        this.skippedAtoms = false;
+        this.checkCacheWarning();
     }
 
     // Get atoms for graph view (only nodes and EdgeLink relationships)
@@ -487,21 +534,28 @@ class AtomSpaceCache extends EventTarget {
         // Add all atoms from the response
         // These atoms are in the incoming set of targetAtom, meaning they contain/reference it
         // So THEY are parents of targetAtom, not the other way around
+        let addedCount = 0;
+        let skippedCount = 0;
         response.forEach(atom => {
             if (atom && typeof atom === 'object') {
                 // First add the atom to cache
-                this.addAtom(atom, null);
-                // Then mark it as a parent of the target atom
-                const atomKey = this.atomToKey(atom);
-                const targetKey = this.atomToKey(targetAtom);
-                if (!this.parents.has(targetKey)) {
-                    this.parents.set(targetKey, new Set());
+                const result = this.addAtom(atom, null);
+                if (result !== null) {
+                    addedCount++;
+                    // Then mark it as a parent of the target atom
+                    const atomKey = this.atomToKey(atom);
+                    const targetKey = this.atomToKey(targetAtom);
+                    if (!this.parents.has(targetKey)) {
+                        this.parents.set(targetKey, new Set());
+                    }
+                    this.parents.get(targetKey).add(atomKey);
+                    if (!this.children.has(atomKey)) {
+                        this.children.set(atomKey, new Set());
+                    }
+                    this.children.get(atomKey).add(targetKey);
+                } else {
+                    skippedCount++;
                 }
-                this.parents.get(targetKey).add(atomKey);
-                if (!this.children.has(atomKey)) {
-                    this.children.set(atomKey, new Set());
-                }
-                this.children.get(atomKey).add(targetKey);
             }
         });
 
@@ -531,21 +585,28 @@ class AtomSpaceCache extends EventTarget {
         // Add all atoms from the response
         // These atoms are in the incoming set of targetAtom, meaning they contain/reference it
         // So THEY are parents of targetAtom, not the other way around
+        let addedCount = 0;
+        let skippedCount = 0;
         response.forEach(atom => {
             if (atom && typeof atom === 'object') {
                 // First add the atom to cache
-                this.addAtom(atom, null);
-                // Then mark it as a parent of the target atom
-                const atomKey = this.atomToKey(atom);
-                const targetKey = this.atomToKey(targetAtom);
-                if (!this.parents.has(targetKey)) {
-                    this.parents.set(targetKey, new Set());
+                const result = this.addAtom(atom, null);
+                if (result !== null) {
+                    addedCount++;
+                    // Then mark it as a parent of the target atom
+                    const atomKey = this.atomToKey(atom);
+                    const targetKey = this.atomToKey(targetAtom);
+                    if (!this.parents.has(targetKey)) {
+                        this.parents.set(targetKey, new Set());
+                    }
+                    this.parents.get(targetKey).add(atomKey);
+                    if (!this.children.has(atomKey)) {
+                        this.children.set(atomKey, new Set());
+                    }
+                    this.children.get(atomKey).add(targetKey);
+                } else {
+                    skippedCount++;
                 }
-                this.parents.get(targetKey).add(atomKey);
-                if (!this.children.has(atomKey)) {
-                    this.children.set(atomKey, new Set());
-                }
-                this.children.get(atomKey).add(targetKey);
             }
         });
 
