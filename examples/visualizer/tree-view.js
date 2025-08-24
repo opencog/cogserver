@@ -501,31 +501,9 @@ function setupEventHandlers() {
                 // For graph view, rebuild the entire graph from cache
                 initializeGraphViewWithAtomCache();
             } else {
-                // For hierarchical/network view, ensure parent is in graph first
-                const parentKey = atomSpaceCache.atomToKey(parent);
-                let parentNodeId = atomNodeMap.get(parentKey);
-
-                // If parent is not in the graph yet, add it
-                if (parentNodeId === undefined) {
-                    parentNodeId = addAtomToGraph(parent, null, 0);
-                }
-
-                // Add new atoms
-                atoms.forEach(atom => {
-                    // Add the incoming atom to the graph
-                    const incomingNodeId = addAtomToGraph(atom, null, 0);
-
-                    // Find which outgoing atom matches our target and connect to it
-                    if (atom.outgoing) {
-                        atom.outgoing.forEach((outgoing, index) => {
-                            // Check if this outgoing matches our target atom
-                            if (isMatchingAtom(outgoing, parent)) {
-                                // Connect the incoming atom to the existing node
-                                addEdgeIfNotExists(incomingNodeId, parentNodeId);
-                            }
-                        });
-                    }
-                });
+                // For hierarchical/network view, rebuild the entire graph with new atoms
+                // This ensures proper bottom-up level calculation
+                rebuildFromAtomCache();
 
                 // Refit the network to show the new nodes
                 network.fit();
@@ -770,24 +748,105 @@ function isMatchingAtom(atom1, atom2) {
 
 // Removed pendingIncomingRequest - now handled by cache
 
+// Calculate the maximum depth of an atom (distance to its deepest leaf)
+function calculateMaxDepth(atom, depthCache = new Map()) {
+    const atomKey = atomSpaceCache.atomToKey(atom);
+
+    // Check cache
+    if (depthCache.has(atomKey)) {
+        return depthCache.get(atomKey);
+    }
+
+    let maxDepth = 0;
+
+    // For Links, check their outgoing atoms
+    if (atom.outgoing && atom.outgoing.length > 0) {
+        // Has children, so depth is 1 + max depth of children
+        atom.outgoing.forEach(child => {
+            if (typeof child === 'object' && child !== null) {
+                const childDepth = calculateMaxDepth(child, depthCache);
+                maxDepth = Math.max(maxDepth, childDepth + 1);
+            }
+        });
+    }
+    // For Nodes or empty Links, depth is 0 (they are leaves)
+
+    depthCache.set(atomKey, maxDepth);
+    return maxDepth;
+}
+
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
-    // Get all root atoms from cache
-    const rootAtoms = atomSpaceCache.getRootAtoms();
+    // Clear existing
+    nodes.clear();
+    edges.clear();
+    atomNodeMap.clear();
+    nodeIdCounter = 1;
 
-    // Add each root atom - this will recursively add all children
-    // In hierarchical view, ALL atoms including EdgeLink/EvaluationLink are shown as nodes
-    rootAtoms.forEach((atom, index) => {
-        addAtomToGraph(atom, null, 0, index);
+    // Calculate depths for all atoms
+    const depthCache = new Map();
+    const allAtoms = atomSpaceCache.getAllAtoms();
+    let maxDepthInGraph = 0;
+
+    // First pass: calculate max depth for each atom
+    allAtoms.forEach(atom => {
+        const depth = calculateMaxDepth(atom, depthCache);
+        maxDepthInGraph = Math.max(maxDepthInGraph, depth);
     });
 
-    // Also add any atoms that might not be connected to any roots
-    const allAtoms = atomSpaceCache.getAllAtoms();
+    // Second pass: add all atoms with inverted levels (bottom-up)
     allAtoms.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        // If not already added, add it as a standalone atom
-        if (!atomNodeMap.has(atomKey)) {
-            addAtomToGraph(atom, null, 0);
+        if (atomNodeMap.has(atomKey)) {
+            return; // Already added
+        }
+
+        const maxDepth = depthCache.get(atomKey);
+        // Invert the level: leaves at bottom (high level number), roots at top (level 0)
+        const level = maxDepthInGraph - maxDepth;
+
+        // Create node
+        const nodeId = nodeIdCounter++;
+        const nodeLabel = createCompactLabel(atom);
+        const nodeColor = getNodeColor(atom.type);
+
+        nodes.add({
+            id: nodeId,
+            label: nodeLabel,
+            color: nodeColor,
+            atom: atom,
+            level: level,
+            title: atomToSExpression(atom)
+        });
+
+        atomNodeMap.set(atomKey, nodeId);
+    });
+
+    // Third pass: add edges for parent-child relationships
+    allAtoms.forEach(atom => {
+        const atomKey = atomSpaceCache.atomToKey(atom);
+        const parentNodeId = atomNodeMap.get(atomKey);
+
+        if (parentNodeId && atom.outgoing && atom.outgoing.length > 0) {
+            atom.outgoing.forEach(child => {
+                if (typeof child === 'object' && child !== null) {
+                    const childKey = atomSpaceCache.atomToKey(child);
+                    const childNodeId = atomNodeMap.get(childKey);
+
+                    if (childNodeId) {
+                        edges.add({
+                            from: parentNodeId,
+                            to: childNodeId,
+                            arrows: {
+                                to: {
+                                    enabled: true,
+                                    scaleFactor: 0.5
+                                }
+                            }
+                        });
+                    }
+                }
+            });
         }
     });
 }
