@@ -662,14 +662,16 @@ class AtomSpaceCache extends EventTarget {
             }
         });
 
-        // Only dispatch update if not cancelled
-        if (!this.operationsCancelled) {
+        // Only dispatch update if not cancelled AND atoms were actually added
+        if (!this.operationsCancelled && addedCount > 0) {
             // Notify that cache has been updated
             this.dispatchEvent(new CustomEvent('update', {
                 detail: {
                     type: 'incoming-set',
                     parent: targetAtom,
-                    atoms: response
+                    atoms: response,
+                    addedCount: addedCount,
+                    skippedCount: skippedCount
                 }
             }));
         }
@@ -717,14 +719,19 @@ class AtomSpaceCache extends EventTarget {
         // This ensures hasPendingOperations() returns correct value in event handlers
         this.pendingRegularRequest = null;
 
-        // Notify that cache has been updated
-        this.dispatchEvent(new CustomEvent('update', {
-            detail: {
-                type: 'incoming-set',
-                parent: targetAtom,
-                atoms: response
-            }
-        }));
+        // Only dispatch update if atoms were actually added
+        if (addedCount > 0) {
+            // Notify that cache has been updated
+            this.dispatchEvent(new CustomEvent('update', {
+                detail: {
+                    type: 'incoming-set',
+                    parent: targetAtom,
+                    atoms: response,
+                    addedCount: addedCount,
+                    skippedCount: skippedCount
+                }
+            }));
+        }
 
         // If there are no more pending operations, dispatch completion event
         if (!this.hasPendingOperations()) {
