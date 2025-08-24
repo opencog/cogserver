@@ -507,10 +507,16 @@ function setupEventHandlers() {
     atomSpaceCache.addEventListener('cache-status', function(event) {
         const { size, maxSize, nearFull, skippedAtoms } = event.detail;
 
-        // Update cache count display
+        // Update cache count display and color
         const cacheCountElement = document.getElementById('cacheCount');
         if (cacheCountElement) {
             cacheCountElement.textContent = size + '/' + maxSize;
+            // Turn red when above 96% full, otherwise use normal color
+            if (nearFull) {
+                cacheCountElement.style.color = '#F44336';  // Red
+            } else {
+                cacheCountElement.style.color = '#2196F3';  // Normal blue
+            }
         }
 
         // Show/hide warning
