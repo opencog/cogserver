@@ -214,48 +214,49 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
+    // Always clear any existing batch timer when we get a new update
+    if (batchUpdateTimer) {
+        clearTimeout(batchUpdateTimer);
+        batchUpdateTimer = null;
+    }
+
     // Check cache status
     const cacheNearFull = atomSpaceCache.isCacheNearFull();
     const hasPendingOps = atomSpaceCache.hasPendingOperations();
 
-    // Check if we should enter or stay in batch processing mode
+    // Check if we should be in batch mode
     // This happens when:
     // 1. Cache is full and atoms are being skipped, OR
-    // 2. We're already in batch mode (to complete the current batch), OR
+    // 2. We're already in batch mode, OR
     // 3. There are any pending operations (downloads in progress)
     const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && cacheNearFull) ||
                         isProcessingBatch ||
                         hasPendingOps;
 
     if (shouldBatch) {
-        // Mark that we're in a batch processing mode
+        // Enter or stay in batch mode
         isProcessingBatch = true;
 
-        // Clear any existing timers
+        // Clear any immediate update timer
         if (pendingGraphUpdate) {
             clearTimeout(pendingGraphUpdate);
             pendingGraphUpdate = null;
         }
-        if (batchUpdateTimer) {
-            clearTimeout(batchUpdateTimer);
-            batchUpdateTimer = null;
-        }
 
-        // Use aggressive throttling if cache was recently full
-        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) ?
-                             AGGRESSIVE_THROTTLE_INTERVAL : MIN_UPDATE_INTERVAL;
+        // Set a new batch timer - this will only fire after no updates for this period
+        // Use longer delay (1 second) to ensure all downloads complete
+        const batchInterval = 1000;
 
-        // Set a timer for the batch to complete
-        // This will only redraw once after no updates for the specified interval
         batchUpdateTimer = setTimeout(() => {
+            // Only NOW do we exit batch mode and redraw
+            isProcessingBatch = false;
+            batchUpdateTimer = null;
+
             // Do the final redraw
             if (typeof operationCancelled === 'undefined' || !operationCancelled) {
                 initializeGraphViewWithAtomCache();
                 lastUpdateTime = Date.now();
             }
-            isProcessingBatch = false;
-            batchUpdateTimer = null;
-            pendingGraphUpdate = null;
 
             // End operation if no more pending work
             if (typeof endOperation === 'function' &&
