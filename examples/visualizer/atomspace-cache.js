@@ -130,7 +130,36 @@ class AtomSpaceCache extends EventTarget {
     // Remove an atom and optionally its descendants
     removeAtom(atom, removeDescendants = false) {
         const atomKey = this.atomToKey(atom);
-        if (!this.atoms.has(atomKey)) return;
+        if (!this.atoms.has(atomKey)) return 0;
+
+        let removedCount = 0;
+
+        // First, find and remove all Links that contain this atom
+        const linksToRemove = new Set();
+        this.atoms.forEach((candidateAtom, candidateKey) => {
+            // Check if this is a Link that contains the atom being removed
+            if (candidateAtom.outgoing && candidateAtom.outgoing.length > 0) {
+                // Check if any outgoing atom matches the one being removed
+                const containsAtom = candidateAtom.outgoing.some(outgoingAtom => {
+                    if (typeof outgoingAtom === 'object' && outgoingAtom !== null) {
+                        return this.atomToKey(outgoingAtom) === atomKey;
+                    }
+                    return false;
+                });
+
+                if (containsAtom) {
+                    linksToRemove.add(candidateKey);
+                }
+            }
+        });
+
+        // Recursively remove all dependent Links
+        linksToRemove.forEach(linkKey => {
+            const linkAtom = this.atoms.get(linkKey);
+            if (linkAtom) {
+                removedCount += this.removeAtom(linkAtom, false);
+            }
+        });
 
         // If removing descendants, remove all children first
         if (removeDescendants) {
@@ -138,9 +167,14 @@ class AtomSpaceCache extends EventTarget {
             children.forEach(childKey => {
                 const childAtom = this.atoms.get(childKey);
                 if (childAtom) {
-                    this.removeAtom(childAtom, true);
+                    removedCount += this.removeAtom(childAtom, true);
                 }
             });
+        }
+
+        // Only proceed if the atom still exists (might have been removed as a dependent)
+        if (!this.atoms.has(atomKey)) {
+            return removedCount;
         }
 
         // Remove from parent's children
@@ -174,6 +208,9 @@ class AtomSpaceCache extends EventTarget {
         this.parents.delete(atomKey);
         this.children.delete(atomKey);
         this.roots.delete(atomKey);
+        removedCount++;
+
+        return removedCount;
     }
 
     // Get all atoms
@@ -216,7 +253,7 @@ class AtomSpaceCache extends EventTarget {
     // Clear all atoms
     // Remove an atom and its parent chain from the cache
     removeAtomAndParents(atom) {
-        if (!atom) return;
+        if (!atom) return 0;
 
         const atomsToRemove = new Set();
         const atomKey = this.atomToKey(atom);
@@ -240,6 +277,37 @@ class AtomSpaceCache extends EventTarget {
 
         // Start collection from the given atom
         collectAtomsToRemove(atomKey);
+
+        // For each atom to remove, also find dependent Links
+        const dependentLinks = new Set();
+        atomsToRemove.forEach(keyToRemove => {
+            this.atoms.forEach((candidateAtom, candidateKey) => {
+                // Skip if already marked for removal
+                if (atomsToRemove.has(candidateKey) || dependentLinks.has(candidateKey)) {
+                    return;
+                }
+
+                // Check if this is a Link that contains any atom being removed
+                if (candidateAtom.outgoing && candidateAtom.outgoing.length > 0) {
+                    const containsRemovedAtom = candidateAtom.outgoing.some(outgoingAtom => {
+                        if (typeof outgoingAtom === 'object' && outgoingAtom !== null) {
+                            const outgoingKey = this.atomToKey(outgoingAtom);
+                            return atomsToRemove.has(outgoingKey);
+                        }
+                        return false;
+                    });
+
+                    if (containsRemovedAtom) {
+                        dependentLinks.add(candidateKey);
+                    }
+                }
+            });
+        });
+
+        // Add dependent Links to removal set
+        dependentLinks.forEach(linkKey => {
+            atomsToRemove.add(linkKey);
+        });
 
         // Remove all collected atoms
         atomsToRemove.forEach(key => {
