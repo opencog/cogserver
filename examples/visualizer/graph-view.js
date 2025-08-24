@@ -197,6 +197,8 @@ const AGGRESSIVE_THROTTLE_INTERVAL = 500; // Much longer delay when cache is ful
 let isProcessingBatch = false; // Track if we're in a batch of updates
 let batchUpdateTimer = null; // Timer for batch completion
 let wasNearFull = false; // Track if cache was near full recently
+let updateCount = 0; // Track number of updates in current operation
+let updateCountResetTimer = null; // Timer to reset update count
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
@@ -214,6 +216,16 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         isProcessingBatch = false;
         return;
     }
+
+    // Track update frequency
+    updateCount++;
+    if (updateCountResetTimer) {
+        clearTimeout(updateCountResetTimer);
+    }
+    updateCountResetTimer = setTimeout(() => {
+        updateCount = 0;
+        updateCountResetTimer = null;
+    }, 500); // Reset after 500ms of no updates
 
     // Check cache status
     const cacheNearFull = atomSpaceCache.isCacheNearFull();
@@ -235,10 +247,12 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
     // This happens when:
     // 1. Cache is full and atoms are being skipped, OR
     // 2. We're already in batch mode (to complete the current batch), OR
-    // 3. Cache size was increased and operations resumed
+    // 3. Cache size was increased and operations resumed, OR
+    // 4. We're getting multiple updates rapidly (more than 2)
     const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && cacheNearFull) ||
                         isProcessingBatch ||
-                        cacheResumedAfterIncrease;
+                        cacheResumedAfterIncrease ||
+                        (hasPendingOps && updateCount > 2);
 
     if (shouldBatch) {
         // Mark that we're in a batch processing mode
@@ -269,6 +283,7 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
             isProcessingBatch = false;
             batchUpdateTimer = null;
             pendingGraphUpdate = null;
+            updateCount = 0; // Reset update count
 
             // End operation if no more pending work
             if (typeof endOperation === 'function' &&

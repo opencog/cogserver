@@ -50,8 +50,17 @@ class AtomSpaceCache extends EventTarget {
 
     // Set the maximum cache size
     setMaxCacheSize(size) {
+        const oldSize = this.maxCacheSize;
         this.maxCacheSize = Math.max(10, size);  // Minimum size of 10
         this.checkCacheWarning();
+
+        // If size increased and we have space now, resume processing if there are pending requests
+        if (size > oldSize && this.canAddAtom()) {
+            // Resume ListLink processing if it was stopped
+            if (!this.isProcessingListLink && this.pendingListLinkRequests.length > 0) {
+                this.processNextListLink();
+            }
+        }
     }
 
     // Check if we can add more atoms without exceeding limit
