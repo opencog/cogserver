@@ -179,56 +179,6 @@ class AtomSpaceCache extends EventTarget {
         this.roots.clear();
     }
 
-    // Get atoms for hierarchical view (exclude EdgeLink internals)
-    getAtomsForHierarchicalView() {
-        const result = [];
-        const processed = new Set();
-
-        // Start with root atoms
-        this.getRootAtoms().forEach(atom => {
-            // Skip EdgeLinks and EvaluationLinks at root level
-            if (atom.type !== 'EdgeLink' && atom.type !== 'EvaluationLink') {
-                result.push({
-                    atom: atom,
-                    depth: 0,
-                    parent: null
-                });
-                processed.add(this.atomToKey(atom));
-            }
-        });
-
-        // Process all atoms, but skip EdgeLink components
-        this.atoms.forEach((atom, atomKey) => {
-            if (processed.has(atomKey)) return;
-
-            // Skip EdgeLinks, EvaluationLinks and their typical components
-            if (atom.type === 'EdgeLink' ||
-                atom.type === 'EvaluationLink' ||
-                atom.type === 'BondNode' ||
-                atom.type === 'PredicateNode') {
-                return;
-            }
-
-            // Skip ListLinks that are part of EdgeLink patterns
-            if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-                // Check if both children are nodes
-                const bothNodes = atom.outgoing.every(child =>
-                    child && typeof child === 'object' && child.type && child.type.endsWith('Node')
-                );
-                if (bothNodes) return;
-            }
-
-            // Add other atoms
-            result.push({
-                atom: atom,
-                depth: 1,
-                parent: null
-            });
-        });
-
-        return result;
-    }
-
     // Get atoms for graph view (only nodes and EdgeLink relationships)
     getAtomsForGraphView() {
         const nodes = [];
@@ -472,37 +422,6 @@ class AtomSpaceCache extends EventTarget {
 
         // Clear the pending request
         this.pendingRegularRequest = null;
-    }
-
-    // Remove an atom and its incoming edges
-    removeIncomingEdges(atom) {
-        const atomKey = this.atomToKey(atom);
-
-        // Find all atoms that have this atom as a child
-        const parents = this.getParents(atom);
-        parents.forEach(parent => {
-            const parentKey = this.atomToKey(parent);
-            const children = this.children.get(parentKey);
-            if (children) {
-                children.delete(atomKey);
-            }
-        });
-
-        // Clear this atom's parents
-        this.parents.set(atomKey, new Set());
-
-        // If atom has no parents, it becomes a root
-        if (this.atoms.has(atomKey)) {
-            this.roots.add(atomKey);
-        }
-
-        // Notify update
-        this.dispatchEvent(new CustomEvent('update', {
-            detail: {
-                type: 'edges-removed',
-                atom: atom
-            }
-        }));
     }
 
     // Disconnect from server

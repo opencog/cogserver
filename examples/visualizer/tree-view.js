@@ -685,7 +685,11 @@ function setupEventHandlers() {
                 }
             } else if (params.edges.length > 0) {
                 const edgeId = params.edges[0];
-                removeIncomingSubgraph(edgeId);
+                // Edge click - remove parent nodes
+                const edge = edges.get(edgeId);
+                if (edge) {
+                    removeNodeAndParents(edge.from);
+                }
             }
         });
 
@@ -853,91 +857,5 @@ function rebuildFromAtomCache() {
     });
 }
 
-// Initialize graph view from atom cache
-function initializeGraphViewWithAtomCache() {
-    const graphData = atomSpaceCache.getAtomsForGraphView();
-
-    // Add all nodes
-    graphData.nodes.forEach((atom, index) => {
-        addNodeToGraph(atom);
-    });
-
-    // Add all edges
-    graphData.edges.forEach(edge => {
-        const fromKey = atomSpaceCache.atomToKey(edge.from);
-        const toKey = atomSpaceCache.atomToKey(edge.to);
-
-        if (atomNodeMap.has(fromKey) && atomNodeMap.has(toKey)) {
-            const fromId = atomNodeMap.get(fromKey);
-            const toId = atomNodeMap.get(toKey);
-            addLabeledEdge(fromId, toId, edge.label, edge.type);
-        }
-    });
-}
-
-// Old function for compatibility - will be removed
-function redrawAllAtomsInTreeMode() {
-    const processedAtoms = new Set();
-    const depthMap = new Map(); // Track depth of each atom to prevent inconsistencies
-
-    // First pass: Add root atoms and establish base hierarchy
-    if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach((atom, index) => {
-            const atomKey = atomToKey(atom);
-            if (!processedAtoms.has(atomKey)) {
-                processedAtoms.add(atomKey);
-                depthMap.set(atomKey, 0);
-                // Add root at depth 0
-                const nodeId = addAtomToGraph(atom, null, 0, index);
-                // Process only immediate children, not recursive
-                if (atom.outgoing && atom.outgoing.length > 0) {
-                    atom.outgoing.forEach((child, childIndex) => {
-                        if (typeof child === 'object' && child !== null) {
-                            const childKey = atomToKey(child);
-                            if (!processedAtoms.has(childKey)) {
-                                processedAtoms.add(childKey);
-                                depthMap.set(childKey, 1);
-                                const childId = addAtomToGraph(child, nodeId, 1, childIndex);
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    // Second pass: Add remaining atoms from stored collection
-    allStoredAtoms.forEach(atomData => {
-        const atom = atomData.atom;
-        const atomKey = atomToKey(atom);
-
-        // Skip if already processed
-        if (processedAtoms.has(atomKey)) {
-            return;
-        }
-
-        // Determine appropriate depth
-        let depth = 1;
-        let parentId = null;
-
-        // Check if this atom has a valid parent in the graph
-        const parentAtom = atomData.parent;
-        if (parentAtom && parentAtom.type !== 'ListLink') {
-            // Don't use ListLink as parent (it comes from graph view EdgeLink processing)
-            const parentKey = atomToKey(parentAtom);
-            if (atomNodeMap.has(parentKey)) {
-                parentId = atomNodeMap.get(parentKey);
-                const parentDepth = depthMap.get(parentKey) || 0;
-                depth = Math.min(parentDepth + 1, 2); // Max depth of 2 to prevent tall layouts
-            }
-        }
-
-        // Add the atom
-        processedAtoms.add(atomKey);
-        depthMap.set(atomKey, depth);
-        addAtomToGraph(atom, parentId, depth, 0);
-    });
-}
-
-
 // Removed fetchIncomingSet - now handled by atomspace-cache
+// Removed initializeGraphViewWithAtomCache - moved to graph-view.js
