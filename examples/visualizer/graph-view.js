@@ -214,8 +214,14 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
-    // If cache is full and atoms are being skipped, use aggressive batching
-    if (eventDetail && eventDetail.skippedCount > 0 && atomSpaceCache.isCacheNearFull()) {
+    // Check if we should enter or stay in batch processing mode
+    // This happens when:
+    // 1. Cache is full and atoms are being skipped, OR
+    // 2. We're already in batch mode and there are still pending operations
+    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && atomSpaceCache.isCacheNearFull()) ||
+                        (isProcessingBatch && atomSpaceCache.hasPendingOperations());
+
+    if (shouldBatch) {
         // Mark that we're in a batch processing mode
         isProcessingBatch = true;
 
@@ -229,8 +235,12 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
             batchUpdateTimer = null;
         }
 
-        // Set a longer timer for the batch to complete
-        // This will only redraw once after no updates for AGGRESSIVE_THROTTLE_INTERVAL ms
+        // Use aggressive throttling if cache was recently full, normal otherwise
+        const batchInterval = (eventDetail && eventDetail.skippedCount > 0) ?
+                             AGGRESSIVE_THROTTLE_INTERVAL : MIN_UPDATE_INTERVAL;
+
+        // Set a timer for the batch to complete
+        // This will only redraw once after no updates for the specified interval
         batchUpdateTimer = setTimeout(() => {
             if (typeof operationCancelled === 'undefined' || !operationCancelled) {
                 initializeGraphViewWithAtomCache();
@@ -246,37 +256,13 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
                 !atomSpaceCache.hasPendingOperations()) {
                 endOperation();
             }
-        }, AGGRESSIVE_THROTTLE_INTERVAL);
+        }, batchInterval);
 
-        // Skip all processing below when in batch mode with skipped atoms
+        // Skip all processing below when in batch mode
         return;
     }
 
-    // If we're in batch processing mode but got an update without skipped atoms,
-    // continue batching but with normal interval
-    if (isProcessingBatch) {
-        if (batchUpdateTimer) {
-            clearTimeout(batchUpdateTimer);
-        }
-        batchUpdateTimer = setTimeout(() => {
-            if (typeof operationCancelled === 'undefined' || !operationCancelled) {
-                initializeGraphViewWithAtomCache();
-                lastUpdateTime = Date.now();
-            }
-            isProcessingBatch = false;
-            batchUpdateTimer = null;
-            pendingGraphUpdate = null;
-
-            // End operation if no more pending work
-            if (typeof endOperation === 'function' &&
-                pendingListLinkFetches === 0 &&
-                !atomSpaceCache.hasPendingOperations()) {
-                endOperation();
-            }
-        }, MIN_UPDATE_INTERVAL);
-        return;
-    }
-
+    // Not in batch mode - process normally
     // Check if we need to fetch incoming sets for ListLinks
     const listLinksToFetch = [];
 
