@@ -235,6 +235,37 @@ function initializeGraphViewWithAllAtoms() {
     initializeGraphViewWithAtomCache();
 }
 
+// Handle cache updates for graph view - performs double fetch for ListLinks
+function handleGraphViewCacheUpdate(parent, atoms) {
+    // Check if we need to fetch incoming sets for ListLinks
+    const listLinksToFetch = [];
+
+    atoms.forEach(atom => {
+        // Check if it's a ListLink with exactly 2 nodes
+        if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
+            // Check if both outgoing atoms are nodes
+            const firstIsNode = atom.outgoing[0] && typeof atom.outgoing[0] === 'object' &&
+                              atom.outgoing[0].type && atom.outgoing[0].type.endsWith('Node');
+            const secondIsNode = atom.outgoing[1] && typeof atom.outgoing[1] === 'object' &&
+                               atom.outgoing[1].type && atom.outgoing[1].type.endsWith('Node');
+
+            if (firstIsNode && secondIsNode) {
+                listLinksToFetch.push(atom);
+            }
+        }
+    });
+
+    // Fetch incoming sets for qualifying ListLinks (second-level fetch)
+    if (listLinksToFetch.length > 0) {
+        listLinksToFetch.forEach(listLink => {
+            atomSpaceCache.fetchIncomingSet(listLink);
+        });
+    }
+
+    // Rebuild the graph to show current state
+    initializeGraphViewWithAtomCache();
+}
+
 // Check if this is a ListLink that belongs to an Edge/EvaluationLink pattern
 function isListLinkInEdgePattern(atom, parent) {
     if (!atom || atom.type !== 'ListLink') {

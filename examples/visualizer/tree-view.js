@@ -498,33 +498,10 @@ function setupEventHandlers() {
             const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
 
             if (layoutType === 'graph') {
-                // For graph view, check if we need to fetch incoming sets for ListLinks
-                const listLinksToFetch = [];
-
-                atoms.forEach(atom => {
-                    // Check if it's a ListLink with exactly 2 nodes
-                    if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-                        // Check if both outgoing atoms are nodes
-                        const firstIsNode = atom.outgoing[0] && typeof atom.outgoing[0] === 'object' &&
-                                          atom.outgoing[0].type && atom.outgoing[0].type.endsWith('Node');
-                        const secondIsNode = atom.outgoing[1] && typeof atom.outgoing[1] === 'object' &&
-                                           atom.outgoing[1].type && atom.outgoing[1].type.endsWith('Node');
-
-                        if (firstIsNode && secondIsNode) {
-                            listLinksToFetch.push(atom);
-                        }
-                    }
-                });
-
-                // Fetch incoming sets for qualifying ListLinks
-                if (listLinksToFetch.length > 0) {
-                    listLinksToFetch.forEach(listLink => {
-                        atomSpaceCache.fetchIncomingSet(listLink);
-                    });
+                // For graph view, delegate to graph-view.js handler
+                if (typeof handleGraphViewCacheUpdate === 'function') {
+                    handleGraphViewCacheUpdate(parent, atoms);
                 }
-
-                // Rebuild the graph to show current state
-                initializeGraphViewWithAtomCache();
             } else {
                 // For hierarchical/network view, rebuild the entire graph with new atoms
                 // This ensures proper bottom-up level calculation
