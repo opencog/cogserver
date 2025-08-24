@@ -3,12 +3,12 @@
 
 // Global variables
 let network = null;
-let nodes = null;
+let vertices = null;  // vis-network vertices (not to be confused with AtomSpace Nodes)
 let edges = null;
 let rootAtoms = [];
 let serverUrl = null;
-let atomNodeMap = new Map();
-let nodeIdCounter = 1;
+let atomVertexMap = new Map();  // Maps atom keys to vertex IDs
+let vertexIdCounter = 1;
 
 // Operation control variables
 let operationCancelled = false;
@@ -82,8 +82,8 @@ function initializeGraph() {
         return;
     }
 
-    // Create initial nodes and edges arrays
-    nodes = new vis.DataSet();
+    // Create initial vertices and edges arrays
+    vertices = new vis.DataSet();
     edges = new vis.DataSet();
 
     // Get the container
@@ -97,12 +97,12 @@ function initializeGraph() {
 
     // Create the network
     const data = {
-        nodes: nodes,
+        nodes: vertices,  // vis-network expects 'nodes' property
         edges: edges
     };
 
     const options = {
-        nodes: {
+        nodes: {  // vis-network configuration expects 'nodes' key
             shape: 'box',
             font: {
                 size: 14,
@@ -161,11 +161,11 @@ function initializeGraph() {
 
     // Add network event handlers
     network.on('click', function(params) {
-        // Handle node clicks
-        if (params.nodes.length > 0) {
-            const nodeId = params.nodes[0];
-            const node = nodes.get(nodeId);
-            if (node && node.atom) {
+        // Handle vertex clicks
+        if (params.nodes.length > 0) {  // vis-network API uses 'nodes'
+            const vertexId = params.nodes[0];
+            const vertex = vertices.get(vertexId);
+            if (vertex && vertex.atom) {
                 // Check if we're in graph view mode
                 const layoutSelect = document.getElementById('layoutSelect');
                 const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
@@ -174,13 +174,13 @@ function initializeGraph() {
                 const currentAtomCount = atomSpaceCache.getStats().totalAtoms;
                 if (currentAtomCount > LARGE_ATOM_THRESHOLD) {
                     showWarningDialog(currentAtomCount, function() {
-                        atomSpaceCache.fetchIncomingSet(node.atom);
+                        atomSpaceCache.fetchIncomingSet(vertex.atom);
                     });
                 } else {
                     // Start operation tracking for stop button
                     startOperation();
                     // Fetch incoming set via cache
-                    atomSpaceCache.fetchIncomingSet(node.atom);
+                    atomSpaceCache.fetchIncomingSet(vertex.atom);
                 }
             }
         }
@@ -189,7 +189,7 @@ function initializeGraph() {
             const edgeId = params.edges[0];
             const edge = edges.get(edgeId);
             if (edge) {
-                removeNodeAndParents(edge.from);
+                removeVertexAndParents(edge.from);
             }
         }
     });
@@ -240,52 +240,52 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
 
         // If we have a parent, we need to ensure proper hierarchy
         if (parentId !== null) {
-            const parentNode = nodes.get(parentId);
-            const existingNode = nodes.get(existingNodeId);
+            const parentVertex = vertices.get(parentId);
+            const existingVertex = vertices.get(existingVertexId);
 
-            if (parentNode && existingNode) {
-                // If this node's current level is not deeper than parent's level,
+            if (parentVertex && existingVertex) {
+                // If this vertex's current level is not deeper than parent's level,
                 // we need to move it down to maintain hierarchy
-                if (existingNode.level <= parentNode.level) {
+                if (existingVertex.level <= parentVertex.level) {
                     // Place it one level below the parent
-                    const newLevel = parentNode.level + 1;
-                    nodes.update({
+                    const newLevel = parentVertex.level + 1;
+                    vertices.update({
                         id: existingNodeId,
                         level: newLevel
                     });
 
                     // Recursively update all children of this node to maintain hierarchy
-                    updateChildrenLevels(existingNodeId, newLevel);
+                    updateChildrenLevels(existingVertexId, newLevel);
                 }
                 // Always add the edge from parent to child
-                addEdgeIfNotExists(parentId, existingNodeId);
+                addEdgeIfNotExists(parentId, existingVertexId);
             }
         }
-        return existingNodeId;
+        return existingVertexId;
     }
 
-    // Create a new node
-    const nodeId = nodeIdCounter++;
-    const nodeLabel = createCompactLabel(atom);
-    const nodeColor = getNodeColor(atom.type);
+    // Create a new vertex
+    const vertexId = vertexIdCounter++;
+    const vertexLabel = createCompactLabel(atom);
+    const vertexColor = getVertexColor(atom.type);
 
-    nodes.add({
-        id: nodeId,
-        label: nodeLabel,
-        color: nodeColor,
+    vertices.add({
+        id: vertexId,
+        label: vertexLabel,
+        color: vertexColor,
         atom: atom,
         level: depth,
         x: order * 150,  // Use order to hint at horizontal position
         title: atomToSExpression(atom) // Full format for tooltip
     });
 
-    atomNodeMap.set(atomKey, nodeId);
+    atomVertexMap.set(atomKey, vertexId);
 
     // Add edge from parent if exists
     if (parentId !== null) {
         edges.add({
             from: parentId,
-            to: nodeId,
+            to: vertexId,
             arrows: {
                 to: {
                     enabled: true
@@ -298,12 +298,12 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
     if (atom.outgoing && atom.outgoing.length > 0) {
         atom.outgoing.forEach((outgoing, index) => {
             if (typeof outgoing === 'object' && outgoing !== null) {
-                addAtomToGraph(outgoing, nodeId, depth + 1, index);
+                addAtomToGraph(outgoing, vertexId, depth + 1, index);
             }
         });
     }
 
-    return nodeId;
+    return vertexId;
 }
 
 function updateChildrenLevels(nodeId, parentLevel) {
@@ -316,10 +316,10 @@ function updateChildrenLevels(nodeId, parentLevel) {
 
     // Update each child's level if needed
     childEdges.forEach(edge => {
-        const childNode = nodes.get(edge.to);
-        if (childNode && childNode.level <= parentLevel) {
+        const childVertex = vertices.get(edge.to);
+        if (childVertex && childVertex.level <= parentLevel) {
             const newChildLevel = parentLevel + 1;
-            nodes.update({
+            vertices.update({
                 id: edge.to,
                 level: newChildLevel
             });
@@ -329,71 +329,71 @@ function updateChildrenLevels(nodeId, parentLevel) {
     });
 }
 
-function removeNodeAndParents(nodeId) {
-    // Get the atom associated with this node
-    const node = nodes.get(nodeId);
-    if (!node || !node.atom) {
+function removeVertexAndParents(vertexId) {
+    // Get the atom associated with this vertex
+    const vertex = vertices.get(vertexId);
+    if (!vertex || !vertex.atom) {
         return;
     }
 
     // Remove the atom and its parents from the cache
-    const removedCount = atomSpaceCache.removeAtomAndParents(node.atom);
+    const removedCount = atomSpaceCache.removeAtomAndParents(vertex.atom);
 
-    // Collect all nodes to remove (this node and all its parents)
-    const nodesToRemove = new Set();
+    // Collect all vertices to remove (this vertex and all its parents)
+    const verticesToRemove = new Set();
     const edgesToRemove = new Set();
 
-    // Recursive function to find all parent nodes
-    function collectParents(currentNodeId) {
-        if (nodesToRemove.has(currentNodeId)) {
+    // Recursive function to find all parent vertices
+    function collectParents(currentVertexId) {
+        if (verticesToRemove.has(currentVertexId)) {
             return; // Already processed
         }
 
-        nodesToRemove.add(currentNodeId);
+        verticesToRemove.add(currentVertexId);
 
-        // Find all edges where this node is the parent (from)
+        // Find all edges where this vertex is the parent (from)
         const childEdges = edges.get({
             filter: function(edge) {
-                return edge.from === currentNodeId;
+                return edge.from === currentVertexId;
             }
         });
         childEdges.forEach(edge => {
             edgesToRemove.add(edge.id);
         });
 
-        // Find all edges where this node is the child (to)
+        // Find all edges where this vertex is the child (to)
         const parentEdges = edges.get({
             filter: function(edge) {
-                return edge.to === currentNodeId;
+                return edge.to === currentVertexId;
             }
         });
 
-        // For each parent edge, recursively collect the parent node
+        // For each parent edge, recursively collect the parent vertex
         parentEdges.forEach(edge => {
             edgesToRemove.add(edge.id);
             collectParents(edge.from);
         });
     }
 
-    // Start collection from the clicked node
-    collectParents(nodeId);
+    // Start collection from the clicked vertex
+    collectParents(vertexId);
 
     // Remove all collected edges
     edges.remove(Array.from(edgesToRemove));
 
-    // Remove all collected nodes
-    const nodeIdsToRemove = Array.from(nodesToRemove);
-    nodes.remove(nodeIdsToRemove);
+    // Remove all collected vertices
+    const vertexIdsToRemove = Array.from(verticesToRemove);
+    vertices.remove(vertexIdsToRemove);
 
-    // Clean up atomNodeMap
-    atomNodeMap.forEach((value, key) => {
-        if (nodesToRemove.has(value)) {
-            atomNodeMap.delete(key);
+    // Clean up atomVertexMap
+    atomVertexMap.forEach((value, key) => {
+        if (verticesToRemove.has(value)) {
+            atomVertexMap.delete(key);
         }
     });
 
     // Update status
-    updateStatus(`Removed ${nodesToRemove.size} node(s) from display and ${removedCount} atom(s) from cache`, 'connected');
+    updateStatus(`Removed ${verticesToRemove.size} vertex/vertices from display and ${removedCount} atom(s) from cache`, 'connected');
 }
 
 function addEdgeIfNotExists(from, to) {
@@ -476,8 +476,8 @@ function atomToSExpression(atom, indent = 0) {
     }
 }
 
-function getNodeColor(type) {
-    // Color scheme for different atom types
+function getVertexColor(type) {
+    // Color scheme for different atom types (for graph vertices)
     const colors = {
         'ConceptNode': '#4CAF50',
         'PredicateNode': '#2196F3',
@@ -525,7 +525,7 @@ function setupEventHandlers() {
 
         // Handle atoms-removed event - no need to rebuild as removal is already done
         if (updateType === 'atoms-removed') {
-            // The visual removal is already handled by removeNodeAndParents
+            // The visual removal is already handled by removeVertexAndParents
             // This event just confirms cache is in sync
             return;
         }
@@ -596,8 +596,8 @@ function setupEventHandlers() {
         // Clear all data structures
         nodes = new vis.DataSet();
         edges = new vis.DataSet();
-        atomNodeMap.clear();
-        nodeIdCounter = 1;
+        atomVertexMap.clear();
+        vertexIdCounter = 1;
 
         // Recreate network with fresh options
         const container = document.getElementById('mynetwork');
@@ -713,26 +713,26 @@ function setupEventHandlers() {
         }
 
         // Create new network with the appropriate options
-        const data = { nodes: nodes, edges: edges };
+        const data = { nodes: vertices, edges: edges };  // vis-network expects 'nodes' property
         network = new vis.Network(container, data, options);
 
         // Re-attach event handlers
         network.on('click', function(params) {
-            if (params.nodes.length > 0) {
-                const nodeId = params.nodes[0];
-                const node = nodes.get(nodeId);
-                if (node && node.atom) {
+            if (params.nodes.length > 0) {  // vis-network API uses 'nodes'
+                const vertexId = params.nodes[0];
+                const vertex = vertices.get(vertexId);
+                if (vertex && vertex.atom) {
                     // Check current atom count and warn if getting large
                     const currentAtomCount = atomSpaceCache.getStats().totalAtoms;
                     if (currentAtomCount > LARGE_ATOM_THRESHOLD) {
                         showWarningDialog(currentAtomCount, function() {
-                            atomSpaceCache.fetchIncomingSet(node.atom);
+                            atomSpaceCache.fetchIncomingSet(vertex.atom);
                         });
                     } else {
                         // Start operation tracking for stop button
                         startOperation();
                         // Fetch via cache
-                        atomSpaceCache.fetchIncomingSet(node.atom);
+                        atomSpaceCache.fetchIncomingSet(vertex.atom);
                     }
                 }
             } else if (params.edges.length > 0) {
@@ -740,7 +740,7 @@ function setupEventHandlers() {
                 // Edge click - remove parent nodes
                 const edge = edges.get(edgeId);
                 if (edge) {
-                    removeNodeAndParents(edge.from);
+                    removeVertexAndParents(edge.from);
                 }
             }
         });
@@ -760,10 +760,10 @@ function setupEventHandlers() {
 
 function refreshGraph() {
     // Clear the graph
-    nodes.clear();
+    vertices.clear();
     edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
+    atomVertexMap.clear();
+    vertexIdCounter = 1;
 
     // Check current layout mode
     const layoutSelect = document.getElementById('layoutSelect');
@@ -941,10 +941,10 @@ function rebuildFromAtomCache() {
     }
 
     // Clear existing
-    nodes.clear();
+    vertices.clear();
     edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
+    atomVertexMap.clear();
+    vertexIdCounter = 1;
 
     // Calculate depths for all atoms
     const depthCache = new Map();
@@ -971,7 +971,7 @@ function rebuildFromAtomCache() {
         // Create node
         const nodeId = nodeIdCounter++;
         const nodeLabel = createCompactLabel(atom);
-        const nodeColor = getNodeColor(atom.type);
+        const vertexColor = getVertexColor(atom.type);
 
         nodes.add({
             id: nodeId,
@@ -982,7 +982,7 @@ function rebuildFromAtomCache() {
             title: atomToSExpression(atom)
         });
 
-        atomNodeMap.set(atomKey, nodeId);
+        atomVertexMap.set(atomKey, vertexId);
     });
 
     // Third pass: add edges for parent-child relationships

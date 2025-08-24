@@ -56,40 +56,40 @@ function extractGraphEdgeInfo(atom) {
     };
 }
 
-// Add a single node to the graph (reusing existing if already present)
-function addNodeToGraph(atom) {
+// Add a single vertex to the graph (reusing existing if already present)
+function addVertexToGraph(atom) {
     const atomKey = atomToKey(atom);
 
-    // Check if node already exists
-    if (atomNodeMap.has(atomKey)) {
-        return atomNodeMap.get(atomKey);
+    // Check if vertex already exists
+    if (atomVertexMap.has(atomKey)) {
+        return atomVertexMap.get(atomKey);
     }
 
-    // Create new node
-    const nodeId = nodeIdCounter++;
-    const nodeLabel = createCompactLabel(atom);
-    const nodeColor = getNodeColor(atom.type);
+    // Create new vertex
+    const vertexId = vertexIdCounter++;
+    const vertexLabel = createCompactLabel(atom);
+    const vertexColor = getVertexColor(atom.type);
 
-    nodes.add({
-        id: nodeId,
-        label: nodeLabel,
-        color: nodeColor,
+    vertices.add({
+        id: vertexId,
+        label: vertexLabel,
+        color: vertexColor,
         atom: atom,
         title: atomToSExpression(atom),
-        shape: 'ellipse' // Use ellipse for graph mode nodes
+        shape: 'ellipse' // Use ellipse for graph mode vertices
     });
 
-    atomNodeMap.set(atomKey, nodeId);
-    return nodeId;
+    atomVertexMap.set(atomKey, vertexId);
+    return vertexId;
 }
 
-// Add a labeled edge between two nodes
+// Add a labeled edge between two vertices
 function addLabeledEdge(fromId, toId, label, edgeType) {
     // Every Atom is unique in AtomSpace - always add the edge
     // Different style for graph edges
     const edgeColor = edgeType === 'EdgeLink' ? '#FF6B6B' : '#4ECDC4';
 
-    // Count existing edges between these nodes to offset curves
+    // Count existing edges between these vertices to offset curves
     const existingEdges = edges.get({
         filter: function(item) {
             return (item.from === fromId && item.to === toId) ||
@@ -132,32 +132,32 @@ function addLabeledEdge(fromId, toId, label, edgeType) {
 
 // Initialize graph view using atom cache
 function initializeGraphViewWithAtomCache() {
-    // Clear existing nodes and edges
-    nodes.clear();
+    // Clear existing vertices and edges
+    vertices.clear();
     edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
+    atomVertexMap.clear();
+    vertexIdCounter = 1;
 
     // Get atoms from cache for graph view
     const graphData = atomSpaceCache.getAtomsForGraphView();
 
-    // Add all nodes first
+    // Add all vertices first (from AtomSpace nodes)
     graphData.nodes.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        if (!atomNodeMap.has(atomKey)) {
-            const nodeId = nodeIdCounter++;
-            const nodeLabel = createCompactLabel(atom);
-            const nodeColor = getNodeColor(atom.type);
+        if (!atomVertexMap.has(atomKey)) {
+            const vertexId = vertexIdCounter++;
+            const vertexLabel = createCompactLabel(atom);
+            const vertexColor = getVertexColor(atom.type);
 
-            nodes.add({
-                id: nodeId,
-                label: nodeLabel,
-                color: nodeColor,
+            vertices.add({
+                id: vertexId,
+                label: vertexLabel,
+                color: vertexColor,
                 atom: atom,
                 title: atomToSExpression(atom)
             });
 
-            atomNodeMap.set(atomKey, nodeId);
+            atomVertexMap.set(atomKey, vertexId);
         }
     });
 
@@ -165,8 +165,8 @@ function initializeGraphViewWithAtomCache() {
     graphData.edges.forEach(edge => {
         const fromKey = atomSpaceCache.atomToKey(edge.from);
         const toKey = atomSpaceCache.atomToKey(edge.to);
-        const fromId = atomNodeMap.get(fromKey);
-        const toId = atomNodeMap.get(toKey);
+        const fromId = atomVertexMap.get(fromKey);
+        const toId = atomVertexMap.get(toKey);
 
         if (fromId && toId) {
             edges.add({
@@ -208,9 +208,9 @@ function handleGraphViewCacheUpdate(parent, atoms) {
     const listLinksToFetch = [];
 
     atoms.forEach(atom => {
-        // Check if it's a ListLink with exactly 2 nodes
+        // Check if it's a ListLink with exactly 2 AtomSpace Nodes
         if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-            // Check if both outgoing atoms are nodes
+            // Check if both outgoing atoms are AtomSpace Nodes
             const firstIsNode = atom.outgoing[0] && typeof atom.outgoing[0] === 'object' &&
                               atom.outgoing[0].type && atom.outgoing[0].type.endsWith('Node');
             const secondIsNode = atom.outgoing[1] && typeof atom.outgoing[1] === 'object' &&
@@ -276,7 +276,7 @@ function handleGraphViewCacheUpdate(parent, atoms) {
 // Get graph view layout options
 function getGraphViewOptions() {
     return {
-        nodes: {
+        nodes: {  // vis-network expects 'nodes' key
             shape: 'ellipse',
             font: {
                 size: 14,
