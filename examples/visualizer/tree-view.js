@@ -330,6 +330,15 @@ function updateChildrenLevels(nodeId, parentLevel) {
 }
 
 function removeNodeAndParents(nodeId) {
+    // Get the atom associated with this node
+    const node = nodes.get(nodeId);
+    if (!node || !node.atom) {
+        return;
+    }
+
+    // Remove the atom and its parents from the cache
+    const removedCount = atomSpaceCache.removeAtomAndParents(node.atom);
+
     // Collect all nodes to remove (this node and all its parents)
     const nodesToRemove = new Set();
     const edgesToRemove = new Set();
@@ -384,7 +393,7 @@ function removeNodeAndParents(nodeId) {
     });
 
     // Update status
-    updateStatus(`Removed ${nodesToRemove.size} node(s)`, 'connected');
+    updateStatus(`Removed ${nodesToRemove.size} node(s) from display and ${removedCount} atom(s) from cache`, 'connected');
 }
 
 function addEdgeIfNotExists(from, to) {
@@ -511,6 +520,13 @@ function setupEventHandlers() {
         // Handle cancellation event
         if (updateType === 'operations-cancelled') {
             endOperation();
+            return;
+        }
+
+        // Handle atoms-removed event - no need to rebuild as removal is already done
+        if (updateType === 'atoms-removed') {
+            // The visual removal is already handled by removeNodeAndParents
+            // This event just confirms cache is in sync
             return;
         }
 

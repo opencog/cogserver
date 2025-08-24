@@ -173,6 +173,84 @@ class AtomSpaceCache extends EventTarget {
     }
 
     // Clear all atoms
+    // Remove an atom and its parent chain from the cache
+    removeAtomAndParents(atom) {
+        if (!atom) return;
+
+        const atomsToRemove = new Set();
+        const atomKey = this.atomToKey(atom);
+
+        // Recursive function to collect atom and all its parents
+        const collectAtomsToRemove = (currentKey) => {
+            if (!currentKey || atomsToRemove.has(currentKey)) {
+                return;
+            }
+
+            atomsToRemove.add(currentKey);
+
+            // Get all parent atoms of this atom
+            const parentKeys = this.parents.get(currentKey);
+            if (parentKeys) {
+                parentKeys.forEach(parentKey => {
+                    collectAtomsToRemove(parentKey);
+                });
+            }
+        };
+
+        // Start collection from the given atom
+        collectAtomsToRemove(atomKey);
+
+        // Remove all collected atoms
+        atomsToRemove.forEach(key => {
+            // Get the atom before removing
+            const atomToRemove = this.atoms.get(key);
+
+            // Remove from atoms map
+            this.atoms.delete(key);
+
+            // Clean up parent relationships
+            const parents = this.parents.get(key);
+            if (parents) {
+                parents.forEach(parentKey => {
+                    const childrenSet = this.children.get(parentKey);
+                    if (childrenSet) {
+                        childrenSet.delete(key);
+                    }
+                });
+            }
+            this.parents.delete(key);
+
+            // Clean up children relationships
+            const children = this.children.get(key);
+            if (children) {
+                children.forEach(childKey => {
+                    const parentsSet = this.parents.get(childKey);
+                    if (parentsSet) {
+                        parentsSet.delete(key);
+                        // If child has no more parents, it becomes a root
+                        if (parentsSet.size === 0 && this.atoms.has(childKey)) {
+                            this.roots.add(childKey);
+                        }
+                    }
+                });
+            }
+            this.children.delete(key);
+
+            // Remove from roots if present
+            this.roots.delete(key);
+        });
+
+        // Notify that cache has been updated
+        this.dispatchEvent(new CustomEvent('update', {
+            detail: {
+                type: 'atoms-removed',
+                count: atomsToRemove.size
+            }
+        }));
+
+        return atomsToRemove.size;
+    }
+
     clear() {
         this.atoms.clear();
         this.parents.clear();
