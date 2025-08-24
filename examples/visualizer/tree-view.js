@@ -10,6 +10,14 @@ let serverUrl = null;
 let atomNodeMap = new Map();
 let nodeIdCounter = 1;
 
+// Operation control variables
+let operationCancelled = false;
+let pendingOperation = null;
+let operationStartTime = null;
+let stopButtonTimer = null;
+const LARGE_ATOM_THRESHOLD = 300; // Warn if more than 300 atoms
+const STOP_BUTTON_DELAY = 2000;   // Show stop button after 2 seconds
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Parse URL parameters
@@ -161,8 +169,19 @@ function initializeGraph() {
                 // Check if we're in graph view mode
                 const layoutSelect = document.getElementById('layoutSelect');
                 const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
-                // Fetch incoming set via cache
-                atomSpaceCache.fetchIncomingSet(node.atom);
+
+                // Check current atom count and warn if getting large
+                const currentAtomCount = atomSpaceCache.getStats().totalAtoms;
+                if (currentAtomCount > LARGE_ATOM_THRESHOLD) {
+                    showWarningDialog(currentAtomCount, function() {
+                        atomSpaceCache.fetchIncomingSet(node.atom);
+                    });
+                } else {
+                    // Start operation tracking for stop button
+                    startOperation();
+                    // Fetch incoming set via cache
+                    atomSpaceCache.fetchIncomingSet(node.atom);
+                }
             }
         }
         // Handle edge clicks
@@ -489,6 +508,12 @@ function setupEventHandlers() {
     atomSpaceCache.addEventListener('update', function(event) {
         const updateType = event.detail.type;
 
+        // Check if operation was cancelled
+        if (operationCancelled) {
+            endOperation();
+            return;
+        }
+
         if (updateType === 'incoming-set') {
             const parent = event.detail.parent;
             const atoms = event.detail.atoms;
@@ -505,13 +530,16 @@ function setupEventHandlers() {
             } else {
                 // For hierarchical/network view, rebuild the entire graph with new atoms
                 // This ensures proper bottom-up level calculation
-                rebuildFromAtomCache();
+                if (!operationCancelled) {
+                    rebuildFromAtomCache();
 
-                // Refit the network to show the new nodes
-                network.fit();
-                updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+                    // Refit the network to show the new nodes
+                    network.fit();
+                    updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+                }
             }
         } else if (updateType === 'listlinks-complete') {
+            endOperation();
             updateStatus('Ready', 'connected');
         }
     });
@@ -666,8 +694,18 @@ function setupEventHandlers() {
                 const nodeId = params.nodes[0];
                 const node = nodes.get(nodeId);
                 if (node && node.atom) {
-                    // Fetch via cache
-                    atomSpaceCache.fetchIncomingSet(node.atom);
+                    // Check current atom count and warn if getting large
+                    const currentAtomCount = atomSpaceCache.getStats().totalAtoms;
+                    if (currentAtomCount > LARGE_ATOM_THRESHOLD) {
+                        showWarningDialog(currentAtomCount, function() {
+                            atomSpaceCache.fetchIncomingSet(node.atom);
+                        });
+                    } else {
+                        // Start operation tracking for stop button
+                        startOperation();
+                        // Fetch via cache
+                        atomSpaceCache.fetchIncomingSet(node.atom);
+                    }
                 }
             } else if (params.edges.length > 0) {
                 const edgeId = params.edges[0];
@@ -721,6 +759,100 @@ function updateStatus(message, className) {
     statusElement.className = className || '';
 }
 
+// Warning and cancellation functions
+function showWarningDialog(atomCount, callback) {
+    const dialog = document.getElementById('warningDialog');
+    const overlay = document.getElementById('overlay');
+    const message = document.getElementById('warningMessage');
+
+    message.textContent = `This operation will process approximately ${atomCount} atoms. This may take some time and could affect performance. Do you want to continue?`;
+
+    dialog.style.display = 'block';
+    overlay.style.display = 'block';
+
+    pendingOperation = callback;
+}
+
+function cancelLargeOperation() {
+    const dialog = document.getElementById('warningDialog');
+    const overlay = document.getElementById('overlay');
+
+    dialog.style.display = 'none';
+    overlay.style.display = 'none';
+
+    pendingOperation = null;
+    updateStatus('Operation cancelled', 'connected');
+}
+
+function proceedWithLargeOperation() {
+    const dialog = document.getElementById('warningDialog');
+    const overlay = document.getElementById('overlay');
+
+    dialog.style.display = 'none';
+    overlay.style.display = 'none';
+
+    if (pendingOperation) {
+        startOperation();
+        pendingOperation();
+        pendingOperation = null;
+    }
+}
+
+function startOperation() {
+    operationCancelled = false;
+    operationStartTime = Date.now();
+
+    // Show stop button after a delay
+    stopButtonTimer = setTimeout(() => {
+        if (!operationCancelled) {
+            document.getElementById('stopButton').style.display = 'block';
+        }
+    }, STOP_BUTTON_DELAY);
+}
+
+function stopCurrentOperation() {
+    operationCancelled = true;
+
+    // Hide stop button
+    document.getElementById('stopButton').style.display = 'none';
+
+    // Clear timer if still pending
+    if (stopButtonTimer) {
+        clearTimeout(stopButtonTimer);
+        stopButtonTimer = null;
+    }
+
+    // Cancel any pending graph updates in graph-view
+    if (typeof pendingGraphUpdate !== 'undefined' && pendingGraphUpdate) {
+        clearTimeout(pendingGraphUpdate);
+        pendingGraphUpdate = null;
+    }
+    if (typeof pendingListLinkFetches !== 'undefined') {
+        pendingListLinkFetches = 0;
+    }
+
+    updateStatus('Processing stopped', 'connected');
+
+    // Ensure the graph remains functional
+    if (network) {
+        network.stabilize();
+    }
+}
+
+function endOperation() {
+    // Hide stop button
+    document.getElementById('stopButton').style.display = 'none';
+
+    // Clear timer if still pending
+    if (stopButtonTimer) {
+        clearTimeout(stopButtonTimer);
+        stopButtonTimer = null;
+    }
+
+    operationCancelled = false;
+    operationStartTime = null;
+}
+
 // Removed handleServerResponse - now handled via cache events
 
 // Helper function to check if two atoms match
@@ -769,6 +901,11 @@ function calculateMaxDepth(atom, depthCache = new Map()) {
 
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
+    // Check if operation was cancelled
+    if (operationCancelled) {
+        return;
+    }
+
     // Clear existing
     nodes.clear();
     edges.clear();

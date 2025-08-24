@@ -194,6 +194,16 @@ let pendingListLinkFetches = 0;
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms) {
+    // Check if operation was cancelled (from tree-view.js)
+    if (typeof operationCancelled !== 'undefined' && operationCancelled) {
+        pendingListLinkFetches = 0;
+        if (pendingGraphUpdate) {
+            clearTimeout(pendingGraphUpdate);
+            pendingGraphUpdate = null;
+        }
+        return;
+    }
+
     // Check if we need to fetch incoming sets for ListLinks
     const listLinksToFetch = [];
 
@@ -237,13 +247,24 @@ function handleGraphViewCacheUpdate(parent, atoms) {
     if (pendingListLinkFetches > 0) {
         // Set a timeout as a fallback in case some fetches fail
         pendingGraphUpdate = setTimeout(() => {
-            pendingListLinkFetches = 0;  // Reset counter
-            initializeGraphViewWithAtomCache();
+            // Check again for cancellation before rebuilding
+            if (typeof operationCancelled === 'undefined' || !operationCancelled) {
+                pendingListLinkFetches = 0;  // Reset counter
+                initializeGraphViewWithAtomCache();
+                if (typeof endOperation === 'function') {
+                    endOperation();
+                }
+            }
             pendingGraphUpdate = null;
         }, 1000);  // 1 second timeout
     } else {
         // No pending fetches, update immediately
-        initializeGraphViewWithAtomCache();
+        if (typeof operationCancelled === 'undefined' || !operationCancelled) {
+            initializeGraphViewWithAtomCache();
+            if (typeof endOperation === 'function') {
+                endOperation();
+            }
+        }
     }
 }
 
