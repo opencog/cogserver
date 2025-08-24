@@ -3,12 +3,20 @@
 
 // Global variables
 let network = null;
-let nodes = null;
+let vertices = null;  // vis-network vertices (not to be confused with AtomSpace Nodes)
 let edges = null;
 let rootAtoms = [];
 let serverUrl = null;
-let atomNodeMap = new Map();
-let nodeIdCounter = 1;
+let atomVertexMap = new Map();  // Maps atom keys to vertex IDs
+let vertexIdCounter = 1;
+
+// Operation control variables
+let operationCancelled = false;
+let pendingOperation = null;
+let operationStartTime = null;
+let stopButtonTimer = null;
+const LARGE_ATOM_THRESHOLD = 300; // Warn if more than 300 atoms
+const STOP_BUTTON_DELAY = 2000;   // Show stop button after 2 seconds
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -74,8 +82,8 @@ function initializeGraph() {
         return;
     }
 
-    // Create initial nodes and edges arrays
-    nodes = new vis.DataSet();
+    // Create initial vertices and edges arrays
+    vertices = new vis.DataSet();
     edges = new vis.DataSet();
 
     // Get the container
@@ -89,12 +97,12 @@ function initializeGraph() {
 
     // Create the network
     const data = {
-        nodes: nodes,
+        nodes: vertices,  // vis-network expects 'nodes' property
         edges: edges
     };
 
     const options = {
-        nodes: {
+        nodes: {  // vis-network configuration expects 'nodes' key
             shape: 'box',
             font: {
                 size: 14,
@@ -153,16 +161,27 @@ function initializeGraph() {
 
     // Add network event handlers
     network.on('click', function(params) {
-        // Handle node clicks
-        if (params.nodes.length > 0) {
-            const nodeId = params.nodes[0];
-            const node = nodes.get(nodeId);
-            if (node && node.atom) {
+        // Handle vertex clicks
+        if (params.nodes.length > 0) {  // vis-network API uses 'nodes'
+            const vertexId = params.nodes[0];
+            const vertex = vertices.get(vertexId);
+            if (vertex && vertex.atom) {
                 // Check if we're in graph view mode
                 const layoutSelect = document.getElementById('layoutSelect');
                 const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
-                // Fetch incoming set via cache
-                atomSpaceCache.fetchIncomingSet(node.atom);
+
+                // Check current atom count and warn if getting large
+                const currentAtomCount = atomSpaceCache.getStats().totalAtoms;
+                if (currentAtomCount > LARGE_ATOM_THRESHOLD) {
+                    showWarningDialog(currentAtomCount, function() {
+                        atomSpaceCache.fetchIncomingSet(vertex.atom);
+                    });
+                } else {
+                    // Start operation tracking for stop button
+                    startOperation();
+                    // Fetch incoming set via cache
+                    atomSpaceCache.fetchIncomingSet(vertex.atom);
+                }
             }
         }
         // Handle edge clicks
@@ -170,7 +189,7 @@ function initializeGraph() {
             const edgeId = params.edges[0];
             const edge = edges.get(edgeId);
             if (edge) {
-                removeNodeAndParents(edge.from);
+                removeVertexAndParents(edge.from);
             }
         }
     });
@@ -216,57 +235,57 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
     const atomKey = atomToKey(atom);
 
     // Check if we've already processed this atom
-    if (atomNodeMap.has(atomKey)) {
-        const existingNodeId = atomNodeMap.get(atomKey);
+    if (atomVertexMap.has(atomKey)) {
+        const existingVertexId = atomVertexMap.get(atomKey);
 
         // If we have a parent, we need to ensure proper hierarchy
         if (parentId !== null) {
-            const parentNode = nodes.get(parentId);
-            const existingNode = nodes.get(existingNodeId);
+            const parentVertex = vertices.get(parentId);
+            const existingVertex = vertices.get(existingVertexId);
 
-            if (parentNode && existingNode) {
-                // If this node's current level is not deeper than parent's level,
+            if (parentVertex && existingVertex) {
+                // If this vertex's current level is not deeper than parent's level,
                 // we need to move it down to maintain hierarchy
-                if (existingNode.level <= parentNode.level) {
+                if (existingVertex.level <= parentVertex.level) {
                     // Place it one level below the parent
-                    const newLevel = parentNode.level + 1;
-                    nodes.update({
-                        id: existingNodeId,
+                    const newLevel = parentVertex.level + 1;
+                    vertices.update({
+                        id: existingVertexId,
                         level: newLevel
                     });
 
                     // Recursively update all children of this node to maintain hierarchy
-                    updateChildrenLevels(existingNodeId, newLevel);
+                    updateChildrenLevels(existingVertexId, newLevel);
                 }
                 // Always add the edge from parent to child
-                addEdgeIfNotExists(parentId, existingNodeId);
+                addEdgeIfNotExists(parentId, existingVertexId);
             }
         }
-        return existingNodeId;
+        return existingVertexId;
     }
 
-    // Create a new node
-    const nodeId = nodeIdCounter++;
-    const nodeLabel = createCompactLabel(atom);
-    const nodeColor = getNodeColor(atom.type);
+    // Create a new vertex
+    const vertexId = vertexIdCounter++;
+    const vertexLabel = createCompactLabel(atom);
+    const vertexColor = getVertexColor(atom.type);
 
-    nodes.add({
-        id: nodeId,
-        label: nodeLabel,
-        color: nodeColor,
+    vertices.add({
+        id: vertexId,
+        label: vertexLabel,
+        color: vertexColor,
         atom: atom,
         level: depth,
         x: order * 150,  // Use order to hint at horizontal position
         title: atomToSExpression(atom) // Full format for tooltip
     });
 
-    atomNodeMap.set(atomKey, nodeId);
+    atomVertexMap.set(atomKey, vertexId);
 
     // Add edge from parent if exists
     if (parentId !== null) {
         edges.add({
             from: parentId,
-            to: nodeId,
+            to: vertexId,
             arrows: {
                 to: {
                     enabled: true
@@ -279,28 +298,28 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
     if (atom.outgoing && atom.outgoing.length > 0) {
         atom.outgoing.forEach((outgoing, index) => {
             if (typeof outgoing === 'object' && outgoing !== null) {
-                addAtomToGraph(outgoing, nodeId, depth + 1, index);
+                addAtomToGraph(outgoing, vertexId, depth + 1, index);
             }
         });
     }
 
-    return nodeId;
+    return vertexId;
 }
 
-function updateChildrenLevels(nodeId, parentLevel) {
-    // Find all edges where this node is the parent
+function updateChildrenLevels(vertexId, parentLevel) {
+    // Find all edges where this vertex is the parent
     const childEdges = edges.get({
         filter: function(edge) {
-            return edge.from === nodeId;
+            return edge.from === vertexId;
         }
     });
 
     // Update each child's level if needed
     childEdges.forEach(edge => {
-        const childNode = nodes.get(edge.to);
-        if (childNode && childNode.level <= parentLevel) {
+        const childVertex = vertices.get(edge.to);
+        if (childVertex && childVertex.level <= parentLevel) {
             const newChildLevel = parentLevel + 1;
-            nodes.update({
+            vertices.update({
                 id: edge.to,
                 level: newChildLevel
             });
@@ -310,62 +329,71 @@ function updateChildrenLevels(nodeId, parentLevel) {
     });
 }
 
-function removeNodeAndParents(nodeId) {
-    // Collect all nodes to remove (this node and all its parents)
-    const nodesToRemove = new Set();
+function removeVertexAndParents(vertexId) {
+    // Get the atom associated with this vertex
+    const vertex = vertices.get(vertexId);
+    if (!vertex || !vertex.atom) {
+        return;
+    }
+
+    // Remove the atom and its parents from the cache
+    const removedCount = atomSpaceCache.removeAtomAndParents(vertex.atom);
+
+    // Collect all vertices to remove (this vertex and all its parents)
+    const verticesToRemove = new Set();
     const edgesToRemove = new Set();
 
-    // Recursive function to find all parent nodes
-    function collectParents(currentNodeId) {
-        if (nodesToRemove.has(currentNodeId)) {
+    // Recursive function to find all parent vertices
+    function collectParents(currentVertexId) {
+        if (verticesToRemove.has(currentVertexId)) {
             return; // Already processed
         }
 
-        nodesToRemove.add(currentNodeId);
+        verticesToRemove.add(currentVertexId);
 
-        // Find all edges where this node is the parent (from)
+        // Find all edges where this vertex is the parent (from)
         const childEdges = edges.get({
             filter: function(edge) {
-                return edge.from === currentNodeId;
+                return edge.from === currentVertexId;
             }
         });
         childEdges.forEach(edge => {
             edgesToRemove.add(edge.id);
         });
 
-        // Find all edges where this node is the child (to)
+        // Find all edges where this vertex is the child (to)
         const parentEdges = edges.get({
             filter: function(edge) {
-                return edge.to === currentNodeId;
+                return edge.to === currentVertexId;
             }
         });
 
-        // For each parent edge, recursively collect the parent node
+        // For each parent edge, recursively collect the parent vertex
         parentEdges.forEach(edge => {
             edgesToRemove.add(edge.id);
             collectParents(edge.from);
         });
     }
 
-    // Start collection from the clicked node
-    collectParents(nodeId);
+    // Start collection from the clicked vertex
+    collectParents(vertexId);
 
     // Remove all collected edges
     edges.remove(Array.from(edgesToRemove));
 
-    // Remove all collected nodes
-    const nodeIdsToRemove = Array.from(nodesToRemove);
-    nodes.remove(nodeIdsToRemove);
+    // Remove all collected vertices
+    const vertexIdsToRemove = Array.from(verticesToRemove);
+    vertices.remove(vertexIdsToRemove);
 
-    // Clean up atomNodeMap
-    atomNodeMap.forEach((value, key) => {
-        if (nodesToRemove.has(value)) {
-            atomNodeMap.delete(key);
+    // Clean up atomVertexMap
+    atomVertexMap.forEach((value, key) => {
+        if (verticesToRemove.has(value)) {
+            atomVertexMap.delete(key);
         }
     });
 
     // Update status
-    updateStatus(`Removed ${nodesToRemove.size} node(s)`, 'connected');
+    updateStatus(`Removed ${verticesToRemove.size} vertex/vertices from display and ${removedCount} atom(s) from cache`, 'connected');
 }
 
 function addEdgeIfNotExists(from, to) {
@@ -448,8 +476,8 @@ function atomToSExpression(atom, indent = 0) {
     }
 }
 
-function getNodeColor(type) {
-    // Color scheme for different atom types
+function getVertexColor(type) {
+    // Color scheme for different atom types (for graph vertices)
     const colors = {
         'ConceptNode': '#4CAF50',
         'PredicateNode': '#2196F3',
@@ -489,6 +517,25 @@ function setupEventHandlers() {
     atomSpaceCache.addEventListener('update', function(event) {
         const updateType = event.detail.type;
 
+        // Handle cancellation event
+        if (updateType === 'operations-cancelled') {
+            endOperation();
+            return;
+        }
+
+        // Handle atoms-removed event - no need to rebuild as removal is already done
+        if (updateType === 'atoms-removed') {
+            // The visual removal is already handled by removeVertexAndParents
+            // This event just confirms cache is in sync
+            return;
+        }
+
+        // Check if operation was cancelled
+        if (operationCancelled) {
+            endOperation();
+            return;
+        }
+
         if (updateType === 'incoming-set') {
             const parent = event.detail.parent;
             const atoms = event.detail.atoms;
@@ -505,33 +552,24 @@ function setupEventHandlers() {
             } else {
                 // For hierarchical/network view, rebuild the entire graph with new atoms
                 // This ensures proper bottom-up level calculation
-                rebuildFromAtomCache();
+                if (!operationCancelled) {
+                    rebuildFromAtomCache();
 
-                // Refit the network to show the new nodes
-                network.fit();
-                updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+                    // Refit the network to show the new nodes
+                    network.fit();
+                    updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+
+                    // The operations-complete event will handle calling endOperation
+                }
             }
-        } else if (updateType === 'listlinks-complete') {
+        } else if (updateType === 'listlinks-complete' || updateType === 'operations-complete') {
+            endOperation();
             updateStatus('Ready', 'connected');
         }
     });
 
     atomSpaceCache.addEventListener('error', function(event) {
         updateStatus(event.detail.message, 'error');
-    });
-
-    // Expand button
-    document.getElementById('expandBtn').addEventListener('click', function() {
-        const selectedNodes = network.getSelectedNodes();
-        if (selectedNodes.length > 0) {
-            const node = nodes.get(selectedNodes[0]);
-            if (node && node.atom) {
-                // Fetch via cache
-                atomSpaceCache.fetchIncomingSet(node.atom);
-            }
-        } else {
-            updateStatus('Select a node to expand', 'error');
-        }
     });
 
     // Reset view button
@@ -554,8 +592,8 @@ function setupEventHandlers() {
         // Clear all data structures
         nodes = new vis.DataSet();
         edges = new vis.DataSet();
-        atomNodeMap.clear();
-        nodeIdCounter = 1;
+        atomVertexMap.clear();
+        vertexIdCounter = 1;
 
         // Recreate network with fresh options
         const container = document.getElementById('mynetwork');
@@ -671,21 +709,35 @@ function setupEventHandlers() {
         }
 
         // Create new network with the appropriate options
-        const data = { nodes: nodes, edges: edges };
+        const data = { nodes: vertices, edges: edges };  // vis-network expects 'nodes' property
         network = new vis.Network(container, data, options);
 
         // Re-attach event handlers
         network.on('click', function(params) {
-            if (params.nodes.length > 0) {
-                const nodeId = params.nodes[0];
-                const node = nodes.get(nodeId);
-                if (node && node.atom) {
-                    // Fetch via cache
-                    atomSpaceCache.fetchIncomingSet(node.atom);
+            if (params.nodes.length > 0) {  // vis-network API uses 'nodes'
+                const vertexId = params.nodes[0];
+                const vertex = vertices.get(vertexId);
+                if (vertex && vertex.atom) {
+                    // Check current atom count and warn if getting large
+                    const currentAtomCount = atomSpaceCache.getStats().totalAtoms;
+                    if (currentAtomCount > LARGE_ATOM_THRESHOLD) {
+                        showWarningDialog(currentAtomCount, function() {
+                            atomSpaceCache.fetchIncomingSet(vertex.atom);
+                        });
+                    } else {
+                        // Start operation tracking for stop button
+                        startOperation();
+                        // Fetch via cache
+                        atomSpaceCache.fetchIncomingSet(vertex.atom);
+                    }
                 }
             } else if (params.edges.length > 0) {
                 const edgeId = params.edges[0];
-                removeIncomingSubgraph(edgeId);
+                // Edge click - remove parent nodes
+                const edge = edges.get(edgeId);
+                if (edge) {
+                    removeVertexAndParents(edge.from);
+                }
             }
         });
 
@@ -704,10 +756,10 @@ function setupEventHandlers() {
 
 function refreshGraph() {
     // Clear the graph
-    nodes.clear();
+    vertices.clear();
     edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
+    atomVertexMap.clear();
+    vertexIdCounter = 1;
 
     // Check current layout mode
     const layoutSelect = document.getElementById('layoutSelect');
@@ -729,6 +781,106 @@ function updateStatus(message, className) {
     const statusElement = document.getElementById('status');
     statusElement.textContent = message;
     statusElement.className = className || '';
+}
+
+// Warning and cancellation functions
+function showWarningDialog(atomCount, callback) {
+    const dialog = document.getElementById('warningDialog');
+    const overlay = document.getElementById('overlay');
+    const message = document.getElementById('warningMessage');
+
+    message.textContent = `This operation will process approximately ${atomCount} atoms. This may take some time and could affect performance. Do you want to continue?`;
+
+    dialog.style.display = 'block';
+    overlay.style.display = 'block';
+
+    pendingOperation = callback;
+}
+
+function cancelLargeOperation() {
+    const dialog = document.getElementById('warningDialog');
+    const overlay = document.getElementById('overlay');
+
+    dialog.style.display = 'none';
+    overlay.style.display = 'none';
+
+    pendingOperation = null;
+    updateStatus('Operation cancelled', 'connected');
+}
+
+function proceedWithLargeOperation() {
+    const dialog = document.getElementById('warningDialog');
+    const overlay = document.getElementById('overlay');
+
+    dialog.style.display = 'none';
+    overlay.style.display = 'none';
+
+    if (pendingOperation) {
+        startOperation();  // This will reset cancellation flag in cache
+        pendingOperation();
+        pendingOperation = null;
+    }
+}
+
+function startOperation() {
+    operationCancelled = false;
+    operationStartTime = Date.now();
+
+    // Reset cancellation flag in cache
+    atomSpaceCache.resetCancellation();
+
+    // Show stop button after a delay
+    stopButtonTimer = setTimeout(() => {
+        if (!operationCancelled) {
+            document.getElementById('stopButton').style.display = 'block';
+        }
+    }, STOP_BUTTON_DELAY);
+}
+
+function stopCurrentOperation() {
+    operationCancelled = true;
+
+    // Cancel all pending operations in the cache
+    atomSpaceCache.cancelAllOperations();
+
+    // Hide stop button
+    document.getElementById('stopButton').style.display = 'none';
+
+    // Clear timer if still pending
+    if (stopButtonTimer) {
+        clearTimeout(stopButtonTimer);
+        stopButtonTimer = null;
+    }
+
+    // Cancel any pending graph updates in graph-view
+    if (typeof pendingGraphUpdate !== 'undefined' && pendingGraphUpdate) {
+        clearTimeout(pendingGraphUpdate);
+        pendingGraphUpdate = null;
+    }
+    if (typeof pendingListLinkFetches !== 'undefined') {
+        pendingListLinkFetches = 0;
+    }
+
+    updateStatus('Processing stopped', 'connected');
+
+    // Ensure the graph remains functional
+    if (network) {
+        network.stabilize();
+    }
+}
+
+function endOperation() {
+    // Hide stop button
+    document.getElementById('stopButton').style.display = 'none';
+
+    // Clear timer if still pending
+    if (stopButtonTimer) {
+        clearTimeout(stopButtonTimer);
+        stopButtonTimer = null;
+    }
+
+    operationCancelled = false;
+    operationStartTime = null;
 }
 
 // Removed handleServerResponse - now handled via cache events
@@ -779,11 +931,16 @@ function calculateMaxDepth(atom, depthCache = new Map()) {
 
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
+    // Check if operation was cancelled
+    if (operationCancelled) {
+        return;
+    }
+
     // Clear existing
-    nodes.clear();
+    vertices.clear();
     edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
+    atomVertexMap.clear();
+    vertexIdCounter = 1;
 
     // Calculate depths for all atoms
     const depthCache = new Map();
@@ -799,7 +956,7 @@ function rebuildFromAtomCache() {
     // Second pass: add all atoms with inverted levels (bottom-up)
     allAtoms.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        if (atomNodeMap.has(atomKey)) {
+        if (atomVertexMap.has(atomKey)) {
             return; // Already added
         }
 
@@ -807,38 +964,38 @@ function rebuildFromAtomCache() {
         // Invert the level: leaves at bottom (high level number), roots at top (level 0)
         const level = maxDepthInGraph - maxDepth;
 
-        // Create node
-        const nodeId = nodeIdCounter++;
-        const nodeLabel = createCompactLabel(atom);
-        const nodeColor = getNodeColor(atom.type);
+        // Create vertex
+        const vertexId = vertexIdCounter++;
+        const vertexLabel = createCompactLabel(atom);
+        const vertexColor = getVertexColor(atom.type);
 
-        nodes.add({
-            id: nodeId,
-            label: nodeLabel,
-            color: nodeColor,
+        vertices.add({
+            id: vertexId,
+            label: vertexLabel,
+            color: vertexColor,
             atom: atom,
             level: level,
             title: atomToSExpression(atom)
         });
 
-        atomNodeMap.set(atomKey, nodeId);
+        atomVertexMap.set(atomKey, vertexId);
     });
 
     // Third pass: add edges for parent-child relationships
     allAtoms.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        const parentNodeId = atomNodeMap.get(atomKey);
+        const parentVertexId = atomVertexMap.get(atomKey);
 
-        if (parentNodeId && atom.outgoing && atom.outgoing.length > 0) {
+        if (parentVertexId && atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(child => {
                 if (typeof child === 'object' && child !== null) {
                     const childKey = atomSpaceCache.atomToKey(child);
-                    const childNodeId = atomNodeMap.get(childKey);
+                    const childVertexId = atomVertexMap.get(childKey);
 
-                    if (childNodeId) {
+                    if (childVertexId) {
                         edges.add({
-                            from: parentNodeId,
-                            to: childNodeId,
+                            from: parentVertexId,
+                            to: childVertexId,
                             arrows: {
                                 to: {
                                     enabled: true,
@@ -853,91 +1010,5 @@ function rebuildFromAtomCache() {
     });
 }
 
-// Initialize graph view from atom cache
-function initializeGraphViewWithAtomCache() {
-    const graphData = atomSpaceCache.getAtomsForGraphView();
-
-    // Add all nodes
-    graphData.nodes.forEach((atom, index) => {
-        addNodeToGraph(atom);
-    });
-
-    // Add all edges
-    graphData.edges.forEach(edge => {
-        const fromKey = atomSpaceCache.atomToKey(edge.from);
-        const toKey = atomSpaceCache.atomToKey(edge.to);
-
-        if (atomNodeMap.has(fromKey) && atomNodeMap.has(toKey)) {
-            const fromId = atomNodeMap.get(fromKey);
-            const toId = atomNodeMap.get(toKey);
-            addLabeledEdge(fromId, toId, edge.label, edge.type);
-        }
-    });
-}
-
-// Old function for compatibility - will be removed
-function redrawAllAtomsInTreeMode() {
-    const processedAtoms = new Set();
-    const depthMap = new Map(); // Track depth of each atom to prevent inconsistencies
-
-    // First pass: Add root atoms and establish base hierarchy
-    if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach((atom, index) => {
-            const atomKey = atomToKey(atom);
-            if (!processedAtoms.has(atomKey)) {
-                processedAtoms.add(atomKey);
-                depthMap.set(atomKey, 0);
-                // Add root at depth 0
-                const nodeId = addAtomToGraph(atom, null, 0, index);
-                // Process only immediate children, not recursive
-                if (atom.outgoing && atom.outgoing.length > 0) {
-                    atom.outgoing.forEach((child, childIndex) => {
-                        if (typeof child === 'object' && child !== null) {
-                            const childKey = atomToKey(child);
-                            if (!processedAtoms.has(childKey)) {
-                                processedAtoms.add(childKey);
-                                depthMap.set(childKey, 1);
-                                const childId = addAtomToGraph(child, nodeId, 1, childIndex);
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    // Second pass: Add remaining atoms from stored collection
-    allStoredAtoms.forEach(atomData => {
-        const atom = atomData.atom;
-        const atomKey = atomToKey(atom);
-
-        // Skip if already processed
-        if (processedAtoms.has(atomKey)) {
-            return;
-        }
-
-        // Determine appropriate depth
-        let depth = 1;
-        let parentId = null;
-
-        // Check if this atom has a valid parent in the graph
-        const parentAtom = atomData.parent;
-        if (parentAtom && parentAtom.type !== 'ListLink') {
-            // Don't use ListLink as parent (it comes from graph view EdgeLink processing)
-            const parentKey = atomToKey(parentAtom);
-            if (atomNodeMap.has(parentKey)) {
-                parentId = atomNodeMap.get(parentKey);
-                const parentDepth = depthMap.get(parentKey) || 0;
-                depth = Math.min(parentDepth + 1, 2); // Max depth of 2 to prevent tall layouts
-            }
-        }
-
-        // Add the atom
-        processedAtoms.add(atomKey);
-        depthMap.set(atomKey, depth);
-        addAtomToGraph(atom, parentId, depth, 0);
-    });
-}
-
-
 // Removed fetchIncomingSet - now handled by atomspace-cache
+// Removed initializeGraphViewWithAtomCache - moved to graph-view.js

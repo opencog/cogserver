@@ -21,6 +21,7 @@ class AtomSpaceCache extends EventTarget {
         // Queue for sequential processing of ListLink requests
         this.pendingListLinkRequests = [];
         this.isProcessingListLink = false;
+        this.operationsCancelled = false;
     }
 
     // Generate unique key for an atom
@@ -172,61 +173,89 @@ class AtomSpaceCache extends EventTarget {
     }
 
     // Clear all atoms
+    // Remove an atom and its parent chain from the cache
+    removeAtomAndParents(atom) {
+        if (!atom) return;
+
+        const atomsToRemove = new Set();
+        const atomKey = this.atomToKey(atom);
+
+        // Recursive function to collect atom and all its parents
+        const collectAtomsToRemove = (currentKey) => {
+            if (!currentKey || atomsToRemove.has(currentKey)) {
+                return;
+            }
+
+            atomsToRemove.add(currentKey);
+
+            // Get all parent atoms of this atom
+            const parentKeys = this.parents.get(currentKey);
+            if (parentKeys) {
+                parentKeys.forEach(parentKey => {
+                    collectAtomsToRemove(parentKey);
+                });
+            }
+        };
+
+        // Start collection from the given atom
+        collectAtomsToRemove(atomKey);
+
+        // Remove all collected atoms
+        atomsToRemove.forEach(key => {
+            // Get the atom before removing
+            const atomToRemove = this.atoms.get(key);
+
+            // Remove from atoms map
+            this.atoms.delete(key);
+
+            // Clean up parent relationships
+            const parents = this.parents.get(key);
+            if (parents) {
+                parents.forEach(parentKey => {
+                    const childrenSet = this.children.get(parentKey);
+                    if (childrenSet) {
+                        childrenSet.delete(key);
+                    }
+                });
+            }
+            this.parents.delete(key);
+
+            // Clean up children relationships
+            const children = this.children.get(key);
+            if (children) {
+                children.forEach(childKey => {
+                    const parentsSet = this.parents.get(childKey);
+                    if (parentsSet) {
+                        parentsSet.delete(key);
+                        // If child has no more parents, it becomes a root
+                        if (parentsSet.size === 0 && this.atoms.has(childKey)) {
+                            this.roots.add(childKey);
+                        }
+                    }
+                });
+            }
+            this.children.delete(key);
+
+            // Remove from roots if present
+            this.roots.delete(key);
+        });
+
+        // Notify that cache has been updated
+        this.dispatchEvent(new CustomEvent('update', {
+            detail: {
+                type: 'atoms-removed',
+                count: atomsToRemove.size
+            }
+        }));
+
+        return atomsToRemove.size;
+    }
+
     clear() {
         this.atoms.clear();
         this.parents.clear();
         this.children.clear();
         this.roots.clear();
-    }
-
-    // Get atoms for hierarchical view (exclude EdgeLink internals)
-    getAtomsForHierarchicalView() {
-        const result = [];
-        const processed = new Set();
-
-        // Start with root atoms
-        this.getRootAtoms().forEach(atom => {
-            // Skip EdgeLinks and EvaluationLinks at root level
-            if (atom.type !== 'EdgeLink' && atom.type !== 'EvaluationLink') {
-                result.push({
-                    atom: atom,
-                    depth: 0,
-                    parent: null
-                });
-                processed.add(this.atomToKey(atom));
-            }
-        });
-
-        // Process all atoms, but skip EdgeLink components
-        this.atoms.forEach((atom, atomKey) => {
-            if (processed.has(atomKey)) return;
-
-            // Skip EdgeLinks, EvaluationLinks and their typical components
-            if (atom.type === 'EdgeLink' ||
-                atom.type === 'EvaluationLink' ||
-                atom.type === 'BondNode' ||
-                atom.type === 'PredicateNode') {
-                return;
-            }
-
-            // Skip ListLinks that are part of EdgeLink patterns
-            if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-                // Check if both children are nodes
-                const bothNodes = atom.outgoing.every(child =>
-                    child && typeof child === 'object' && child.type && child.type.endsWith('Node')
-                );
-                if (bothNodes) return;
-            }
-
-            // Add other atoms
-            result.push({
-                atom: atom,
-                depth: 1,
-                parent: null
-            });
-        });
-
-        return result;
     }
 
     // Get atoms for graph view (only nodes and EdgeLink relationships)
@@ -366,6 +395,11 @@ class AtomSpaceCache extends EventTarget {
 
     // Fetch incoming set for an atom
     fetchIncomingSet(atom) {
+        // Check if operations were cancelled
+        if (this.operationsCancelled) {
+            return;
+        }
+
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
             this.dispatchEvent(new CustomEvent('error', {
                 detail: { message: 'Not connected to server' }
@@ -407,6 +441,13 @@ class AtomSpaceCache extends EventTarget {
 
     // Process ListLink requests sequentially
     processNextListLink() {
+        // Check if operations were cancelled
+        if (this.operationsCancelled) {
+            this.pendingListLinkRequests = [];
+            this.isProcessingListLink = false;
+            return;
+        }
+
         if (this.pendingListLinkRequests.length === 0) {
             this.isProcessingListLink = false;
             this.dispatchEvent(new CustomEvent('update', {
@@ -425,6 +466,14 @@ class AtomSpaceCache extends EventTarget {
     processListLinkResponse(response) {
         if (!this.currentListLinkRequest) return;
 
+        // Check if operations were cancelled
+        if (this.operationsCancelled) {
+            this.currentListLinkRequest = null;
+            this.pendingListLinkRequests = [];
+            this.isProcessingListLink = false;
+            return;
+        }
+
         const parentAtom = this.currentListLinkRequest.atom;
 
         // Add all atoms from the response
@@ -434,14 +483,17 @@ class AtomSpaceCache extends EventTarget {
             }
         });
 
-        // Notify that cache has been updated
-        this.dispatchEvent(new CustomEvent('update', {
-            detail: {
-                type: 'incoming-set',
-                parent: parentAtom,
-                atoms: response
-            }
-        }));
+        // Only dispatch update if not cancelled
+        if (!this.operationsCancelled) {
+            // Notify that cache has been updated
+            this.dispatchEvent(new CustomEvent('update', {
+                detail: {
+                    type: 'incoming-set',
+                    parent: parentAtom,
+                    atoms: response
+                }
+            }));
+        }
 
         // Process next ListLink
         this.currentListLinkRequest = null;
@@ -461,6 +513,10 @@ class AtomSpaceCache extends EventTarget {
             }
         });
 
+        // Clear the pending request BEFORE dispatching event
+        // This ensures hasPendingOperations() returns correct value in event handlers
+        this.pendingRegularRequest = null;
+
         // Notify that cache has been updated
         this.dispatchEvent(new CustomEvent('update', {
             detail: {
@@ -470,39 +526,41 @@ class AtomSpaceCache extends EventTarget {
             }
         }));
 
-        // Clear the pending request
-        this.pendingRegularRequest = null;
+        // If there are no more pending operations, dispatch completion event
+        if (!this.hasPendingOperations()) {
+            this.dispatchEvent(new CustomEvent('update', {
+                detail: { type: 'operations-complete' }
+            }));
+        }
     }
 
-    // Remove an atom and its incoming edges
-    removeIncomingEdges(atom) {
-        const atomKey = this.atomToKey(atom);
+    // Cancel all pending operations
+    cancelAllOperations() {
+        // Set cancellation flag
+        this.operationsCancelled = true;
 
-        // Find all atoms that have this atom as a child
-        const parents = this.getParents(atom);
-        parents.forEach(parent => {
-            const parentKey = this.atomToKey(parent);
-            const children = this.children.get(parentKey);
-            if (children) {
-                children.delete(atomKey);
-            }
-        });
+        // Clear ListLink queue
+        this.pendingListLinkRequests = [];
+        this.isProcessingListLink = false;
+        this.currentListLinkRequest = null;
 
-        // Clear this atom's parents
-        this.parents.set(atomKey, new Set());
+        // Clear regular request
+        this.pendingRegularRequest = null;
 
-        // If atom has no parents, it becomes a root
-        if (this.atoms.has(atomKey)) {
-            this.roots.add(atomKey);
-        }
-
-        // Notify update
+        // Notify that operations were cancelled
         this.dispatchEvent(new CustomEvent('update', {
-            detail: {
-                type: 'edges-removed',
-                atom: atom
-            }
+            detail: { type: 'operations-cancelled' }
         }));
+    }
+
+    // Reset cancellation flag (call when starting new operation)
+    resetCancellation() {
+        this.operationsCancelled = false;
+    }
+
+    // Check if there are pending operations
+    hasPendingOperations() {
+        return this.isProcessingListLink || this.pendingListLinkRequests.length > 0 || this.pendingRegularRequest !== null;
     }
 
     // Disconnect from server

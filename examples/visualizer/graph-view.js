@@ -56,61 +56,40 @@ function extractGraphEdgeInfo(atom) {
     };
 }
 
-// Add atoms to graph with special handling for edge patterns
-function addAtomToGraphView(atom, parentId, depth, order = 0) {
-    // Check if this is a special edge pattern
-    if (isGraphEdgePattern(atom)) {
-        const edgeInfo = extractGraphEdgeInfo(atom);
-
-        // Add the from and to nodes if they don't exist
-        const fromNodeId = addNodeToGraph(edgeInfo.fromNode);
-        const toNodeId = addNodeToGraph(edgeInfo.toNode);
-
-        // Add a labeled edge between them
-        addLabeledEdge(fromNodeId, toNodeId, edgeInfo.edgeLabel, edgeInfo.edgeType);
-
-        // Don't add the Edge/EvaluationLink itself as a node
-        return null;
-    }
-
-    // For non-edge patterns, use regular graph addition
-    return addAtomToGraph(atom, parentId, depth, order);
-}
-
-// Add a single node to the graph (reusing existing if already present)
-function addNodeToGraph(atom) {
+// Add a single vertex to the graph (reusing existing if already present)
+function addVertexToGraph(atom) {
     const atomKey = atomToKey(atom);
 
-    // Check if node already exists
-    if (atomNodeMap.has(atomKey)) {
-        return atomNodeMap.get(atomKey);
+    // Check if vertex already exists
+    if (atomVertexMap.has(atomKey)) {
+        return atomVertexMap.get(atomKey);
     }
 
-    // Create new node
-    const nodeId = nodeIdCounter++;
-    const nodeLabel = createCompactLabel(atom);
-    const nodeColor = getNodeColor(atom.type);
+    // Create new vertex
+    const vertexId = vertexIdCounter++;
+    const vertexLabel = createCompactLabel(atom);
+    const vertexColor = getVertexColor(atom.type);
 
-    nodes.add({
-        id: nodeId,
-        label: nodeLabel,
-        color: nodeColor,
+    vertices.add({
+        id: vertexId,
+        label: vertexLabel,
+        color: vertexColor,
         atom: atom,
         title: atomToSExpression(atom),
-        shape: 'ellipse' // Use ellipse for graph mode nodes
+        shape: 'ellipse' // Use ellipse for graph mode vertices
     });
 
-    atomNodeMap.set(atomKey, nodeId);
-    return nodeId;
+    atomVertexMap.set(atomKey, vertexId);
+    return vertexId;
 }
 
-// Add a labeled edge between two nodes
+// Add a labeled edge between two vertices
 function addLabeledEdge(fromId, toId, label, edgeType) {
     // Every Atom is unique in AtomSpace - always add the edge
     // Different style for graph edges
     const edgeColor = edgeType === 'EdgeLink' ? '#FF6B6B' : '#4ECDC4';
 
-    // Count existing edges between these nodes to offset curves
+    // Count existing edges between these vertices to offset curves
     const existingEdges = edges.get({
         filter: function(item) {
             return (item.from === fromId && item.to === toId) ||
@@ -153,32 +132,32 @@ function addLabeledEdge(fromId, toId, label, edgeType) {
 
 // Initialize graph view using atom cache
 function initializeGraphViewWithAtomCache() {
-    // Clear existing nodes and edges
-    nodes.clear();
+    // Clear existing vertices and edges
+    vertices.clear();
     edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
+    atomVertexMap.clear();
+    vertexIdCounter = 1;
 
     // Get atoms from cache for graph view
     const graphData = atomSpaceCache.getAtomsForGraphView();
 
-    // Add all nodes first
+    // Add all vertices first (from AtomSpace nodes)
     graphData.nodes.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        if (!atomNodeMap.has(atomKey)) {
-            const nodeId = nodeIdCounter++;
-            const nodeLabel = createCompactLabel(atom);
-            const nodeColor = getNodeColor(atom.type);
+        if (!atomVertexMap.has(atomKey)) {
+            const vertexId = vertexIdCounter++;
+            const vertexLabel = createCompactLabel(atom);
+            const vertexColor = getVertexColor(atom.type);
 
-            nodes.add({
-                id: nodeId,
-                label: nodeLabel,
-                color: nodeColor,
+            vertices.add({
+                id: vertexId,
+                label: vertexLabel,
+                color: vertexColor,
                 atom: atom,
                 title: atomToSExpression(atom)
             });
 
-            atomNodeMap.set(atomKey, nodeId);
+            atomVertexMap.set(atomKey, vertexId);
         }
     });
 
@@ -186,8 +165,8 @@ function initializeGraphViewWithAtomCache() {
     graphData.edges.forEach(edge => {
         const fromKey = atomSpaceCache.atomToKey(edge.from);
         const toKey = atomSpaceCache.atomToKey(edge.to);
-        const fromId = atomNodeMap.get(fromKey);
-        const toId = atomNodeMap.get(toKey);
+        const fromId = atomVertexMap.get(fromKey);
+        const toId = atomVertexMap.get(toKey);
 
         if (fromId && toId) {
             edges.add({
@@ -209,41 +188,29 @@ function initializeGraphViewWithAtomCache() {
     });
 }
 
-// Initialize graph view mode (legacy - for compatibility)
-function initializeGraphView() {
-    // Clear any existing data
-    if (nodes) nodes.clear();
-    if (edges) edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
-
-    // Process root atoms with graph view logic
-    if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach(atom => {
-            processAtomForGraphView(atom);
-        });
-
-        if (network) {
-            network.fit();
-        }
-        updateStatus(`Graph view initialized with ${rootAtoms.length} atom(s)`, 'connected');
-    }
-}
-
-// Initialize graph view with all stored atoms - redirects to cache-based version
-function initializeGraphViewWithAllAtoms() {
-    initializeGraphViewWithAtomCache();
-}
+// Batching mechanism for graph updates
+let pendingGraphUpdate = null;
+let pendingListLinkFetches = 0;
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms) {
+    // Check if operation was cancelled (from tree-view.js)
+    if (typeof operationCancelled !== 'undefined' && operationCancelled) {
+        pendingListLinkFetches = 0;
+        if (pendingGraphUpdate) {
+            clearTimeout(pendingGraphUpdate);
+            pendingGraphUpdate = null;
+        }
+        return;
+    }
+
     // Check if we need to fetch incoming sets for ListLinks
     const listLinksToFetch = [];
 
     atoms.forEach(atom => {
-        // Check if it's a ListLink with exactly 2 nodes
+        // Check if it's a ListLink with exactly 2 AtomSpace Nodes
         if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-            // Check if both outgoing atoms are nodes
+            // Check if both outgoing atoms are AtomSpace Nodes
             const firstIsNode = atom.outgoing[0] && typeof atom.outgoing[0] === 'object' &&
                               atom.outgoing[0].type && atom.outgoing[0].type.endsWith('Node');
             const secondIsNode = atom.outgoing[1] && typeof atom.outgoing[1] === 'object' &&
@@ -255,251 +222,63 @@ function handleGraphViewCacheUpdate(parent, atoms) {
         }
     });
 
-    // Fetch incoming sets for qualifying ListLinks (second-level fetch)
+    // Track how many ListLink fetches we're about to start
     if (listLinksToFetch.length > 0) {
+        pendingListLinkFetches += listLinksToFetch.length;
+
+        // Fetch incoming sets for qualifying ListLinks (second-level fetch)
         listLinksToFetch.forEach(listLink => {
             atomSpaceCache.fetchIncomingSet(listLink);
         });
     }
 
-    // Rebuild the graph to show current state
-    initializeGraphViewWithAtomCache();
-}
-
-// Check if this is a ListLink that belongs to an Edge/EvaluationLink pattern
-function isListLinkInEdgePattern(atom, parent) {
-    if (!atom || atom.type !== 'ListLink') {
-        return false;
+    // If this was a ListLink response, decrement the counter
+    if (parent && parent.type === 'ListLink') {
+        pendingListLinkFetches = Math.max(0, pendingListLinkFetches - 1);
     }
-    // Check if parent is an Edge/EvaluationLink with this ListLink as second argument
-    if (parent && (parent.type === 'EdgeLink' || parent.type === 'EvaluationLink')) {
-        if (parent.outgoing && parent.outgoing.length === 2 && parent.outgoing[1] === atom) {
-            // Check if first argument is a PredicateNode or BondNode
-            const predicate = parent.outgoing[0];
-            if (predicate && typeof predicate === 'object' &&
-                (predicate.type === 'PredicateNode' || predicate.type === 'BondNode')) {
-                return true;
+
+    // Clear any existing update timer
+    if (pendingGraphUpdate) {
+        clearTimeout(pendingGraphUpdate);
+        pendingGraphUpdate = null;
+    }
+
+    // If we're waiting for ListLink fetches, defer the update
+    if (pendingListLinkFetches > 0) {
+        // Set a timeout as a fallback in case some fetches fail
+        pendingGraphUpdate = setTimeout(() => {
+            // Check again for cancellation before rebuilding
+            if (typeof operationCancelled === 'undefined' || !operationCancelled) {
+                pendingListLinkFetches = 0;  // Reset counter
+                initializeGraphViewWithAtomCache();
             }
-        }
-    }
-
-    return false;
-}
-
-// Check if this is a PredicateNode/BondNode that belongs to an Edge/EvaluationLink pattern
-function isPredicateInEdgePattern(atom, parent) {
-    if (!atom || (atom.type !== 'PredicateNode' && atom.type !== 'BondNode')) {
-        return false;
-    }
-    // Check if parent is an Edge/EvaluationLink with this PredicateNode/BondNode as first argument
-    if (parent && (parent.type === 'EdgeLink' || parent.type === 'EvaluationLink')) {
-        if (parent.outgoing && parent.outgoing.length === 2 && parent.outgoing[0] === atom) {
-            // Check if second argument is a ListLink with 2 nodes
-            const list = parent.outgoing[1];
-            if (list && typeof list === 'object' && list.type === 'ListLink') {
-                if (list.outgoing && list.outgoing.length === 2) {
-                    const first = list.outgoing[0];
-                    const second = list.outgoing[1];
-                    if (first && typeof first === 'object' && first.type.endsWith('Node') &&
-                        second && typeof second === 'object' && second.type.endsWith('Node')) {
-                        return true;
-                    }
-                }
+            // End operation when timeout completes
+            if (typeof endOperation === 'function') {
+                endOperation();
             }
-        }
-    }
-
-    return false;
-}
-
-// Check if an atom should be skipped in graph view
-function shouldSkipInGraphView(atom) {
-    if (!atom || typeof atom !== 'object') {
-        return true;
-    }
-
-    // Skip ListLinks that could be part of Edge/EvaluationLink patterns
-    if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-        const first = atom.outgoing[0];
-        const second = atom.outgoing[1];
-        // If it has exactly 2 nodes, it might be part of a pattern - skip it
-        if (first && typeof first === 'object' && first.type.endsWith('Node') &&
-            second && typeof second === 'object' && second.type.endsWith('Node')) {
-            return true;
-        }
-    }
-
-    // Skip PredicateNode and BondNode as they're used as labels in EdgeLinks
-    if (atom.type === 'PredicateNode' || atom.type === 'BondNode') {
-        return true;
-    }
-
-    return false;
-}
-
-// Process an atom and its children for graph view
-function processAtomForGraphView(atom, visited = new Set()) {
-    if (!atom || typeof atom !== 'object') {
-        return;
-    }
-
-    // Check if this is an Edge/EvaluationLink with the special pattern FIRST
-    // Don't use visited set for EdgeLinks - process them all
-    if (isGraphEdgePattern(atom)) {
-        const edgeInfo = extractGraphEdgeInfo(atom);
-
-        // Add only the two endpoint nodes (or reuse if they exist)
-        const fromNodeId = addNodeToGraph(edgeInfo.fromNode);
-        const toNodeId = addNodeToGraph(edgeInfo.toNode);
-
-        // Add labeled edge between them
-        addLabeledEdge(fromNodeId, toNodeId, edgeInfo.edgeLabel, edgeInfo.edgeType);
-
-        // Don't process this atom's children as regular nodes
-        return;
-    }
-
-    // For non-EdgeLink atoms, use the visited set normally
-    const atomKey = atomToKey(atom);
-
-    if (visited.has(atomKey)) {
-        return;
-    }
-
-    // Skip atoms that shouldn't be shown in graph view
-    if (shouldSkipInGraphView(atom)) {
-        // Don't mark certain atoms as visited as they can be shared by multiple EdgeLinks
-        if ((atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) ||
-            atom.type === 'PredicateNode' ||
-            atom.type === 'BondNode') {
-            // These can be shared by multiple EdgeLinks - don't mark as visited
-        } else {
-            // Mark other skipped atoms as visited
-            visited.add(atomKey);
-        }
-        // Still process children to find patterns
-        if (atom.outgoing && atom.outgoing.length > 0) {
-            atom.outgoing.forEach(outgoing => {
-                if (typeof outgoing === 'object' && outgoing !== null) {
-                    processAtomForGraphView(outgoing, visited);
-                }
-            });
-        }
-        return;
-    }
-
-    // Mark as visited for regular atoms
-    visited.add(atomKey);
-
-    // Regular atom - add as node and process children
-    const nodeId = addNodeToGraph(atom);
-
-    // Process outgoing links
-    if (atom.outgoing && atom.outgoing.length > 0) {
-        atom.outgoing.forEach(outgoing => {
-            if (typeof outgoing === 'object' && outgoing !== null) {
-                // Process the child
-                processAtomForGraphView(outgoing, visited);
-
-                // Add edge only if the child was actually added as a node
-                if (!isGraphEdgePattern(outgoing) && !shouldSkipInGraphView(outgoing)) {
-                    const outgoingKey = atomToKey(outgoing);
-                    if (atomNodeMap.has(outgoingKey)) {
-                        const childId = atomNodeMap.get(outgoingKey);
-                        addEdgeIfNotExists(nodeId, childId);
-                    }
-                }
-            }
-        });
-    }
-}
-
-// Fetch incoming set for graph view with special handling for ListLinks
-function fetchIncomingSetForGraph(atom, nodeId) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        updateStatus('Not connected to server', 'error');
-        return;
-    }
-
-    updateStatus('Fetching incoming links...', 'loading');
-
-    // Construct the command to get incoming set
-    let atomSpec;
-    if (atom.name !== undefined) {
-        // It's a node - escape the name properly for JSON
-        const escapedName = JSON.stringify(atom.name);
-        atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
+            pendingGraphUpdate = null;
+        }, 1000);  // 1 second timeout
     } else {
-        // It's a link or complex atom - use full JSON serialization
-        atomSpec = JSON.stringify(atom);
-    }
-
-    const command = `AtomSpace.getIncoming(${atomSpec})`;
-
-    // Store request info for when we receive the response
-    pendingIncomingRequest = {
-        atom: atom,
-        nodeId: nodeId,
-        isGraphView: true  // Flag to indicate graph view processing
-    };
-
-    // Send the command
-    socket.send(command);
-}
-
-// Process incoming set response for graph view
-function processIncomingSetForGraph(incomingAtoms, targetNodeId) {
-    if (!incomingAtoms || !Array.isArray(incomingAtoms)) {
-        updateStatus('No incoming links found', 'connected');
-        return;
-    }
-
-    // Track ListLinks that need their incoming set fetched
-    const listLinksToFetch = [];
-
-    // Use a shared visited set for all processing
-    const visited = new Set();
-
-    // First pass: add all incoming atoms and identify ListLinks with 2 nodes
-    incomingAtoms.forEach(atom => {
-        if (atom && typeof atom === 'object') {
-            // Check if it's a ListLink with exactly 2 nodes
-            if (atom.type === 'ListLink' && atom.outgoing && atom.outgoing.length === 2) {
-                // Check if both outgoing atoms are nodes
-                const firstIsNode = atom.outgoing[0] && typeof atom.outgoing[0] === 'object' &&
-                                  atom.outgoing[0].type && atom.outgoing[0].type.endsWith('Node');
-                const secondIsNode = atom.outgoing[1] && typeof atom.outgoing[1] === 'object' &&
-                                   atom.outgoing[1].type && atom.outgoing[1].type.endsWith('Node');
-
-                if (firstIsNode && secondIsNode) {
-                    listLinksToFetch.push(atom);
-                }
-            }
-
-            // Process this atom (might be an Edge/EvaluationLink pattern)
-            processAtomForGraphView(atom, visited);
+        // No pending fetches, update immediately
+        if (typeof operationCancelled === 'undefined' || !operationCancelled) {
+            initializeGraphViewWithAtomCache();
         }
-    });
-
-    // Now fetch incoming sets for qualifying ListLinks
-    if (listLinksToFetch.length > 0) {
-        fetchListLinkIncomingSets(listLinksToFetch, visited);
+        // End operation if this is the initial fetch with no ListLinks to follow
+        // The cache's operations-complete event doesn't know about our double-fetch logic
+        if (typeof endOperation === 'function' &&
+            pendingListLinkFetches === 0 &&
+            !atomSpaceCache.hasPendingOperations()) {
+            endOperation();
+        }
     }
-
-    // Refresh the graph
-    if (network) {
-        network.fit();
-    }
-
-    updateStatus(`Added ${incomingAtoms.length} incoming link(s)`, 'connected');
 }
 
-// NOTE: WebSocket communication functions removed - now handled by atomspace-cache
+// NOTE: Old atom processing functions removed - now handled by atomspace-cache
 
 // Get graph view layout options
 function getGraphViewOptions() {
     return {
-        nodes: {
+        nodes: {  // vis-network expects 'nodes' key
             shape: 'ellipse',
             font: {
                 size: 14,
