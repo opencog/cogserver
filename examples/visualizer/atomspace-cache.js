@@ -74,11 +74,13 @@ class AtomSpaceCache extends EventTarget {
             }
         }
 
-        // Process atom's outgoing links as children
+        // Process atom's outgoing links as structural children
+        // Note: We don't pass 'atom' as parent here because structural containment
+        // is different from incoming-set parent relationship
         if (atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(child => {
                 if (typeof child === 'object' && child !== null) {
-                    this.addAtom(child, atom);
+                    this.addAtom(child, null);  // No parent relationship for structural children
                 }
             });
         }
@@ -271,16 +273,22 @@ class AtomSpaceCache extends EventTarget {
                 const predicate = atom.outgoing[0];
                 const list = atom.outgoing[1];
 
-                // Validate the pattern
+                // Validate the pattern AND check if the ListLink is still in cache
+                const listKey = this.atomToKey(list);
                 if (predicate && (predicate.type === 'PredicateNode' || predicate.type === 'BondNode') &&
                     list && list.type === 'ListLink' &&
-                    list.outgoing && list.outgoing.length === 2) {
+                    list.outgoing && list.outgoing.length === 2 &&
+                    this.atoms.has(listKey)) {  // Make sure ListLink still exists in cache
 
                     const fromNode = list.outgoing[0];
                     const toNode = list.outgoing[1];
+                    const fromKey = this.atomToKey(fromNode);
+                    const toKey = this.atomToKey(toNode);
 
+                    // Check nodes exist and are still in cache
                     if (fromNode && fromNode.type && fromNode.type.endsWith('Node') &&
-                        toNode && toNode.type && toNode.type.endsWith('Node')) {
+                        toNode && toNode.type && toNode.type.endsWith('Node') &&
+                        this.atoms.has(fromKey) && this.atoms.has(toKey)) {
 
                         // Add edge info
                         edges.push({
