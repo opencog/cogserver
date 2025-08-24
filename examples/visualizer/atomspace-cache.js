@@ -550,6 +550,11 @@ class AtomSpaceCache extends EventTarget {
         this.operationsCancelled = false;
     }
 
+    // Check if there are pending operations
+    hasPendingOperations() {
+        return this.isProcessingListLink || this.pendingListLinkRequests.length > 0 || this.pendingRegularRequest !== null;
+    }
+
     // Disconnect from server
     disconnect() {
         if (this.socket) {

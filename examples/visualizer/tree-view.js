@@ -558,6 +558,12 @@ function setupEventHandlers() {
                     // Refit the network to show the new nodes
                     network.fit();
                     updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+
+                    // End operation if there are no more pending operations
+                    // Otherwise wait for listlinks-complete event
+                    if (!atomSpaceCache.hasPendingOperations()) {
+                        endOperation();
+                    }
                 }
             }
         } else if (updateType === 'listlinks-complete') {
