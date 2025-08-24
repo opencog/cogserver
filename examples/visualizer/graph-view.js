@@ -191,9 +191,14 @@ function initializeGraphViewWithAtomCache() {
 // Batching mechanism for graph updates
 let pendingGraphUpdate = null;
 let pendingListLinkFetches = 0;
+let lastUpdateTime = 0;
+const MIN_UPDATE_INTERVAL = 100; // Minimum ms between graph updates
+const AGGRESSIVE_THROTTLE_INTERVAL = 500; // Much longer delay when cache is full
+let isProcessingBatch = false; // Track if we're in a batch of updates
+let batchUpdateTimer = null; // Timer for batch completion
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
-function handleGraphViewCacheUpdate(parent, atoms) {
+function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
     // Check if operation was cancelled (from tree-view.js)
     if (typeof operationCancelled !== 'undefined' && operationCancelled) {
         pendingListLinkFetches = 0;
@@ -201,6 +206,74 @@ function handleGraphViewCacheUpdate(parent, atoms) {
             clearTimeout(pendingGraphUpdate);
             pendingGraphUpdate = null;
         }
+        if (batchUpdateTimer) {
+            clearTimeout(batchUpdateTimer);
+            batchUpdateTimer = null;
+        }
+        isProcessingBatch = false;
+        return;
+    }
+
+    // If cache is full and atoms are being skipped, use aggressive batching
+    if (eventDetail && eventDetail.skippedCount > 0 && atomSpaceCache.isCacheNearFull()) {
+        // Mark that we're in a batch processing mode
+        isProcessingBatch = true;
+
+        // Clear any existing timers
+        if (pendingGraphUpdate) {
+            clearTimeout(pendingGraphUpdate);
+            pendingGraphUpdate = null;
+        }
+        if (batchUpdateTimer) {
+            clearTimeout(batchUpdateTimer);
+            batchUpdateTimer = null;
+        }
+
+        // Set a longer timer for the batch to complete
+        // This will only redraw once after no updates for AGGRESSIVE_THROTTLE_INTERVAL ms
+        batchUpdateTimer = setTimeout(() => {
+            if (typeof operationCancelled === 'undefined' || !operationCancelled) {
+                initializeGraphViewWithAtomCache();
+                lastUpdateTime = Date.now();
+            }
+            isProcessingBatch = false;
+            batchUpdateTimer = null;
+            pendingGraphUpdate = null;
+
+            // End operation if no more pending work
+            if (typeof endOperation === 'function' &&
+                pendingListLinkFetches === 0 &&
+                !atomSpaceCache.hasPendingOperations()) {
+                endOperation();
+            }
+        }, AGGRESSIVE_THROTTLE_INTERVAL);
+
+        // Skip all processing below when in batch mode with skipped atoms
+        return;
+    }
+
+    // If we're in batch processing mode but got an update without skipped atoms,
+    // continue batching but with normal interval
+    if (isProcessingBatch) {
+        if (batchUpdateTimer) {
+            clearTimeout(batchUpdateTimer);
+        }
+        batchUpdateTimer = setTimeout(() => {
+            if (typeof operationCancelled === 'undefined' || !operationCancelled) {
+                initializeGraphViewWithAtomCache();
+                lastUpdateTime = Date.now();
+            }
+            isProcessingBatch = false;
+            batchUpdateTimer = null;
+            pendingGraphUpdate = null;
+
+            // End operation if no more pending work
+            if (typeof endOperation === 'function' &&
+                pendingListLinkFetches === 0 &&
+                !atomSpaceCache.hasPendingOperations()) {
+                endOperation();
+            }
+        }, MIN_UPDATE_INTERVAL);
         return;
     }
 

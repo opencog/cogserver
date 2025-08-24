@@ -955,6 +955,13 @@ function stopCurrentOperation() {
         clearTimeout(pendingGraphUpdate);
         pendingGraphUpdate = null;
     }
+    if (typeof batchUpdateTimer !== 'undefined' && batchUpdateTimer) {
+        clearTimeout(batchUpdateTimer);
+        batchUpdateTimer = null;
+    }
+    if (typeof isProcessingBatch !== 'undefined') {
+        isProcessingBatch = false;
+    }
     if (typeof pendingListLinkFetches !== 'undefined') {
         pendingListLinkFetches = 0;
     }
