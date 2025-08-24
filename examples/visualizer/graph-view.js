@@ -151,7 +151,65 @@ function addLabeledEdge(fromId, toId, label, edgeType) {
     });
 }
 
-// Initialize graph view mode
+// Initialize graph view using atom cache
+function initializeGraphViewWithAtomCache() {
+    // Clear existing nodes and edges
+    nodes.clear();
+    edges.clear();
+    atomNodeMap.clear();
+    nodeIdCounter = 1;
+
+    // Get atoms from cache for graph view
+    const graphData = atomSpaceCache.getAtomsForGraphView();
+
+    // Add all nodes first
+    graphData.nodes.forEach(atom => {
+        const atomKey = atomSpaceCache.atomToKey(atom);
+        if (!atomNodeMap.has(atomKey)) {
+            const nodeId = nodeIdCounter++;
+            const nodeLabel = createCompactLabel(atom);
+            const nodeColor = getNodeColor(atom.type);
+
+            nodes.add({
+                id: nodeId,
+                label: nodeLabel,
+                color: nodeColor,
+                atom: atom,
+                title: atomToSExpression(atom)
+            });
+
+            atomNodeMap.set(atomKey, nodeId);
+        }
+    });
+
+    // Add all edges
+    graphData.edges.forEach(edge => {
+        const fromKey = atomSpaceCache.atomToKey(edge.from);
+        const toKey = atomSpaceCache.atomToKey(edge.to);
+        const fromId = atomNodeMap.get(fromKey);
+        const toId = atomNodeMap.get(toKey);
+
+        if (fromId && toId) {
+            edges.add({
+                from: fromId,
+                to: toId,
+                label: edge.label,
+                arrows: {
+                    to: {
+                        enabled: true,
+                        scaleFactor: 0.5
+                    }
+                },
+                font: {
+                    size: 10,
+                    align: 'middle'
+                }
+            });
+        }
+    });
+}
+
+// Initialize graph view mode (legacy - for compatibility)
 function initializeGraphView() {
     // Clear any existing data
     if (nodes) nodes.clear();
@@ -172,34 +230,9 @@ function initializeGraphView() {
     }
 }
 
-// Initialize graph view with all stored atoms
+// Initialize graph view with all stored atoms - redirects to cache-based version
 function initializeGraphViewWithAllAtoms() {
-    // Clear any existing data
-    if (nodes) nodes.clear();
-    if (edges) edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
-
-    // Use a shared visited set for regular atoms, but EdgeLinks bypass it
-    const visited = new Set();
-
-    // Process root atoms first
-    if (rootAtoms && rootAtoms.length > 0) {
-        rootAtoms.forEach(atom => {
-            processAtomForGraphView(atom, visited);
-        });
-    }
-
-    // Then process all stored atoms
-    if (typeof allStoredAtoms !== 'undefined') {
-        allStoredAtoms.forEach(atomData => {
-            processAtomForGraphView(atomData.atom, visited);
-        });
-    }
-
-    if (network) {
-        network.fit();
-    }
+    initializeGraphViewWithAtomCache();
 }
 
 // Check if this is a ListLink that belongs to an Edge/EvaluationLink pattern
@@ -430,81 +463,7 @@ function processIncomingSetForGraph(incomingAtoms, targetNodeId) {
     updateStatus(`Added ${incomingAtoms.length} incoming link(s)`, 'connected');
 }
 
-// Fetch incoming sets for multiple ListLinks sequentially
-function fetchListLinkIncomingSets(listLinks, visited = new Set()) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        return;
-    }
-
-    // Process ListLinks sequentially to avoid response confusion
-    let currentIndex = 0;
-
-    function processNextListLink() {
-        if (currentIndex >= listLinks.length) {
-            // All requests completed, update the network
-            if (network) {
-                network.fit();
-            }
-            return;
-        }
-
-        const listLink = listLinks[currentIndex];
-        const atomSpec = JSON.stringify(listLink);
-        const command = `AtomSpace.getIncoming(${atomSpec})`;
-
-        // Create a handler for this specific request
-        const messageHandler = function(event) {
-            try {
-                const rawResponse = JSON.parse(event.data);
-                let response;
-
-                // Handle wrapped response format
-                if (rawResponse.hasOwnProperty('success')) {
-                    if (rawResponse.success && rawResponse.result) {
-                        response = rawResponse.result;
-                    }
-                } else {
-                    response = rawResponse;
-                }
-
-                if (response && Array.isArray(response)) {
-
-                    // Process ALL atoms from the response
-                    response.forEach((atom, idx) => {
-                        if (atom && typeof atom === 'object') {
-                            // Store for persistence
-                            if (typeof allStoredAtoms !== 'undefined') {
-                                allStoredAtoms.add({
-                                    atom: atom,
-                                    parent: listLink
-                                });
-                            }
-
-                            // Process the atom - EdgeLinks will be drawn as arrows
-                            processAtomForGraphView(atom, visited);
-                        }
-                    });
-                }
-            } catch (error) {
-                // Error processing ListLink incoming set
-            }
-
-            // Remove this handler after processing
-            socket.removeEventListener('message', messageHandler);
-
-            // Process next ListLink
-            currentIndex++;
-            processNextListLink();
-        };
-
-        // Add the handler and send the command
-        socket.addEventListener('message', messageHandler);
-        socket.send(command);
-    }
-
-    // Start processing the first ListLink
-    processNextListLink();
-}
+// NOTE: WebSocket communication functions removed - now handled by atomspace-cache
 
 // Get graph view layout options
 function getGraphViewOptions() {

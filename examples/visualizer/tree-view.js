@@ -5,7 +5,6 @@
 let network = null;
 let nodes = null;
 let edges = null;
-let socket = null;
 let rootAtoms = [];
 let serverUrl = null;
 let atomNodeMap = new Map();
@@ -162,13 +161,8 @@ function initializeGraph() {
                 // Check if we're in graph view mode
                 const layoutSelect = document.getElementById('layoutSelect');
                 const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
-                if (layoutType === 'graph' && typeof fetchIncomingSetForGraph === 'function') {
-                    // Use graph view's special fetch function
-                    fetchIncomingSetForGraph(node.atom, nodeId);
-                } else {
-                    // Use regular fetch function
-                    fetchIncomingSet(node.atom, nodeId);
-                }
+                // Fetch incoming set via cache
+                atomSpaceCache.fetchIncomingSet(node.atom);
             }
         }
         // Handle edge clicks
@@ -213,55 +207,8 @@ function connectToServer() {
     console.log('Attempting to connect to:', jsonUrl);
     updateStatus('Connecting to server...', 'loading');
 
-    try {
-        socket = new WebSocket(jsonUrl);
-    } catch (e) {
-        console.error('Failed to create WebSocket:', e);
-        updateStatus('Failed to create connection', 'error');
-        return;
-    }
-
-    socket.onopen = function() {
-        console.log('WebSocket connected');
-        updateStatus('Connected to server', 'connected');
-    };
-
-    socket.onmessage = function(event) {
-        try {
-            const response = JSON.parse(event.data);
-            console.log('Raw server response:', response);
-
-            // Handle wrapped response format {success: true/false, result: ...}
-            if (response.hasOwnProperty('success')) {
-                handleServerResponse(response);
-            } else {
-                // Handle unwrapped response for backward compatibility
-                handleServerResponse({success: true, result: response});
-            }
-        } catch (e) {
-            console.error('Failed to parse server response:', e);
-            console.error('Raw data:', event.data);
-        }
-    };
-
-    socket.onerror = function(error) {
-        console.error('WebSocket error:', error);
-        updateStatus('Connection error', 'error');
-    };
-
-    socket.onclose = function(event) {
-        console.log('WebSocket disconnected:', event.code, event.reason);
-        updateStatus('Disconnected from server', 'error');
-    };
-
-    // Add a timeout to detect if connection fails
-    setTimeout(function() {
-        if (socket.readyState === WebSocket.CONNECTING) {
-            console.warn('Connection timeout - still connecting after 5 seconds');
-            updateStatus('Connection timeout', 'error');
-            socket.close();
-        }
-    }, 5000);
+    // Connect via atom cache
+    atomSpaceCache.connect(jsonUrl);
 }
 
 function addAtomToGraph(atom, parentId, depth, order = 0) {
@@ -528,13 +475,76 @@ function getNodeColor(type) {
 
 
 function setupEventHandlers() {
+    // Set up cache event listeners
+    atomSpaceCache.addEventListener('connection', function(event) {
+        const status = event.detail.status;
+        const message = event.detail.message;
+        if (status === 'connected') {
+            updateStatus(message, 'connected');
+        } else if (status === 'disconnected' || status === 'error') {
+            updateStatus(message, 'error');
+        }
+    });
+
+    atomSpaceCache.addEventListener('update', function(event) {
+        const updateType = event.detail.type;
+
+        if (updateType === 'incoming-set') {
+            const parent = event.detail.parent;
+            const atoms = event.detail.atoms;
+
+            // Find the parent node in our graph
+            const parentKey = atomSpaceCache.atomToKey(parent);
+            const parentNodeId = atomNodeMap.get(parentKey);
+
+            if (parentNodeId !== undefined) {
+                // Check current layout mode
+                const layoutSelect = document.getElementById('layoutSelect');
+                const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
+
+                if (layoutType === 'graph') {
+                    // For graph view, rebuild the entire graph from cache
+                    initializeGraphViewWithAtomCache();
+                } else {
+                    // For hierarchical/network view, add new atoms
+                    atoms.forEach(atom => {
+                        // Add the incoming atom to the graph
+                        const incomingNodeId = addAtomToGraph(atom, null, 0);
+
+                        // Find which outgoing atom matches our target and connect to it
+                        if (atom.outgoing) {
+                            atom.outgoing.forEach((outgoing, index) => {
+                                // Check if this outgoing matches our target atom
+                                if (isMatchingAtom(outgoing, parent)) {
+                                    // Connect the incoming atom to the existing node
+                                    addEdgeIfNotExists(incomingNodeId, parentNodeId);
+                                }
+                            });
+                        }
+                    });
+
+                    // Refit the network to show the new nodes
+                    network.fit();
+                    updateStatus(`Added ${atoms.length} incoming links`, 'connected');
+                }
+            }
+        } else if (updateType === 'listlinks-complete') {
+            updateStatus('Ready', 'connected');
+        }
+    });
+
+    atomSpaceCache.addEventListener('error', function(event) {
+        updateStatus(event.detail.message, 'error');
+    });
+
     // Expand button
     document.getElementById('expandBtn').addEventListener('click', function() {
         const selectedNodes = network.getSelectedNodes();
         if (selectedNodes.length > 0) {
             const node = nodes.get(selectedNodes[0]);
             if (node && node.atom) {
-                fetchIncomingSet(node.atom, selectedNodes[0]);
+                // Fetch via cache
+                atomSpaceCache.fetchIncomingSet(node.atom);
             }
         } else {
             updateStatus('Select a node to expand', 'error');
@@ -683,11 +693,11 @@ function refreshGraph() {
     const layoutType = layoutSelect ? layoutSelect.value : 'hierarchical';
 
     if (layoutType === 'graph') {
-        // Use graph view refresh with all atoms
-        initializeGraphViewWithAllAtoms();
+        // Use graph view with atom cache
+        initializeGraphViewWithAtomCache();
     } else {
-        // Re-add all atoms using normal tree view
-        redrawAllAtomsInTreeMode();
+        // Rebuild from cache for hierarchical/network view
+        rebuildFromAtomCache();
         network.fit();
     }
 
@@ -700,57 +710,7 @@ function updateStatus(message, className) {
     statusElement.className = className || '';
 }
 
-function handleServerResponse(response) {
-    // Handle responses from the server
-    console.log('Server response:', response);
-
-    // Check if this is a response to getIncoming
-    if (pendingIncomingRequest) {
-        if (response.success && response.result) {
-            const incomingAtoms = response.result;
-            const targetNodeId = pendingIncomingRequest.nodeId;
-
-            // Store all incoming atoms for later use
-            incomingAtoms.forEach(atom => {
-                allStoredAtoms.add({
-                    atom: atom,
-                    parent: pendingIncomingRequest.atom
-                });
-            });
-
-            // Check if this is a graph view request
-            if (pendingIncomingRequest.isGraphView && typeof processIncomingSetForGraph === 'function') {
-                // Use graph view's special processing
-                processIncomingSetForGraph(incomingAtoms, targetNodeId);
-            } else {
-                // Regular tree view processing
-                incomingAtoms.forEach(atom => {
-                    // Add the incoming atom to the graph
-                    const incomingNodeId = addAtomToGraph(atom, null, 0);
-
-                    // Find which outgoing atom matches our target and connect to it
-                    if (atom.outgoing) {
-                        atom.outgoing.forEach((outgoing, index) => {
-                            // Check if this outgoing matches our target atom
-                            if (isMatchingAtom(outgoing, pendingIncomingRequest.atom)) {
-                                // Connect the incoming atom to the existing node
-                                addEdgeIfNotExists(incomingNodeId, targetNodeId);
-                            }
-                        });
-                    }
-                });
-
-                // Refit the network to show the new nodes
-                network.fit();
-                updateStatus(`Added ${incomingAtoms.length} incoming links`, 'connected');
-            }
-        } else {
-            updateStatus('No incoming links found', 'connected');
-        }
-
-        pendingIncomingRequest = null;
-    }
-}
+// Removed handleServerResponse - now handled via cache events
 
 // Helper function to check if two atoms match
 function isMatchingAtom(atom1, atom2) {
@@ -767,8 +727,7 @@ function isMatchingAtom(atom1, atom2) {
     return atomToKey(atom1) === atomToKey(atom2);
 }
 
-// Global variable to track pending incoming set request
-let pendingIncomingRequest = null;
+// Removed pendingIncomingRequest - now handled by cache
 
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
@@ -919,34 +878,4 @@ function redrawAllAtomsInTreeMode() {
 }
 
 
-function fetchIncomingSet(atom, nodeId) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        updateStatus('Not connected to server', 'error');
-        return;
-    }
-
-    updateStatus('Fetching incoming links...', 'loading');
-
-    // Construct the command to get incoming set
-    let atomSpec;
-    if (atom.name !== undefined) {
-        // It's a node - escape the name properly for JSON
-        const escapedName = JSON.stringify(atom.name);
-        atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
-    } else {
-        // It's a link or complex atom - use full JSON serialization
-        atomSpec = JSON.stringify(atom);
-    }
-
-    const command = `AtomSpace.getIncoming(${atomSpec})`;
-    console.log('Getting incoming set for atom:', command);
-
-    // Store request info for when we receive the response
-    pendingIncomingRequest = {
-        atom: atom,
-        nodeId: nodeId
-    };
-
-    // Send the command
-    socket.send(command);
-}
+// Removed fetchIncomingSet - now handled by atomspace-cache

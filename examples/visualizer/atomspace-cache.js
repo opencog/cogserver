@@ -1,8 +1,10 @@
 // AtomSpace Cache - Central storage for all atoms being visualized
 // This maintains a single source of truth for all layout modes
+// Handles all WebSocket communications with the CogServer
 
-class AtomSpaceCache {
+class AtomSpaceCache extends EventTarget {
     constructor() {
+        super();
         // Map of atom key to atom object
         this.atoms = new Map();
         // Map of atom key to parent atom keys (for hierarchy tracking)
@@ -11,6 +13,14 @@ class AtomSpaceCache {
         this.children = new Map();
         // Set of root atom keys (atoms with no parents)
         this.roots = new Set();
+
+        // WebSocket connection
+        this.socket = null;
+        this.serverUrl = null;
+
+        // Queue for sequential processing of ListLink requests
+        this.pendingListLinkRequests = [];
+        this.isProcessingListLink = false;
     }
 
     // Generate unique key for an atom
@@ -288,6 +298,187 @@ class AtomSpaceCache {
             distribution[atom.type] = (distribution[atom.type] || 0) + 1;
         });
         return distribution;
+    }
+
+    // ============= WebSocket Communication Methods =============
+
+    // Connect to CogServer
+    connect(serverUrl) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.close();
+        }
+
+        this.serverUrl = serverUrl;
+        this.socket = new WebSocket(serverUrl);
+
+        this.socket.onopen = () => {
+            console.log('Connected to CogServer');
+            this.dispatchEvent(new CustomEvent('connection', {
+                detail: { status: 'connected', message: 'Connected to server' }
+            }));
+        };
+
+        this.socket.onclose = () => {
+            console.log('Disconnected from CogServer');
+            this.dispatchEvent(new CustomEvent('connection', {
+                detail: { status: 'disconnected', message: 'Disconnected from server' }
+            }));
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            this.dispatchEvent(new CustomEvent('connection', {
+                detail: { status: 'error', message: 'Connection error' }
+            }));
+        };
+
+        this.socket.onmessage = (event) => {
+            this.handleWebSocketMessage(event);
+        };
+    }
+
+    // Handle incoming WebSocket messages
+    handleWebSocketMessage(event) {
+        try {
+            const rawResponse = JSON.parse(event.data);
+            let response;
+
+            // Handle wrapped response format
+            if (rawResponse.hasOwnProperty('success')) {
+                if (rawResponse.success && rawResponse.result) {
+                    response = rawResponse.result;
+                }
+            } else {
+                response = rawResponse;
+            }
+
+            // Process the response based on what we're waiting for
+            if (this.isProcessingListLink && response && Array.isArray(response)) {
+                this.processListLinkResponse(response);
+            }
+        } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+        }
+    }
+
+    // Fetch incoming set for an atom
+    fetchIncomingSet(atom) {
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+            this.dispatchEvent(new CustomEvent('error', {
+                detail: { message: 'Not connected to server' }
+            }));
+            return;
+        }
+
+        // Construct the command
+        let atomSpec;
+        if (atom.name !== undefined) {
+            const escapedName = JSON.stringify(atom.name);
+            atomSpec = `{"type": "${atom.type}", "name": ${escapedName}}`;
+        } else {
+            atomSpec = JSON.stringify(atom);
+        }
+
+        const command = `AtomSpace.getIncoming(${atomSpec})`;
+        console.log('Getting incoming set:', command);
+
+        // For regular atoms, send immediately
+        if (atom.type !== 'ListLink') {
+            this.socket.send(command);
+            return;
+        }
+
+        // For ListLinks, queue for sequential processing
+        this.pendingListLinkRequests.push({
+            atom: atom,
+            command: command
+        });
+
+        if (!this.isProcessingListLink) {
+            this.processNextListLink();
+        }
+    }
+
+    // Process ListLink requests sequentially
+    processNextListLink() {
+        if (this.pendingListLinkRequests.length === 0) {
+            this.isProcessingListLink = false;
+            this.dispatchEvent(new CustomEvent('update', {
+                detail: { type: 'listlinks-complete' }
+            }));
+            return;
+        }
+
+        this.isProcessingListLink = true;
+        const request = this.pendingListLinkRequests.shift();
+        this.currentListLinkRequest = request;
+        this.socket.send(request.command);
+    }
+
+    // Process ListLink response
+    processListLinkResponse(response) {
+        if (!this.currentListLinkRequest) return;
+
+        const parentAtom = this.currentListLinkRequest.atom;
+
+        // Add all atoms from the response
+        response.forEach(atom => {
+            if (atom && typeof atom === 'object') {
+                this.addAtom(atom, parentAtom);
+            }
+        });
+
+        // Notify that cache has been updated
+        this.dispatchEvent(new CustomEvent('update', {
+            detail: {
+                type: 'incoming-set',
+                parent: parentAtom,
+                atoms: response
+            }
+        }));
+
+        // Process next ListLink
+        this.currentListLinkRequest = null;
+        setTimeout(() => this.processNextListLink(), 10);
+    }
+
+    // Remove an atom and its incoming edges
+    removeIncomingEdges(atom) {
+        const atomKey = this.atomToKey(atom);
+
+        // Find all atoms that have this atom as a child
+        const parents = this.getParents(atom);
+        parents.forEach(parent => {
+            const parentKey = this.atomToKey(parent);
+            const children = this.children.get(parentKey);
+            if (children) {
+                children.delete(atomKey);
+            }
+        });
+
+        // Clear this atom's parents
+        this.parents.set(atomKey, new Set());
+
+        // If atom has no parents, it becomes a root
+        if (this.atoms.has(atomKey)) {
+            this.roots.add(atomKey);
+        }
+
+        // Notify update
+        this.dispatchEvent(new CustomEvent('update', {
+            detail: {
+                type: 'edges-removed',
+                atom: atom
+            }
+        }));
+    }
+
+    // Disconnect from server
+    disconnect() {
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+        }
     }
 }
 
