@@ -306,11 +306,11 @@ function addAtomToGraph(atom, parentId, depth, order = 0) {
     return vertexId;
 }
 
-function updateChildrenLevels(nodeId, parentLevel) {
-    // Find all edges where this node is the parent
+function updateChildrenLevels(vertexId, parentLevel) {
+    // Find all edges where this vertex is the parent
     const childEdges = edges.get({
         filter: function(edge) {
-            return edge.from === nodeId;
+            return edge.from === vertexId;
         }
     });
 
@@ -960,7 +960,7 @@ function rebuildFromAtomCache() {
     // Second pass: add all atoms with inverted levels (bottom-up)
     allAtoms.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        if (atomNodeMap.has(atomKey)) {
+        if (atomVertexMap.has(atomKey)) {
             return; // Already added
         }
 
@@ -968,15 +968,15 @@ function rebuildFromAtomCache() {
         // Invert the level: leaves at bottom (high level number), roots at top (level 0)
         const level = maxDepthInGraph - maxDepth;
 
-        // Create node
-        const nodeId = nodeIdCounter++;
-        const nodeLabel = createCompactLabel(atom);
+        // Create vertex
+        const vertexId = vertexIdCounter++;
+        const vertexLabel = createCompactLabel(atom);
         const vertexColor = getVertexColor(atom.type);
 
-        nodes.add({
-            id: nodeId,
-            label: nodeLabel,
-            color: nodeColor,
+        vertices.add({
+            id: vertexId,
+            label: vertexLabel,
+            color: vertexColor,
             atom: atom,
             level: level,
             title: atomToSExpression(atom)
@@ -988,18 +988,18 @@ function rebuildFromAtomCache() {
     // Third pass: add edges for parent-child relationships
     allAtoms.forEach(atom => {
         const atomKey = atomSpaceCache.atomToKey(atom);
-        const parentNodeId = atomNodeMap.get(atomKey);
+        const parentVertexId = atomVertexMap.get(atomKey);
 
-        if (parentNodeId && atom.outgoing && atom.outgoing.length > 0) {
+        if (parentVertexId && atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(child => {
                 if (typeof child === 'object' && child !== null) {
                     const childKey = atomSpaceCache.atomToKey(child);
-                    const childNodeId = atomNodeMap.get(childKey);
+                    const childVertexId = atomVertexMap.get(childKey);
 
-                    if (childNodeId) {
+                    if (childVertexId) {
                         edges.add({
-                            from: parentNodeId,
-                            to: childNodeId,
+                            from: parentVertexId,
+                            to: childVertexId,
                             arrows: {
                                 to: {
                                     enabled: true,
