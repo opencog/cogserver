@@ -588,9 +588,27 @@ function setupEventHandlers() {
 
             if (layoutType === 'hierarchical') {
                 options = {
+                    nodes: {
+                        shape: 'box',
+                        font: {
+                            size: 14,
+                            face: 'monospace'
+                        },
+                        margin: 5,
+                        widthConstraint: {
+                            maximum: 150,
+                            minimum: 40
+                        }
+                    },
                     edges: {
                         smooth: {
                             enabled: false  // Straight lines
+                        },
+                        arrows: {
+                            to: {
+                                enabled: true,
+                                scaleFactor: 0.5
+                            }
                         }
                     },
                     physics: {
@@ -624,11 +642,30 @@ function setupEventHandlers() {
                     }
                 };
             } else {
+                // Network view
                 options = {
+                    nodes: {
+                        shape: 'box',
+                        font: {
+                            size: 14,
+                            face: 'monospace'
+                        },
+                        margin: 5,
+                        widthConstraint: {
+                            maximum: 150,
+                            minimum: 40
+                        }
+                    },
                     edges: {
                         smooth: {
                             enabled: true,  // Allow curves in network mode
                             type: 'dynamic'
+                        },
+                        arrows: {
+                            to: {
+                                enabled: true,
+                                scaleFactor: 0.5
+                            }
                         }
                     },
                     physics: {
@@ -660,7 +697,8 @@ function setupEventHandlers() {
                 const nodeId = params.nodes[0];
                 const node = nodes.get(nodeId);
                 if (node && node.atom) {
-                    fetchIncomingSet(node.atom, nodeId);
+                    // Fetch via cache
+                    atomSpaceCache.fetchIncomingSet(node.atom);
                 }
             } else if (params.edges.length > 0) {
                 const edgeId = params.edges[0];
