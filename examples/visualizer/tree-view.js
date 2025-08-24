@@ -772,74 +772,30 @@ function isMatchingAtom(atom1, atom2) {
 
 // Rebuild visualization from atom cache for hierarchical/network view
 function rebuildFromAtomCache() {
-    // Clear existing graph
-    nodes.clear();
-    edges.clear();
-    atomNodeMap.clear();
-    nodeIdCounter = 1;
-
-    // Get all atoms from cache
+    // Get root atoms from cache
+    const rootAtoms = atomSpaceCache.getRootAtoms();
+    
+    // Add each root atom - this will recursively add all children
+    rootAtoms.forEach((atom, index) => {
+        // Skip EdgeLink and EvaluationLink in hierarchical view
+        if (atom.type !== 'EdgeLink' && atom.type !== 'EvaluationLink') {
+            addAtomToGraph(atom, null, 0, index);
+        }
+    });
+    
+    // Also add any atoms that might not be connected to roots
     const allAtoms = atomSpaceCache.getAllAtoms();
-    const processed = new Set();
-
-    // First pass: Add all atoms except EdgeLink/EvaluationLink patterns
     allAtoms.forEach(atom => {
-        const atomKey = atomSpaceCache.atomToKey(atom);
-        if (processed.has(atomKey)) return;
-
-        // Skip only EdgeLink and EvaluationLink themselves
-        // But show everything else including ListLinks, BondNodes, PredicateNodes
+        // Skip EdgeLink and EvaluationLink
         if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') {
-            // Don't display EdgeLink/EvaluationLink in hierarchical view
-            // They are represented as edges in graph view only
             return;
         }
-
-        processed.add(atomKey);
-
-        // Determine parent and depth
-        const parents = atomSpaceCache.getParents(atom);
-        let parentId = null;
-        let depth = 0;
-
-        // Find first valid parent that's not an EdgeLink/EvaluationLink
-        for (const parent of parents) {
-            if (parent.type !== 'EdgeLink' && parent.type !== 'EvaluationLink') {
-                const parentKey = atomSpaceCache.atomToKey(parent);
-                if (atomNodeMap.has(parentKey)) {
-                    parentId = atomNodeMap.get(parentKey);
-                    const parentNode = nodes.get(parentId);
-                    if (parentNode) {
-                        depth = parentNode.level + 1;
-                    }
-                    break;
-                }
-            }
-        }
-
-        // Add the atom to the graph
-        addAtomToGraph(atom, parentId, depth, 0);
-    });
-
-    // Second pass: Ensure all parent-child relationships are represented
-    allAtoms.forEach(atom => {
-        if (atom.type === 'EdgeLink' || atom.type === 'EvaluationLink') return;
-
+        
         const atomKey = atomSpaceCache.atomToKey(atom);
-        const nodeId = atomNodeMap.get(atomKey);
-        if (!nodeId) return;
-
-        // Add edges for all parent relationships
-        const parents = atomSpaceCache.getParents(atom);
-        parents.forEach(parent => {
-            if (parent.type !== 'EdgeLink' && parent.type !== 'EvaluationLink') {
-                const parentKey = atomSpaceCache.atomToKey(parent);
-                const parentNodeId = atomNodeMap.get(parentKey);
-                if (parentNodeId) {
-                    addEdgeIfNotExists(parentNodeId, nodeId);
-                }
-            }
-        });
+        // If not already added, add it as a standalone atom
+        if (!atomNodeMap.has(atomKey)) {
+            addAtomToGraph(atom, null, 0);
+        }
     });
 }
 
