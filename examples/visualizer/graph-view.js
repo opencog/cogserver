@@ -196,8 +196,6 @@ const MIN_UPDATE_INTERVAL = 100; // Minimum ms between graph updates
 const AGGRESSIVE_THROTTLE_INTERVAL = 500; // Much longer delay when cache is full
 let isProcessingBatch = false; // Track if we're in a batch of updates
 let batchUpdateTimer = null; // Timer for batch completion
-let recentUpdateCount = 0; // Track recent updates to detect bursts
-let recentUpdateWindow = null; // Timer to reset recent update count
 
 // Handle cache updates for graph view - performs double fetch for ListLinks
 function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
@@ -216,26 +214,14 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
-    // Track update frequency to detect bursts (e.g., after cache size increase)
-    recentUpdateCount++;
-
-    // Reset counter after a window of time
-    if (recentUpdateWindow) {
-        clearTimeout(recentUpdateWindow);
-    }
-    recentUpdateWindow = setTimeout(() => {
-        recentUpdateCount = 0;
-        recentUpdateWindow = null;
-    }, 1000); // Reset counter after 1 second of no updates
+    // Check if cache has pending operations (it might have resumed after cache size increase)
+    const hasPendingOps = atomSpaceCache.hasPendingOperations();
 
     // Check if we should enter or stay in batch processing mode
     // This happens when:
     // 1. Cache is full and atoms are being skipped, OR
-    // 2. We're getting rapid updates (more than 3 in quick succession), OR
-    // 3. We're already in batch mode and still getting updates
-    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0 && atomSpaceCache.isCacheNearFull()) ||
-                        (recentUpdateCount > 3) ||
-                        (isProcessingBatch && atomSpaceCache.hasPendingOperations());
+    // 2. Cache has pending operations (including after cache size increase)
+    const shouldBatch = (eventDetail && eventDetail.skippedCount > 0) || hasPendingOps;
 
     if (shouldBatch) {
         // Mark that we're in a batch processing mode
@@ -266,7 +252,6 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
             isProcessingBatch = false;
             batchUpdateTimer = null;
             pendingGraphUpdate = null;
-            recentUpdateCount = 0; // Reset the burst counter
 
             // End operation if no more pending work
             if (typeof endOperation === 'function' &&
@@ -280,7 +265,16 @@ function handleGraphViewCacheUpdate(parent, atoms, eventDetail) {
         return;
     }
 
-    // Not in batch mode - process normally
+    // Not in batch mode - check if we need to process immediately or defer
+
+    // If we have a pending batch timer but are not in batch mode anymore,
+    // this is likely a straggler update after cache size increase
+    // Clear any lingering timers and process immediately
+    if (batchUpdateTimer) {
+        clearTimeout(batchUpdateTimer);
+        batchUpdateTimer = null;
+    }
+
     // Check if we need to fetch incoming sets for ListLinks
     const listLinksToFetch = [];
 
