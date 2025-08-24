@@ -91,7 +91,6 @@ function connect() {
 
     try {
         socket = new WebSocket(serverURL);
-
         socket.addEventListener('open', onConnect);
         socket.addEventListener('close', onDisconnect);
         socket.addEventListener('message', onMessage);
@@ -818,6 +817,9 @@ function atomToSExpression(atom, indent = 0) {
 function showAtomsOfType(type) {
     console.log(`Showing atoms of type: ${type}`);
 
+    // Clear all checked atoms when switching panes
+    checkedAtoms.clear();
+
     // Update title with count from reportCounts if available
     const count = atomData.counts?.[type] || 0;
     atomListingTitle.textContent = `${type} Atoms (${count})`;
@@ -849,6 +851,8 @@ function showAtomsOfType(type) {
 function hideAtomListing() {
     atomListingPanel.classList.add('hidden');
     atomListingContent.innerHTML = '';
+    // Clear all checked atoms when closing the panel
+    checkedAtoms.clear();
 }
 
 function openStatsPage() {
