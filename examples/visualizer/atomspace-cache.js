@@ -14,6 +14,10 @@ class AtomSpaceCache extends EventTarget {
         // Set of root atom keys (atoms with no parents)
         this.roots = new Set();
 
+        // Reverse index: Map of atom key to Set of atom keys that reference it
+        // This tracks which Links contain this atom in their outgoing set
+        this.referencedBy = new Map();
+
         // WebSocket connection
         this.socket = null;
         this.serverUrl = null;
@@ -78,9 +82,10 @@ class AtomSpaceCache extends EventTarget {
         if (!atom) return null;
 
         const atomKey = this.atomToKey(atom);
+        const isNewAtom = !this.atoms.has(atomKey);
 
         // Store the atom if not already present and we have space
-        if (!this.atoms.has(atomKey)) {
+        if (isNewAtom) {
             // Check cache limit
             if (!this.canAddAtom()) {
                 this.skippedAtoms = true;
@@ -89,6 +94,7 @@ class AtomSpaceCache extends EventTarget {
             this.atoms.set(atomKey, atom);
             this.parents.set(atomKey, new Set());
             this.children.set(atomKey, new Set());
+            this.referencedBy.set(atomKey, new Set());
             this.checkCacheWarning();  // Update warning status
         }
 
@@ -113,13 +119,23 @@ class AtomSpaceCache extends EventTarget {
             }
         }
 
-        // Process atom's outgoing links as structural children
-        // Note: We don't pass 'atom' as parent here because structural containment
-        // is different from incoming-set parent relationship
+        // Process outgoing links
         if (atom.outgoing && atom.outgoing.length > 0) {
             atom.outgoing.forEach(child => {
                 if (typeof child === 'object' && child !== null) {
+                    // Recursively add the child atom first
                     this.addAtom(child, null);  // No parent relationship for structural children
+
+                    // Update reverse index - do this AFTER adding child and only for new atoms
+                    // This tracks which atoms are referenced by this atom
+                    if (isNewAtom) {
+                        const childKey = this.atomToKey(child);
+                        // Add this atom to the child's referencedBy set
+                        if (!this.referencedBy.has(childKey)) {
+                            this.referencedBy.set(childKey, new Set());
+                        }
+                        this.referencedBy.get(childKey).add(atomKey);
+                    }
                 }
             });
         }
@@ -135,25 +151,11 @@ class AtomSpaceCache extends EventTarget {
         let removedCount = 0;
 
         // First, find and remove all Links that contain this atom
-        const linksToRemove = new Set();
-        this.atoms.forEach((candidateAtom, candidateKey) => {
-            // Check if this is a Link that contains the atom being removed
-            if (candidateAtom.outgoing && candidateAtom.outgoing.length > 0) {
-                // Check if any outgoing atom matches the one being removed
-                const containsAtom = candidateAtom.outgoing.some(outgoingAtom => {
-                    if (typeof outgoingAtom === 'object' && outgoingAtom !== null) {
-                        return this.atomToKey(outgoingAtom) === atomKey;
-                    }
-                    return false;
-                });
-
-                if (containsAtom) {
-                    linksToRemove.add(candidateKey);
-                }
-            }
-        });
+        // Use reverse index for O(1) lookup instead of scanning all atoms
+        const linksToRemove = new Set(this.referencedBy.get(atomKey) || []);
 
         // Recursively remove all dependent Links
+        // This recursion ensures that Links containing removed Links are also removed
         linksToRemove.forEach(linkKey => {
             const linkAtom = this.atoms.get(linkKey);
             if (linkAtom) {
@@ -175,6 +177,24 @@ class AtomSpaceCache extends EventTarget {
         // Only proceed if the atom still exists (might have been removed as a dependent)
         if (!this.atoms.has(atomKey)) {
             return removedCount;
+        }
+
+        // Clean up reverse index entries for this atom's outgoing links
+        const atomToRemove = this.atoms.get(atomKey);
+        if (atomToRemove && atomToRemove.outgoing && atomToRemove.outgoing.length > 0) {
+            atomToRemove.outgoing.forEach(child => {
+                if (typeof child === 'object' && child !== null) {
+                    const childKey = this.atomToKey(child);
+                    const referencedBySet = this.referencedBy.get(childKey);
+                    if (referencedBySet) {
+                        referencedBySet.delete(atomKey);
+                        // Clean up empty sets
+                        if (referencedBySet.size === 0) {
+                            this.referencedBy.delete(childKey);
+                        }
+                    }
+                }
+            });
         }
 
         // Remove from parent's children
@@ -203,11 +223,12 @@ class AtomSpaceCache extends EventTarget {
             });
         }
 
-        // Remove the atom
+        // Remove the atom from all maps
         this.atoms.delete(atomKey);
         this.parents.delete(atomKey);
         this.children.delete(atomKey);
         this.roots.delete(atomKey);
+        this.referencedBy.delete(atomKey);
         removedCount++;
 
         return removedCount;
@@ -278,41 +299,53 @@ class AtomSpaceCache extends EventTarget {
         // Start collection from the given atom
         collectAtomsToRemove(atomKey);
 
-        // For each atom to remove, also find dependent Links
-        const dependentLinks = new Set();
-        atomsToRemove.forEach(keyToRemove => {
-            this.atoms.forEach((candidateAtom, candidateKey) => {
-                // Skip if already marked for removal
-                if (atomsToRemove.has(candidateKey) || dependentLinks.has(candidateKey)) {
-                    return;
-                }
+        // Recursively find ALL dependent Links using reverse index
+        // We need to keep finding links until no new ones are found
+        let previousSize = 0;
+        while (previousSize !== atomsToRemove.size) {
+            previousSize = atomsToRemove.size;
+            const newDependentLinks = new Set();
 
-                // Check if this is a Link that contains any atom being removed
-                if (candidateAtom.outgoing && candidateAtom.outgoing.length > 0) {
-                    const containsRemovedAtom = candidateAtom.outgoing.some(outgoingAtom => {
-                        if (typeof outgoingAtom === 'object' && outgoingAtom !== null) {
-                            const outgoingKey = this.atomToKey(outgoingAtom);
-                            return atomsToRemove.has(outgoingKey);
+            // For each atom to be removed, find Links that reference it
+            atomsToRemove.forEach(keyToRemove => {
+                const referencingLinks = this.referencedBy.get(keyToRemove);
+                if (referencingLinks) {
+                    referencingLinks.forEach(linkKey => {
+                        // Only add if not already marked for removal
+                        if (!atomsToRemove.has(linkKey)) {
+                            newDependentLinks.add(linkKey);
                         }
-                        return false;
                     });
-
-                    if (containsRemovedAtom) {
-                        dependentLinks.add(candidateKey);
-                    }
                 }
             });
-        });
 
-        // Add dependent Links to removal set
-        dependentLinks.forEach(linkKey => {
-            atomsToRemove.add(linkKey);
-        });
+            // Add newly found dependent Links to removal set
+            newDependentLinks.forEach(linkKey => {
+                atomsToRemove.add(linkKey);
+            });
+        }
 
         // Remove all collected atoms
         atomsToRemove.forEach(key => {
             // Get the atom before removing
             const atomToRemove = this.atoms.get(key);
+
+            // Clean up reverse index for this atom's outgoing links
+            if (atomToRemove && atomToRemove.outgoing && atomToRemove.outgoing.length > 0) {
+                atomToRemove.outgoing.forEach(child => {
+                    if (typeof child === 'object' && child !== null) {
+                        const childKey = this.atomToKey(child);
+                        const referencedBySet = this.referencedBy.get(childKey);
+                        if (referencedBySet) {
+                            referencedBySet.delete(key);
+                            // Clean up empty sets
+                            if (referencedBySet.size === 0) {
+                                this.referencedBy.delete(childKey);
+                            }
+                        }
+                    }
+                });
+            }
 
             // Remove from atoms map
             this.atoms.delete(key);
@@ -347,6 +380,9 @@ class AtomSpaceCache extends EventTarget {
 
             // Remove from roots if present
             this.roots.delete(key);
+
+            // Remove from referencedBy map
+            this.referencedBy.delete(key);
         });
 
         // Check if we're below the warning threshold after removal
@@ -371,13 +407,15 @@ class AtomSpaceCache extends EventTarget {
         this.parents.clear();
         this.children.clear();
         this.roots.clear();
+        this.referencedBy.clear();
         this.skippedAtoms = false;
         this.checkCacheWarning();
     }
 
     // Get atoms for graph view (only nodes and EdgeLink relationships)
     getAtomsForGraphView() {
-        const nodes = [];
+        // Use Map to track nodes efficiently (key -> node)
+        const nodeMap = new Map();
         const edges = [];
 
         this.atoms.forEach(atom => {
@@ -413,24 +451,21 @@ class AtomSpaceCache extends EventTarget {
                             type: atom.type
                         });
 
-                        // Add nodes if not already present
-                        if (!nodes.some(n => this.atomToKey(n) === this.atomToKey(fromNode))) {
-                            nodes.push(fromNode);
-                        }
-                        if (!nodes.some(n => this.atomToKey(n) === this.atomToKey(toNode))) {
-                            nodes.push(toNode);
-                        }
+                        // Add nodes to map (O(1) operation)
+                        nodeMap.set(fromKey, fromNode);
+                        nodeMap.set(toKey, toNode);
                     }
                 }
             } else if (atom.type && atom.type.endsWith('Node') &&
                        atom.type !== 'BondNode' && atom.type !== 'PredicateNode') {
-                // Add standalone nodes
-                if (!nodes.some(n => this.atomToKey(n) === this.atomToKey(atom))) {
-                    nodes.push(atom);
-                }
+                // Add standalone nodes (O(1) operation)
+                const atomKey = this.atomToKey(atom);
+                nodeMap.set(atomKey, atom);
             }
         });
 
+        // Convert map values to array for return
+        const nodes = Array.from(nodeMap.values());
         return { nodes, edges };
     }
 
