@@ -1,15 +1,29 @@
 /*
  * opencog/cogserver/modules/commands/BuiltinRequestsModule.cc
  *
- * Copyright (C) 2008 by OpenCog Foundation
+ * Copyright (C) 2008,2010 by OpenCog Foundation
  * Written by Gustavo Gama <gama@vettalabs.com>
- * SPDX-License-Identifier: AGPL-3.0-or-later
+ * Written by Joel Pitt <joel@opencog.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License v3 as
+ * published by the Free Software Foundation and including the exceptions
+ * at http://opencog.org/wiki/Licenses
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program; if not, write to:
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #include <iomanip>
 #include <unistd.h>
 
-#include <opencog/util/ansi.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -17,6 +31,35 @@
 #include "BuiltinRequestsModule.h"
 
 using namespace opencog;
+
+//!@{
+//! color codes in ANSI
+static const char* const COLOR_OFF = "\033[0m";
+static const char* const BRIGHT = "\033[1m";
+static const char* const RED = "\033[31m";
+static const char* const GREEN = "\033[32m";
+static const char* const YELLOW = "\033[33m";
+static const char* const BLUE = "\033[34m";
+static const char* const MAGENTA = "\033[35m";
+static const char* const CYAN = "\033[36m";
+static const char* const WHITE = "\033[37m";
+//!@}
+
+inline void ansi_code(std::string &s,const std::string &code) {
+    s.append(code);
+}
+
+//!@{
+static inline void ansi_off(std::string &s) { ansi_code(s,COLOR_OFF); }
+static inline void ansi_bright(std::string &s) { ansi_code(s,BRIGHT); }
+static inline void ansi_red(std::string &s) { ansi_code(s,RED); }
+static inline void ansi_green(std::string &s) { ansi_code(s,GREEN); }
+static inline void ansi_yellow(std::string &s) { ansi_code(s,YELLOW); }
+static inline void ansi_blue(std::string &s) { ansi_code(s,BLUE); }
+static inline void ansi_magenta(std::string &s) { ansi_code(s,MAGENTA); }
+static inline void ansi_cyan(std::string &s) { ansi_code(s,CYAN); }
+static inline void ansi_white(std::string &s) { ansi_code(s,WHITE); }
+//!@}
 
 DECLARE_MODULE(BuiltinRequestsModule)
 
