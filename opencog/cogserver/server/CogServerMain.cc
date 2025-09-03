@@ -30,10 +30,10 @@
 #include <signal.h>
 #include <string.h>
 
+#include <sstream>
 #include <string>
 #include <thread>
-
-#include <boost/algorithm/string.hpp>
+#include <vector>
 
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
@@ -108,21 +108,21 @@ int main(int argc, char *argv[])
             // override all previous options, e.g.
             // -DLOG_TO_STDOUT=TRUE
             std::string text = optarg;
-            std::vector<std::string> strs;
-            boost::split(strs, text, boost::is_any_of("=:"));
-            std::string optionName = strs[0];
-            std::string value;
-            if (strs.size() > 2) {
-                // merge end tokens if more than one separator found
-                for (uint i = 1; i < strs.size(); i++)
-                    value += strs[i];
-            } else if (strs.size() == 1) {
+
+            // Find the position of '=' separator
+            size_t equalPos = text.find('=');
+
+            if (equalPos == std::string::npos) {
+                // No '=' found, option has no value
                 std::cerr << "No value given for option "
-                          << strs[0] << std::endl;
+                          << text << std::endl;
+                configPairs.push_back({text, ""});
             } else {
-                value = strs[1];
+                // Split at '=' position
+                std::string optionName = text.substr(0, equalPos);
+                std::string value = text.substr(equalPos + 1);
+                configPairs.push_back({optionName, value});
             }
-            configPairs.push_back({optionName, value});
         } else if (c == 'p') {
             console_port = atoi(optarg);
         } else if (c == 'w') {
