@@ -25,23 +25,15 @@
 
 using namespace opencog;
 
-#define PATH_MAX 1024
-static std::string get_exe_name()
-{
-    static char buf[PATH_MAX];
-    int rslt = readlink("/proc/self/exe", buf, PATH_MAX);
-
-    if ( rslt < 0 || rslt >= PATH_MAX ) {
-        return NULL;
-    }
-
-    buf[rslt] = '\0';
-        return std::string(buf);
-}
-
 static std::string get_exe_dir()
 {
-    std::string exeName = get_exe_name();
+    static const int PATH_MAX=1024;
+    static char buf[PATH_MAX];
+    int rslt = readlink("/proc/self/exe", buf, PATH_MAX);
+    if (rslt < 0) return "";
+
+    buf[rslt] = '\0';
+    std::string exeName(buf);
     return exeName.substr(0, exeName.rfind("/")+1);
 }
 
