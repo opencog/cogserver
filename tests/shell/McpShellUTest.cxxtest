@@ -210,7 +210,14 @@ public:
         McpShell shell(as);
         GenericEval* eval = shell.get_evaluator();
 
-        eval->eval_expr("AtomSpace.getAtoms(\"ConceptNode\")");
+        // Use proper JSON-RPC 2.0 format for MCP protocol
+        std::string json_request = "{\"jsonrpc\": \"2.0\", "
+                                   "\"method\": \"tools/call\", "
+                                   "\"params\": {\"name\": \"getAtoms\", "
+                                               "\"arguments\": {\"type\": \"ConceptNode\"}}, "
+                                   "\"id\": 1}";
+
+        eval->eval_expr(json_request);
         std::string result = eval->poll_result();
 
         TS_ASSERT(!eval->eval_error());
