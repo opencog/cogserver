@@ -19,13 +19,31 @@
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/exceptions.h>
-#include <opencog/util/files.h>
 #include <opencog/util/misc.h>
-#include <opencog/util/platform.h>
 
 #include "ModuleManager.h"
 
 using namespace opencog;
+
+#define PATH_MAX 1024
+static std::string get_exe_name()
+{
+    static char buf[PATH_MAX];
+    int rslt = readlink("/proc/self/exe", buf, PATH_MAX);
+
+    if ( rslt < 0 || rslt >= PATH_MAX ) {
+        return NULL;
+    }
+
+    buf[rslt] = '\0';
+        return std::string(buf);
+}
+
+static std::string get_exe_dir()
+{
+    std::string exeName = get_exe_name();
+    return exeName.substr(0, exeName.rfind("/")+1);
+}
 
 ModuleManager::ModuleManager(void)
 {
