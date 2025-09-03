@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include <boost/asio/ip/tcp.hpp>
+#include <asio/ip/tcp.hpp>
 #include <opencog/util/Logger.h>
 #include <opencog/network/ServerSocket.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -30,7 +30,7 @@ NetworkServer::NetworkServer(unsigned short port, const char* name) :
     _port(port),
     _running(false),
     _acceptor(_io_service,
-        boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
+        asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port))
 {
     logger().debug("[NetworkServer] constructor for %s at %d", name, port);
     _start_time = time(nullptr);
@@ -54,7 +54,7 @@ void NetworkServer::stop()
     _running = false;
     ServerSocket::network_gone();
 
-    boost::system::error_code ec;
+    std::error_code ec;
     _acceptor.cancel(ec);
     _io_service.stop();
 
@@ -83,7 +83,7 @@ void NetworkServer::listen(void)
         // thread exits).  That is why there is no delete of the *ss
         // below, and that is why there is the weird self-delete at the
         // end of ServerSocket::handle_connection().
-        boost::asio::ip::tcp::socket* sock = new boost::asio::ip::tcp::socket(_io_service);
+        asio::ip::tcp::socket* sock = new asio::ip::tcp::socket(_io_service);
 
         _acceptor.accept(*sock);
 
@@ -93,7 +93,7 @@ void NetworkServer::listen(void)
         _nconnections++;
         _last_connect = time(nullptr);
 
-        boost::asio::ip::tcp::no_delay ndly(true);
+        asio::ip::tcp::no_delay ndly(true);
         sock->set_option(ndly);
 
         int fd = sock->native_handle();
@@ -121,8 +121,8 @@ void NetworkServer::run(ServerSocket* (*handler)(void))
 
     try {
         _io_service.run();
-    } catch (const boost::system::system_error& e) {
-        logger().error("Error in boost::asio io_service::run() => %s", e.what());
+    } catch (const std::system_error& e) {
+        logger().error("Error in asio io_service::run() => %s", e.what());
     }
 
     _listener_thread = new std::thread(&NetworkServer::listen, this);

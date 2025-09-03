@@ -81,7 +81,7 @@ For more info, please consult the
 
 Version
 -------
-This is **version 3.2.0**. The code is stable, it's been used in
+This is **version 3.3.0**. The code is stable, it's been used in
 production settings for a decade.   There are no known bugs. There are
 some planned features; see below.
 
@@ -151,6 +151,10 @@ To build and run the CogServer, you need to install the AtomSpace first.
 The WebSockets server needs the OpenSSL devel environment to be
 installed. Optional; if not installed, the cogserver will be built
 without websockets support.
+
+###### ASIO
+> The ASIO asynchronous IO system.
+> On Debian/Ubuntu, `sudo apt install libasio-dev`
 
 ###### OpenSSL
 > OpenSSL

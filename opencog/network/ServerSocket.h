@@ -11,7 +11,7 @@
 
 #include <atomic>
 #include <pthread.h>
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 namespace opencog
 {
@@ -42,7 +42,7 @@ class ServerSocket
 {
 private:
     // The actual socket on which data comes & goes.
-    boost::asio::ip::tcp::socket* _socket;
+    asio::ip::tcp::socket* _socket;
     static bool _network_gone;
 
     // A count of the number of concurrent open sockets. This is used
@@ -57,13 +57,13 @@ private:
     static size_t _num_open_stalls;
 
     // Read a newline-delimited line of text from socket.
-    std::string get_telnet_line(boost::asio::streambuf&);
+    std::string get_telnet_line(asio::streambuf&);
 
     // Read _content_length bytes
-    std::string get_http_body(boost::asio::streambuf&);
+    std::string get_http_body(asio::streambuf&);
 
     // Send an asio buffer that has data in it.
-    void Send(const boost::asio::const_buffer&);
+    void Send(const asio::const_buffer&);
 
     // WebSocket state machine; unused in the telnet interface.
     bool _got_first_line;
@@ -116,7 +116,7 @@ public:
     void act_as_http_socket(void) { _is_http_socket = true; }
     void act_as_mcp(void) { _is_mcp_socket = true; }
 
-    void set_connection(boost::asio::ip::tcp::socket*);
+    void set_connection(asio::ip::tcp::socket*);
     void handle_connection(void);
 
     /**

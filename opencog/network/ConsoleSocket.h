@@ -37,7 +37,7 @@ private:
     // We need the use-count and the condition variables to avoid races
     // between asynchronous socket closures and unsent replies. So, for
     // example, the user may send a command, but then close the socket
-    // before the reply is sent.  The boost::asio code notices the
+    // before the reply is sent.  The asio code notices the
     // closed socket, and ServerSocket::handle_connection() exits it's
     // loop, and then tries to destruct this class and exit the thread
     // that has been handling the socket i/o. We have to hold off this

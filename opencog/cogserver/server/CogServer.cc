@@ -76,7 +76,7 @@ void CogServer::enableNetworkServer(int port)
     {
         _consoleServer = new NetworkServer(port, "Telnet Server");
     }
-    catch (const boost::system::system_error& ex)
+    catch (const std::system_error& ex)
     {
         fprintf(stderr, "Error: Cannot enable network server at port %d: %s\n",
             port, ex.what());
@@ -101,7 +101,7 @@ void CogServer::enableWebServer(int port)
     {
         _webServer = new NetworkServer(port, "WebSocket Server");
     }
-    catch (const boost::system::system_error& ex)
+    catch (const std::system_error& ex)
     {
         fprintf(stderr, "Error: Cannot enable web server at port %d: %s\n",
             port, ex.what());
@@ -133,7 +133,7 @@ void CogServer::enableMCPServer(int port)
     {
         _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
     }
-    catch (const boost::system::system_error& ex)
+    catch (const std::system_error& ex)
     {
         fprintf(stderr, "Error: Cannot enable MCP server at port %d: %s\n",
             port, ex.what());

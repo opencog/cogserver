@@ -14,7 +14,7 @@
 #include <string>
 #include <thread>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 #include <opencog/network/ServerSocket.h>
 
 namespace opencog
@@ -44,8 +44,8 @@ protected:
     std::string _name;
     short _port;
     std::atomic_bool _running;
-    boost::asio::io_service _io_service;
-    boost::asio::ip::tcp::acceptor _acceptor;
+    asio::io_service _io_service;
+    asio::ip::tcp::acceptor _acceptor;
     std::thread* _listener_thread;
 
     /** The network server's main listener thread.  */
