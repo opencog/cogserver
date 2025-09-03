@@ -19,6 +19,9 @@ jobs:
             - ccache-{{ checksum "/tmp/date" }}
             - ccache-
       - run:
+          name: Temp hack until Docker pulls latest octool
+          command: apt install libasio-dev
+      - run:
           name: Install CogUtil
           command: |
             git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/cogutil /ws/cogutil
