@@ -1,0 +1,221 @@
+/*
+ * tests/shell/McpShellUTest.cxxtest
+ *
+ * Test for MCP Shell functionality
+ * Copyright (c) 2024 OpenCog Contributors
+ * All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License v3 as
+ * published by the Free Software Foundation and including the exceptions
+ * at http://opencog.org/wiki/Licenses
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program; if not, write to:
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+#include <thread>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <opencog/util/Config.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/shell/McpShell.h>
+#include <opencog/cogserver/shell/McpEval.h>
+#include <opencog/eval/GenericEval.h>
+
+using namespace opencog;
+
+std::string mcp_cmd_exec(const char* cmd)
+{
+    char buf[1000];
+    std::string result;
+    std::shared_ptr<FILE> pope(popen(cmd, "r"), pclose);
+    if (!pope) throw std::runtime_error("popen() failed!");
+    while (!feof(pope.get())) {
+        if (fgets(buf, sizeof(buf), pope.get()) != NULL)
+            result += buf;
+    }
+    return result;
+}
+
+class McpShellUTest : public CxxTest::TestSuite
+{
+private:
+    CogServer* csrv;
+    std::thread* main_loop;
+
+public:
+    McpShellUTest()
+    {
+        logger().set_level(Logger::DEBUG);
+    }
+
+    ~McpShellUTest()
+    {
+        if (!CxxTest::TestTracker::tracker().suiteFailed())
+            std::remove(logger().get_filename().c_str());
+    }
+
+    void setUp()
+    {
+        csrv = &cogserver();
+        csrv->loadModules();
+        csrv->enableNetworkServer(17334);
+        main_loop = new std::thread(&CogServer::serverLoop, csrv);
+
+        // Wait for the cogserver to finish initializing
+        sleep(1);
+    }
+
+    void tearDown()
+    {
+        csrv->stop();
+        main_loop->join();
+        delete main_loop;
+    }
+
+    void testMcpShellBasic()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test basic MCP shell connection
+        int rc = system("echo 'mcp\n.\n' | nc -q 1 localhost 17334");
+        TS_ASSERT_EQUALS(rc, 0);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellServer()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test MCP shell in server mode
+        std::string reply = mcp_cmd_exec(
+            "echo 'mcp server localhost 8081\n.\n' | nc -q 1 localhost 17334");
+
+        TS_ASSERT(reply.size() > 0);
+        TS_ASSERT(reply.find("MCP shell") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellClient()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test MCP shell in client mode
+        std::string reply = mcp_cmd_exec(
+            "echo 'mcp client\n.\n' | nc -q 1 localhost 17334");
+
+        TS_ASSERT(reply.size() > 0);
+        TS_ASSERT(reply.find("MCP shell") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellHush()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test MCP shell with hush mode
+        std::string reply = mcp_cmd_exec(
+            "echo 'mcp hush\n' | nc -q 1 localhost 17334");
+
+        // Hush mode should return minimal output
+        TS_ASSERT(reply.size() < 100);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellJsonQuery()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Create a socket connection for interactive testing
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        TS_ASSERT(0 < sock);
+
+        struct sockaddr_in server;
+        server.sin_addr.s_addr = inet_addr("127.0.0.1");
+        server.sin_family = AF_INET;
+        server.sin_port = htons(17334);
+
+        int rc = connect(sock, (struct sockaddr *)&server, sizeof(server));
+        TS_ASSERT(0 == rc);
+
+        // Enter MCP shell
+        rc = send(sock, "mcp\n", strlen("mcp\n"), 0);
+        TS_ASSERT(4 == rc);
+
+        char initial_reply[1000];
+        rc = recv(sock, initial_reply, sizeof(initial_reply), 0);
+        TS_ASSERT(0 < rc);
+
+        // Test JSON query functionality
+        const char* json_query = "{\"method\": \"atomspace_query\", \"params\": {\"query\": \"AtomSpace.getAtoms()\"}}\n";
+        rc = send(sock, json_query, strlen(json_query), 0);
+        TS_ASSERT(static_cast<size_t>(rc) == strlen(json_query));
+
+        char query_reply[2000];
+        rc = recv(sock, query_reply, sizeof(query_reply), 0);
+        TS_ASSERT(0 < rc);
+
+        close(sock);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellEvaluator()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test McpEval functionality directly
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        McpShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        TS_ASSERT(eval != nullptr);
+
+        // Test evaluation
+        eval->eval_expr("AtomSpace.getAtoms()");
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        TS_ASSERT(result.size() > 0);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellAtomSpaceIntegration()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Add some atoms to test with
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        Handle conch = as->add_node(CONCEPT_NODE, "test-concept");
+        TS_ASSERT(conch != Handle::UNDEFINED);
+
+        // Test MCP shell can access these atoms
+        McpShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        eval->eval_expr("AtomSpace.getAtoms(\"ConceptNode\")");
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        TS_ASSERT(result.find("test-concept") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+};

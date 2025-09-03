@@ -15,4 +15,7 @@ LINK_LIBRARIES(
 	${Boost_SYSTEM_LIBRARY}
 )
 
+ADD_CXXTEST(McpShellUTest)
+TARGET_LINK_LIBRARIES(McpShellUTest mcp-shell mcp-eval)
+
 ADD_CXXTEST(ShellUTest)
