@@ -96,26 +96,6 @@ ELSE (ATOMSPACE_STORAGE_FOUND)
 ENDIF (ATOMSPACE_STORAGE_FOUND)
 
 # ----------------------------------------------------------
-# Check for boost. We need dynamic-linked, threaded libs by default.
-SET(Boost_USE_STATIC_LIBS OFF)
-SET(Boost_USE_MULTITHREADED ON)
-SET(MIN_BOOST 1.46)
-
-# Required boost packages
-FIND_PACKAGE(Boost ${MIN_BOOST} CONFIG)
-
-IF(Boost_FOUND)
-	SET(Boost_FOUND_SAVE 1)
-ELSE(Boost_FOUND)
-	MESSAGE(FATAL_ERROR "Boost ${MIN_BOOST} or newer is needed to build OpenCog!")
-ENDIF(Boost_FOUND)
-
-# Opencog won't compile with Boost 1.51, some kind of conflict with
-# hash functions, see github bugs 1 and 36
-IF(105100 EQUAL ${Boost_VERSION})
-	MESSAGE(FATAL_ERROR "Boost version 1.51 will not work with OpenCog.  Please use a different version.")
-ENDIF(105100 EQUAL ${Boost_VERSION})
-MESSAGE(STATUS "Boost version ${Boost_VERSION} found.")
 
 FIND_PACKAGE(OpenSSL)
 IF (OPENSSL_FOUND)
@@ -246,7 +226,7 @@ STRING(TIMESTAMP UTC_DATE %Y%m%d UTC)
 FILE(WRITE "${PROJECT_BINARY_DIR}/install_manifest.txt")
 ## It doesn't have a header-file declaring the version similar to cogutil and
 ## atomspace.
-SET(SEMANTIC_VERSION 0.1.4)
+SET(SEMANTIC_VERSION 3.3.0)
 
 ## Cpack configuration
 SET(CPACK_GENERATOR "DEB")

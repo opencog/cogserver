@@ -39,7 +39,6 @@ ext = Extension(
         "/opt/local/include"  # For MacPorts
         ],
     libraries=["stdc++",
-        "boost_system-mt","boost_thread-mt", # boost dependencies
         # opencog libraries
         "atomspace",
         "util"
