@@ -95,6 +95,14 @@ ELSE (ATOMSPACE_STORAGE_FOUND)
 	MESSAGE(FATAL_ERROR "AtomSpace Storage missing: it is needed!")
 ENDIF (ATOMSPACE_STORAGE_FOUND)
 
+FIND_PACKAGE(Asio REQUIRED)
+IF (Asio_FOUND)
+	ADD_DEFINITIONS(-DHAVE_ASIO)
+	SET(HAVE_ASIO 1)
+ELSE (Asio_FOUND)
+	MESSAGE(FATAL_ERROR "ASIO missing: can't build without it.")
+ENDIF (Asio_FOUND)
+
 # ----------------------------------------------------------
 
 FIND_PACKAGE(OpenSSL)
