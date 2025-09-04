@@ -34,9 +34,9 @@ namespace opencog
  *
  * Users of this class need only implement these two methods.
  *
- * This class exists only to hide the ugliness of boost:asio.
- * Some day in the future, this should be re-written to avoid using
- * boost! But for now, it's stable debugged and it works.
+ * This class exists only to hide the ugliness of asio. Some day
+ * in the future, this should be re-written to avoid using asio!
+ * But for now, it's stable debugged and it works.
  */
 class ServerSocket
 {

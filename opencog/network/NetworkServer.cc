@@ -58,7 +58,7 @@ void NetworkServer::stop()
     _acceptor.cancel(ec);
     _io_service.stop();
 
-    // Booost::asio hangs, despite the above.  Brute-force it to
+    // asio hangs, despite the above.  Brute-force it to
     // get it's head out of it's butt, and do the right thing.
     pthread_cancel(_listener_thread->native_handle());
 
@@ -76,7 +76,7 @@ void NetworkServer::listen(void)
         // The call to _acceptor.accept() will block this thread until
         // a network connection is made. Thus, we defer the creation
         // of the connection handler thread until after accept()
-        // returns.  However, the boost design violates RAII principles,
+        // returns.  However, the asio design violates RAII principles,
         // so instead, what we do is to hand off the socket created here,
         // to the ServerSocket class, which will delete it, when the
         // connection socket closes (just before the connection handler
