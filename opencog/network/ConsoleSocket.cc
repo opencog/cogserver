@@ -35,7 +35,7 @@ ConsoleSocket::~ConsoleSocket()
     //
     // Some details: basically, the remote end of the socket "fires and
     // forgets" a bunch of commands, and then closes the socket before
-    // these requests have completed.  boost:asio notices that the
+    // these requests have completed.  asio notices that the
     // remote socket has closed, and so decides its a good day to call
     // destructors. But of course, its not ... because the requests
     // still have to be handled.

@@ -292,9 +292,9 @@ ServerSocket::~ServerSocket()
 
     Exit();
 
-    // An attempt to delete a boost socket, after being stopped with
+    // An attempt to delete an asio socket, after being stopped with
     // `asio::io_service::stop()` will result in a crash, deep
-    // inside boost. Failing to delete is also obviously a memleak,
+    // inside asio. Failing to delete is also obviously a memleak,
     // but for now, well accept a memleak in exchange for stability.
     // See notes in the body of the Exit() method below (circa line 322).
     if (not _network_gone)
@@ -382,7 +382,7 @@ void ServerSocket::Send(const asio::const_buffer& buf)
 
 // As far as I can tell, asio is not actually thread-safe,
 // in particular, when closing and destroying sockets.  This strikes
-// me as incredibly stupid -- a first-class reason to not use boost.
+// me as incredibly stupid -- a first-class reason to not use asio.
 // But whatever.  Hack around this for now.
 static std::mutex _asio_crash;
 
@@ -399,24 +399,24 @@ void ServerSocket::Exit()
     {
         _socket->shutdown(asio::ip::tcp::socket::shutdown_both);
 
-        // OK, so there is some boost bug here. This line of code
+        // OK, so there is some asio bug here. This line of code
         // crashes, and I can't figure out how to make it not crash.
         // So, if we start a cogserver, telnet into it, stop the
         // cogserver, then exit telnet, it will crash deep inside of
-        // boost (in the `close()` below.) I think it crashes because
-        // boost is accessing freed memory. That is, by this point,
+        // asio (in the `close()` below.) I think it crashes because
+        // asio is accessing freed memory. That is, by this point,
         // we have called `NetworkServer::stop()` which calls
         // `asio::io_service::stop()` which probably frees
-        // something. Of course, we only wanted to stop boost from
+        // something. Of course, we only wanted to stop asio from
         // listening, and not to stop it from servicing sockets. So
         // anyway, it frees stuff, and then does a use-after-free.
         //
         // Why do I think this? Because, on rare occasions, it does not
         // crash in the `close()` below. It crashes later, in `malloc()`
-        // with a corrupted free list. Which tells me boost is doing
+        // with a corrupted free list. Which tells me asio is doing
         // use-after-free.
         //
-        // Boost ASIO seems awfully buggy to me ... its forced us into
+        // ASIO seems awfully buggy to me ... its forced us into
         // this stunningly complex design, and ... I don't know how to
         // (easily) fix it.
         //
