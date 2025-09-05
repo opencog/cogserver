@@ -10,7 +10,7 @@
  * (This code was created by Claude.)
  */
 
-#include <nlohmann/json.hpp>
+#include <json/json.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -37,13 +37,25 @@
     typedef int SOCKET;
 #endif
 
-using json = nlohmann::json;
+// Using jsoncpp's Json namespace
+
+// Helper function to convert Json::Value to string with optional indentation
+static inline std::string dump_result(const Json::Value& value, bool pretty = true) {
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = pretty ? "  " : "";
+    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+    std::ostringstream oss;
+    writer->write(value, &oss);
+    return oss.str();
+}
 
 class SimpleJsonRpcClient {
 private:
     SOCKET sock;
     std::atomic<int> message_id{0};
     bool connected{false};
+    Json::StreamWriterBuilder writer_builder;
+    Json::CharReaderBuilder reader_builder;
 
 public:
     SimpleJsonRpcClient() : sock(INVALID_SOCKET) {
@@ -51,6 +63,8 @@ public:
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
+        writer_builder["indentation"] = "";
+        writer_builder["commentStyle"] = "None";
     }
 
     ~SimpleJsonRpcClient() {
@@ -104,10 +118,10 @@ public:
         connected = false;
     }
 
-    bool sendMessage(const json& message) {
+    bool sendMessage(const Json::Value& message) {
         if (!connected) return false;
 
-        std::string msg_str = message.dump() + "\n";
+        std::string msg_str = dump_result(message, false) + "\n";
         int total_sent = 0;
         int msg_len = msg_str.length();
 
@@ -123,8 +137,8 @@ public:
         return true;
     }
 
-    json receiveMessage() {
-        if (!connected) return json();
+    Json::Value receiveMessage() {
+        if (!connected) return Json::Value();
 
         std::string buffer;
         char recv_buf[4096];
@@ -133,7 +147,7 @@ public:
             int received = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
             if (received <= 0) {
                 std::cerr << "Failed to receive message" << std::endl;
-                return json();
+                return Json::Value();
             }
 
             recv_buf[received] = '\0';
@@ -145,26 +159,28 @@ public:
                 std::string line = buffer.substr(0, newline_pos);
                 buffer = buffer.substr(newline_pos + 1);
 
-                try {
-                    return json::parse(line);
-                } catch (const json::parse_error& e) {
-                    std::cerr << "Failed to parse JSON: " << e.what() << std::endl;
-                    return json();
+                Json::Value root;
+                std::unique_ptr<Json::CharReader> reader(reader_builder.newCharReader());
+                std::string errors;
+
+                if (!reader->parse(line.c_str(), line.c_str() + line.length(), &root, &errors)) {
+                    std::cerr << "Failed to parse JSON: " << errors << std::endl;
+                    return Json::Value();
                 }
+                return root;
             }
         }
     }
 
-    json sendRequest(const std::string& method, const json& params = json()) {
+    Json::Value sendRequest(const std::string& method, const Json::Value& params = Json::Value()) {
         int id = message_id++;
 
-        json request = {
-            {"jsonrpc", "2.0"},
-            {"method", method},
-            {"id", id}
-        };
+        Json::Value request;
+        request["jsonrpc"] = "2.0";
+        request["method"] = method;
+        request["id"] = id;
 
-        if (!params.is_null()) {
+        if (!params.isNull()) {
             request["params"] = params;
         }
 
@@ -172,41 +188,37 @@ public:
             throw std::runtime_error("Failed to send request");
         }
 
-        json response = receiveMessage();
+        Json::Value response = receiveMessage();
         if (response.empty()) {
             throw std::runtime_error("Failed to receive response");
         }
 
-        if (response.contains("error")) {
-            throw std::runtime_error("RPC error: " + response["error"].dump());
+        if (response.isMember("error")) {
+            throw std::runtime_error("RPC error: " + dump_result(response["error"], false));
         }
 
-        if (response.contains("result")) {
+        if (response.isMember("result")) {
             return response["result"];
         }
 
-        return json();
+        return Json::Value();
     }
 
     bool initialize(const std::string& name, const std::string& version) {
-        json params = {
-            {"protocolVersion", "2024-11-05"},
-            {"capabilities", json::object()},
-            {"clientInfo", {
-                {"name", name},
-                {"version", version}
-            }}
-        };
+        Json::Value params;
+        params["protocolVersion"] = "2024-11-05";
+        params["capabilities"] = Json::objectValue;
+        params["clientInfo"]["name"] = name;
+        params["clientInfo"]["version"] = version;
 
         try {
-            json result = sendRequest("initialize", params);
-            std::cout << "Initialize response: " << result.dump(2) << std::endl;
+            Json::Value result = sendRequest("initialize", params);
+            std::cout << "Initialize response: " << dump_result(result) << std::endl;
 
             // Send initialized notification
-            json notification = {
-                {"jsonrpc", "2.0"},
-                {"method", "notifications/initialized"}
-            };
+            Json::Value notification;
+            notification["jsonrpc"] = "2.0";
+            notification["method"] = "notifications/initialized";
             sendMessage(notification);
 
             return true;
@@ -225,34 +237,32 @@ public:
         }
     }
 
-    json getServerCapabilities() {
+    Json::Value getServerCapabilities() {
         return sendRequest("mcp/describe");
     }
 
-    json listTools() {
+    Json::Value listTools() {
         return sendRequest("tools/list");
     }
 
-    json callTool(const std::string& name, const json& arguments = json()) {
-        json params = {
-            {"name", name}
-        };
+    Json::Value callTool(const std::string& name, const Json::Value& arguments = Json::Value()) {
+        Json::Value params;
+        params["name"] = name;
 
-        if (!arguments.is_null()) {
+        if (!arguments.isNull()) {
             params["arguments"] = arguments;
         }
 
         return sendRequest("tools/call", params);
     }
 
-    json listResources() {
+    Json::Value listResources() {
         return sendRequest("resources/list");
     }
 
-    json readResource(const std::string& uri) {
-        json params = {
-            {"uri", uri}
-        };
+    Json::Value readResource(const std::string& uri) {
+        Json::Value params;
+        params["uri"] = uri;
         return sendRequest("resources/read", params);
     }
 };
@@ -327,8 +337,8 @@ int main(int argc, char* argv[]) {
         // Get server capabilities
         std::cout << "\nGetting server capabilities..." << std::endl;
         try {
-            json capabilities = client.getServerCapabilities();
-            std::cout << "✓ Server capabilities: " << capabilities.dump(2) << std::endl;
+            Json::Value capabilities = client.getServerCapabilities();
+            std::cout << "✓ Server capabilities: " << dump_result(capabilities) << std::endl;
         } catch (const std::exception& e) {
             std::cout << "✗ Failed to get server capabilities: " << e.what() << std::endl;
         }
@@ -336,24 +346,25 @@ int main(int argc, char* argv[]) {
         // List available tools
         std::cout << "\nListing available tools..." << std::endl;
         try {
-            json tools_response = client.listTools();
+            Json::Value tools_response = client.listTools();
 
-            if (tools_response.contains("tools") && tools_response["tools"].is_array()) {
-                auto tools = tools_response["tools"];
+            if (tools_response.isMember("tools") && tools_response["tools"].isArray()) {
+                Json::Value tools = tools_response["tools"];
                 std::cout << "✓ Found " << tools.size() << " tools:" << std::endl;
 
-                for (const auto& tool : tools) {
-                    std::cout << "  - " << tool["name"].get<std::string>()
-                              << ": " << tool["description"].get<std::string>() << std::endl;
+                for (Json::ArrayIndex i = 0; i < tools.size(); ++i) {
+                    const Json::Value& tool = tools[i];
+                    std::cout << "  - " << tool["name"].asString()
+                              << ": " << tool["description"].asString() << std::endl;
                 }
 
                 // Call a tool if available
-                if (!tools.empty()) {
-                    const auto& first_tool = tools[0];
-                    std::string tool_name = first_tool["name"].get<std::string>();
+                if (tools.size() > 0) {
+                    const Json::Value& first_tool = tools[0];
+                    std::string tool_name = first_tool["name"].asString();
                     std::cout << "\nCalling tool '" << tool_name << "'..." << std::endl;
 
-                    json tool_args;
+                    Json::Value tool_args;
                     // Add some example arguments based on common tool types
                     if (tool_name == "echo") {
                         tool_args["text"] = "Hello from network client!";
@@ -364,8 +375,8 @@ int main(int argc, char* argv[]) {
                     }
 
                     try {
-                        json result = client.callTool(tool_name, tool_args);
-                        std::cout << "✓ Tool result: " << result.dump(2) << std::endl;
+                        Json::Value result = client.callTool(tool_name, tool_args);
+                        std::cout << "✓ Tool result: " << dump_result(result) << std::endl;
                     } catch (const std::exception& e) {
                         std::cout << "✗ Tool call failed: " << e.what() << std::endl;
                     }
@@ -378,21 +389,21 @@ int main(int argc, char* argv[]) {
         // List available resources
         std::cout << "\nListing available resources..." << std::endl;
         try {
-            json resources = client.listResources();
-            std::cout << "✓ Resources: " << resources.dump(2) << std::endl;
+            Json::Value resources = client.listResources();
+            std::cout << "✓ Resources: " << dump_result(resources) << std::endl;
 
             // Try to read a resource if available
-            if (resources.contains("resources") && resources["resources"].is_array() &&
-                !resources["resources"].empty()) {
+            if (resources.isMember("resources") && resources["resources"].isArray() &&
+                resources["resources"].size() > 0) {
 
-                const auto& first_resource = resources["resources"][0];
-                if (first_resource.contains("uri")) {
-                    std::string uri = first_resource["uri"].get<std::string>();
+                const Json::Value& first_resource = resources["resources"][0];
+                if (first_resource.isMember("uri")) {
+                    std::string uri = first_resource["uri"].asString();
                     std::cout << "\nReading resource: " << uri << std::endl;
 
                     try {
-                        json content = client.readResource(uri);
-                        std::cout << "✓ Resource content: " << content.dump(2) << std::endl;
+                        Json::Value content = client.readResource(uri);
+                        std::cout << "✓ Resource content: " << dump_result(content) << std::endl;
                     } catch (const std::exception& e) {
                         std::cout << "✗ Failed to read resource: " << e.what() << std::endl;
                     }
