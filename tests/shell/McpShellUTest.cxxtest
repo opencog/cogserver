@@ -162,14 +162,29 @@ public:
         rc = recv(sock, initial_reply, sizeof(initial_reply), 0);
         TS_ASSERT(0 < rc);
 
-        // Test JSON query functionality
-        const char* json_query = "{\"method\": \"atomspace_query\", \"params\": {\"query\": \"AtomSpace.getAtoms()\"}}\n";
+        // Test JSON query functionality with valid JSON-RPC 2.0 format
+        const char* json_query = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":1}\n";
         rc = send(sock, json_query, strlen(json_query), 0);
         TS_ASSERT(static_cast<size_t>(rc) == strlen(json_query));
 
-        char query_reply[2000];
-        rc = recv(sock, query_reply, sizeof(query_reply), 0);
+        // Need to give the server time to process
+        usleep(100000); // 100ms delay
+
+        char query_reply[4000];
+        memset(query_reply, 0, sizeof(query_reply));
+        rc = recv(sock, query_reply, sizeof(query_reply)-1, MSG_DONTWAIT);
         TS_ASSERT(0 < rc);
+
+        // The reply might include a prompt, so let's look for the JSON part
+        std::string reply_str(query_reply, rc);
+
+        // Verify the reply contains a valid JSON-RPC response
+        // The response should have these JSON-RPC elements
+        TS_ASSERT(reply_str.find("{") != std::string::npos);
+        TS_ASSERT(reply_str.find("}") != std::string::npos);
+        TS_ASSERT(reply_str.find("jsonrpc") != std::string::npos);
+        TS_ASSERT(reply_str.find("2.0") != std::string::npos);
+        TS_ASSERT(reply_str.find("id") != std::string::npos);
 
         close(sock);
 
