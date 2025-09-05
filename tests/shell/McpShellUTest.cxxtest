@@ -138,7 +138,31 @@ public:
         logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testMcpShellJsonQuery()
+    void testMcpShellPingTest()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test McpEval functionality directly
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        McpShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        TS_ASSERT(eval != nullptr);
+
+        // Test evaluation with a valid JSON-RPC ping request
+        eval->eval_expr("{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}");
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        TS_ASSERT(result.size() > 0);
+        // Verify it's a valid JSON-RPC response
+        TS_ASSERT(result.find("\"jsonrpc\"") != std::string::npos);
+        TS_ASSERT(result.find("\"2.0\"") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testMcpShellToolsList()
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
@@ -187,30 +211,6 @@ public:
         TS_ASSERT(reply_str.find("id") != std::string::npos);
 
         close(sock);
-
-        logger().debug("END TEST: %s", __FUNCTION__);
-    }
-
-    void testMcpShellEvaluator()
-    {
-        logger().debug("BEGIN TEST: %s", __FUNCTION__);
-
-        // Test McpEval functionality directly
-        AtomSpacePtr as = cogserver().getAtomSpace();
-        McpShell shell(as);
-        GenericEval* eval = shell.get_evaluator();
-
-        TS_ASSERT(eval != nullptr);
-
-        // Test evaluation with a valid JSON-RPC ping request
-        eval->eval_expr("{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}");
-        std::string result = eval->poll_result();
-
-        TS_ASSERT(!eval->eval_error());
-        TS_ASSERT(result.size() > 0);
-        // Verify it's a valid JSON-RPC response
-        TS_ASSERT(result.find("\"jsonrpc\"") != std::string::npos);
-        TS_ASSERT(result.find("\"2.0\"") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
     }
