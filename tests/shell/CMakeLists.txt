@@ -14,6 +14,9 @@ LINK_LIBRARIES(
 	${ATOMSPACE_LIBRARIES}
 )
 
+ADD_CXXTEST(JsonShellUTest)
+TARGET_LINK_LIBRARIES(JsonShellUTest json-shell)
+
 IF (HAVE_MCP)
 	ADD_CXXTEST(McpShellUTest)
 	TARGET_LINK_LIBRARIES(McpShellUTest mcp-shell mcp-eval)

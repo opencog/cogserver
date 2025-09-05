@@ -1,0 +1,234 @@
+/*
+ * tests/shell/JsonShellUTest.cxxtest
+ *
+ * Test for JSON Shell functionality
+ * Copyright (c) 2024 OpenCog Contributors
+ * All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License v3 as
+ * published by the Free Software Foundation and including the exceptions
+ * at http://opencog.org/wiki/Licenses
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program; if not, write to:
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+#include <thread>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <opencog/atoms/atom_types/NameServer.h>
+#include <opencog/atoms/base/Atom.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/persist/json/JsonEval.h>
+#include <opencog/util/Config.h>
+#include <opencog/util/Logger.h>
+
+#include "opencog/cogserver/shell/JsonShell.h"
+
+using namespace opencog;
+
+class JsonShellUTest : public CxxTest::TestSuite
+{
+private:
+    CogServer* csrv;
+    std::thread* main_loop;
+    int port = 17335;  // Different port from McpShellUTest
+
+public:
+    JsonShellUTest()
+    {
+        logger().set_level(Logger::INFO);
+    }
+
+    ~JsonShellUTest()
+    {
+        if (!CxxTest::TestTracker::tracker().suiteFailed())
+            std::remove(logger().get_filename().c_str());
+    }
+
+    void setUp()
+    {
+        csrv = &cogserver();
+        csrv->loadModules();
+        csrv->enableNetworkServer(port);
+        main_loop = new std::thread(&CogServer::serverLoop, csrv);
+
+        // Wait for the cogserver to finish initializing
+        sleep(1);
+    }
+
+    void tearDown()
+    {
+        csrv->stop();
+        main_loop->join();
+        delete main_loop;
+    }
+
+    void testJsonShellBasic()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test basic JSON shell interaction
+        std::string cmd = "echo 'json\n.\n' | nc -q 1 localhost " + std::to_string(port);
+        int rc = system(cmd.c_str());
+        TS_ASSERT_EQUALS(rc, 0);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testJsonShellQuery()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Create a socket connection for interactive testing
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        TS_ASSERT(0 < sock);
+
+        struct sockaddr_in server;
+        server.sin_addr.s_addr = inet_addr("127.0.0.1");
+        server.sin_family = AF_INET;
+        server.sin_port = htons(port);
+
+        int rc = connect(sock, (struct sockaddr *)&server, sizeof(server));
+        TS_ASSERT(0 == rc);
+
+        // Enter JSON shell
+        rc = send(sock, "json\n", strlen("json\n"), 0);
+        TS_ASSERT(5 == rc);
+
+        char initial_reply[1000];
+        rc = recv(sock, initial_reply, sizeof(initial_reply), 0);
+        TS_ASSERT(0 < rc);
+
+        // Test JSON query functionality with AtomSpace.version()
+        const char* json_query = "AtomSpace.version()\n";
+        rc = send(sock, json_query, strlen(json_query), 0);
+        TS_ASSERT(static_cast<size_t>(rc) == strlen(json_query));
+
+        // Need to give the server time to process
+        usleep(100000); // 100ms delay
+
+        char query_reply[2000];
+        memset(query_reply, 0, sizeof(query_reply));
+        rc = recv(sock, query_reply, sizeof(query_reply)-1, MSG_DONTWAIT);
+        TS_ASSERT(0 < rc);
+
+        // The reply should contain a version number
+        std::string reply_str(query_reply, rc);
+        TS_ASSERT(reply_str.size() > 0);
+
+        close(sock);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testJsonShellEvaluator()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Test JsonEval functionality directly
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        JsonShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        TS_ASSERT(eval != nullptr);
+
+        // Test evaluation with a valid JSON command
+        eval->eval_expr("AtomSpace.version()");
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        TS_ASSERT(result.size() > 0);
+        // The version should be a numeric string
+        TS_ASSERT(result.find(".") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testJsonShellAtomSpaceIntegration()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Add some atoms to test with
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        Handle conch = as->add_node(CONCEPT_NODE, "test-concept-json");
+        TS_ASSERT(conch != Handle::UNDEFINED);
+
+        // Test JSON shell can access these atoms
+        JsonShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        // Use JSON command format to check for the atom
+        std::string json_request = "AtomSpace.haveNode(\"Concept\", \"test-concept-json\")";
+
+        eval->eval_expr(json_request);
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        // Should return "true" (check if result contains true)
+        TS_ASSERT(result.find("true") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testJsonShellGetAtoms()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        // Add some atoms to test with
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        as->add_node(CONCEPT_NODE, "json-test-1");
+        as->add_node(CONCEPT_NODE, "json-test-2");
+        as->add_node(NUMBER_NODE, "42");
+
+        JsonShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        // Get all ConceptNodes
+        eval->eval_expr("AtomSpace.getAtoms(\"ConceptNode\")");
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        TS_ASSERT(result.find("json-test-1") != std::string::npos);
+        TS_ASSERT(result.find("json-test-2") != std::string::npos);
+        TS_ASSERT(result.find("test-concept-json") != std::string::npos);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+
+    void testJsonShellMakeAtom()
+    {
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+        AtomSpacePtr as = cogserver().getAtomSpace();
+        JsonShell shell(as);
+        GenericEval* eval = shell.get_evaluator();
+
+        // Create a new atom via JSON command
+        std::string cmd = "AtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})";
+        eval->eval_expr(cmd);
+        std::string result = eval->poll_result();
+
+        TS_ASSERT(!eval->eval_error());
+        TS_ASSERT(result.find("true") != std::string::npos);
+
+        // Verify the atom was created
+        Handle h = as->get_node(CONCEPT_NODE, "json-created");
+        TS_ASSERT(h != Handle::UNDEFINED);
+
+        logger().debug("END TEST: %s", __FUNCTION__);
+    }
+};
