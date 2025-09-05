@@ -26,7 +26,8 @@
 #include <algorithm>
 
 #if HAVE_MCP
-#include <nlohmann/json.hpp>
+#include <json/json.h>
+#include <sstream>
 #endif // HAVE_MCP
 
 #include <opencog/util/Logger.h>
@@ -37,9 +38,6 @@
 
 using namespace opencog;
 using namespace std::chrono_literals;
-#if HAVE_MCP
-using namespace nlohmann;
-#endif // HAVE_MCP
 
 McpEval::McpEval(const AtomSpacePtr& asp)
 	: GenericEval(), _atomspace(asp)
@@ -65,48 +63,54 @@ void McpEval::eval_expr(const std::string &expr)
 	logger().info("[McpEval] received %s", expr.c_str());
 	try
 	{
-		json request = json::parse(expr);
-		if (!request.contains("jsonrpc") || request["jsonrpc"] != "2.0")
-		{
-			json error_response;
+		Json::Value request;
+		Json::CharReaderBuilder reader_builder;
+		std::unique_ptr<Json::CharReader> reader(reader_builder.newCharReader());
+		std::string errors;
+
+		if (!reader->parse(expr.c_str(), expr.c_str() + expr.length(), &request, &errors)) {
+			Json::Value error_response;
 			error_response["jsonrpc"] = "2.0";
-			error_response["id"] = json();
-			error_response["error"] = {
-				{"code", -32600},
-				{"message", "Invalid Request - missing jsonrpc 2.0"}
-			};
-			_result = error_response.dump() + "\n";
+			error_response["id"] = Json::Value::null;
+			error_response["error"]["code"] = -32700;
+			error_response["error"]["message"] = "Parse error: " + errors;
+			_result = json_to_string(error_response) + "\n";
 			return;
 		}
 
-		std::string method = request.value("method", "");
-		json params = request.value("params", json::object());
-		json id = request.value("id", json());
+		if (!request.isMember("jsonrpc") || request["jsonrpc"].asString() != "2.0")
+		{
+			Json::Value error_response;
+			error_response["jsonrpc"] = "2.0";
+			error_response["id"] = Json::Value::null;
+			error_response["error"]["code"] = -32600;
+			error_response["error"]["message"] = "Invalid Request - missing jsonrpc 2.0";
+			_result = json_to_string(error_response) + "\n";
+			return;
+		}
+
+		std::string method = request.isMember("method") ? request["method"].asString() : "";
+		Json::Value params = request.isMember("params") ? request["params"] : Json::objectValue;
+		Json::Value id = request.isMember("id") ? request["id"] : Json::Value::null;
 
 		logger().debug("[McpEval] method %s", method.c_str());
-		json response;
+		Json::Value response;
 		response["jsonrpc"] = "2.0";
 		response["id"] = id;
 
 		if (method == "initialize") {
-			response["result"] = {
-				{"protocolVersion", "2024-11-05"},
-				{"capabilities", {
-					{"tools", json::object()},
-					{"resources", json::object()}
-				}},
-				{"serverInfo", {
-					{"name", "CogServer MCP"},
-					{"version", "0.1.0"}
-				}}
-			};
+			response["result"]["protocolVersion"] = "2024-11-05";
+			response["result"]["capabilities"]["tools"] = Json::objectValue;
+			response["result"]["capabilities"]["resources"] = Json::objectValue;
+			response["result"]["serverInfo"]["name"] = "CogServer MCP";
+			response["result"]["serverInfo"]["version"] = "0.1.0";
 		} else if (method == "notifications/initialized" or
 		           method == "initialized") {
 #define WTF_INIT
 #ifdef WTF_INIT
 			// Supposedly there should be no response here, but its
 			// broken if we're silent. So ... !???
-			response["result"] = json::object();
+			response["result"] = Json::objectValue;
 #else
 			// Notification - no response
 			_result = "";
@@ -122,74 +126,83 @@ void McpEval::eval_expr(const std::string &expr)
 			_done = true;
 			return;
 		} else if (method == "ping") {
-			response["result"] = json::object();
+			response["result"] = Json::objectValue;
 		} else if (method == "tools/list") {
-			json all_tools = json::array();
+			Json::Value all_tools(Json::arrayValue);
 
 			// Collect tools from all registered plugins
 			for (const auto& plugin : _plugins) {
 				std::string plugin_tools_json = plugin->get_tool_descriptions();
-				json plugin_tools = json::parse(plugin_tools_json);
-				for (const auto& tool : plugin_tools) {
-					all_tools.push_back(tool);
+				Json::Value plugin_tools;
+				Json::CharReaderBuilder builder;
+				std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+				std::string errors;
+
+				if (reader->parse(plugin_tools_json.c_str(),
+				                  plugin_tools_json.c_str() + plugin_tools_json.length(),
+				                  &plugin_tools, &errors)) {
+					for (Json::ArrayIndex i = 0; i < plugin_tools.size(); ++i) {
+						all_tools.append(plugin_tools[i]);
+					}
 				}
 			}
 
-			response["result"] = {
-				{"tools", all_tools}
-			};
+			response["result"]["tools"] = all_tools;
 		} else if (method == "resources/list") {
-			response["result"] = {
-				{"resources", json::array()}
-			};
+			response["result"]["resources"] = Json::arrayValue;
 		} else if (method == "tools/call") {
-			std::string tool_name = params.value("name", "");
-			json arguments = params.value("arguments", json::object());
+			std::string tool_name = params.isMember("name") ? params["name"].asString() : "";
+			Json::Value arguments = params.isMember("arguments") ? params["arguments"] : Json::objectValue;
 
 			// Find the plugin that handles this tool
 			auto it = _tool_to_plugin.find(tool_name);
 			if (it != _tool_to_plugin.end()) {
 				// Invoke the tool through the plugin
-				std::string arguments_json = arguments.dump();
+				std::string arguments_json = json_to_string(arguments);
 				std::string tool_result_json = it->second->invoke_tool(tool_name, arguments_json);
-				json tool_result = json::parse(tool_result_json);
 
-				// Check if the plugin returned an error
-				if (tool_result.contains("error")) {
-					response["error"] = tool_result["error"];
+				Json::Value tool_result;
+				Json::CharReaderBuilder builder;
+				std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+				std::string errors;
+
+				if (reader->parse(tool_result_json.c_str(),
+				                  tool_result_json.c_str() + tool_result_json.length(),
+				                  &tool_result, &errors)) {
+					// Check if the plugin returned an error
+					if (tool_result.isMember("error")) {
+						response["error"] = tool_result["error"];
+					} else {
+						response["result"] = tool_result;
+					}
 				} else {
-					response["result"] = tool_result;
+					response["error"]["code"] = -32700;
+					response["error"]["message"] = "Failed to parse tool result";
 				}
 			} else {
-				response["error"] = {
-					{"code", -32601},
-					{"message", "Tool not found: " + tool_name}
-				};
+				response["error"]["code"] = -32601;
+				response["error"]["message"] = "Tool not found: " + tool_name;
 			}
 		} else {
-			response["error"] = {
-				{"code", -32601},
-				{"message", "Method not found: " + method}
-			};
+			response["error"]["code"] = -32601;
+			response["error"]["message"] = "Method not found: " + method;
 		}
 
-		logger().info("[McpEval] replying: %s", response.dump().c_str());
+		logger().info("[McpEval] replying: %s", json_to_string(response).c_str());
 
 		// Trailing newline is mandatory; jsonrpc uses line discipline.
-		_result = response.dump() + "\n";
+		_result = json_to_string(response) + "\n";
 		_done = true;
 	}
 	catch (const std::exception& e)
 	{
-		json error_response;
+		Json::Value error_response;
 		error_response["jsonrpc"] = "2.0";
-		error_response["id"] = json();
-		error_response["error"] = {
-			{"code", -32700},
-			{"message", "Parse error: " + std::string(e.what())}
-		};
-		logger().info("[McpEval] error reply: %s", error_response.dump().c_str());
-		_result = error_response.dump() + "\n";
+		error_response["id"] = Json::Value::null;
+		error_response["error"]["code"] = -32700;
+		error_response["error"]["message"] = "Parse error: " + std::string(e.what());
+		logger().info("[McpEval] error reply: %s", json_to_string(error_response).c_str());
+		_result = json_to_string(error_response) + "\n";
 		_done = true;
 	}
 #else
@@ -239,10 +252,16 @@ void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
 
 	// Map each tool to its plugin
 	std::string tools_json = plugin->get_tool_descriptions();
-	json tools = json::parse(tools_json);
-	for (const auto& tool : tools) {
-		std::string tool_name = tool["name"];
-		_tool_to_plugin[tool_name] = plugin;
+	Json::Value tools;
+	Json::CharReaderBuilder builder;
+	std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+	std::string errors;
+
+	if (reader->parse(tools_json.c_str(), tools_json.c_str() + tools_json.length(), &tools, &errors)) {
+		for (Json::ArrayIndex i = 0; i < tools.size(); ++i) {
+			std::string tool_name = tools[i]["name"].asString();
+			_tool_to_plugin[tool_name] = plugin;
+		}
 	}
 #endif // HAVE_MCP
 }

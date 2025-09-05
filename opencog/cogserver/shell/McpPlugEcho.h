@@ -56,4 +56,23 @@ public:
 
 } // namespace opencog
 
+#if HAVE_MCP
+#include <json/json.h>
+#include <sstream>
+#include <memory>
+
+// Helper function to convert Json::Value to string
+static inline std::string json_to_string(const Json::Value& value) {
+    static Json::StreamWriterBuilder builder = []() {
+        Json::StreamWriterBuilder b;
+        b["indentation"] = "";  // Compact output (no newlines/indentation)
+        return b;
+    }();
+    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+    std::ostringstream oss;
+    writer->write(value, &oss);
+    return oss.str();
+}
+#endif // HAVE_MCP
+
 #endif // _OPENCOG_MCP_PLUG_ECHO_H
