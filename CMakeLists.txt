@@ -113,13 +113,15 @@ ELSE (OPENSSL_FOUND)
 	MESSAGE(STATUS "OpenSSL missing: needed for WebSockets.")
 ENDIF (OPENSSL_FOUND)
 
-FIND_PACKAGE(nlohmann_json)
-IF (nlohmann_json_FOUND)
+FIND_PACKAGE(PkgConfig)
+PKG_CHECK_MODULES(JSONCPP jsoncpp)
+IF (JSONCPP_FOUND)
 	ADD_DEFINITIONS(-DHAVE_MCP=1)
 	SET(HAVE_MCP 1)
-ELSE (nlohmann_json_FOUND)
-	MESSAGE(STATUS "MCP missing: needed for Model Context Protocol support.")
-ENDIF (nlohmann_json_FOUND)
+	INCLUDE_DIRECTORIES(${JSONCPP_INCLUDE_DIRS})
+ELSE (JSONCPP_FOUND)
+	MESSAGE(STATUS "MCP missing: needed for Model Context Protocol support (jsoncpp required).")
+ENDIF (JSONCPP_FOUND)
 
 
 # ----------------------------------------------------------
