@@ -84,8 +84,7 @@ IF (HAVE_MCP)
 	)
 	TARGET_LINK_LIBRARIES(mcp-eval
 		${ATOMSPACE_STORAGE_LIBRARIES}
-		# nlohmann_json::nlohmann_json
-		${nlohmann_json_LIBRARIES}
+		${JSONCPP_LIBRARIES}
 	)
 
 	INSTALL (TARGETS mcp-eval

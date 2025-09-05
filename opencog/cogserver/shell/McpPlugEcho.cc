@@ -24,7 +24,8 @@
 #include <ctime>
 
 #if HAVE_MCP
-#include <nlohmann/json.hpp>
+#include <json/json.h>
+#include <sstream>
 #endif
 
 #include "McpPlugEcho.h"
@@ -34,36 +35,27 @@ using namespace opencog;
 std::string McpPlugEcho::get_tool_descriptions() const
 {
 #if HAVE_MCP
-    using namespace nlohmann;
-    json tools = json::array();
+    Json::Value tools(Json::arrayValue);
 
     // Echo tool description
-    tools.push_back({
-        {"name", "echo"},
-        {"description", "Echo the input text"},
-        {"inputSchema", {
-            {"type", "object"},
-            {"properties", {
-                {"text", {
-                    {"type", "string"},
-                    {"description", "Text to echo"}
-                }}
-            }},
-            {"required", {"text"}}
-        }}
-    });
+    Json::Value echo_tool;
+    echo_tool["name"] = "echo";
+    echo_tool["description"] = "Echo the input text";
+    echo_tool["inputSchema"]["type"] = "object";
+    echo_tool["inputSchema"]["properties"]["text"]["type"] = "string";
+    echo_tool["inputSchema"]["properties"]["text"]["description"] = "Text to echo";
+    echo_tool["inputSchema"]["required"].append("text");
+    tools.append(echo_tool);
 
     // Time tool description
-    tools.push_back({
-        {"name", "time"},
-        {"description", "Get current time"},
-        {"inputSchema", {
-            {"type", "object"},
-            {"properties", json::object()}
-        }}
-    });
+    Json::Value time_tool;
+    time_tool["name"] = "time";
+    time_tool["description"] = "Get current time";
+    time_tool["inputSchema"]["type"] = "object";
+    time_tool["inputSchema"]["properties"] = Json::objectValue;
+    tools.append(time_tool);
 
-    return tools.dump();
+    return json_to_string(tools);
 #else
     return "[]";
 #endif
@@ -73,43 +65,43 @@ std::string McpPlugEcho::invoke_tool(const std::string& tool_name,
                                      const std::string& arguments) const
 {
 #if HAVE_MCP
-    using namespace nlohmann;
-    json response;
+    Json::Value response;
 
     try {
         if (tool_name == "echo") {
-            json args = json::parse(arguments);
-            std::string text = args.value("text", "");
-            response["content"] = {
-                {
-                    {"type", "text"},
-                    {"text", "Echo: " + text}
-                }
-            };
+            Json::Value args;
+            Json::CharReaderBuilder builder;
+            std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+            std::string errors;
+
+            if (reader->parse(arguments.c_str(), arguments.c_str() + arguments.length(), &args, &errors)) {
+                std::string text = args.isMember("text") ? args["text"].asString() : "";
+                Json::Value content_item;
+                content_item["type"] = "text";
+                content_item["text"] = "Echo: " + text;
+                response["content"].append(content_item);
+            } else {
+                response["error"]["code"] = -32700;
+                response["error"]["message"] = "Parse error: " + errors;
+            }
         } else if (tool_name == "time") {
             auto now = std::chrono::system_clock::now();
             auto time_t = std::chrono::system_clock::to_time_t(now);
-            response["content"] = {
-                {
-                    {"type", "text"},
-                    {"text", std::ctime(&time_t)}
-                }
-            };
+            Json::Value content_item;
+            content_item["type"] = "text";
+            content_item["text"] = std::ctime(&time_t);
+            response["content"].append(content_item);
         } else {
             // Tool not found in this plugin
-            response["error"] = {
-                {"code", -32601},
-                {"message", "Tool not found in McpPlugEcho: " + tool_name}
-            };
+            response["error"]["code"] = -32601;
+            response["error"]["message"] = "Tool not found in McpPlugEcho: " + tool_name;
         }
-    } catch (const json::parse_error& e) {
-        response["error"] = {
-            {"code", -32700},
-            {"message", "Parse error: " + std::string(e.what())}
-        };
+    } catch (const std::exception& e) {
+        response["error"]["code"] = -32700;
+        response["error"]["message"] = "Parse error: " + std::string(e.what());
     }
 
-    return response.dump();
+    return json_to_string(response);
 #else
     return "{\"error\":{\"code\":-32601,\"message\":\"MCP not compiled\"}}";
 #endif
