@@ -118,7 +118,7 @@ class TestCogServer(unittest.TestCase):
     def test_double_start_error(self):
         """Test that starting server twice raises error."""
         # Start server
-        start_cogserver()
+        start_cogserver(console_port=17553, enable_web=False, enable_mcp=False)
         self.assertTrue(is_cogserver_running(), "Server should be running")
 
         # Try to start again - should raise RuntimeError
@@ -169,7 +169,8 @@ class TestCogServer(unittest.TestCase):
         """Test multiple start/stop cycles."""
         for i in range(3):
             # Start server
-            result = start_cogserver(console_port=17501 + i)
+            result = start_cogserver(console_port=17560 + i,
+                                    enable_web=False, enable_mcp=False)
             self.assertTrue(result, f"Server should start on cycle {i}")
             self.assertTrue(is_cogserver_running(),
                           f"Server should be running on cycle {i}")
