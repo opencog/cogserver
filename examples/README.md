@@ -35,6 +35,10 @@ One of these verifies that the CogServer is responding corrrectly.
 Two more are network proxies that can be used to escape network
 sandboxes. These are useful when running Claude over TOR or a VPN.
 
+The [python](./python) subdirectory demonstrates how to start the
+cogserver from a python shell, so that the AtomSpace used by the python
+shell is the same one as that used by the cogserver.
+
 The [module](./module) subdirectory provides a template for creating
 a custom module. Most developers should NOT be interested in this
 example! If you want to create a new shell, similar to the python,
