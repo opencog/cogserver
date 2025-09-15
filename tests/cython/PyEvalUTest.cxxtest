@@ -70,8 +70,6 @@ public:
         if (pyEvalRequest != NULL) {
             TS_TRACE("CogServer successfully loaded Python module");
             delete pyEvalRequest;
-        } else {
-            TS_SKIP("Python module not available in CogServer");
         }
     }
 
@@ -84,8 +82,6 @@ public:
         if (pyShellRequest != NULL) {
             TS_TRACE("CogServer can create Python shell requests");
             delete pyShellRequest;
-        } else {
-            TS_SKIP("Python shell not available in CogServer");
         }
     }
 
@@ -93,10 +89,7 @@ public:
     {
         // Test that CogServer can process a py-eval request
         Request* req = cogserver().createRequest("py-eval");
-        if (req == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req, (Request*) NULL);
 
         // Add a simple Python expression
         req->addParameter("test_cogserver_var = 123");
@@ -115,10 +108,7 @@ public:
     {
         // Test that CogServer can handle multiple py-eval requests in sequence
         Request* req1 = cogserver().createRequest("py-eval");
-        if (req1 == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req1, (Request*) NULL);
 
         // First request: set a variable
         req1->addParameter("cogserver_test_x = 10");
@@ -147,10 +137,7 @@ public:
     {
         // Test that CogServer can handle complex Python expressions
         Request* req = cogserver().createRequest("py-eval");
-        if (req == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req, (Request*) NULL);
 
         // Add a complex Python expression with function definition
         req->addParameter("def cogserver_test_func(n): return n * n");
@@ -179,10 +166,7 @@ public:
     {
         // Test that CogServer py-eval can handle module imports
         Request* req = cogserver().createRequest("py-eval");
-        if (req == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req, (Request*) NULL);
 
         // Import a standard library module through CogServer
         req->addParameter("import math");
@@ -211,10 +195,7 @@ public:
     {
         // Test that Python code executed through CogServer can access the AtomSpace
         Request* req = cogserver().createRequest("py-eval");
-        if (req == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req, (Request*) NULL);
 
         // Get initial size of atomspace
         int initial_size = atomspace->get_size();
@@ -256,10 +237,7 @@ public:
     {
         // Test that CogServer handles Python errors gracefully
         Request* req = cogserver().createRequest("py-eval");
-        if (req == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req, (Request*) NULL);
 
         // Send invalid Python syntax through CogServer
         req->addParameter("this is not valid python");
@@ -287,10 +265,9 @@ public:
         Request* req2 = cogserver().createRequest("py-eval");
         Request* req3 = cogserver().createRequest("py-eval");
 
-        if (req1 == NULL || req2 == NULL || req3 == NULL) {
-            TS_SKIP("py-eval request not available");
-            return;
-        }
+        TS_ASSERT_DIFFERS(req1, (Request*) NULL);
+        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
+        TS_ASSERT_DIFFERS(req3, (Request*) NULL);
 
         // Queue multiple requests
         req1->addParameter("queue_test_a = 1");
