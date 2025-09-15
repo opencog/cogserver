@@ -1,35 +1,25 @@
+# Import needed types from atomspace
+from opencog.atomspace cimport cAtomSpacePtr
 
-# Basic wrapping for std::string conversion
-cdef extern from "<string>" namespace "std":
-    cdef cppclass string:
-        string()
-        string(char *)
-        char * c_str()
-        int size()
-
-# Handle
-
-cdef extern from "opencog/atoms/base/Handle.h" namespace "opencog":
-    cdef cppclass cHandle "opencog::Handle":
-        cHandle()
-        bint operator==(cHandle h)
-        bint operator!=(cHandle h)
-        bint operator<(cHandle h)
-        bint operator>(cHandle h)
-        bint operator<=(cHandle h)
-        bint operator>=(cHandle h)
-        cHandle UNDEFINED
-# HandleSeq
-    cdef cppclass cHandleSeq "opencog::HandleSeq"
-
-# AtomSpaces
-from opencog.atomspace cimport cValuePtr
+# CogServer extern declarations
 cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
-    cValuePtr cython_server_atomspace()
+    cdef cppclass cCogServer "opencog::CogServer":
+        cCogServer()
+        cCogServer(cAtomSpacePtr)
+        void enableNetworkServer(int port)
+        void enableWebServer(int port)
+        void enableMCPServer(int port)
+        void disableNetworkServer()
+        void disableWebServer()
+        void disableMCPServer()
+        void serverLoop() nogil
+        void stop()
+        bint running()
+        cAtomSpacePtr getAtomSpace()
+        void setAtomSpace(const cAtomSpacePtr&)
+        void loadModules()
 
-cdef extern from "opencog/cogserver/server/Request.h" namespace "opencog":
-    cdef cppclass cRequest "opencog::Request":
-        void send(string s)
-
-cdef class Request:
-    cdef cRequest *c_obj
+    # Singleton functions
+    cCogServer& cogserver()
+    cCogServer& cogserver(cAtomSpacePtr)
+    cAtomSpacePtr cython_server_atomspace()
