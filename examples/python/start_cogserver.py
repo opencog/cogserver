@@ -61,6 +61,10 @@ print("Exit the scheme shell with a single dot or a ^D")
 print("\nAlternately, enter the pythonshell with `py` and then run")
 print("  print(\"my atomspace=\", list(my_atomspace))")
 
+print("\nYou can create new Atoms in those shells; they will appear here")
+print("because this AtomSpace and the CofserverAtomSpace are one and the same.")
+print("If you run MCP, you can even ask Claude to create Atoms for you.")
+
 print("\nWill now sleep for ten minutes; after this, the cogserver will stop")
 import time
 time.sleep(600)
