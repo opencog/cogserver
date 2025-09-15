@@ -45,6 +45,8 @@ SET_TARGET_PROPERTIES(cogserver_cython PROPERTIES
 INSTALL (TARGETS cogserver_cython
 	DESTINATION "${PYTHON_DEST}")
 
-# Install the .pxd file for other modules to use
+INSTALL (FILES __init__.py
+	DESTINATION "${PYTHON_DEST}")
+
 INSTALL (FILES cogserver.pxd
 	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/opencog/cython/opencog")
