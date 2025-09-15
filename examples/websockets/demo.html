@@ -328,7 +328,7 @@ $ python3
                  print("Created this:", cc)</tt></td>
          <td><button class="run-btn" onclick='runCommand("cc = Concept(\"foo\")\nprint(\"Created this:\", cc)", "py")'>Run this</button></td></tr>
      <tr><td>Fetch all Atoms:</td>
-         <td><tt>spacey = AtomSpace()<br>
+         <td><tt>spacey = get_default_atomspace()<br>
                  all = spacey.get_atoms_by_type(types.Atom, True)<br>
                  print("All of them", all)</tt></td>
          <td><button class="run-btn" onclick='runCommand("spacey = AtomSpace()\nall = spacey.get_atoms_by_type(types.Atom, True)\nprint(\"All of them\", all)", "py")'>Run this</button></td></tr>
