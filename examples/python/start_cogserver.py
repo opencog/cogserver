@@ -69,5 +69,6 @@ print("\nWill now sleep for ten minutes; after this, the cogserver will stop")
 import time
 time.sleep(600)
 stop_cogserver()
+print("... Times up! Goodbye!")
 
 # THE END. That's All, Folks!
