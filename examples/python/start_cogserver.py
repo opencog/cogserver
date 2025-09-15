@@ -24,7 +24,7 @@ my_atomspace = AtomSpace()
 # Tell the type constructors to use it.
 set_default_atomspace(my_atomspace)
 
-# Poke some data into the AtomSpace
+print("\nCreating an AtomSpace and putting some data into it...")
 A = ConceptNode('Apple')
 B = ConceptNode('Berry')
 C = ConceptNode('Comestible')
@@ -40,6 +40,7 @@ from opencog.cogserver import (
     get_server_atomspace
 )
 
+print("Starting the CogServer ...")
 start_cogserver(atomspace=my_atomspace,
                 console_port=17300,    # Default is 17001
                 web_port=18381,        # Default is 18080
@@ -48,6 +49,21 @@ start_cogserver(atomspace=my_atomspace,
 print("\nYou can connect using:")
 print("  rlwrap telnet localhost 17300")
 
-# stop_cogserver()
+print("\nand then try some commands:")
+print("  help")
+print("  stats")
+
+print("\nTo view the AtomSpace contents, try this:")
+print("Enter the scm shell with `scm` and then run")
+print("  (cog-prt-atomspace)")
+print("Exit the scheme shell with a single dot or a ^D")
+
+print("\nAlternately, enter the pythonshell with `py` and then run")
+print("  print(\"my atomspace=\", list(my_atomspace))")
+
+print("\nWill now sleep for ten minutes; after this, the cogserver will stop")
+import time
+time.sleep(600)
+stop_cogserver()
 
 # THE END. That's All, Folks!
