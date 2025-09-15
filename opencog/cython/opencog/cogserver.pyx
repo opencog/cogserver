@@ -151,5 +151,7 @@ def is_cogserver_running():
     global _server_running
     if not _server_running:
         return False
-    cdef cCogServer* server_ptr = &cogserver()
-    return server_ptr.running()
+    # This hangs. Probably shouldn't/
+    # cdef cCogServer* server_ptr = &cogserver()
+    # return server_ptr.running()
+    return True
