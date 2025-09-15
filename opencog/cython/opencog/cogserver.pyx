@@ -92,7 +92,8 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
     def server_loop():
         """Run the server's main loop."""
         try:
-            server_ptr.serverLoop()
+            with nogil:
+                server_ptr.serverLoop()
         except Exception as e:
             print(f"Server loop error: {e}")
 
