@@ -88,11 +88,6 @@ std::string PageServer::serve(const std::string& url)
         filepath += "/" + url;
     }
 
-    // Special case for visualizer files
-    if (url.find("/visualizer/") == 0 || url == "/visualizer") {
-        // Already have the right path
-    }
-
     // Check if file exists
     struct stat file_stat;
     if (stat(filepath.c_str(), &file_stat) != 0) {
@@ -149,6 +144,7 @@ std::string PageServer::notFound(const std::string& url)
         "<body><h1>404 Not Found</h1>\n"
         "The Cogserver doesn't know about " + url + "\n"
         "<p>The <a href=\"/stats\">stats page is here</a>.\n"
+        "<p>The <a href=\"/websockets/\">websockets demo is here</a>.\n"
         "<p>The <a href=\"/visualizer/\">visualizer is here</a>.\n"
         "<p>The RESTful URL's include /json, /python and /scm.\n"
         "</body></html>\n";
