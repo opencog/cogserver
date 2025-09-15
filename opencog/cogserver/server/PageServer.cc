@@ -144,9 +144,9 @@ std::string PageServer::notFound(const std::string& url)
         "<body><h1>404 Not Found</h1>\n"
         "The Cogserver doesn't know about " + url + "\n"
         "<p>The <a href=\"/stats\">stats page is here</a>.\n"
-        "<p>The <a href=\"/websockets/\">websockets demo is here</a>.\n"
+        "<p>The <a href=\"/websockets/json-test.html\">JSON test page is here</a>.\n"
+        "<p>The <a href=\"/websockets/demo.html\">websockets demo is here</a>.\n"
         "<p>The <a href=\"/visualizer/\">visualizer is here</a>.\n"
-        "<p>The RESTful URL's include /json, /python and /scm.\n"
         "</body></html>\n";
 
     std::ostringstream response;
