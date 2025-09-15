@@ -1,7 +1,7 @@
 
 # Build examples
 ADD_SUBDIRECTORY (module)
-ADD_SUBDIRECTORY (visualzer)
+ADD_SUBDIRECTORY (visualizer)
 
 IF(HAVE_MCP)
 	ADD_SUBDIRECTORY (mcp)
