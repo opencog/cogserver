@@ -12,7 +12,7 @@ cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
         void disableNetworkServer()
         void disableWebServer()
         void disableMCPServer()
-        void serverLoop()
+        void serverLoop() nogil
         void stop()
         bint running()
         cAtomSpacePtr getAtomSpace()
