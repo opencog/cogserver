@@ -250,7 +250,7 @@ public:
      *  successfully and 'false' otherwise. */
     virtual bool execute(void) = 0;
 
-    /** Abstract method for telling if the Request if for entering a shell*/
+    /** Return true, if running the Request will create and enter a shell. */
     virtual bool isShell(void) = 0;
 
     /** Send the command output back to the client. */
