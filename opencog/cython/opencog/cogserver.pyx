@@ -27,7 +27,7 @@ def get_server_atomspace():
     return asp
 
 def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port=18888,
-                    enable_console=True, enable_web=False, enable_mcp=False):
+                    enable_console=True, enable_web=True, enable_mcp=True):
     """Start the CogServer with the specified configuration.
 
     Args:
@@ -36,8 +36,8 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
         web_port (int, optional): Port for web server. Default: 18080
         mcp_port (int, optional): Port for MCP server. Default: 18888
         enable_console (bool, optional): Enable telnet console server. Default: True
-        enable_web (bool, optional): Enable web server. Default: False
-        enable_mcp (bool, optional): Enable MCP server. Default: False
+        enable_web (bool, optional): Enable web server. Default: True
+        enable_mcp (bool, optional): Enable MCP server. Default: True
 
     Returns:
         bool: True if server started successfully, False otherwise.
@@ -68,6 +68,8 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
     else:
         server_ptr = &cogserver()
 
+    server_ptr.loadModules()
+
     # Enable requested services
     try:
         if enable_console:
@@ -86,28 +88,23 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
             server_ptr.disableNetworkServer()
         raise RuntimeError(f"Failed to start server: {e}")
 
-    # Mark as running before starting the thread
-    _server_running = True
-
     # Start server loop in a separate thread
     def server_loop():
-        global _server_running
+        """Run the server's main loop."""
         try:
             server_ptr.serverLoop()
-        finally:
-            _server_running = False
+        except Exception as e:
+            print(f"Server loop error: {e}")
 
     _server_thread = threading.Thread(target=server_loop, daemon=True)
     _server_thread.start()
 
-    # Wait briefly to ensure server has started
-    import time
-    time.sleep(0.2)
+    # Mark as initialized
+    _server_running = True
 
-    if not server_ptr.running():
-        _server_running = False
-        _server_thread = None
-        raise RuntimeError("Failed to start CogServer")
+    # Give the server a moment to start
+    import time
+    time.sleep(0.1)
 
     return True
 
@@ -133,7 +130,7 @@ def stop_cogserver():
     server_ptr.disableWebServer()
     server_ptr.disableNetworkServer()
 
-    # Wait for server thread to finish (with timeout)
+    # Wait for the server thread to finish (with timeout)
     if _server_thread and _server_thread.is_alive():
         _server_thread.join(timeout=5.0)
         if _server_thread.is_alive():

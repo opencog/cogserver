@@ -17,6 +17,7 @@ cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
         bint running()
         cAtomSpacePtr getAtomSpace()
         void setAtomSpace(const cAtomSpacePtr&)
+        void loadModules()
 
     # Singleton functions
     cCogServer& cogserver()
