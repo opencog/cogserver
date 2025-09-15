@@ -2,12 +2,9 @@
 # The atom_types.h file is written to the build directory
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 
+# Enable testing without installing first.
 DECLARE_GUILE_CONFIG_TARGET(SCM_CONFIG "opencog cs-config" "OPENCOG_TEST")
 
-# The build order used here is loosely in terms of
-# dependencies: the later parts depend on, or may
-# someday depend on the earlier parts.
-#
 ADD_SUBDIRECTORY (network)
 ADD_SUBDIRECTORY (cogserver)
 IF(HAVE_CYTHON)
