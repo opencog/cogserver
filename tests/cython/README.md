@@ -14,10 +14,3 @@ export LD_LIBRARY_PATH=build/opencog/cython
 Then, from the project root directory:
 
 nosetests3 -vs tests/cython/
-
-If you modify the cython bindings, you may need to manually remove
-some build files to get a clean rebuild.  Basically, the CMakefiles
-for cython/python are buggy, and fail to rebuild when changes are made.
-So, for example:
-
-rm build/opencog/cython/opencog/cogserver.cpp
