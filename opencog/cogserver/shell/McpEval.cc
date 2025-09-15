@@ -295,7 +295,7 @@ void McpEval::unregister_plugin(std::shared_ptr<McpPlugin> plugin)
 /* ============================================================== */
 
 // One evaluator per thread.  This allows multiple users to each
-// have thier own evaluator.
+// have their own evaluator.
 McpEval* McpEval::get_evaluator(const AtomSpacePtr& asp)
 {
 	static thread_local McpEval* evaluator = new McpEval(asp);

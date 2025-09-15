@@ -3,7 +3,7 @@ OBOSLETE
 The code below has been obsoleted by the base AtomSpace ProxyNode
 infrastructure. The code here worked. Just that it is not really
 the best design ... it was hard to configure. Not flexible. The
-ProxyNode infrastrcuture is superior. We keep this here as a curio.
+ProxyNode infrastructure is superior. We keep this here as a curio.
 
 Proxy Agents
 ------------
@@ -125,7 +125,7 @@ See below for details.
 TODO
 ----
 ***Stop the presses!***. OK everything described in the later sections
-works, but now we've got a much much better idea, and it neeeds to be
+works, but now we've got a much much better idea, and it needs to be
 implemented. It will make everything here "obsolete" (because it will
 be built-in).
 

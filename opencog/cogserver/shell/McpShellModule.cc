@@ -67,7 +67,7 @@ McpShellModule::shelloutRequest::info(void)
 		"this might be easier to use when debugging the MCP implementation\n"
 		"by hand.\n\n"
 		"Example usage: `{\"methods\":\"tools/list\",\"jsonrpc\":\"2.0\",\"id\":1}`\n"
-		"will return all MCP tools currently avaiable.\n"
+		"will return all MCP tools currently available.\n"
 		"By default, this prints a prompt. To get a shell without a prompt,\n"
 		"say `mcp hush` or `mcp quiet`\n"
 		"To exit the shell, send a ^D (ctrl-D) or a single . on a line by itself.\n",

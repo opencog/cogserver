@@ -355,7 +355,7 @@ Querying
   is not capable of.
 * The indexing needed for good query performance is handled
   automatically by the AtomSpace; there are many indexes, but these are
-  not explictly visible, accessible or controllable.
+  not explicitly visible, accessible or controllable.
 * There are more than a few different query optimization techniques that
   are built into the system. These are not externally visible,
   controllable or accessible; they are chosen automatically, depending

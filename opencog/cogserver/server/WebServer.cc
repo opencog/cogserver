@@ -51,7 +51,7 @@ void WebServer::OnConnection(void)
 
 	// We expect the URL to have the form /json or /scm or
 	// whatever, and, stripping away the leading slash, it
-	// should be one of the supported comands.
+	// should be one of the supported commands.
 	std::string cmdName = _url.substr(1);
 	_request = _cserver.createRequest(cmdName);
 

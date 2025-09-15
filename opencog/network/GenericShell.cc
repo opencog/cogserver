@@ -235,7 +235,7 @@ void GenericShell::user_interrupt()
 	// It can also happen that eval_loop() has exited, and has set
 	// _evaluator to nullptr. So we need to check for this. Of course,
 	// this is insane and racey, and in principle, we need some kind
-	// addional condition varable to avoid hitting this during shutdown.
+	// additional condition variable to avoid hitting this during shutdown.
 	// but for now, just punt.
 	//
 	// This happens if you run TopShell, enter . carriage return ctrl-C

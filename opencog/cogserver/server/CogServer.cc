@@ -191,7 +191,7 @@ void CogServer::serverLoop()
     }
 
     // Prevent the Network server from accepting any more connections,
-    // and from queing any more Requests. I think. This might be racey.
+    // and from queueing any more Requests. I think. This might be racey.
     if (_mcpServer)
         _mcpServer->stop();
     if (_webServer)

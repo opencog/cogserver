@@ -260,7 +260,7 @@ void ServerConsole::sendPrompt()
 
 /// Parse command line. Quotes are stripped.
 /// XXX escaped quotes are not handled correctly. FIXME.
-/// This passes over quotes embeded in the middle strings.
+/// This passes over quotes embedded in the middle strings.
 /// And that OK, because what the heck did you want to happen?
 static std::list<std::string> simple_tokenize(const std::string& line)
 {
@@ -340,7 +340,7 @@ void ServerConsole::OnLine(const std::string& line)
     {
         OnLine("scm");
 
-        // Re-issue the command, but only if we sucessfully got a shell.
+        // Re-issue the command, but only if we successfully got a shell.
         // (We might not get a shell if scheme is not installed.)
         if (_shell) {
             OnLine(line);
@@ -354,7 +354,7 @@ void ServerConsole::OnLine(const std::string& line)
     {
         OnLine("json");
 
-        // Re-issue the command, but only if we sucessfully got a shell.
+        // Re-issue the command, but only if we successfully got a shell.
         // (We might not get a shell if json is screwed up.)
         if (_shell) {
             OnLine(line);

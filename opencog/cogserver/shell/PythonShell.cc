@@ -53,7 +53,7 @@ PythonShell::~PythonShell()
 
 GenericEval* PythonShell::get_evaluator(void)
 {
-    // We are using a singlton instance here, because the current
+    // We are using a singleton instance here, because the current
     // Python evaluator isn't thread safe.  If/when it does become
     // thread-safe, we should probably go multi-threaed, instead.
     if (!evaluator) evaluator = &PythonEval::instance();

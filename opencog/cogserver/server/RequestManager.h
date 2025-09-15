@@ -43,7 +43,7 @@ namespace opencog
  *
  * This constraint does not apply to the Python and Scheme shells:
  * Work there can run for unlimited amounts of time. All that happens
- * there is that the shell client is blocked, until the job finshes
+ * there is that the shell client is blocked, until the job finishes
  * or until they kill it.  The GenericShell suppoprts out-of-band
  * ctrl-C, so the user can always ctrl-C to kill an out-of-control
  * Scheme or Python job.

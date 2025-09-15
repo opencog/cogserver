@@ -31,7 +31,7 @@ chatting the MCP protocol can connect to the CogServer at port 18888
 and work directly with the Atoms in the AtomSpace.
 
 The mcp subdirectory also includes some debug and checking tools.
-One of these verifies that the CogServer is responding corrrectly.
+One of these verifies that the CogServer is responding correctly.
 Two more are network proxies that can be used to escape network
 sandboxes. These are useful when running Claude over TOR or a VPN.
 

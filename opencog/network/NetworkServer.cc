@@ -143,7 +143,7 @@ std::string NetworkServer::display_stats(int nlines)
     strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
 
     // Current max_open_sockets is 60 which requires a terminal
-    // size of 66x80 to display correctly. So reserve a reasonble
+    // size of 66x80 to display correctly. So reserve a reasonable
     // string size.
     std::string rc;
     rc.reserve(4000);
@@ -203,7 +203,7 @@ std::string NetworkServer::display_stats(int nlines)
     rc += buff;
 
     // The above chews up 8 lines of display. Byobu/tmux needs a line.
-    // Blank line for accepting commmands. So subtract 10.
+    // Blank line for accepting commands. So subtract 10.
     rc += "\n";
     rc += ServerSocket::display_stats(nlines - 10);
 

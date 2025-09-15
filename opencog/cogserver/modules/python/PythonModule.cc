@@ -122,7 +122,7 @@ bool PythonModule::preloadModules()
 ///
 /// It is expected that the file contains a python module. The module
 /// should contain a 'request' (shell command, written in python).
-/// Requests/commnds must inherit from opencog.cogserver.Request
+/// Requests/commands must inherit from opencog.cogserver.Request
 //
 std::string PythonModule::do_load_py(Request *dummy, std::list<std::string> args)
 {

@@ -53,7 +53,7 @@ SchemeShell::SchemeShell(const AtomSpacePtr& asp) :
 	pending_prompt = "... ";
 	_name = " scm";
 
-	// Set the inital atomspace for this thread.
+	// Set the initial atomspace for this thread.
 	SchemeEval::set_scheme_as(_shellspace.get());
 }
 

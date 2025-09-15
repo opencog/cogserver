@@ -167,7 +167,7 @@ void TopEval::interrupt(void)
 }
 
 // One evaluator per thread.  This allows multiple users to each
-// have thier own evaluator.
+// have their own evaluator.
 TopEval* TopEval::get_evaluator(CogServer& cs)
 {
 	static thread_local TopEval* evaluator = new TopEval(cs);

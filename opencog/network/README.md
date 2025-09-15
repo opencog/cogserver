@@ -77,7 +77,7 @@ protected:
 	}
 	void OnLine(const std::string& cmd)
 	{
-		std::string reply = "Recieved this command: " + cmd + "\n";
+		std::string reply = "Received this command: " + cmd + "\n";
 		Send(reply);
 		Send("my-server-prompt>");
 	}

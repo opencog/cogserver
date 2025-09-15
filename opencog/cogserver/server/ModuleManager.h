@@ -82,7 +82,7 @@ public:
     bool loadModule(const std::string& filename, CogServer&);
 
     /** Unloads a dynamic library/module. Takes the module's id, as
-     *  defined in the Module base class and overriden by the derived
+     *  defined in the Module base class and overridden by the derived
      *  module classes. See the documentation in the Module.h file for
      *  more details. */
     bool unloadModule(const std::string& id);
