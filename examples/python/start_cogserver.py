@@ -7,7 +7,7 @@ Example of how the cogserver can be started from python.
 Once the server is started, it can be accessed via it's TCP/IP ports.
 In this example, an AtomSpace will be created and some data poked into
 it. Only afterwards will the cogserver be started. It could also be
-doe the other way around: the cogserver could have been started first;
+done the other way around: the cogserver could have been started first;
 the order does not matter.
 
 The cogserver will use the same AtomSpace as the python shell; thus,

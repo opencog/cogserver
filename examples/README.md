@@ -39,6 +39,15 @@ The [python](./python) subdirectory demonstrates how to start the
 cogserver from a python shell, so that the AtomSpace used by the python
 shell is the same one as that used by the cogserver.
 
+The demo for running the cogserver from scheme is almost trivial.
+Just do this:
+```
+(use-modules (opencog) (opencog cogserver))
+(start-cogserver)
+```
+That's it. Scheme documentation available from the guile REPL, by
+saying `,describe start-cogserver`.
+
 The [module](./module) subdirectory provides a template for creating
 a custom module. Most developers should NOT be interested in this
 example! If you want to create a new shell, similar to the python,
