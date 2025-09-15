@@ -4,6 +4,7 @@ ADD_LIBRARY (server SHARED
 	CogServer.cc
 	MCPServer.cc
 	ModuleManager.cc
+	PageServer.cc
 	Request.cc
 	RequestManager.cc
 	ServerConsole.cc
@@ -70,6 +71,7 @@ INSTALL (FILES
 	MCPServer.h
 	Module.h
 	ModuleManager.h
+	PageServer.h
 	Request.h
 	RequestClassInfo.h
 	RequestManager.h

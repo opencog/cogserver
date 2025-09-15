@@ -2,6 +2,7 @@
 # Build examples
 ADD_SUBDIRECTORY (module)
 ADD_SUBDIRECTORY (visualizer)
+ADD_SUBDIRECTORY (websockets)
 
 IF(HAVE_MCP)
 	ADD_SUBDIRECTORY (mcp)

@@ -15,6 +15,7 @@
 #include <opencog/util/misc.h>
 
 #include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/server/PageServer.h>
 #include <opencog/cogserver/server/WebServer.h>
 
 using namespace opencog;
@@ -56,21 +57,12 @@ void WebServer::OnConnection(void)
 	_request = _cserver.createRequest(cmdName);
 
 	// Reject URL's we don't know about.
+	// Try to serve static pages from /usr/local/share/cogserver
 	if (nullptr == _request)
 	{
-		logger().info("[WebServer] Unsupported request %s", _url.c_str());
-		Send("HTTP/1.1 404 Not Found\r\n"
-			"Server: CogServer\r\n"
-			"Content-Type: text/html\r\n"
-			"\r\n"
-			"<!DOCTYPE html>\n"
-			"<html lang=\"en\">\n"
-			"<head><meta charset=\"UTF-8\"></head>\n"
-			"<body><h1>404 Not Found</h1>\n"
-			"The Cogserver doesn't know about " + _url + "\n"
-			"<p>The <a href=\"stats\">stats page is here</a>.\n"
-			"<p>The RESTful URL's include json, python and scm.\n"
-			"</body</html>\n");
+		logger().info("[WebServer] Request not found, trying PageServer for %s", _url.c_str());
+		std::string response = PageServer::serve(_url);
+		Send(response);
 		throw SilentException();
 	}
 
