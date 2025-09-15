@@ -12,6 +12,12 @@ the order does not matter.
 
 The cogserver will use the same AtomSpace as the python shell; thus,
 the Atoms created here will be visible there, and vice-versa.
+
+Once the cogserver is running, The AtomSpace contents are available
+via webspockets in JSON format. The python and scheme evaluators are
+also avialbe through websockets; and all three: python, scheme and json,
+are available through telnet. See the html pages in the example
+directory for more.
 """
 
 # First, import the usual AtomSpace python modules.
