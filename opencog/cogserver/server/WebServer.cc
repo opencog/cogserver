@@ -50,6 +50,26 @@ void WebServer::OnConnection(void)
 		throw SilentException();
 	}
 
+#ifdef HAVE_MCP
+	// Handle OAuth discovery endpoints for MCP
+	if (0 == _url.compare("/.well-known/oauth-protected-resource"))
+	{
+		Send(oauth_protected_resource());
+		throw SilentException();
+	}
+	if (0 == _url.compare("/.well-known/oauth-authorization-server"))
+	{
+		Send(oauth_authorization_server());
+		throw SilentException();
+	}
+	// Handle the /register endpoint that Claude is looking for
+	if (0 == _url.compare("/register"))
+	{
+		Send(oauth_register_not_required());
+		throw SilentException();
+	}
+#endif
+
 	// We expect the URL to have the form /json or /scm or
 	// whatever, and, stripping away the leading slash, it
 	// should be one of the supported commands.
@@ -228,6 +248,75 @@ std::string WebServer::favicon(void)
 
 	return response;
 }
+
+#ifdef HAVE_MCP
+// ==================================================================
+// OAuth discovery endpoints for MCP
+
+/// Return OAuth protected resource metadata indicating no authentication required
+std::string WebServer::oauth_protected_resource(void)
+{
+	// This indicates that no authentication is required
+	// by not specifying any authorization_servers
+	std::string json_body = "{}";
+
+	std::string response =
+		"HTTP/1.1 200 OK\r\n"
+		"Server: CogServer\r\n"
+		"Content-Type: application/json\r\n"
+		"Content-Length: ";
+
+	char buf[20];
+	snprintf(buf, 20, "%lu", json_body.size());
+	response += buf;
+	response += "\r\n\r\n";
+	response += json_body;
+
+	return response;
+}
+
+/// Return OAuth authorization server metadata indicating no authentication
+std::string WebServer::oauth_authorization_server(void)
+{
+	// Return minimal OAuth metadata indicating no authentication required
+	std::string json_body = "{\"issuer\":\"http://localhost:18080\"}";
+
+	std::string response =
+		"HTTP/1.1 200 OK\r\n"
+		"Server: CogServer\r\n"
+		"Content-Type: application/json\r\n"
+		"Content-Length: ";
+
+	char buf[20];
+	snprintf(buf, 20, "%lu", json_body.size());
+	response += buf;
+	response += "\r\n\r\n";
+	response += json_body;
+
+	return response;
+}
+
+/// Return a response indicating registration is not required
+std::string WebServer::oauth_register_not_required(void)
+{
+	// Return a response indicating that registration is not needed
+	std::string json_body = "{\"error\":\"registration_not_supported\",\"error_description\":\"This MCP server does not require OAuth registration\"}";
+
+	std::string response =
+		"HTTP/1.1 400 Bad Request\r\n"
+		"Server: CogServer\r\n"
+		"Content-Type: application/json\r\n"
+		"Content-Length: ";
+
+	char buf[20];
+	snprintf(buf, 20, "%lu", json_body.size());
+	response += buf;
+	response += "\r\n\r\n";
+	response += json_body;
+
+	return response;
+}
+#endif // HAVE_MCP
 
 #endif // HAVE_OPENSSL
 // ==================================================================

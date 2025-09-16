@@ -38,6 +38,11 @@ protected:
 
 	std::string html_stats(void);
 	std::string favicon(void);
+#ifdef HAVE_MCP
+	std::string oauth_protected_resource(void);
+	std::string oauth_authorization_server(void);
+	std::string oauth_register_not_required(void);
+#endif
 public:
     WebServer(CogServer&);
     ~WebServer();
