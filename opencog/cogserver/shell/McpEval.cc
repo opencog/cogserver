@@ -24,6 +24,7 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
+#include <fstream>
 
 #if HAVE_MCP
 #include <json/json.h>
@@ -109,8 +110,11 @@ void McpEval::eval_expr(const std::string &expr)
 			toolsCapability["listChanged"] = false;  // We don't support dynamic tool changes
 			response["result"]["capabilities"]["tools"] = toolsCapability;
 
-			// We don't have resources yet
-			response["result"]["capabilities"]["resources"] = Json::objectValue;
+			// Indicate that we support resources for documentation
+			Json::Value resourcesCapability;
+			resourcesCapability["subscribe"] = false;  // No live updates for docs
+			resourcesCapability["listChanged"] = false;  // Static resource list
+			response["result"]["capabilities"]["resources"] = resourcesCapability;
 
 			response["result"]["serverInfo"]["name"] = "CogServer MCP";
 			response["result"]["serverInfo"]["version"] = "0.1.1";
@@ -165,7 +169,73 @@ void McpEval::eval_expr(const std::string &expr)
 
 			response["result"]["tools"] = all_tools;
 		} else if (method == "resources/list") {
-			response["result"]["resources"] = Json::arrayValue;
+			Json::Value resources(Json::arrayValue);
+
+			// Add the AtomSpace introduction document (shorter overview)
+			Json::Value intro_resource;
+			intro_resource["uri"] = "atomspace://docs/introduction";
+			intro_resource["name"] = "AtomSpace Introduction";
+			intro_resource["description"] = "Overview of the AtomSpace, Atoms, and basic concepts";
+			intro_resource["mimeType"] = "text/markdown";
+			resources.append(intro_resource);
+
+			// Add the detailed AtomSpace guide (longer detailed guide)
+			Json::Value guide_resource;
+			guide_resource["uri"] = "atomspace://docs/atomspace-guide";
+			guide_resource["name"] = "AtomSpace Detailed Guide";
+			guide_resource["description"] = "Comprehensive guide to Atomese, the AtomSpace, and the CogServer";
+			guide_resource["mimeType"] = "text/markdown";
+			resources.append(guide_resource);
+
+			response["result"]["resources"] = resources;
+		} else if (method == "resources/read") {
+			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
+
+			// Use the CMAKE install prefix for the documentation path
+			std::string doc_base = std::string(PROJECT_INSTALL_PREFIX) + "/share/cogserver/mcp/";
+
+			if (uri == "atomspace://docs/introduction") {
+				// Read the AtomSpace-Overview.md file (shorter introduction)
+				std::string doc_path = doc_base + "AtomSpace-Overview.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/atomspace-guide") {
+				// Read the AtomSpace-Details.md file (longer detailed guide)
+				std::string doc_path = doc_base + "AtomSpace-Details.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else {
+				response["error"]["code"] = -32602;
+				response["error"]["message"] = "Resource not found: " + uri;
+			}
 		} else if (method == "tools/call") {
 			std::string tool_name = params.isMember("name") ? params["name"].asString() : "";
 			Json::Value arguments = params.isMember("arguments") ? params["arguments"] : Json::objectValue;
