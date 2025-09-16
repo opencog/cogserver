@@ -99,7 +99,8 @@ void McpEval::eval_expr(const std::string &expr)
 		response["id"] = id;
 
 		if (method == "initialize") {
-			response["result"]["protocolVersion"] = "2024-11-05";
+			// Use the latest MCP protocol version
+			response["result"]["protocolVersion"] = "2025-06-18";
 
 			// Indicate that we support tools by including the capability
 			// The MCP spec states that presence of the key indicates support
