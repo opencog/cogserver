@@ -14,8 +14,8 @@ directory](https://github.com/opencog/atomspace-storage/tree/master/opencog/pers
 Some example mini-prompts include:
 * Please ask the atomese MCP server what version it is.
 * ask the atomese server what all the direct subtypes of type 'Node' are
-* run that query again, but set subclass to true
-* ask if it has a node of type 'Concept' that is named 'foo'
+* run that query again, but set subclass to true.
+* ask if it has a node of type 'Concept' that is named 'foo'
 * Are there any atoms of type Node?
 * Can you run that query again, setting subclass to true?
 * Please ask the server if it has (ListLink (Concept "foo"))
@@ -30,21 +30,14 @@ Some example mini-prompts include:
   the key (Predicate "fovs") and it should be a FloatValue holding the
   vector 1 2 3 0.4 0.5 -0.6 0.777 88 999
 
-The above works without having to explain anything at all to CLAUDE.
-However, the [CLAUDE-AtomSpace.md](CLAUDE-AtomSpace.md) explains what
-the CogServer and the Atomspace are, and should make it easier for
-Claude to understand what you are trying to do.
+The above works without having to explain anything to the LLM. The MCP
+interfaces describe the AtomSpace and how it works to the LLM.
 
 The eventual goal of attaching MCP to the AtomSpace is not to access
 Atoms one or two at a time, but to manipulate millions of them, using
 Atomese sensorimotor interfaces. These are under development, and are
-"pre-alpha" (cough cough. Version 0.0.1 to be precise.) For now, the
+"pre-alpha" (cough cough. Version 0.0.2 to be precise.) For now, the
 above works.
-
-Note that the above requests work just fine, even without any additional
-prompting about the AtomSpace. The [CLAUDE.md](CLAUDE.md) file contains
-a large, detailed prompt explaining the AtomSpace to Claude (or any
-other LLM with MCP support).
 
 The MCP Servers
 ---------------
@@ -66,7 +59,11 @@ example, Claude can access this after configuring
 ```
 claude mcp list
 claude mcp add atomese -t http http://localhost:18080/mcp
+claude mcp list
 ```
+The second `claude mcp list` confirms that the interface was found and
+that Claude was able to connect.
+
 The raw interface is at port 18888; an example of how to use it is given
 below.
 
@@ -83,7 +80,7 @@ that an LLM cannot contact the CogServer directly. The pair of proxy
 servers `stdio_to_unix_proxy.py` and `unix_to_tcp_proxy.py` can be used
 to overcome/bypass these issues.
 
-Ideally, start the Cogserver first.  Then, in a distinct shell, run
+Ideally, start the CogServer first.  Then, in a distinct shell, run
 ```
 ./unix_to_tcp_proxy.py --verbose
 ```
@@ -125,8 +122,5 @@ Future things.
   Atomese needed to compute cosine similarity or mutual information
   for some collection of `EdgeLink`s, i.e. try to get it to reinvent
   the old atomspace-matrix code, but this time in pure Atomese.
-* Move the CLAUDE.md file over to an MCP "resource". That is, I think
-  this is the intended way of providing MCP documentation. I guess.
-  I'm not sure.
 
 -----
