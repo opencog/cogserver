@@ -143,6 +143,10 @@ function buildHierarchyLevels() {
         };
     }
 
+    // Build a set of Arg's immediate children
+    const argChildren = new Set(typeData['Arg']?.children || []);
+    console.log('Arg children:', Array.from(argChildren));
+
     // Calculate the SHORTEST path level for each type using BFS
     // This handles multiple inheritance correctly
     const levels = {};
@@ -192,26 +196,43 @@ function buildHierarchyLevels() {
     });
 
     // Find the primary parent for each type (parent with shortest path to TopType)
+    // BUT ignore parents that are children of Arg
     Object.entries(typeData).forEach(([typeName, typeInfo]) => {
-        if (typeInfo.parents.length > 1) {
-            // Find parent with lowest level (closest to TopType)
-            let primaryParent = null;
-            let minLevel = Number.MAX_SAFE_INTEGER;
+        if (typeInfo.parents.length > 0) {
+            // Filter out any parents that are Arg children
+            const validParents = typeInfo.parents.filter(parent => !argChildren.has(parent));
 
-            typeInfo.parents.forEach(parent => {
-                if (typeData[parent] && typeData[parent].level < minLevel) {
-                    minLevel = typeData[parent].level;
-                    primaryParent = parent;
-                }
-            });
+            if (validParents.length > 0) {
+                // Find parent with lowest level from valid parents only
+                let primaryParent = null;
+                let minLevel = Number.MAX_SAFE_INTEGER;
 
-            typeInfo.primaryParent = primaryParent;
-            typeInfo.secondaryParents = typeInfo.parents.filter(p => p !== primaryParent);
+                validParents.forEach(parent => {
+                    if (typeData[parent] && typeData[parent].level < minLevel) {
+                        minLevel = typeData[parent].level;
+                        primaryParent = parent;
+                    }
+                });
 
-            console.log(`${typeName} has multiple parents. Primary: ${primaryParent}, Secondary: ${typeInfo.secondaryParents}`);
-        } else if (typeInfo.parents.length === 1) {
-            typeInfo.primaryParent = typeInfo.parents[0];
-            typeInfo.secondaryParents = [];
+                typeInfo.primaryParent = primaryParent;
+                typeInfo.secondaryParents = typeInfo.parents.filter(p => p !== primaryParent);
+            } else {
+                // All parents are Arg children, use the original logic
+                let primaryParent = null;
+                let minLevel = Number.MAX_SAFE_INTEGER;
+
+                typeInfo.parents.forEach(parent => {
+                    if (typeData[parent] && typeData[parent].level < minLevel) {
+                        minLevel = typeData[parent].level;
+                        primaryParent = parent;
+                    }
+                });
+
+                typeInfo.primaryParent = primaryParent;
+                typeInfo.secondaryParents = typeInfo.parents.filter(p => p !== primaryParent);
+            }
+
+            console.log(`${typeName} has multiple parents. Primary: ${typeInfo.primaryParent}, Secondary: ${typeInfo.secondaryParents}`);
         }
     });
 
@@ -497,6 +518,9 @@ function layoutTree(rootTypes, width, height) {
     // Use recursive approach to layout subtrees properly
     let currentY = padding;
 
+    // Use the argChildren set from buildHierarchyLevels (already defined earlier)
+    const argChildrenSet = new Set(typeData['Arg']?.children || []);
+
     function layoutSubtree(nodeName, level, parentY = null) {
         if (positions[nodeName]) return 0; // Already positioned
 
@@ -512,6 +536,12 @@ function layoutTree(rootTypes, width, height) {
 
         let subtreeHeight = nodeHeight;
         currentY += nodeHeight;
+
+        // If this is an Arg child, stop here - don't layout its children
+        if (argChildrenSet.has(nodeName)) {
+            console.log(`Stopping at ${nodeName} (Arg child)`);
+            return subtreeHeight;
+        }
 
         // Get children and group them by this parent
         const children = nodeInfo.children || [];
@@ -530,10 +560,33 @@ function layoutTree(rootTypes, width, height) {
 
     // Start with TopType
     if (typeData['TopType']) {
-        layoutSubtree('TopType', 0);
+        // Layout TopType itself
+        positions['TopType'] = {
+            x: padding,
+            y: currentY,
+            level: 0
+        };
+        currentY += nodeHeight;
 
-        // Add spacing between major subtrees
-        currentY += subtreeSpacing;
+        // Layout Arg subtree
+        if (typeData['Arg']) {
+            const argHeight = layoutSubtree('Arg', 1);
+            // Add extra spacing after Arg subtree
+            currentY += subtreeSpacing * 2;
+        }
+
+        // Layout Value subtree
+        if (typeData['Value']) {
+            layoutSubtree('Value', 1);
+        }
+
+        // Layout any other direct children of TopType
+        const topChildren = typeData['TopType'].children || [];
+        topChildren.forEach(child => {
+            if (child !== 'Arg' && child !== 'Value' && !positions[child]) {
+                layoutSubtree(child, 1);
+            }
+        });
     }
 
     // Handle any orphaned nodes (shouldn't happen but just in case)
