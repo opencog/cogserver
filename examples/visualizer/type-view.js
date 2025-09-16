@@ -31,8 +31,8 @@ function setupEventListeners() {
 function connect() {
     const statusElement = document.getElementById('connection-status');
 
-    // Default to localhost
-    const serverUrl = 'ws://localhost:18080/json';
+    // Use current hostname/IP instead of hardcoded localhost
+    const serverUrl = `ws://${window.location.hostname}:18080/json`;
 
     showLoading(true);
     showError(null);

@@ -48,8 +48,8 @@ function setup()
   });
   connectButton.addEventListener('click', changeConnection);
 
-  // Initial server and endpoint.
-  server = 'ws://localhost:18080/';
+  // Initial server and endpoint - use current hostname.
+  server = `ws://${window.location.hostname}:18080/`;
   endpoint = 'json';
   serverURL = server + endpoint;
 
