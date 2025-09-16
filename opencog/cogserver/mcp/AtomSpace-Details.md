@@ -8,8 +8,8 @@ Protocol (MCP) server.
   or 'cogserv' or something similar. There will be more than a dozen
   tools available to work with Atomese.
 
-The intended audience for this file is Claude, or any other LLM that
-has MCP interfaces. This file explains the AtomSpace in such a way that
+The intended audience for this file is any LLM that knows how to use
+MCP interfaces. This file explains the AtomSpace in such a way that
 the LLM will be able to work with users to create and manipulate
 Atomese from verbal descriptions. Users may or may not understand the
 descriptions and explanatios offered here, and thus it is vital that
@@ -28,40 +28,72 @@ the AtomSpace. Here are few places to start:
 * http://wiki.opencog.org/w/Value
 * http://wiki.opencog.org/w/JoinLink
 
+The Atomese system is large and complex, and few users will understand
+it fully. In addition, the Atomese system has a dozen different modules
+that extend its capabilities and functions. These introduce additional
+complexity. Understanding those will require study of the particular
+subsystem that gets loaded and used.
+
 Here is what you need to know.
 
 The AtomSpace
 -------------
 * The AtomSpace is an in-RAM hypergraph database.
 * Hypergraphs are constructed from Atoms, of which there are two basic
-  types: Nodes and Links. There are also subtypes, explained later.
+  Types: Nodes and Links. There is also a Type subsystem, explained later.
 * All Nodes have a string name. There can only ever be one Node having
   a given name: it is globally unique. Thus, all references to a Node
   of a given name are always to the same Node.
+* Node names can be any valid UTF-8 string, of any length. Node names
+  are usually short, maybe a dozen characters long, but not always.
 * All Links hold a list of Atoms. There can only ever be one Link
   holding a given list of Atoms: it is globally unique.
-* Thus, hypergraphs are described in terms of trees, each tree
-  consisting of Links. That is, the interior vertices of the tree are
-  Links, and the leaves are Nodes. Because Atoms (Nodes and Links) are
-  globally unique, these trees connect to one another via their Atoms.
-* The AtomSpace contents are immutable: Atoms can only be added or
-  removed; the cannot be modified. That is, the name of a Node cannot
-  be changed. The list of Atoms in a Link cannot be changed.
-* The idea of "global uniqueness" refers to not only the current
-  AtomSpace, but potentially all other accessible AtomSpaces.
-* The contents AtomSpaces are NOT kept in sync automatically, but
-  are up to user actions to shuttle Atoms around between them.
+* Links do not have names.
+* The list of Atoms in a give Link type can be empty. Note that there
+  is only one possible Link of this type, as it is necessarily globally
+  unique. Such empty Links are rarely used.
+* Hypergraphs are represented as trees. The root of a tree is a Link,
+  unless it is a tree of depth zero, in which case the root can be a
+  Node. Of course, Nodes have no sub-branches.
+* The interior vertices of a tree are necessarily Links, and the
+  leaves are almost always Nodes. The leaves might also be empty Links.
+* Because Atoms (Nodes and Links) are globally unique, different trees
+  might share common subtrees. It is this sharing of subtrees that gives
+  rise to the hypergraph structure.
+
+* The name of a Node is immutable: it cannot be changed. Thus, Nodes
+  can be created and destroyed, but the name itself cannot be altered.
+* The list of Atoms in a Link is immutable: it cannot be changed. Thus,
+  Links can be created and destroyed, but the contents cannot be changed.
+* The above immutability constraints are used to guarantee coherence
+  in the representation of hypergraphs, and to provide thread safety
+  when running multiple processing threads in the AtomSpace.
+
+* The idea of "global uniqueness" refers not only to the current
+  AtomSpace, but in principle to all other accessible AtomSpaces.
+* Some of these other AtomSpaces might be located on other network
+  nodes, in distant locations, or they might be held on disk or
+  other persistant storage.
+* The contents of these other, distant AtomSpaces are **NOT** kept
+  in sync automatically. It is up to the various users to coordinate
+  actions to shuttle Atoms around between them.
 * In particular, Values attached to Atoms in distinct AtomSpaces are
-  not synchronized. The Value subsystem is explained below.
+  not synchronized. The Value subsystem is explained later, below.
+* You, the LLM interacting with this MCP server, has this ability to
+  copy Atoms between AtomSpaces.
+* This becomes particularly interesting when the persistence subsystem
+  is loaded. There are several kinds of these, they provide StorageNodes
+  for fetching and storing Atoms from remote locations.
 
 Multiple AtomSpaces
 -------------------
 * There are two distinct ways in which there can be multiple AtomSpaces.
 * In one form, AtomSpaces can inherit from one-another, thus allowing
   supersets and subsets to be formed. However, the current MCP
-  interfaces do not provide an direct way of working with this, and
-  so this ability is not further explained.
-* In another form, AtomSpaces can be stored to disk, or shared over the
+  interfaces do not provide any direct way of working with this, and
+  so this ability is not further explained. (Future iteractions of the
+  MCP interfaces might fix this.)
+* In the other form, AtomSpaces can be stored to disk, or shared over the
   network, using the StorageNode subsystem, explained below.
 * In general, these different AtomSpaces will contain different sets
   of Atoms.
@@ -83,9 +115,15 @@ Using the AtomSpace
   requests that some action be performed again, this is because things
   may have changed.
 * The AtomSpace can hold millions or billions of Atoms, and thus it is
-  usually a bad idea to try to get them all. The `getAtoms` tool will
-  return all Atoms of a given type. There are much fancier and more
-  powerful ways to query the AtomSpace contents, described below.
+  usually a bad idea to try to get them all.
+* If a users aks you to get all Atoms of some given type, you should
+  first do a quick and easy (fast) check to see how many Atoms there
+  are of that type. If there are more than a few hundred, the user
+  should be informed.
+
+* The `getAtoms` tool will return all Atoms of a given type. There are
+  much fancier and more powerful ways to query the AtomSpace contents,
+  described below.
 * Atoms can be created with the `makeAtom` tool.
 * Atoms can be removed with the `extract` tool. By default, only the
   Atom at the top of the tree can be removed. However, if the recursive
@@ -95,16 +133,22 @@ Using the AtomSpace
 
 Atom Types
 ----------
+* The Atomese system implements a Type subsystem, providing for the
+  dynamic creation and loading of Atom and Value subtypes.
 * There is a hierarchy of Atom types. Thus, ConceptNode, ItemNode, and
-  PredicateNode are all a type of Node. Similarly, ListLink and EdgeLink
-  are types of Links. There are hundreds of types.
+  PredicateNode are all of Type Node. Similarly, ListLink and EdgeLink
+  are types of Links. There are hundreds of Types.
+* The type at the very top of the hierarchy is called TopType.
 * The MCP interface provides several tools, getSubTypes and
   getSuperTypes, to explore the type hierarchy. These have a recursive
-  flag on them, returning the immediate type descendants, or going
+  flag on them, returning the immediate Type descendants, or going
   deeper.
-* On very rare occasions, additional types might be added during
+* A given Type might have multiple parents, i.e. multiple super-types.
+  This implies that there might be multiple paths to the TopType.
+
+* On very rare occasions, additional Types might be added during
   runtime. This happens when a module specifying new types is loaded.
-* The type hierarchy is less than ten levels deep, more or less.
+* The type hierarchy is less than a dozen levels deep, approximately.
 * There is no performance penalty at all for using deeply nested types.
 * Different kinds of types do have different implications for the size
   of an Atom. For example, the EvaluationLink is implemented with a C++
