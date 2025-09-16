@@ -710,8 +710,39 @@ function drawNodes(container, positions) {
         text.setAttribute('font-family', 'sans-serif');
         text.textContent = typeName;
 
-        // Add click handler
-        g.addEventListener('click', () => selectType(typeName));
+        // Add tooltip
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `Click to open documentation for ${typeName}`;
+        g.appendChild(title);
+
+        // Add click handler to open wiki documentation
+        g.addEventListener('click', (e) => {
+            // Open wiki documentation in new tab
+            const wikiUrl = `https://wiki.opencog.org/w/${typeName}`;
+            window.open(wikiUrl, '_blank');
+
+            // Also update the info panel
+            selectType(typeName);
+
+            // Prevent event bubbling
+            e.stopPropagation();
+        });
+
+        // Add hover effect
+        g.addEventListener('mouseenter', () => {
+            rect.setAttribute('fill', '#e3f2fd');
+            rect.setAttribute('stroke', '#1976d2');
+            rect.setAttribute('stroke-width', '2');
+        });
+
+        g.addEventListener('mouseleave', () => {
+            rect.setAttribute('fill', 'white');
+            rect.setAttribute('stroke', '#333');
+            rect.setAttribute('stroke-width', '1');
+        });
+
+        // Change cursor to pointer
+        g.style.cursor = 'pointer';
 
         g.appendChild(rect);
         g.appendChild(text);
