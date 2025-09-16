@@ -216,6 +216,7 @@ ServerSocket::ServerSocket(void) :
     _do_frame_io(false),
     _is_http_socket(false),
     _got_websock_header(false),
+    _host_header(""),
     _keep_alive(false),
     _content_length(0),
     _is_mcp_socket(false)

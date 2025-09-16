@@ -278,8 +278,18 @@ std::string WebServer::oauth_protected_resource(void)
 /// Return OAuth authorization server metadata indicating no authentication
 std::string WebServer::oauth_authorization_server(void)
 {
+	// Build the issuer URL from the Host header if available
+	std::string issuer_url = "http://";
+	if (!_host_header.empty()) {
+		issuer_url += _host_header;
+	} else {
+		// Fallback to localhost with actual port if no Host header was provided
+		short port = _cserver.getWebServerPort();
+		issuer_url += "localhost:" + std::to_string(port);
+	}
+
 	// Return minimal OAuth metadata indicating no authentication required
-	std::string json_body = "{\"issuer\":\"http://localhost:18080\"}";
+	std::string json_body = "{\"issuer\":\"" + issuer_url + "\"}";
 
 	std::string response =
 		"HTTP/1.1 200 OK\r\n"

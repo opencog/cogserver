@@ -270,6 +270,14 @@ void ServerSocket::HandshakeLine(const std::string& line)
 		if (0 == line.compare(0, strlen(clen), clen))
 			{ _content_length = std::stoi(line.substr(strlen(clen))); return; }
 
+		static const char* host = "Host: ";
+		if (0 == line.compare(0, strlen(host), host))
+			{ _host_header = line.substr(strlen(host)); return; }
+
+		static const char* host_lower = "host: ";
+		if (0 == line.compare(0, strlen(host_lower), host_lower))
+			{ _host_header = line.substr(strlen(host_lower)); return; }
+
 		static const char* kpal = "connection: keep-alive";
 		if (0 == line.compare(0, strlen(kpal), kpal))
 			{ _keep_alive = true; return; }

@@ -107,6 +107,9 @@ public:
 
     bool running(void) { return _running; }
 
+    /** Get the web server port */
+    short getWebServerPort() const { return _webServer ? _webServer->getPort() : 0; }
+
     /*** Request API ***/
     Request* createRequest(const std::string& id) {
         return RequestManager::createRequest(id, *this);
