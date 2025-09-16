@@ -237,6 +237,16 @@ button:disabled {
     box-shadow: var(--shadow-md);
 }
 
+.stat-card.clickable {
+    cursor: pointer;
+}
+
+.stat-card.clickable:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
 .stat-value {
     font-size: 2.5rem;
     font-weight: 700;

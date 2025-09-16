@@ -3,6 +3,7 @@
 INSTALL(FILES
 	index.html
 	tree-view.html
+	type-view.html
 	README.md
 	DESTINATION share/cogserver/visualizer
 	COMPONENT visualizer
@@ -13,6 +14,7 @@ INSTALL(FILES
 	graph-view.js
 	landing.js
 	tree-view.js
+	type-view.js
 	styles.css
 	DESTINATION share/cogserver/visualizer
 	COMPONENT visualizer
