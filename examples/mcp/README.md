@@ -46,17 +46,6 @@ prompting about the AtomSpace. The [CLAUDE.md](CLAUDE.md) file contains
 a large, detailed prompt explaining the AtomSpace to Claude (or any
 other LLM with MCP support).
 
-### TODO
-* Teach Claude how to run AtomSpace queries -- i.e. how to write
-  `QueryLink` and then run it.
-* Teach Claude how to create a data processing pipeline: how to write
-  Atomese needed to compute cosine similarity or mutual information
-  for some collection of `EdgeLink`s, i.e. try to get it to reinvent
-  the old atomspace-matrix code, but this time in pure Atomese.
-* Move the CLAUDE.md file over to an MCP "resource". That is, I think
-  this is the intended way of providing MCP documentatio. I guess.
-  I'm not sure.
-
 The MCP Servers
 ---------------
 There are two ways of using MCP with the CogServer:
@@ -94,17 +83,27 @@ that an LLM cannot contact the CogServer directly. The pair of proxy
 servers `stdio_to_unix_proxy.py` and `unix_to_tcp_proxy.py` can be used
 to overcome/bypass these issues.
 
-For example, if using Claude Code, the proxy can be configured as
+Ideally, start the Cogserver first.  Then, in a distinct shell, run
 ```
-claude mcp list
-clause mcp add atomese /where/ever/stdio_to_unix_proxy.py
+./unix_to_tcp_proxy.py --verbose
 ```
-Then, in a distinct shell, run
+The above connects to the CogServer on localhost. Specify a remote
+CogServer like so:
 ```
 ./unix_to_tcp_proxy.py --remote-host example.com --remote-port 18888 --verbose
 ```
-and then make sure that the CogServer is running on that host. The
-default CogServer MCP port is 18888.
+The default CogServer raw MCP port is 18888.
+
+Next, tell the LLM how to connect.  If using Claude Code, the proxy
+can be configured as
+```
+claude mcp list
+clause mcp add atomese /where/ever/stdio_to_unix_proxy.py
+claude mcp list
+```
+
+The second `claude mcp list` will connect and verify that the connection
+is working.
 
 ### Demo MCP checker
 The code in `mcp-checker.cc` provides a simple Model Context protocol
@@ -116,3 +115,18 @@ Use the `--host` and `--port` flags to specify a different host and
 port.
 
 The binary is located at [build/examples/mcp](../../build/examples/mcp).
+
+TODO
+----
+Future things.
+* Teach Claude how to run AtomSpace queries -- i.e. how to write
+  `QueryLink` and then run it.
+* Teach Claude how to create a data processing pipeline: how to write
+  Atomese needed to compute cosine similarity or mutual information
+  for some collection of `EdgeLink`s, i.e. try to get it to reinvent
+  the old atomspace-matrix code, but this time in pure Atomese.
+* Move the CLAUDE.md file over to an MCP "resource". That is, I think
+  this is the intended way of providing MCP documentation. I guess.
+  I'm not sure.
+
+-----

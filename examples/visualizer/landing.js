@@ -62,8 +62,9 @@ function init() {
         if (e.key === 'Enter') sendDebugCommand();
     });
 
-    // Set default values
-    serverInput.value = serverInput.value || 'ws://localhost:18080/';
+    // Set default values - use current hostname/IP
+    const defaultUrl = `ws://${window.location.hostname}:18080/`;
+    serverInput.value = serverInput.value || defaultUrl;
 }
 
 function toggleConnection() {

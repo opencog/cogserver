@@ -26,7 +26,7 @@
     <p>This page tests the JSON WebSocket connection to the CogServer</p>
 
     <div>
-        <label>Server URL: <input type="text" id="url" value="ws://localhost:18080/json" style="width: 300px;"></label>
+        <label>Server URL: <input type="text" id="url" value="" style="width: 300px;"></label>
         <button id="connect">Connect</button>
         <button id="test" disabled>Run Tests</button>
     </div>
@@ -41,6 +41,9 @@
         const connectBtn = document.getElementById('connect');
         const testBtn = document.getElementById('test');
         let testQueue = [];
+
+        // Set default URL to current hostname
+        urlInput.value = `ws://${window.location.hostname}:18080/json`;
 
         function addLog(message, type = 'info') {
             const entry = document.createElement('div');
