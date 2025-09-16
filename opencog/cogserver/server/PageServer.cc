@@ -16,7 +16,7 @@
 
 using namespace opencog;
 
-const std::string PageServer::base_path = "/usr/local/share/cogserver";
+const std::string PageServer::base_path = PROJECT_INSTALL_PREFIX "/share/cogserver";
 
 std::string PageServer::getMimeType(const std::string& filename)
 {
