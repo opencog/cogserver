@@ -100,8 +100,17 @@ void McpEval::eval_expr(const std::string &expr)
 
 		if (method == "initialize") {
 			response["result"]["protocolVersion"] = "2024-11-05";
-			response["result"]["capabilities"]["tools"] = Json::objectValue;
+
+			// Indicate that we support tools by including the capability
+			// The MCP spec states that presence of the key indicates support
+			// An empty object {} means basic support without advanced features
+			Json::Value toolsCapability;
+			toolsCapability["listChanged"] = false;  // We don't support dynamic tool changes
+			response["result"]["capabilities"]["tools"] = toolsCapability;
+
+			// We don't have resources yet
 			response["result"]["capabilities"]["resources"] = Json::objectValue;
+
 			response["result"]["serverInfo"]["name"] = "CogServer MCP";
 			response["result"]["serverInfo"]["version"] = "0.1.0";
 		} else if (method == "notifications/initialized" or
