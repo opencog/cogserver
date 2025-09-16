@@ -391,6 +391,35 @@ Pipelines and Filters
 
 Objects
 -------
+* Atoms that inherit from `ObejctNode` implement a message-passing
+  object-oriented system.
+* Messages can be sent to such objects using the SetValue and the
+  GetValue JSON tools. They can also be sent by executing the
+  `SetValueLink` and the `ValueOfLink`.
+* SetValue requires a (key,value) pair; the key is the message, and
+  the value is the associatted data. There is no return value, in this
+  case.
+* GetValue requires only a key, and it returns a Value.
+* The actual supported messages depend on the Object type. Any keys
+  that are not one of these special message types are handled as
+  ordinary keys, just as they would be on any other Atom.
+* The four most common messages are `(Predicate "*-open-*")` and
+  `(Predicate "*-close-*")` and `(Predicate "*-read-*")`  and
+  `(Predicate "*-write-*")`.  There might be others as well.
+  They won't always be PredicateNodes, but this is the convention.
+  The use of the leading and trailing star-dash is also a convention,
+  and is not mandatory.
+
+* This object-oriented message-passing system is used by two important
+  subsystems: the StorageNode subsystem, described below, and the
+  SensoryNode subsystem.
+
+* The SensoryNode subsystem provides objects that explictly work with
+  and control external systems. SensoryNodes allow the state of the
+  external world to be perceived, and to be manipulated, Thus, it is
+  often called the sensori-motor system. All SensroyNodes support
+  the four open/close/read/write messages. Some support more. The
+  external target is generally indicated as a URL.
 
 Querying
 --------
@@ -410,7 +439,7 @@ Querying
   provide the "answer".
 * The act of querying is sometimes called "pattern matching". Note
   that the Atomese query system is far more sophisticated than what
-  other system call pattern matching. In other systems, "pattern
+  other systems call pattern matching. In other systems, "pattern
   matching" usually refers to a regex-like query. By contrast, the
   Atomese query system is stack-based, and performs a recursive
   traversal of the AtomSpace. Please do not confuse the simpler
@@ -419,6 +448,11 @@ Querying
 * The Atomese query system can be compared to SQL. However, it is
   more powerful than SQL, and can perform complex queries that SQL
   is not capable of.
+* In particular, AtomSpace queries are themselves hypergraphs, and
+  so can be queried and rewritten and manipulated.  That is, unlike
+  SQL, the query system does not live outside of the database: it is
+  "inside", represented with Atoms.
+
 * The indexing needed for good query performance is handled
   automatically by the AtomSpace; there are many indexes, but these are
   not explicitly visible, accessible or controllable.
