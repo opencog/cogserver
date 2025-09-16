@@ -170,28 +170,40 @@ Atomese
   More generally, one says that the hypergraphs are written in Atomese.
 * A common way to write Atomese is to use s-expressions. Thus
   `(ListLink (Concept "foo"))` is a Link that contains a single Node
-  within it.
+  (a ConceptNode) within it.
 * The suffix Link and Node are optional; thus ConceptNode is the same
   type as Concept, and ListLink is the same as List. In a few rare
   cases, the longer name is mandatory.  Proper capitalization is
-  important.
+  important. Not all Atomse have the Link or Node suffix. For example,
+  there is a Link called `Section`, but there is Link called
+  `SectionLink`.
 * In addition to s-expressions, many users are more comfortable
   using a python-style syntax, writing `ListLink(ConceptNode("foo"))`
   for the example above.
 * A way of talking about the location of an Atom in an Atomese tree
-  is to talk about it's incoming set, and its outgoing set (or outgoing
-  list). The outgoing set of a Link is simply the list of Atoms in that
+  is to talk about it's incoming set, and its outgoing set. More
+  precisely, it's an outgoing list, because it is an ordered list
+  and NOT a set in the strict technical sense of "set". Despite this,
+  the informal usage of calling it the "outgoing set" is common, even
+  though it really is a list.
+* The outgoing "set" of a Link is simply the list of Atoms in that
   Link. Nodes do not have an outgoing set. The incoming set of an Atom
-  is the set of all Links that contain that Atom. The incoming set can
-  be fetched with the `getIncoming` tool.
+  is the set of all Links that contain that Atom. The incoming set
+  really is a set, an unordered set: it is not given any convetional
+  order. It is a true set and not a multi-set.
+* The incoming set can be fetched with the `getIncoming` tool.
 * Most Link types are ordered, in that the outgoing set is not actually
   a set, but a list, and the order of that list is important. A few Link
-  types are unordered, in that the outgoing set is truly a set, and any
-  type of UnorderedLink having the same outgoing set, written in any
-  order, refers to the same globally unique Link.
+  types are unordered, in that the outgoing set is truly a (multi-)set.
+  Any subtype of UnorderedLink will be unordered. Thus, no matter what
+  order the Atoms are listed in the outgoing set, however they are written,
+  that Link will refer to the same globally unique Link.
+* That is, `(Unordered A B)` is exactly the same Link as `(Unordered B A)`
+  even though, superficially, they seem to be written differently.
 * Atoms typically use 500 bytes to 1500 bytes each, depending on the
   atom type and the graph it is in. This RAM usage includes all of the
-  internal indexes and lookup tables that are invisible to the user.
+  internal indexes and lookup tables kept by the AtomSpace. These are
+  invisible to the user, and are automatically managed.
 * The actual size of the Atom does depend on the number of Values
   attached to it, and the size of the incoming set, but there is little
   that can be done about this: the size is what it is, as needed to
@@ -205,13 +217,13 @@ Values
 * This database is mutable, and can be changed at any time.
 * The keys must always be Atoms. By convention, the keys are usually
   PredicateNodes, but they can be any kind of Atom.
-* The values can be any object of type Value.
-* The Value type is a base type for Atoms. Thus, the Atom type is a
+* The values can be anything of type Value.
+* The Value Type is a base type for Atoms. Thus, the Atom type is a
   subtype of Value. (and, of course, Links and Nodes are subtypes of
   Atom.)
 * Examples of Values are FloatValue, StringValue and ListValue.
-* The FloatValue holds a vector of floats. This vector is of arbitrary
-  length.
+* The FloatValue holds a vector of floats. This vector can be of
+  arbitrary length.
 * The StringValue holds a vector of strings.
 * The BoolValue holds a vector of bits.
 * The ListValue holds a vector of Values.
@@ -250,7 +262,7 @@ Conventional Representations
 ----------------------------
 * There are several conventional representations used for conventional
   knowledge graph structures.
-* Directed graphs, in the sense of graph theory, are conventional
+* Directed graphs, in the sense of graph theory, are conventionally
   specified with vertices and the edges connecting them. The
   conventional Atomese representation for a labelled, directed edge is
 ```
@@ -266,37 +278,44 @@ Conventional Representations
   the vertices.
 * On rare occasions, the list will contain more or fewer than two
   vertices; in this case, it is no longer a "true graph-theoretical
-  graph edge", but is still entirely valid and usable as Atomese.
+  graph edge", but it is still entirely valid and usable as Atomese.
 * An older representation, sometimes in use, but discouraged, is
 ```
   (EvaluationLink (PredicateNode "edge name")
       (ListLink (ConceptNode "head vertex") (ConceptNode "tail vertex")))
 ```
-  EvaluationLinks are discouraged because the use more RAM and CPU than
+  EvaluationLinks are discouraged because they use more RAM and CPU than
   EdgeLinks. ConceptNodes are mildly discouraged only because not all
   graph vertices are conceptually concepts.
+* The best use of EvaluationLinks are with GroundedPredicateNodes, as
+  this allows the GroundedPredicate to be executed, and the results
+  returned.
 
 Execution
 ---------
 * Many, but not all Atom types are executable.
-* When an Atom is executed, it performs some action, and returns a value.
+* When an Atom is executed, it performs some action, and returns a Value.
 * The outgoing set of the Atom is usually interpreted as the "arguments"
   to a "function", and so executing an Atom can be thought of as
   "applying" a function to some arguments. The words "arguments",
   "function" and "apply" are in quotes, because while this is a
   reasonable way to think about the execution of Atoms, it is not
-  formally dictated.
+  formally dictated. There is no formal definition of these ideas in
+  Atomese.
 * Execution might depend on the incoming set, on the contents of the
   AtomSpace, on the Values attached to the Atom, and on external systems
   attached to some Atoms.
 * Execution will almost always have side-effects, such as modifying
   the AtomSpace contents, modifying the Values attached to assorted
   Atoms, or causing some external system to perform some action or
-  change it's state.
-* Execution will depend on the Atom type.
+  change it's state.  This inclues the operating system, and possibly
+  other computers in the network/internet.
+* Execution will depend on the Atom Type.
 
 * Different executable Atom types implement different kinds of
   algorithms and functions.
+* This is generally done by having each distinct Atom Type be associated
+  with a C++ class that implements an `execute()` method.
 * There are two basic classes of executable Atoms: the ones that
   perform graph queries, and the ones that implement Abstract Syntax
   Tree (AST) pipelines. These are reviewed in greater detail further below.
@@ -321,7 +340,7 @@ Execution
      (FloatValueOf (Concept "foo") (Predicate "some key"))
      (FloatValueOf (Concept "bar") (Predicate "some key")))
 ```
-  when it is executed, will add together the values on the given Atoms
+  when it is executed, will add together the Values on the given Atoms
   at the given keys. It will return a FloatValue containing the result.
 * In the above example, the addition is vector addition. If one vector
   is shorter than another, the returned value will be the shortest of
@@ -348,7 +367,7 @@ Execution
   it is the ExecutionOutputLink that is executed.
 * The arguments to these functions are taken from the outgoing set of
   the ExecutionOutputLink.
-* The scheme dialect is the one provided by guile.
+* The scheme dialect is the one provided by GNU guile.
 * All executable Atoms have wiki pages that explain what they do and
   how they work. If in doubt, the wiki pages should be consulted.
 
@@ -369,6 +388,9 @@ Pipelines and Filters
 * There are several Link types that can create new threads, executing
   the Atoms in their outgoing set. If these are needed, the wiki page
   should be consulted for examples and explanations.
+
+Objects
+-------
 
 Querying
 --------
