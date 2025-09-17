@@ -6,20 +6,22 @@ The OpenCog CogServer is a network scheme & python command-line
 server for the [OpenCog AtomSpace](https://github.com/opencog/atomspace)
 (hyper-)graph database. It allows network users to run arbitrary python
 and scheme code on the server, and access the AtomSpace over the
-network. The cogserver also provides a pseudo-JSON interface, as well
-as a high-speed data transfer format that is used for building
-network-distributed AtomSpaces. The CogServer is a part of the
+network. It also provides a JSON interface, a high-performance
+s-expression bulk data transfer format, and an LLM MCP format.
+The s-expression interface is used for building network-distributed
+AtomSpaces. The CogServer is a part of the
 [OpenCog project](https://opencog.org).
 
 Overview
 --------
-The CogServer provides a network command-line console and a WebSocket
-server.  The network console server provides a fast, efficient telnet
-interface, giving access to Scheme (guile), Python and JSON command-lines.
-These can be used by multiple users at the same time, all obtaining
-access to the *same* AtomSpace. This is also shared by the WebSocket
-interface, so that all users see the same data, irrespective of the
-network connection.
+The CogServer provides a network command-line console, a WebSocket
+server and an HTTP server.  The network console server provides a
+fast, efficient telnet interface, giving access to Scheme (guile),
+Python, JSON, and s-expression command-lines.  These can be used by
+multiple users at the same time, all obtaining access to the *same*
+AtomSpace. This is also shared by the HTTP and WebSocket interfaces,
+so that all users see the same data, irrespective of the network
+connection.
 
 This capability is useful in several different ways:
 
@@ -29,27 +31,27 @@ This capability is useful in several different ways:
   monitoring status, and poking around and performing general
   maintenance on long-running servers.
 
-* **Multi-user Network command line.** Ordinary Python does not allow
-  multiple users to access it at the same time.  With the CogServer,
-  multiple python users can use it simultaneously. All python state is
-  visible to all python users. All changes to the AtomSpace become
-  immediately available to Python, Scheme, JSON and s-expression users.
+* **Multi-user Python REPL.** Ordinary Python does not allow
+  multiple users to access it at the same time.  The CogServer
+  provides a python network shell, which can be used by multiple
+  users at the same time.  All python state is visible to all
+  python users. All changes to the AtomSpace become immediately
+  available to Python, Scheme, JSON, s-expression and MCP users.
 
-* **Fast Scheme REPL.** The network command line also includes a
-  scheme (guile) interface.  It is an order of magnitude faster than
-  the ice-9 REPL server, with much lower latency and higher throughput.
+* **Fast Scheme REPL.** The CogServer includes a scheme (guile)
+  interface.  It is an order of magnitude faster than the `ice-9`
+  REPL server, with much lower latency and higher throughput.
   It is also stable; its free of lockups, hangs and crashes. It's fast.
 
-* ** Bulk data transfer.** The network command line also includes a
-  raw s-expression interface. This is another order of magnitude faster
-  than either python or scheme, and allows bulk data transfer.  It is
+* **Bulk data transfer.** The CogServer includes a raw s-expression
+  interface. This is another order of magnitude faster than either
+  python, scheme or JSON, and allows bulk data transfer.  It is
   also several orders of magnitude faster than conventional ZeroMQ,
-  HTTP, RPC, JSON or Protobuff protocols.
+  HTTP, RPC, RPC/JSON or Protobuff protocols.
 
 * **WebSocket API.** All interfaces are accessible through websockets.
-  The only difference is that telnet prompts are not sent. For example,
-  the python API is available at `ws://localhost:18080/py`.  At this time,
-  encryption is not supported, so `wss://` URL's will not work.
+  The only difference is that the REPL prompts are not sent. For example,
+  the python API is available at `ws://localhost:18080/py`.
   See the [websocket example](./examples/websockets/demo.html) for more.
 
 * **JSON-style interface.** This is useful for creating JavaScript-powered
@@ -99,21 +101,21 @@ python command line.
   Add the `-h` flag to get a list of configurable settings.
 
 * From guile: `(use-modules (opencog cogserver)) (start-cogserver)`
-  Use `,describe start-cogserver` at the guile REPL to get
-  documentation.
+  Documentation is available at the guile REPL with the
+  `,describe start-cogserver` command.
 
 * From python:
 ```
-from opencog.atomspace import AtomSpace
-from opencog.cogserver import *
-my_atomspace = AtomSpace()
-start_cogserver(atomspace=my_atomspace)
+    from opencog.atomspace import AtomSpace
+    from opencog.cogserver import *
+    my_atomspace = AtomSpace()
+    start_cogserver(atomspace=my_atomspace)
 ```
 See the [python example](./examples/python/start_cogserver.py) for
 more details.
 
 There are several ways to interact with a running cogserver. One way
-is either through HTTP or websockets: point your web browser at
+is through HTTP or websockets: point your web browser at
 `http://localhost:18080` and go.
 
 To use an LLM to view and manipulate the AtomSpace, just tell the LLM
@@ -178,18 +180,14 @@ To build and run the CogServer, you need to install the AtomSpace first.
 > On Debian/Ubuntu, `sudo apt install libasio-dev`
 
 ###### OpenSSL
-> OpenSSL
+> Optional: OpenSSL
 > On Debian/Ubuntu, `sudo apt install libssl-dev`
-
-If you don't install SSL, you'll get a CogServer without
-websockets support.
+> If you don't install SSL, you won;t get websockets.
 
 ###### JSON
-> JSON support library
+> Optional: JSON support library
 > On Debian/Ubuntu, `sudo apt install libjsoncpp-dev`
-
-If you don't install JSON, you'll get a CogServer without
-JSON support.
+> If you don't install JSON, you won't get JSON.
 
 
 Unit tests
@@ -208,5 +206,13 @@ The system archtiecture is described in these README's:
 * [cogserver/README](opencog/cogserver/server/README.md)
 * [builtin-module/README](opencog/cogserver/modules/commands/README.md)
 * [cython/README](opencog/cython/README.md)
+
+TODO
+----
+* Add `wss://` and `https://` encryption.
+* Add OAuth authentication. This should be provided by some external
+  server wrapper, but how?
+* What about authentication and encryption for the raw telnet/netcat
+  interfaces?
 
 ----
