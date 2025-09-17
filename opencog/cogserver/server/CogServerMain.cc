@@ -45,7 +45,7 @@ using namespace opencog;
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-DOPTION=\"VALUE\"]\n\n"
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-DOPTION=\"VALUE\"]\n"
         << "\n"
         << "Supported options and default values:\n"
         << "SERVER_PORT = 17001\n"
