@@ -222,6 +222,12 @@ public:
             notification["method"] = "notifications/initialized";
             sendMessage(notification);
 
+            // Per JSON RPC spec, there should be no response to
+            // notifications. But we have to hack this, to keep
+            // Claude HTTP happy. So read a response, and discard it.
+            Json::Value init_response = receiveMessage();
+            std::cout << "DEBUG: initialize notification response: "
+                  << dump_result(init_response) << std::endl;
             return true;
         } catch (const std::exception& e) {
             std::cerr << "Initialize failed: " << e.what() << std::endl;
