@@ -334,31 +334,6 @@ void ServerSocket::Send(const std::string& cmd)
         return;
     }
 
-    // For HTTP sockets (non-WebSocket), add HTTP headers
-    // This is used for MCP and JSON APIs over HTTP
-    if (_is_http_socket and not _do_frame_io)
-    {
-        // Build HTTP response with Content-Length
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Server: CogServer\r\n"
-            "Content-Type: application/json\r\n"
-            "Content-Length: " + std::to_string(cmdsize) + "\r\n"
-            "Cache-Control: no-cache\r\n";
-
-        if (_keep_alive)
-            response += "Connection: keep-alive\r\n";
-        else
-            response += "Connection: close\r\n";
-
-        response += "\r\n";
-
-        // Send headers and body
-        Send(asio::const_buffer(response.c_str(), response.size()));
-        Send(asio::const_buffer(cmd.c_str(), cmdsize));
-        return;
-    }
-
     // If we are here, we have to perform websockets framing.
     send_websocket(cmd);
 }
