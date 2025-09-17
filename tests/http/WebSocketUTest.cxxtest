@@ -1,0 +1,323 @@
+/*
+ * tests/http/WebSocketUTest.cxxtest
+ *
+ * Copyright (C) 2025 BrainyBlaze Dynamics Inc.
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cxxtest/TestSuite.h>
+#include <string>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
+#include <thread>
+#include <chrono>
+#include <sstream>
+#include <iomanip>
+
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/util/Logger.h>
+
+using namespace opencog;
+
+class WebSocketUTest : public CxxTest::TestSuite
+{
+private:
+	CogServer* _cogserver;
+	std::thread* _csthread;
+
+	// Simple base64 encoding for WebSocket handshake
+	std::string base64_encode(const std::string& input) {
+		static const char* base64_chars =
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"abcdefghijklmnopqrstuvwxyz"
+			"0123456789+/";
+
+		std::string output;
+		int val = 0, valb = -6;
+		for (unsigned char c : input) {
+			val = (val << 8) + c;
+			valb += 8;
+			while (valb >= 0) {
+				output.push_back(base64_chars[(val >> valb) & 0x3F]);
+				valb -= 6;
+			}
+		}
+		if (valb > -6) output.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
+		while (output.size() % 4) output.push_back('=');
+		return output;
+	}
+
+	// Create WebSocket frame
+	std::string create_websocket_frame(const std::string& data) {
+		std::string frame;
+		frame.push_back(0x81); // FIN=1, opcode=1 (text)
+
+		size_t len = data.length();
+		if (len < 126) {
+			frame.push_back(0x80 | len); // masked, length
+		} else if (len < 65536) {
+			frame.push_back(0x80 | 126); // masked, extended length follows
+			frame.push_back((len >> 8) & 0xFF);
+			frame.push_back(len & 0xFF);
+		}
+
+		// Add masking key (required for client->server)
+		frame.push_back(0x12);
+		frame.push_back(0x34);
+		frame.push_back(0x56);
+		frame.push_back(0x78);
+
+		// Mask the payload
+		for (size_t i = 0; i < data.length(); i++) {
+			frame.push_back(data[i] ^ frame[2 + (i % 4)]);
+		}
+
+		return frame;
+	}
+
+	// Parse WebSocket frame
+	std::string parse_websocket_frame(const std::string& frame) {
+		if (frame.length() < 2) return "";
+
+		size_t pos = 0;
+		// Skip first byte (contains FIN bit and opcode)
+		pos++;
+		uint8_t byte2 = frame[pos++];
+
+		bool masked = (byte2 & 0x80) != 0;
+		size_t payload_len = byte2 & 0x7F;
+
+		if (payload_len == 126) {
+			if (frame.length() < pos + 2) return "";
+			payload_len = (frame[pos] << 8) | frame[pos + 1];
+			pos += 2;
+		} else if (payload_len == 127) {
+			if (frame.length() < pos + 8) return "";
+			// Skip high 32 bits for simplicity
+			pos += 4;
+			payload_len = (frame[pos] << 24) | (frame[pos + 1] << 16) |
+			              (frame[pos + 2] << 8) | frame[pos + 3];
+			pos += 4;
+		}
+
+		if (masked) {
+			if (frame.length() < pos + 4) return "";
+			pos += 4; // Skip mask key
+		}
+
+		if (frame.length() < pos + payload_len) return "";
+
+		return frame.substr(pos, payload_len);
+	}
+
+	int connect_to_server(int port) {
+		int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if (sockfd < 0) return -1;
+
+		struct sockaddr_in serv_addr;
+		memset(&serv_addr, 0, sizeof(serv_addr));
+		serv_addr.sin_family = AF_INET;
+		serv_addr.sin_port = htons(port);
+		serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+		if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+			close(sockfd);
+			return -1;
+		}
+
+		return sockfd;
+	}
+
+	std::string receive_until_frame(int sockfd) {
+		std::string result;
+		char buffer[4096];
+
+		// Keep reading until we get a complete WebSocket frame
+		while (true) {
+			int bytes = recv(sockfd, buffer, sizeof(buffer), 0);
+			if (bytes <= 0) break;
+
+			result.append(buffer, bytes);
+
+			// Check if we have a complete frame (simplified check)
+			if (result.length() >= 2) {
+				size_t expected = 2; // minimum frame size
+				uint8_t byte2 = result[1];
+				size_t payload_len = byte2 & 0x7F;
+
+				if (payload_len == 126) expected += 2;
+				else if (payload_len == 127) expected += 8;
+
+				if ((byte2 & 0x80) != 0) expected += 4; // mask
+				expected += payload_len;
+
+				if (result.length() >= expected) break;
+			}
+		}
+
+		return result;
+	}
+
+public:
+	WebSocketUTest() {
+		logger().set_level(Logger::DEBUG);
+		logger().set_timestamp_flag(true);
+		logger().set_print_to_stdout_flag(true);
+
+		// Create and start cogserver
+		_cogserver = &cogserver();
+		_cogserver->loadModules();
+		_cogserver->enableWebServer(18282);
+
+		// Run the server on a separate thread
+		_csthread = new std::thread([&]() { _cogserver->serverLoop(); });
+
+		// Give the server time to start
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+	~WebSocketUTest() {
+		// Stop the server
+		_cogserver->stop();
+		_csthread->join();
+		delete _csthread;
+		_csthread = nullptr;
+
+		// Clean up
+		_cogserver->disableWebServer();
+	}
+
+	// Test WebSocket handshake and JSON response
+	void test_websocket_json_response()
+	{
+		int sockfd = connect_to_server(18282);
+		TS_ASSERT_LESS_THAN(0, sockfd);
+
+		// Send WebSocket handshake
+		std::string key = "dGhlIHNhbXBsZSBub25jZQ==";
+		std::string handshake =
+			"GET /json HTTP/1.1\r\n"
+			"Host: localhost:18282\r\n"
+			"Upgrade: websocket\r\n"
+			"Connection: Upgrade\r\n"
+			"Sec-WebSocket-Key: " + key + "\r\n"
+			"Sec-WebSocket-Version: 13\r\n"
+			"\r\n";
+
+		send(sockfd, handshake.c_str(), handshake.length(), 0);
+
+		// Receive handshake response
+		char buffer[1024];
+		int bytes = recv(sockfd, buffer, sizeof(buffer), 0);
+		TS_ASSERT_LESS_THAN(0, bytes);
+
+		std::string response(buffer, bytes);
+		TS_ASSERT(response.find("HTTP/1.1 101 Switching Protocols") != std::string::npos);
+
+		// Send a JSON request via WebSocket
+		std::string json_request = "{\"command\": \"version\"}";
+		std::string frame = create_websocket_frame(json_request);
+		send(sockfd, frame.c_str(), frame.length(), 0);
+
+		// Receive WebSocket frame response
+		std::string ws_response = receive_until_frame(sockfd);
+
+		// Parse the WebSocket frame to get the JSON
+		std::string json_response = parse_websocket_frame(ws_response);
+
+		close(sockfd);
+
+		// Verify the response is pure JSON without HTTP headers
+		TS_ASSERT(!json_response.empty());
+		TS_ASSERT(json_response.find("HTTP/1.1") == std::string::npos);
+		TS_ASSERT(json_response.find("Content-Type") == std::string::npos);
+		TS_ASSERT(json_response.find("Content-Length") == std::string::npos);
+
+		// It should be valid JSON starting with { or [
+		size_t first_char = json_response.find_first_not_of(" \t\r\n");
+		if (first_char != std::string::npos) {
+			char c = json_response[first_char];
+			TS_ASSERT(c == '{' || c == '[');
+		}
+	}
+
+	// Test regular HTTP request with query string
+	void test_http_query_string()
+	{
+		int sockfd = connect_to_server(18282);
+		TS_ASSERT_LESS_THAN(0, sockfd);
+
+		// Send HTTP request with query string for a non-existent file
+		std::string request =
+			"GET /nonexistent-file.html?param1=value1&param2=value2 HTTP/1.1\r\n"
+			"Host: localhost:18282\r\n"
+			"\r\n";
+
+		send(sockfd, request.c_str(), request.length(), 0);
+
+		// Receive response
+		char buffer[4096];
+		int bytes = recv(sockfd, buffer, sizeof(buffer), 0);
+		close(sockfd);
+
+		TS_ASSERT_LESS_THAN(0, bytes);
+		std::string response(buffer, bytes);
+
+		// Should get 404 for non-existent file
+		// The important thing is that the query string doesn't break URL parsing
+		TS_ASSERT(response.find("HTTP/1.1 404 Not Found") != std::string::npos);
+
+		// The response should have proper HTTP headers
+		TS_ASSERT(response.find("Content-Type") != std::string::npos);
+		TS_ASSERT(response.find("Content-Length") != std::string::npos);
+	}
+
+	// Test regular HTTP JSON endpoint
+	void test_http_json_with_headers()
+	{
+		int sockfd = connect_to_server(18282);
+		TS_ASSERT_LESS_THAN(0, sockfd);
+
+		// Send HTTP POST to JSON endpoint
+		std::string json_body = "{\"command\": \"version\"}";
+		std::stringstream request;
+		request << "POST /json HTTP/1.1\r\n";
+		request << "Host: localhost:18282\r\n";
+		request << "Content-Type: application/json\r\n";
+		request << "Content-Length: " << json_body.length() << "\r\n";
+		request << "\r\n";
+		request << json_body;
+
+		std::string req_str = request.str();
+		send(sockfd, req_str.c_str(), req_str.length(), 0);
+
+		// Receive response
+		char buffer[4096];
+		int bytes = recv(sockfd, buffer, sizeof(buffer), 0);
+		close(sockfd);
+
+		TS_ASSERT_LESS_THAN(0, bytes);
+		std::string response(buffer, bytes);
+
+		// Should have HTTP headers for regular HTTP request
+		TS_ASSERT(response.find("HTTP/1.1 200 OK") != std::string::npos);
+		TS_ASSERT(response.find("Content-Type: application/json") != std::string::npos);
+		TS_ASSERT(response.find("Content-Length") != std::string::npos);
+
+		// And should have JSON body after headers
+		TS_ASSERT(response.find("\r\n\r\n") != std::string::npos);
+		size_t body_start = response.find("\r\n\r\n") + 4;
+		if (body_start < response.length()) {
+			std::string body = response.substr(body_start);
+			size_t first_char = body.find_first_not_of(" \t\r\n");
+			if (first_char != std::string::npos) {
+				char c = body[first_char];
+				TS_ASSERT(c == '{' || c == '[');
+			}
+		}
+	}
+};

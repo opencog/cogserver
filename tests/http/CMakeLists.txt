@@ -5,3 +5,4 @@ LINK_LIBRARIES(
 )
 
 ADD_CXXTEST(HttpUTest)
+ADD_CXXTEST(WebSocketUTest)
