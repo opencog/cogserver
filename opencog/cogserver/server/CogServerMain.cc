@@ -39,13 +39,15 @@
 #include <opencog/util/Logger.h>
 
 #include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/version.h>
 
 using namespace opencog;
 
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-DOPTION=\"VALUE\"]\n"
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-v] [-DOPTION=\"VALUE\"]\n"
+        << "  -v    Print version and exit\n"
         << "\n"
         << "Supported options and default values:\n"
         << "SERVER_PORT = 17001\n"
@@ -94,7 +96,7 @@ int main(int argc, char *argv[])
     int webserver_port = 18080;
     int mcp_port = 18888;
 
-    static const char *optString = "p:w:m:D:h";
+    static const char *optString = "p:w:m:D:hv";
     std::vector<std::pair<std::string, std::string>> configPairs;
     std::string progname = argv[0];
 
@@ -129,6 +131,9 @@ int main(int argc, char *argv[])
             webserver_port = atoi(optarg);
         } else if (c == 'm') {
             mcp_port = atoi(optarg);
+        } else if (c == 'v') {
+            std::cout << "CogServer version " << COGSERVER_VERSION_STRING << std::endl;
+            exit(0);
         } else {
             // unknown option (or help)
             usage(progname.c_str());

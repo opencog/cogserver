@@ -158,6 +158,7 @@ ENDIF (VALGRIND_FOUND)
 
 # Set default include paths.
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}
+	${PROJECT_BINARY_DIR}
 	${COGUTIL_INCLUDE_DIR} ${ATOMSPACE_INCLUDE_DIR})
 
 INCLUDE(OpenCogMacros)
@@ -237,6 +238,12 @@ FILE(WRITE "${PROJECT_BINARY_DIR}/install_manifest.txt")
 ## It doesn't have a header-file declaring the version similar to cogutil and
 ## atomspace.
 SET(SEMANTIC_VERSION 3.3.0)
+
+# Generate version header file
+CONFIGURE_FILE(
+    "${CMAKE_CURRENT_SOURCE_DIR}/opencog/cogserver/version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/opencog/cogserver/version.h"
+)
 
 ## Cpack configuration
 SET(CPACK_GENERATOR "DEB")
