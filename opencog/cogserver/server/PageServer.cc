@@ -70,9 +70,16 @@ bool PageServer::isSafePath(const std::string& path)
 
 std::string PageServer::serve(const std::string& url)
 {
+    // Strip query string if present
+    std::string path = url;
+    size_t query_pos = path.find('?');
+    if (query_pos != std::string::npos) {
+        path = path.substr(0, query_pos);
+    }
+
     // Security check
-    if (!isSafePath(url)) {
-        logger().warn("[PageServer] Unsafe path requested: %s", url.c_str());
+    if (!isSafePath(path)) {
+        logger().warn("[PageServer] Unsafe path requested: %s", path.c_str());
         return notFound(url);
     }
 
@@ -80,12 +87,12 @@ std::string PageServer::serve(const std::string& url)
     std::string filepath = base_path;
 
     // Handle root request
-    if (url == "/" || url.empty()) {
+    if (path == "/" || path.empty()) {
         filepath += "/index.html";
-    } else if (url[0] == '/') {
-        filepath += url;
+    } else if (path[0] == '/') {
+        filepath += path;
     } else {
-        filepath += "/" + url;
+        filepath += "/" + path;
     }
 
     // Check if file exists
