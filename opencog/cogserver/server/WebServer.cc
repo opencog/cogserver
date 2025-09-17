@@ -114,8 +114,8 @@ void WebServer::OnLine(const std::string& line)
 		_shell->discipline(false);
 	}
 
-	// Non-HTTP connection - use normal threaded evaluation
-	if (not _is_http_socket)
+	// WebSocket connections use normal threaded evaluation
+	if (_got_websock_header)
 	{
 		_shell->eval(line);
 		return;
