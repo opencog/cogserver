@@ -90,10 +90,7 @@ public:
 	{
 		logger().set_level(Logger::DEBUG);
 		logger().set_print_to_stdout_flag(true);
-	}
 
-	void setUp()
-	{
 		// Start the CogServer on a thread
 		_cogserver = &cogserver();
 		_cogserver->loadModules();
@@ -106,7 +103,7 @@ public:
 		usleep(100000);
 	}
 
-	void tearDown()
+	~HttpUTest()
 	{
 		// Stop the server
 		_cogserver->stop();
@@ -116,6 +113,16 @@ public:
 
 		// Clean up
 		_cogserver->disableWebServer();
+	}
+
+	void setUp()
+	{
+		// Per-test setup - nothing needed
+	}
+
+	void tearDown()
+	{
+		// Per-test teardown - nothing needed
 	}
 
 	// Test basic HTTP GET request to root
