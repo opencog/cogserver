@@ -41,21 +41,20 @@ above works.
 
 The MCP Servers
 ---------------
-There are two ways of using MCP with the CogServer:
-* Over an HTTP connection, where the CogServer acts as a web server,
-* Over a raw TCP/IP socket, which reads and responds to MCP JSON.
+There are three ways of using MCP with the CogServer:
+* Over an HTTP connection.
+* Over a websockets connection.
+* Over a raw TCP/IP socket.
 
-The first form provides a conventional HTTP interface, as documented at
-[modelcontextprotocol.io](https://modelcontextprotocol.io/). The second
-form exists for custom applications that wrap MCP in other ways, and
-need a raw JSON interface. Currently, the major application is to work
-around the open bug
-[Claude Code #1536](https://github.com/anthropics/claude-code/issues/1536).
-The work-around is given further below, and uses a pair of proxies to
-copy MCP JSON on stdio to the raw CogServer socket.
+All three are effectively "the same thing", differing only in how the
+MCP JSON responses are wrapped. The MCP JSON protocol is documented at
+[modelcontextprotocol.io](https://modelcontextprotocol.io/).
 
-The regular interface is located at port 18080, at the URL `/mcp`. For
-example, Claude can access this after configuring
+The HTTP and websocket interfaces are located at port 18080, at the
+URL `/mcp`. The raw TCP/IP interface is at port 18888.
+
+For example, Claude supports the HTTP interfaces, and can access the
+atomese server after configuring
 ```
 claude mcp list
 claude mcp add atomese -t http http://localhost:18080/mcp
@@ -63,9 +62,6 @@ claude mcp list
 ```
 The second `claude mcp list` confirms that the interface was found and
 that Claude was able to connect.
-
-The raw interface is at port 18888; an example of how to use it is given
-below.
 
 
 MCP Utility Tools
