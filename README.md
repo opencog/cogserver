@@ -79,7 +79,7 @@ This capability is useful in several different ways:
   See the [MCP README](./examples/mcp/README.md) for more info.
 
 * **Demo visualizer.** This is a simple html/js visualizer for the
-  AtomSpace contents, accessbile with standard web browsers. Just
+  AtomSpace contents, accessible with standard web browsers. Just
   start the CogServer, open http://localhost:18080/ and go.
 
 For more info, please consult the
@@ -125,7 +125,7 @@ claude mcp add atomese -t http http://localhost:18080/mcp
 ```
 
 The command-line telnet shell is accessed by saying
-`rlwrap telnet localhost 17001`. Type `help` for a list of availble
+`rlwrap telnet localhost 17001`. Type `help` for a list of available
 commands. These include the `py`, `scm`, `json` and `sexpr` shells
 (for python, scheme, json and s-expressions.) A one-shot python
 evaluator is available at `py-eval`: it will run a blob of python
@@ -200,7 +200,7 @@ from the `./build` directory.
 
 Architecture
 ------------
-The system archtiecture is described in these README's:
+The system architecture is described in these README's:
 
 * [network/README](opencog/network/README.md)
 * [cogserver/README](opencog/cogserver/server/README.md)
