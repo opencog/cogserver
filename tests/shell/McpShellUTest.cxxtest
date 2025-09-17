@@ -59,16 +59,7 @@ public:
     McpShellUTest()
     {
         logger().set_level(Logger::DEBUG);
-    }
 
-    ~McpShellUTest()
-    {
-        if (!CxxTest::TestTracker::tracker().suiteFailed())
-            std::remove(logger().get_filename().c_str());
-    }
-
-    void setUp()
-    {
         csrv = &cogserver();
         csrv->loadModules();
         csrv->enableNetworkServer(17334);
@@ -78,11 +69,22 @@ public:
         sleep(1);
     }
 
-    void tearDown()
+    ~McpShellUTest()
     {
         csrv->stop();
         main_loop->join();
         delete main_loop;
+
+        if (!CxxTest::TestTracker::tracker().suiteFailed())
+            std::remove(logger().get_filename().c_str());
+    }
+
+    void setUp()
+    {
+    }
+
+    void tearDown()
+    {
     }
 
     void testMcpShellBasic()
