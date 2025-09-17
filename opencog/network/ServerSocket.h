@@ -81,6 +81,7 @@ protected:
     bool _is_http_socket;
     bool _got_websock_header;
     std::string _url;
+    std::string _host_header;  // Host header from HTTP request
 
     // KeepAlive connections will repeatedly send HTTP headers.
     bool _keep_alive;

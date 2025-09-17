@@ -237,10 +237,6 @@ public:
         }
     }
 
-    Json::Value getServerCapabilities() {
-        return sendRequest("mcp/describe");
-    }
-
     Json::Value listTools() {
         return sendRequest("tools/list");
     }
@@ -332,15 +328,6 @@ int main(int argc, char* argv[]) {
             std::cout << "✓ Ping successful" << std::endl;
         } else {
             std::cout << "✗ Ping failed" << std::endl;
-        }
-
-        // Get server capabilities
-        std::cout << "\nGetting server capabilities..." << std::endl;
-        try {
-            Json::Value capabilities = client.getServerCapabilities();
-            std::cout << "✓ Server capabilities: " << dump_result(capabilities) << std::endl;
-        } catch (const std::exception& e) {
-            std::cout << "✗ Failed to get server capabilities: " << e.what() << std::endl;
         }
 
         // List available tools

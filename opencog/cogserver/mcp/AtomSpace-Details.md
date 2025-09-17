@@ -8,8 +8,8 @@ Protocol (MCP) server.
   or 'cogserv' or something similar. There will be more than a dozen
   tools available to work with Atomese.
 
-The intended audience for this file is Claude, or any other LLM that
-has MCP interfaces. This file explains the AtomSpace in such a way that
+The intended audience for this file is any LLM that knows how to use
+MCP interfaces. This file explains the AtomSpace in such a way that
 the LLM will be able to work with users to create and manipulate
 Atomese from verbal descriptions. Users may or may not understand the
 descriptions and explanatios offered here, and thus it is vital that
@@ -28,40 +28,72 @@ the AtomSpace. Here are few places to start:
 * http://wiki.opencog.org/w/Value
 * http://wiki.opencog.org/w/JoinLink
 
+The Atomese system is large and complex, and few users will understand
+it fully. In addition, the Atomese system has a dozen different modules
+that extend its capabilities and functions. These introduce additional
+complexity. Understanding those will require study of the particular
+subsystem that gets loaded and used.
+
 Here is what you need to know.
 
 The AtomSpace
 -------------
 * The AtomSpace is an in-RAM hypergraph database.
 * Hypergraphs are constructed from Atoms, of which there are two basic
-  types: Nodes and Links. There are also subtypes, explained later.
+  Types: Nodes and Links. There is also a Type subsystem, explained later.
 * All Nodes have a string name. There can only ever be one Node having
   a given name: it is globally unique. Thus, all references to a Node
   of a given name are always to the same Node.
+* Node names can be any valid UTF-8 string, of any length. Node names
+  are usually short, maybe a dozen characters long, but not always.
 * All Links hold a list of Atoms. There can only ever be one Link
   holding a given list of Atoms: it is globally unique.
-* Thus, hypergraphs are described in terms of trees, each tree
-  consisting of Links. That is, the interior vertices of the tree are
-  Links, and the leaves are Nodes. Because Atoms (Nodes and Links) are
-  globally unique, these trees connect to one another via their Atoms.
-* The AtomSpace contents are immutable: Atoms can only be added or
-  removed; the cannot be modified. That is, the name of a Node cannot
-  be changed. The list of Atoms in a Link cannot be changed.
-* The idea of "global uniqueness" refers to not only the current
-  AtomSpace, but potentially all other accessible AtomSpaces.
-* The contents AtomSpaces are NOT kept in sync automatically, but
-  are up to user actions to shuttle Atoms around between them.
+* Links do not have names.
+* The list of Atoms in a give Link type can be empty. Note that there
+  is only one possible Link of this type, as it is necessarily globally
+  unique. Such empty Links are rarely used.
+* Hypergraphs are represented as trees. The root of a tree is a Link,
+  unless it is a tree of depth zero, in which case the root can be a
+  Node. Of course, Nodes have no sub-branches.
+* The interior vertices of a tree are necessarily Links, and the
+  leaves are almost always Nodes. The leaves might also be empty Links.
+* Because Atoms (Nodes and Links) are globally unique, different trees
+  might share common subtrees. It is this sharing of subtrees that gives
+  rise to the hypergraph structure.
+
+* The name of a Node is immutable: it cannot be changed. Thus, Nodes
+  can be created and destroyed, but the name itself cannot be altered.
+* The list of Atoms in a Link is immutable: it cannot be changed. Thus,
+  Links can be created and destroyed, but the contents cannot be changed.
+* The above immutability constraints are used to guarantee coherence
+  in the representation of hypergraphs, and to provide thread safety
+  when running multiple processing threads in the AtomSpace.
+
+* The idea of "global uniqueness" refers not only to the current
+  AtomSpace, but in principle to all other accessible AtomSpaces.
+* Some of these other AtomSpaces might be located on other network
+  nodes, in distant locations, or they might be held on disk or
+  other persistant storage.
+* The contents of these other, distant AtomSpaces are **NOT** kept
+  in sync automatically. It is up to the various users to coordinate
+  actions to shuttle Atoms around between them.
 * In particular, Values attached to Atoms in distinct AtomSpaces are
-  not synchronized. The Value subsystem is explained below.
+  not synchronized. The Value subsystem is explained later, below.
+* You, the LLM interacting with this MCP server, has this ability to
+  copy Atoms between AtomSpaces.
+* This becomes particularly interesting when the persistence subsystem
+  is loaded. There are several kinds of these, they provide StorageNodes
+  for fetching and storing Atoms from remote locations.
 
 Multiple AtomSpaces
 -------------------
 * There are two distinct ways in which there can be multiple AtomSpaces.
 * In one form, AtomSpaces can inherit from one-another, thus allowing
   supersets and subsets to be formed. However, the current MCP
-  interfaces do not provide an direct way of working with this, and
-  so this ability is not further explained.
-* In another form, AtomSpaces can be stored to disk, or shared over the
+  interfaces do not provide any direct way of working with this, and
+  so this ability is not further explained. (Future iteractions of the
+  MCP interfaces might fix this.)
+* In the other form, AtomSpaces can be stored to disk, or shared over the
   network, using the StorageNode subsystem, explained below.
 * In general, these different AtomSpaces will contain different sets
   of Atoms.
@@ -83,9 +115,15 @@ Using the AtomSpace
   requests that some action be performed again, this is because things
   may have changed.
 * The AtomSpace can hold millions or billions of Atoms, and thus it is
-  usually a bad idea to try to get them all. The `getAtoms` tool will
-  return all Atoms of a given type. There are much fancier and more
-  powerful ways to query the AtomSpace contents, described below.
+  usually a bad idea to try to get them all.
+* If a users aks you to get all Atoms of some given type, you should
+  first do a quick and easy (fast) check to see how many Atoms there
+  are of that type. If there are more than a few hundred, the user
+  should be informed.
+
+* The `getAtoms` tool will return all Atoms of a given type. There are
+  much fancier and more powerful ways to query the AtomSpace contents,
+  described below.
 * Atoms can be created with the `makeAtom` tool.
 * Atoms can be removed with the `extract` tool. By default, only the
   Atom at the top of the tree can be removed. However, if the recursive
@@ -95,16 +133,22 @@ Using the AtomSpace
 
 Atom Types
 ----------
+* The Atomese system implements a Type subsystem, providing for the
+  dynamic creation and loading of Atom and Value subtypes.
 * There is a hierarchy of Atom types. Thus, ConceptNode, ItemNode, and
-  PredicateNode are all a type of Node. Similarly, ListLink and EdgeLink
-  are types of Links. There are hundreds of types.
+  PredicateNode are all of Type Node. Similarly, ListLink and EdgeLink
+  are types of Links. There are hundreds of Types.
+* The type at the very top of the hierarchy is called TopType.
 * The MCP interface provides several tools, getSubTypes and
   getSuperTypes, to explore the type hierarchy. These have a recursive
-  flag on them, returning the immediate type descendants, or going
+  flag on them, returning the immediate Type descendants, or going
   deeper.
-* On very rare occasions, additional types might be added during
+* A given Type might have multiple parents, i.e. multiple super-types.
+  This implies that there might be multiple paths to the TopType.
+
+* On very rare occasions, additional Types might be added during
   runtime. This happens when a module specifying new types is loaded.
-* The type hierarchy is less than ten levels deep, more or less.
+* The type hierarchy is less than a dozen levels deep, approximately.
 * There is no performance penalty at all for using deeply nested types.
 * Different kinds of types do have different implications for the size
   of an Atom. For example, the EvaluationLink is implemented with a C++
@@ -126,28 +170,40 @@ Atomese
   More generally, one says that the hypergraphs are written in Atomese.
 * A common way to write Atomese is to use s-expressions. Thus
   `(ListLink (Concept "foo"))` is a Link that contains a single Node
-  within it.
+  (a ConceptNode) within it.
 * The suffix Link and Node are optional; thus ConceptNode is the same
   type as Concept, and ListLink is the same as List. In a few rare
   cases, the longer name is mandatory.  Proper capitalization is
-  important.
+  important. Not all Atomse have the Link or Node suffix. For example,
+  there is a Link called `Section`, but there is Link called
+  `SectionLink`.
 * In addition to s-expressions, many users are more comfortable
   using a python-style syntax, writing `ListLink(ConceptNode("foo"))`
   for the example above.
 * A way of talking about the location of an Atom in an Atomese tree
-  is to talk about it's incoming set, and its outgoing set (or outgoing
-  list). The outgoing set of a Link is simply the list of Atoms in that
+  is to talk about it's incoming set, and its outgoing set. More
+  precisely, it's an outgoing list, because it is an ordered list
+  and NOT a set in the strict technical sense of "set". Despite this,
+  the informal usage of calling it the "outgoing set" is common, even
+  though it really is a list.
+* The outgoing "set" of a Link is simply the list of Atoms in that
   Link. Nodes do not have an outgoing set. The incoming set of an Atom
-  is the set of all Links that contain that Atom. The incoming set can
-  be fetched with the `getIncoming` tool.
+  is the set of all Links that contain that Atom. The incoming set
+  really is a set, an unordered set: it is not given any convetional
+  order. It is a true set and not a multi-set.
+* The incoming set can be fetched with the `getIncoming` tool.
 * Most Link types are ordered, in that the outgoing set is not actually
   a set, but a list, and the order of that list is important. A few Link
-  types are unordered, in that the outgoing set is truly a set, and any
-  type of UnorderedLink having the same outgoing set, written in any
-  order, refers to the same globally unique Link.
+  types are unordered, in that the outgoing set is truly a (multi-)set.
+  Any subtype of UnorderedLink will be unordered. Thus, no matter what
+  order the Atoms are listed in the outgoing set, however they are written,
+  that Link will refer to the same globally unique Link.
+* That is, `(Unordered A B)` is exactly the same Link as `(Unordered B A)`
+  even though, superficially, they seem to be written differently.
 * Atoms typically use 500 bytes to 1500 bytes each, depending on the
   atom type and the graph it is in. This RAM usage includes all of the
-  internal indexes and lookup tables that are invisible to the user.
+  internal indexes and lookup tables kept by the AtomSpace. These are
+  invisible to the user, and are automatically managed.
 * The actual size of the Atom does depend on the number of Values
   attached to it, and the size of the incoming set, but there is little
   that can be done about this: the size is what it is, as needed to
@@ -161,13 +217,13 @@ Values
 * This database is mutable, and can be changed at any time.
 * The keys must always be Atoms. By convention, the keys are usually
   PredicateNodes, but they can be any kind of Atom.
-* The values can be any object of type Value.
-* The Value type is a base type for Atoms. Thus, the Atom type is a
+* The values can be anything of type Value.
+* The Value Type is a base type for Atoms. Thus, the Atom type is a
   subtype of Value. (and, of course, Links and Nodes are subtypes of
   Atom.)
 * Examples of Values are FloatValue, StringValue and ListValue.
-* The FloatValue holds a vector of floats. This vector is of arbitrary
-  length.
+* The FloatValue holds a vector of floats. This vector can be of
+  arbitrary length.
 * The StringValue holds a vector of strings.
 * The BoolValue holds a vector of bits.
 * The ListValue holds a vector of Values.
@@ -206,7 +262,7 @@ Conventional Representations
 ----------------------------
 * There are several conventional representations used for conventional
   knowledge graph structures.
-* Directed graphs, in the sense of graph theory, are conventional
+* Directed graphs, in the sense of graph theory, are conventionally
   specified with vertices and the edges connecting them. The
   conventional Atomese representation for a labelled, directed edge is
 ```
@@ -222,37 +278,44 @@ Conventional Representations
   the vertices.
 * On rare occasions, the list will contain more or fewer than two
   vertices; in this case, it is no longer a "true graph-theoretical
-  graph edge", but is still entirely valid and usable as Atomese.
+  graph edge", but it is still entirely valid and usable as Atomese.
 * An older representation, sometimes in use, but discouraged, is
 ```
   (EvaluationLink (PredicateNode "edge name")
       (ListLink (ConceptNode "head vertex") (ConceptNode "tail vertex")))
 ```
-  EvaluationLinks are discouraged because the use more RAM and CPU than
+  EvaluationLinks are discouraged because they use more RAM and CPU than
   EdgeLinks. ConceptNodes are mildly discouraged only because not all
   graph vertices are conceptually concepts.
+* The best use of EvaluationLinks are with GroundedPredicateNodes, as
+  this allows the GroundedPredicate to be executed, and the results
+  returned.
 
 Execution
 ---------
 * Many, but not all Atom types are executable.
-* When an Atom is executed, it performs some action, and returns a value.
+* When an Atom is executed, it performs some action, and returns a Value.
 * The outgoing set of the Atom is usually interpreted as the "arguments"
   to a "function", and so executing an Atom can be thought of as
   "applying" a function to some arguments. The words "arguments",
   "function" and "apply" are in quotes, because while this is a
   reasonable way to think about the execution of Atoms, it is not
-  formally dictated.
+  formally dictated. There is no formal definition of these ideas in
+  Atomese.
 * Execution might depend on the incoming set, on the contents of the
   AtomSpace, on the Values attached to the Atom, and on external systems
   attached to some Atoms.
 * Execution will almost always have side-effects, such as modifying
   the AtomSpace contents, modifying the Values attached to assorted
   Atoms, or causing some external system to perform some action or
-  change it's state.
-* Execution will depend on the Atom type.
+  change it's state.  This inclues the operating system, and possibly
+  other computers in the network/internet.
+* Execution will depend on the Atom Type.
 
 * Different executable Atom types implement different kinds of
   algorithms and functions.
+* This is generally done by having each distinct Atom Type be associated
+  with a C++ class that implements an `execute()` method.
 * There are two basic classes of executable Atoms: the ones that
   perform graph queries, and the ones that implement Abstract Syntax
   Tree (AST) pipelines. These are reviewed in greater detail further below.
@@ -277,7 +340,7 @@ Execution
      (FloatValueOf (Concept "foo") (Predicate "some key"))
      (FloatValueOf (Concept "bar") (Predicate "some key")))
 ```
-  when it is executed, will add together the values on the given Atoms
+  when it is executed, will add together the Values on the given Atoms
   at the given keys. It will return a FloatValue containing the result.
 * In the above example, the addition is vector addition. If one vector
   is shorter than another, the returned value will be the shortest of
@@ -304,7 +367,7 @@ Execution
   it is the ExecutionOutputLink that is executed.
 * The arguments to these functions are taken from the outgoing set of
   the ExecutionOutputLink.
-* The scheme dialect is the one provided by guile.
+* The scheme dialect is the one provided by GNU guile.
 * All executable Atoms have wiki pages that explain what they do and
   how they work. If in doubt, the wiki pages should be consulted.
 
@@ -326,6 +389,38 @@ Pipelines and Filters
   the Atoms in their outgoing set. If these are needed, the wiki page
   should be consulted for examples and explanations.
 
+Objects
+-------
+* Atoms that inherit from `ObejctNode` implement a message-passing
+  object-oriented system.
+* Messages can be sent to such objects using the SetValue and the
+  GetValue JSON tools. They can also be sent by executing the
+  `SetValueLink` and the `ValueOfLink`.
+* SetValue requires a (key,value) pair; the key is the message, and
+  the value is the associatted data. There is no return value, in this
+  case.
+* GetValue requires only a key, and it returns a Value.
+* The actual supported messages depend on the Object type. Any keys
+  that are not one of these special message types are handled as
+  ordinary keys, just as they would be on any other Atom.
+* The four most common messages are `(Predicate "*-open-*")` and
+  `(Predicate "*-close-*")` and `(Predicate "*-read-*")`  and
+  `(Predicate "*-write-*")`.  There might be others as well.
+  They won't always be PredicateNodes, but this is the convention.
+  The use of the leading and trailing star-dash is also a convention,
+  and is not mandatory.
+
+* This object-oriented message-passing system is used by two important
+  subsystems: the StorageNode subsystem, described below, and the
+  SensoryNode subsystem.
+
+* The SensoryNode subsystem provides objects that explictly work with
+  and control external systems. SensoryNodes allow the state of the
+  external world to be perceived, and to be manipulated, Thus, it is
+  often called the sensori-motor system. All SensroyNodes support
+  the four open/close/read/write messages. Some support more. The
+  external target is generally indicated as a URL.
+
 Querying
 --------
 * The `QueryLink` and `JoinLink` can be used to perform complex and
@@ -344,7 +439,7 @@ Querying
   provide the "answer".
 * The act of querying is sometimes called "pattern matching". Note
   that the Atomese query system is far more sophisticated than what
-  other system call pattern matching. In other systems, "pattern
+  other systems call pattern matching. In other systems, "pattern
   matching" usually refers to a regex-like query. By contrast, the
   Atomese query system is stack-based, and performs a recursive
   traversal of the AtomSpace. Please do not confuse the simpler
@@ -353,6 +448,11 @@ Querying
 * The Atomese query system can be compared to SQL. However, it is
   more powerful than SQL, and can perform complex queries that SQL
   is not capable of.
+* In particular, AtomSpace queries are themselves hypergraphs, and
+  so can be queried and rewritten and manipulated.  That is, unlike
+  SQL, the query system does not live outside of the database: it is
+  "inside", represented with Atoms.
+
 * The indexing needed for good query performance is handled
   automatically by the AtomSpace; there are many indexes, but these are
   not explicitly visible, accessible or controllable.

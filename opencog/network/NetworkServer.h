@@ -72,6 +72,9 @@ public:
 
     /** Print network stats in human-readable tabular form */
     std::string display_stats(int nlines = -1);
+
+    /** Get the port this server is listening on */
+    short getPort() const { return _port; }
 }; // class
 
 /** @}*/

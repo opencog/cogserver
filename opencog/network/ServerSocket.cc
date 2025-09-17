@@ -216,6 +216,7 @@ ServerSocket::ServerSocket(void) :
     _do_frame_io(false),
     _is_http_socket(false),
     _got_websock_header(false),
+    _host_header(""),
     _keep_alive(false),
     _content_length(0),
     _is_mcp_socket(false)
@@ -332,26 +333,6 @@ void ServerSocket::Send(const std::string& cmd)
         Send(asio::const_buffer(cmd.c_str(), cmdsize));
         return;
     }
-
-#if 0
-    // ??? Why is this here? Who uses this? Is this for MCP?
-    if (_is_http_socket)
-    {
-        // Build HTTP response with Content-Length
-        // XXX FIXME Content-Type is wrong for everyone but JSON,
-        // but who cares because only JSON uses HTTP.
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: application/json\r\n"
-            "Content-Length: " + std::to_string(cmdsize) + "\r\n"
-            "Cache-Control: no-cache\r\n"
-            "Connection: keep-alive\r\n"
-            "\r\n";
-
-        // Send headers
-        send_websocket(response);
-    }
-#endif
 
     // If we are here, we have to perform websockets framing.
     send_websocket(cmd);
