@@ -182,7 +182,7 @@ public:
 		std::string body = response.substr(body_start + 4);
 		TS_ASSERT(!body.empty());
 		TS_ASSERT(body.find("<html>") != std::string::npos ||
-		          body.find("<HTML>") != std::string::npos);
+		          body.find("<!DOCTYPE html>") != std::string::npos);
 
 		// Stats page should contain network statistics
 		TS_ASSERT(body.find("Network Activity") != std::string::npos ||
