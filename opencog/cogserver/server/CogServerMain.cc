@@ -46,8 +46,9 @@ using namespace opencog;
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-v] [-DOPTION=\"VALUE\"]\n"
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-u <unix socket>] [-v] [-DOPTION=\"VALUE\"]\n"
         << "  -v    Print version and exit\n"
+        << "  -u    Unix domain socket path for MCP (e.g., /tmp/cogserver/mcp)\n"
         << "\n"
         << "Supported options and default values:\n"
         << "SERVER_PORT = 17001\n"
@@ -95,8 +96,9 @@ int main(int argc, char *argv[])
     int console_port = 17001;
     int webserver_port = 18080;
     int mcp_port = 18888;
+    std::string unix_socket_path;
 
-    static const char *optString = "p:w:m:D:hv";
+    static const char *optString = "p:w:m:u:D:hv";
     std::vector<std::pair<std::string, std::string>> configPairs;
     std::string progname = argv[0];
 
@@ -131,6 +133,8 @@ int main(int argc, char *argv[])
             webserver_port = atoi(optarg);
         } else if (c == 'm') {
             mcp_port = atoi(optarg);
+        } else if (c == 'u') {
+            unix_socket_path = optarg;
         } else if (c == 'v') {
             std::cout << "CogServer version " << COGSERVER_VERSION_STRING << std::endl;
             exit(0);
@@ -193,6 +197,8 @@ int main(int argc, char *argv[])
             cogserve.enableWebServer(webserver_port);
         if (0 < mcp_port)
             cogserve.enableMCPServer(mcp_port);
+        if (!unix_socket_path.empty())
+            cogserve.enableUnixMCPServer(unix_socket_path);
     }
     catch (const std::exception& ex)
     {

@@ -23,6 +23,9 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/cogserver/server/WebServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
+#ifdef HAVE_MCP
+#include <opencog/cogserver/server/UnixMCPServer.h>
+#endif
 
 #include "CogServer.h"
 
@@ -41,6 +44,7 @@ CogServer::CogServer(void) :
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
+    _unixMcpServer(nullptr),
     _running(false)
 {
 }
@@ -50,6 +54,7 @@ CogServer::CogServer(AtomSpacePtr as) :
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
+    _unixMcpServer(nullptr),
     _running(false)
 {
     if (nullptr == as)
@@ -170,6 +175,41 @@ void CogServer::disableMCPServer()
 {
 }
 
+void CogServer::enableUnixMCPServer(const std::string& socket_path)
+{
+#ifdef HAVE_MCP
+    if (_unixMcpServer) return;
+    try
+    {
+        _unixMcpServer = new UnixMCPServer(*this, socket_path);
+        _unixMcpServer->start();
+        _running = true;
+        logger().info("Unix MCP server running on socket %s", socket_path.c_str());
+    }
+    catch (const std::exception& ex)
+    {
+        fprintf(stderr, "Error: Cannot enable Unix MCP server at %s: %s\n",
+                socket_path.c_str(), ex.what());
+        throw;
+    }
+#else
+    printf("CogServer compiled without MCP Support.\n");
+    logger().info("CogServer compiled without MCP Support.");
+#endif // HAVE_MCP
+}
+
+void CogServer::disableUnixMCPServer()
+{
+#ifdef HAVE_MCP
+    if (_unixMcpServer)
+    {
+        _unixMcpServer->stop();
+        delete _unixMcpServer;
+        _unixMcpServer = nullptr;
+    }
+#endif // HAVE_MCP
+}
+
 void CogServer::stop()
 {
     _running = false;
@@ -198,6 +238,9 @@ void CogServer::serverLoop()
         _webServer->stop();
     if (_consoleServer)
         _consoleServer->stop();
+#ifdef HAVE_MCP
+    disableUnixMCPServer();
+#endif
 
     // Drain whatever is left in the queue.
     while (0 < getRequestQueueSize())

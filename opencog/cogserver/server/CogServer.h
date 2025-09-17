@@ -56,6 +56,7 @@ protected:
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
+    class UnixMCPServer* _unixMcpServer;
     bool _running;
 
     /** Protected; singleton instance! Bad things happen when there is
@@ -100,10 +101,14 @@ public:
 	 /** Starts the MCP Model Context Protocol server. */
     virtual void enableMCPServer(int port=18888);
 
+    /** Starts the Unix domain socket MCP server. */
+    virtual void enableUnixMCPServer(const std::string& socket_path = "/tmp/cogserver/mcp");
+
     /** Stops the network server and closes all the open server sockets. */
     virtual void disableNetworkServer(void);
     virtual void disableWebServer(void);
     virtual void disableMCPServer(void);
+    virtual void disableUnixMCPServer(void);
 
     bool running(void) { return _running; }
 

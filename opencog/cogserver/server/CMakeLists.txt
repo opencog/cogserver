@@ -3,6 +3,7 @@
 ADD_LIBRARY (server SHARED
 	CogServer.cc
 	MCPServer.cc
+	UnixMCPServer.cc
 	ModuleManager.cc
 	PageServer.cc
 	Request.cc
@@ -69,6 +70,7 @@ INSTALL (FILES
 	CogServer.h
 	Factory.h
 	MCPServer.h
+	UnixMCPServer.h
 	Module.h
 	ModuleManager.h
 	PageServer.h
