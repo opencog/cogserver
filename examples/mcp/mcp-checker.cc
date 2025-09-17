@@ -140,20 +140,11 @@ public:
     Json::Value receiveMessage() {
         if (!connected) return Json::Value();
 
-        std::string buffer;
+        static std::string buffer; // Make buffer static to preserve data between calls
         char recv_buf[4096];
 
         while (true) {
-            int received = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
-            if (received <= 0) {
-                std::cerr << "Failed to receive message" << std::endl;
-                return Json::Value();
-            }
-
-            recv_buf[received] = '\0';
-            buffer += recv_buf;
-
-            // Check if we have a complete line
+            // First check if we already have a complete line in the buffer
             size_t newline_pos = buffer.find('\n');
             if (newline_pos != std::string::npos) {
                 std::string line = buffer.substr(0, newline_pos);
@@ -169,6 +160,16 @@ public:
                 }
                 return root;
             }
+
+            // Read more data if we don't have a complete line
+            int received = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
+            if (received <= 0) {
+                std::cerr << "Failed to receive message" << std::endl;
+                return Json::Value();
+            }
+
+            recv_buf[received] = '\0';
+            buffer += recv_buf;
         }
     }
 
@@ -206,7 +207,7 @@ public:
 
     bool initialize(const std::string& name, const std::string& version) {
         Json::Value params;
-        params["protocolVersion"] = "2024-11-05";
+        params["protocolVersion"] = "2025-06-18";
         params["capabilities"] = Json::objectValue;
         params["clientInfo"]["name"] = name;
         params["clientInfo"]["version"] = version;
@@ -221,6 +222,12 @@ public:
             notification["method"] = "notifications/initialized";
             sendMessage(notification);
 
+            // Per JSON RPC spec, there should be no response to
+            // notifications. But we have to hack this, to keep
+            // Claude HTTP happy. So read a response, and discard it.
+            Json::Value init_response = receiveMessage();
+            std::cout << "DEBUG: initialize notification response: "
+                  << dump_result(init_response) << std::endl;
             return true;
         } catch (const std::exception& e) {
             std::cerr << "Initialize failed: " << e.what() << std::endl;
@@ -334,6 +341,7 @@ int main(int argc, char* argv[]) {
         std::cout << "\nListing available tools..." << std::endl;
         try {
             Json::Value tools_response = client.listTools();
+            std::cout << "DEBUG: Raw tools response: " << dump_result(tools_response) << std::endl;
 
             if (tools_response.isMember("tools") && tools_response["tools"].isArray()) {
                 Json::Value tools = tools_response["tools"];
@@ -376,25 +384,64 @@ int main(int argc, char* argv[]) {
         // List available resources
         std::cout << "\nListing available resources..." << std::endl;
         try {
-            Json::Value resources = client.listResources();
-            std::cout << "✓ Resources: " << dump_result(resources) << std::endl;
+            Json::Value resources_response = client.listResources();
+            std::cout << "DEBUG: Raw resources response: " << dump_result(resources_response) << std::endl;
 
-            // Try to read a resource if available
-            if (resources.isMember("resources") && resources["resources"].isArray() &&
-                resources["resources"].size() > 0) {
+            if (resources_response.isMember("resources") && resources_response["resources"].isArray()) {
+                Json::Value resources = resources_response["resources"];
+                std::cout << "✓ Found " << resources.size() << " resources:" << std::endl;
 
-                const Json::Value& first_resource = resources["resources"][0];
-                if (first_resource.isMember("uri")) {
-                    std::string uri = first_resource["uri"].asString();
-                    std::cout << "\nReading resource: " << uri << std::endl;
-
-                    try {
-                        Json::Value content = client.readResource(uri);
-                        std::cout << "✓ Resource content: " << dump_result(content) << std::endl;
-                    } catch (const std::exception& e) {
-                        std::cout << "✗ Failed to read resource: " << e.what() << std::endl;
+                for (Json::ArrayIndex i = 0; i < resources.size(); ++i) {
+                    const Json::Value& resource = resources[i];
+                    std::cout << "  - URI: " << resource["uri"].asString() << std::endl;
+                    if (resource.isMember("name")) {
+                        std::cout << "    Name: " << resource["name"].asString() << std::endl;
+                    }
+                    if (resource.isMember("description")) {
+                        std::cout << "    Description: " << resource["description"].asString() << std::endl;
+                    }
+                    if (resource.isMember("mimeType")) {
+                        std::cout << "    MIME Type: " << resource["mimeType"].asString() << std::endl;
                     }
                 }
+
+                // Try to read the first resource if available
+                if (resources.size() > 0) {
+                    const Json::Value& first_resource = resources[0];
+                    if (first_resource.isMember("uri")) {
+                        std::string uri = first_resource["uri"].asString();
+                        std::cout << "\nReading first resource: " << uri << std::endl;
+
+                        try {
+                            Json::Value read_response = client.readResource(uri);
+                            if (read_response.isMember("contents")) {
+                                Json::Value contents = read_response["contents"];
+                                if (contents.isArray() && contents.size() > 0) {
+                                    const Json::Value& first_content = contents[0];
+                                    if (first_content.isMember("text")) {
+                                        std::string text = first_content["text"].asString();
+                                        // Print first 200 chars of content
+                                        if (text.length() > 200) {
+                                            std::cout << "✓ Resource content (first 200 chars):\n"
+                                                      << text.substr(0, 200) << "..." << std::endl;
+                                        } else {
+                                            std::cout << "✓ Resource content:\n" << text << std::endl;
+                                        }
+                                    } else if (first_content.isMember("uri")) {
+                                        std::cout << "✓ Resource references URI: "
+                                                  << first_content["uri"].asString() << std::endl;
+                                    }
+                                }
+                            } else {
+                                std::cout << "✓ Read response: " << dump_result(read_response) << std::endl;
+                            }
+                        } catch (const std::exception& e) {
+                            std::cout << "✗ Failed to read resource: " << e.what() << std::endl;
+                        }
+                    }
+                }
+            } else {
+                std::cout << "✓ No resources available" << std::endl;
             }
         } catch (const std::exception& e) {
             std::cout << "✗ Failed to list resources: " << e.what() << std::endl;

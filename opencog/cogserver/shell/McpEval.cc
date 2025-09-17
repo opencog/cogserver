@@ -128,9 +128,12 @@ void McpEval::eval_expr(const std::string &expr)
 		           method == "initialized") {
 #define WTF_INIT
 #ifdef WTF_INIT
-			// Supposedly there should be no response here, but its
-			// broken if we're silent. So ... !???
+			// Notifications (requests without id) should not send a
+			// response per JSON-RPC spec.
+			// But HTTP clients need some response to be sent back.
+			// Return an empty result object to keep HTTP happy.
 			response["result"] = Json::objectValue;
+			response.removeMember("id");
 #else
 			// Notification - no response
 			_result = "";
