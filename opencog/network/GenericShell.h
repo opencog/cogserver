@@ -73,7 +73,6 @@ class GenericShell
 		volatile bool self_destruct;
 		bool apply_discipline;
 
-		virtual GenericEval* get_evaluator(void) = 0;
 		virtual void thread_init(void);
 		virtual void line_discipline(const std::string &expr);
 
@@ -111,6 +110,8 @@ class GenericShell
 		virtual void hush_output(bool);
 		virtual void hush_prompt(bool);
 		virtual void discipline(bool);
+
+		virtual GenericEval* get_evaluator(void) = 0;
 
 		// Monitor statistics
 		const char* _name;

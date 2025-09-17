@@ -7,6 +7,7 @@
 
 #ifdef HAVE_OPENSSL
 
+#include <cstring>
 #include <string>
 #include <openssl/sha.h>
 
@@ -17,6 +18,7 @@
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/PageServer.h>
 #include <opencog/cogserver/server/WebServer.h>
+#include <opencog/eval/GenericEval.h>
 
 using namespace opencog;
 
@@ -111,7 +113,42 @@ void WebServer::OnLine(const std::string& line)
 		// Disable line discipline
 		_shell->discipline(false);
 	}
-	_shell->eval(line);
+
+	// Non-HTTP connection - use normal threaded evaluation
+	if (not _is_http_socket)
+	{
+		_shell->eval(line);
+		return;
+	}
+
+	// For non-WebSocket HTTP connections, don't use the shell's threaded evaluation
+	// Instead, get the evaluator directly and use it synchronously
+	GenericEval* eval = _shell->get_evaluator();
+
+	// Start evaluation
+	eval->begin_eval();
+
+	// Evaluate the expression
+	eval->eval_expr(line);
+
+	// Collect all results
+	std::string result;
+	std::string chunk;
+	do {
+		chunk = eval->poll_result();
+		result += chunk;
+	} while (!chunk.empty());
+
+	// Send with appropriate HTTP headers
+	if (!result.empty())
+	{
+		// Determine content type based on shell type
+		std::string content_type = "text/plain";
+		if (strcmp(_shell->_name, "mcp") == 0 || strcmp(_shell->_name, "json") == 0)
+			content_type = "application/json";
+
+		SendWithHeader(result, content_type);
+	}
 }
 
 
@@ -327,6 +364,26 @@ std::string WebServer::oauth_register_not_required(void)
 	return response;
 }
 #endif // HAVE_MCP
+
+// Send with HTTP headers for shell output
+void WebServer::SendWithHeader(const std::string& msg, const std::string& content_type)
+{
+	// Build HTTP response with Content-Length
+	std::string response = "HTTP/1.1 200 OK\r\n";
+	response += "Server: CogServer\r\n";
+	response += "Content-Type: ";
+	response += content_type;
+	response += "\r\n";
+	response += "Content-Length: ";
+	char buf[20];
+	snprintf(buf, 20, "%lu", msg.size());
+	response += buf;
+	response += "\r\n\r\n";
+	response += msg;
+
+	// Send the complete HTTP response
+	Send(response);
+}
 
 #endif // HAVE_OPENSSL
 // ==================================================================

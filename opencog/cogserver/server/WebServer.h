@@ -43,6 +43,9 @@ protected:
 	std::string oauth_authorization_server(void);
 	std::string oauth_register_not_required(void);
 #endif
+
+	// Send with HTTP headers for shell output
+	void SendWithHeader(const std::string& msg, const std::string& content_type);
 public:
     WebServer(CogServer&);
     ~WebServer();
