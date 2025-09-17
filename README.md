@@ -29,16 +29,26 @@ This capability is useful in several different ways:
   monitoring status, and poking around and performing general
   maintenance on long-running servers.
 
-* **Network command line.** Ordinary Python does not allow multiple
-  users to access it at the same time. With the CogServer, multiple
-  Python users can use it simultaneously. As to scheme/guile, whereas
-  there is an ice-9 REPL server, the CogServer is an order of magnitude
-  faster, lower latency/higher throughput, and infinitely more stable;
-  its free of lockups, hangs and crashes. It's fast.
+* **Multi-user Network command line.** Ordinary Python does not allow
+  multiple users to access it at the same time.  With the CogServer,
+  multiple python users can use it simultaneously. All python state is
+  visible to all python users. All changes to the AtomSpace become
+  immediately available to Python, Scheme, JSON and s-expression users.
+
+* **Fast Scheme REPL.** The network command line also includes a
+  scheme (guile) interface.  It is an order of magnitude faster than
+  the ice-9 REPL server, with much lower latency and higher throughput.
+  It is also stable; its free of lockups, hangs and crashes. It's fast.
+
+* ** Bulk data transfer.** The network command line also includes a
+  raw s-expression interface. This is another order of magnitude faster
+  than either python or scheme, and allows bulk data transfer.  It is
+  also several orders of magnitude faster than conventional ZeroMQ,
+  HTTP, RPC, JSON or Protobuff protocols.
 
 * **WebSocket API.** All interfaces are accessible through websockets.
-  The only difference is that prompts are not sent. For example, the
-  python API is available at `ws://localhost:18080/py`.  At this time,
+  The only difference is that telnet prompts are not sent. For example,
+  the python API is available at `ws://localhost:18080/py`.  At this time,
   encryption is not supported, so `wss://` URL's will not work.
   See the [websocket example](./examples/websockets/demo.html) for more.
 
@@ -47,34 +57,28 @@ This capability is useful in several different ways:
   comfortable working with JSON.  This API is available at
   `ws://localhost:18080/json`.
 
-* **Bulk data transfer.** The base "s-expression" encoding of Atoms and
-  (Truth)Values is UTF-8 text string format. It's  human-readable, easy
-  and efficient. It does not require fiddling with complex binary formats
-  or protocols or the use of protocol libraries or API's. (We're looking
-  at you, HTTP, REST, ZeroMQ, ProtoBuff and friends. You are all very
-  sophisticated, yes, but are hard to use. And sometimes painfully slow.)
-
 * **Network-distributed processing.** The [StorageNode
   API](https://wiki.opencog.org/w/StorageNode) provides a uniform data
   transfer API to local disk, 3rd-party databases and network. The
   CogServer implements this API, thus allowing multiple AtomSpaces
   distributed on the network to share data.
 
-* **Proxy Agents.** The proxy infrastructure has been replaced by a
-  more general, more flexible, more powerful and configurable proxying
-  system. See the AtomSpace Storage git repo, in the
-  [opencog/persist/proxy directory.](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/proxy)
+* **Proxy Agents.** Proxies allow mirroring, load-balancing and
+  caching.  See the AtomSpace Storage git repo, in the
+  [opencog/persist/proxy directory](https://github.com/opencog/atomspace-storage/tree/master/opencog/persist/proxy)
+  in the `atomspace-storage` git repo.
 
-* **Model Context Protocol.** An experimental MCP interface is being
-  developed; this allows MCP-compatible LLM's to interact with the
-  AtomSpace. There are two interfaces to it; one is plain-text, as would
-  be the case for stdio MCP servers. The other is a standard HTTP
-  connection.  See the [MCP README](./examples/mcp/README.md) for more
-  info.
+* **Model Context Protocol.** An MCP interface has been developed;
+  this allows MCP-compatible LLM's to interact with the AtomSpace.
+  You can examine and change AtomSpace contents merely by asking the
+  LLM to do it for you! No more coding in Atomese! Just talk to it!
+  There are three interfaces: standard HTTP, websockets and raw
+  JSON/RPC over a TCP/IP socket.
+  See the [MCP README](./examples/mcp/README.md) for more info.
 
-* The `stats` command provides a `top`-like command for viewing who is
-  connected to the Cogserver, and what they are doing. Type `help stats`
-  for more info.
+* **Demo visualizer.** This is a simple html/js visualizer for the
+  AtomSpace contents, accessbile with standard web browsers. Just
+  start the CogServer, open http://localhost:18080/ and go.
 
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
@@ -82,8 +86,7 @@ For more info, please consult the
 Version
 -------
 This is **version 3.3.0**. The code is stable, it's been used in
-production settings for a decade.   There are no known bugs. There are
-some planned features; see below.
+production settings for over a decade.   There are no known bugs.
 
 Using
 -----
@@ -91,36 +94,57 @@ There are three ways to start the cogserver: from a bash shell prompt
 (as a stand-alone process), from the guile command line, or from the
 python command line.
 
-* From bash, just start the process:
-  `$ build/opencog/cogserver/server/cogserver`
+* From bash, after installing, just start the process:
+  `$ cogserver`
+  Add the `-h` flag to get a list of configurable settings.
 
 * From guile: `(use-modules (opencog cogserver)) (start-cogserver)`
+  Use `,describe start-cogserver` at the guile REPL to get
+  documentation.
 
-* From python: `import opencog.cogserver` and then
-  `??? start_cogserver() ???` (where's the documentation for this?)
-  (At this time, there is no currently active python maintainer. Help
-  wanted.)
+* From python:
+```
+from opencog.atomspace import AtomSpace
+from opencog.cogserver import *
+my_atomspace = AtomSpace()
+start_cogserver(atomspace=my_atomspace)
+```
+See the [python example](./examples/python/start_cogserver.py) for
+more details.
 
-Once started, one can obtain a shell by saying `rlwrap telnet localhost
-17001`, and then `py`, `scm` or `json` to obtain python, scheme or json
-shells.  This can be done as many times as desired; all shells share the
-same AtomSpace, and the system is fully multi-threaded/thread-safe.
-The status of all network connections is displayed by `stats`. For more
-info, type `help py`, `help scm`, `help json` and `help stats`.
+There are several ways to interact with a running cogserver. One way
+is either through HTTP or websockets: point your web browser at
+`http://localhost:18080` and go.
 
-The `rlwrap` utility simply adds arrow-key support, so that up-arrow
-provides a command history, and left-right arrow allows in-place editing.
-Note that `telnet` does not provide any password protection!  It is
-fully networked, so you can telnet from other hosts. The default port
-number `17001` can be changed; see the documentation.
+To use an LLM to view and manipulate the AtomSpace, just tell the LLM
+where to find it. For Anthropic Claude, this  would be:
+```
+claude mcp add atomese -t http http://localhost:18080/mcp
+```
+
+The command-line telnet shell is accessed by saying
+`rlwrap telnet localhost 17001`. Type `help` for a list of availble
+commands. These include the `py`, `scm`, `json` and `sexpr` shells
+(for python, scheme, json and s-expressions.) A one-shot python
+evaluator is available at `py-eval`: it will run a blob of python
+code and return immediately, without providing a shell.
+
+The system is multi-user: all shells share the same AtomSpace.
+The status of all network connections is displayed by `stats` and
+`top`. For more info, type `help py`, `help scm`, `help json` and
+`help stats`.
+
+By using `telnet` with `rlwrap`, one gets arrow-key support, so that
+up-arrow provides a command history, and left-right arrow allows
+in-place editing.
+
+There is no authentication or password protection! If you need that,
+you need to download, install and configure an authentication server
+that can wrap the CogServer.
 
 The socket protocol used is 'trivial'. Thus, besides `telnet`, one can
 also use `netcat`, or access the socket directly, with ordinary socket
 connect, open and read/write calls.
-
-WebSocket programmers will find it convenient to use their own favorite
-tools to access the json API. A very simple example can be found in the
-[WebSocket Example](examples/websockets/) directory.
 
 Building and Running
 --------------------
@@ -133,6 +157,7 @@ mkdir build
 cd build
 cmake ..
 make -j
+sudo make install
 ```
 For additional information on dependencies and general hand-holding
 with the build, see the [building Opencog
@@ -148,10 +173,6 @@ To build and run the CogServer, you need to install the AtomSpace first.
 > It uses exactly the same build procedure as this package. Be sure
   to `sudo make install` at the end.
 
-The WebSockets server needs the OpenSSL devel environment to be
-installed. Optional; if not installed, the cogserver will be built
-without websockets support.
-
 ###### ASIO
 > The ASIO asynchronous IO system.
 > On Debian/Ubuntu, `sudo apt install libasio-dev`
@@ -160,66 +181,32 @@ without websockets support.
 > OpenSSL
 > On Debian/Ubuntu, `sudo apt install libssl-dev`
 
-The MCP Model Context Protocol server needs the NLohmann JSON devel
-environment to be installed.  Optional; if not installed, the cogserver
-will be built without MCP support.
+If you don't install SSL, you'll get a CogServer without
+websockets support.
 
-###### NLohmann JSON
+###### JSON
 > JSON support library
-> On Debian/Ubuntu, `sudo apt install nlohmann-json3-dev`
+> On Debian/Ubuntu, `sudo apt install libjsoncpp-dev`
+
+If you don't install JSON, you'll get a CogServer without
+JSON support.
 
 
 Unit tests
 ----------
 To build and run the unit tests, just say
 ```
-    make test
+    make -j check
 ```
 from the `./build` directory.
 
 Architecture
 ------------
-See also these README's:
+The system archtiecture is described in these README's:
 
-* [proxy/README](opencog/cogserver/proxy/README.md)
 * [network/README](opencog/network/README.md)
 * [cogserver/README](opencog/cogserver/server/README.md)
 * [builtin-module/README](opencog/cogserver/modules/commands/README.md)
 * [cython/README](opencog/cython/README.md)
 
-TODO
 ----
-There are two major open ToDo items for the CogServer.  These are:
-
-* **Distributed computing.** How to build a distributed computing fabric
-  for AtomSpace data? The read-thru and write-thru proxies provide basic
-  building blocks for distributed computing: they can forward I/O
-  traffic to other servers.
-  See the [proxy/README](opencog/cogserver/proxy/README.md) for details.
-  There are no automation tools for configuring these into a large complex
-  network. There is a project for this in the
-  [AtomSpace Agents](https://github.com/opencog/atomspace-agents) git
-  repo. It is currently abandoned (due to lack of interest).
-
-* **Security.** Right now, anyone who has network access can attach to
-  the CogServer, and do anything. There are three different ways to do
-  'anything':
-
-  * The top-level CogServer shell allows arbitrary loadable modules to
-    be loaded.
-  * The python and scheme shells allow the execution of arbitrary python
-    and scheme code, including system calls. This includes file writes.
-  * The sexpr and json shells are "controlled", in that they do NOT
-    allow access to system calls.  However, they do allow arbitrary
-    changes to the made to the AtomSpace, including insertion and
-    deletion of Atoms. The `GroundedPredicateNode` allows for the
-    arbitrary execution of arbitrary scheme and python code.
-
-It's not clear how to introduce security into this model, other than to
-only open network connections to trusted, authorized users. Presumably,
-there are several off-the-shelf solutions for controlling network
-access, but no one has picked a good one. Obviously, exporting the
-CogServer socket via SSH is a good way of controlling access to who
-can use it. But SSH proxying is very low-level, and not admin-friendly.
-Nor particularly user-friendly, either: the user can't just login into
-some website and ask for access.
