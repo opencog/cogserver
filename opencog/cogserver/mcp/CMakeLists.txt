@@ -3,6 +3,9 @@
 INSTALL(FILES
 	AtomSpace-Details.md
 	AtomSpace-Overview.md
+	CreateAtom-Prompt.md
+	QueryAtom-Prompt.md
+	WorkingWithValues-Prompt.md
 	DESTINATION share/cogserver/mcp
 	COMPONENT mcp
 )
