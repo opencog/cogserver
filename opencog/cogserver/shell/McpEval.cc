@@ -116,6 +116,11 @@ void McpEval::eval_expr(const std::string &expr)
 			resourcesCapability["listChanged"] = false;  // Static resource list
 			response["result"]["capabilities"]["resources"] = resourcesCapability;
 
+			// Indicate that we support prompts for guided tool usage
+			Json::Value promptsCapability;
+			promptsCapability["listChanged"] = false;  // Static prompt list
+			response["result"]["capabilities"]["prompts"] = promptsCapability;
+
 			response["result"]["serverInfo"]["name"] = "CogServer MCP";
 			response["result"]["serverInfo"]["version"] = "0.1.1";
 			response["result"]["serverInfo"]["instructions"] =
@@ -191,6 +196,28 @@ void McpEval::eval_expr(const std::string &expr)
 			resources.append(guide_resource);
 
 			response["result"]["resources"] = resources;
+		} else if (method == "prompts/list") {
+			Json::Value prompts(Json::arrayValue);
+
+			// Prompt for creating Atoms
+			Json::Value create_prompt;
+			create_prompt["name"] = "create-atoms";
+			create_prompt["description"] = "Guide for creating Nodes and Links in the AtomSpace";
+			prompts.append(create_prompt);
+
+			// Prompt for querying AtomSpace
+			Json::Value query_prompt;
+			query_prompt["name"] = "query-atomspace";
+			query_prompt["description"] = "Guide for querying and exploring the AtomSpace effectively";
+			prompts.append(query_prompt);
+
+			// Prompt for working with Values
+			Json::Value values_prompt;
+			values_prompt["name"] = "work-with-values";
+			values_prompt["description"] = "Guide for working with Values, Truth Values, and key-value pairs";
+			prompts.append(values_prompt);
+
+			response["result"]["prompts"] = prompts;
 		} else if (method == "resources/read") {
 			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
 
