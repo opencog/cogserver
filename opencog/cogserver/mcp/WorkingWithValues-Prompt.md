@@ -10,7 +10,7 @@ This prompt explains how to work with the Value system in the AtomSpace.
   - FloatValue (vectors of floats)
   - StringValue (vectors of strings)
   - LinkValue (vectors of other Values)
-  - TruthValue (strength and confidence)
+  - SimpleTruthValue (strength and confidence - probabilistic values)
   - Other specialized Value types
 
 ## Key-Value Pairs
