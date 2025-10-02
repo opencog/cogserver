@@ -1,45 +1,54 @@
 # Creating Atoms in the AtomSpace
 
-This prompt helps you create Atoms (Nodes and Links) in the AtomSpace correctly.
+This prompt helps you create Atoms (Nodes and Links) in the AtomSpace using Atomese s-expressions.
 
 ## Key Concepts
 
 1. **Nodes** - Have a type and a name. Names are UTF-8 strings.
 2. **Links** - Have a type and an outgoing set (list of Atoms).
 3. **Atoms are globally unique** - Creating the same Atom twice returns the same Atom.
+4. **Atomese** - The s-expression language: `(Concept "name")` for Nodes, `(List ...)` for Links.
+
+## Atomese Format
+
+All MCP commands use **s-expressions** wrapped in an `atomese` field:
+
+**Input**: `{"atomese": "(Concept \"cat\")"}`
+
+**Output**: `(Concept "cat")`
+
+**Note**: You can omit "Node" and "Link" suffixes. Write `Concept` instead of `ConceptNode`, `List` instead of `ListLink`, etc.
 
 ## Common Atom Types
 
 ### Node Types
-- `ConceptNode` - Represents a concept (e.g., "cat", "dog", "color")
-- `PredicateNode` - Represents a predicate/property (e.g., "is-red", "has-color")
-- `NumberNode` - Represents a number (stored as string)
-- `VariableNode` - Represents a variable in patterns
+- `Concept` - Represents a concept (e.g., "cat", "dog", "color")
+- `Predicate` - Represents a predicate/property (e.g., "is-red", "has-color")
+- `Number` - Represents a number (stored as string)
+- `Variable` - Represents a variable in patterns
 
 ### Link Types
-- `ListLink` - Ordered list of Atoms
-- `SetLink` - Unordered set of Atoms
-- `EvaluationLink` - Relates a predicate to arguments
-- `InheritanceLink` - Represents "is-a" relationships
-- `MemberLink` - Represents set membership
+- `List` - Ordered list of Atoms
+- `Set` - Unordered set of Atoms
+- `Evaluation` - Relates a predicate to arguments
+- `Inheritance` - Represents "is-a" relationships
+- `Member` - Represents set membership
 
 ## Creating Nodes
 
 **Tool**: `makeAtom`
 
-**Example: Create a ConceptNode**
+**Example: Create a Concept**
 ```json
 {
-  "type": "ConceptNode",
-  "name": "cat"
+  "atomese": "(Concept \"cat\")"
 }
 ```
 
-**Example: Create a PredicateNode**
+**Example: Create a Predicate**
 ```json
 {
-  "type": "PredicateNode",
-  "name": "has-color"
+  "atomese": "(Predicate \"has-color\")"
 }
 ```
 
@@ -47,31 +56,17 @@ This prompt helps you create Atoms (Nodes and Links) in the AtomSpace correctly.
 
 **Tool**: `makeAtom`
 
-**Example: Create a ListLink**
+**Example: Create a List**
 ```json
 {
-  "type": "ListLink",
-  "outgoing": [
-    {"type": "ConceptNode", "name": "cat"},
-    {"type": "ConceptNode", "name": "mat"}
-  ]
+  "atomese": "(List (Concept \"cat\") (Concept \"mat\"))"
 }
 ```
 
-**Example: Create an EvaluationLink**
+**Example: Create an Evaluation**
 ```json
 {
-  "type": "EvaluationLink",
-  "outgoing": [
-    {"type": "PredicateNode", "name": "has-color"},
-    {
-      "type": "ListLink",
-      "outgoing": [
-        {"type": "ConceptNode", "name": "sky"},
-        {"type": "ConceptNode", "name": "blue"}
-      ]
-    }
-  ]
+  "atomese": "(Evaluation (Predicate \"has-color\") (List (Concept \"sky\") (Concept \"blue\")))"
 }
 ```
 
@@ -83,9 +78,9 @@ This prompt helps you create Atoms (Nodes and Links) in the AtomSpace correctly.
 ```json
 {
   "atoms": [
-    {"type": "ConceptNode", "name": "cat"},
-    {"type": "ConceptNode", "name": "dog"},
-    {"type": "ConceptNode", "name": "bird"}
+    {"atomese": "(Concept \"cat\")"},
+    {"atomese": "(Concept \"dog\")"},
+    {"atomese": "(Concept \"bird\")"}
   ]
 }
 ```
@@ -103,17 +98,7 @@ This prompt helps you create Atoms (Nodes and Links) in the AtomSpace correctly.
 "The sky is blue"
 ```json
 {
-  "type": "EvaluationLink",
-  "outgoing": [
-    {"type": "PredicateNode", "name": "has-color"},
-    {
-      "type": "ListLink",
-      "outgoing": [
-        {"type": "ConceptNode", "name": "sky"},
-        {"type": "ConceptNode", "name": "blue"}
-      ]
-    }
-  ]
+  "atomese": "(Evaluation (Predicate \"has-color\") (List (Concept \"sky\") (Concept \"blue\")))"
 }
 ```
 
@@ -121,11 +106,7 @@ This prompt helps you create Atoms (Nodes and Links) in the AtomSpace correctly.
 "A cat is an animal"
 ```json
 {
-  "type": "InheritanceLink",
-  "outgoing": [
-    {"type": "ConceptNode", "name": "cat"},
-    {"type": "ConceptNode", "name": "animal"}
-  ]
+  "atomese": "(Inheritance (Concept \"cat\") (Concept \"animal\"))"
 }
 ```
 
@@ -133,16 +114,6 @@ This prompt helps you create Atoms (Nodes and Links) in the AtomSpace correctly.
 For representing directed graphs:
 ```json
 {
-  "type": "EdgeLink",
-  "outgoing": [
-    {"type": "PredicateNode", "name": "follows"},
-    {
-      "type": "ListLink",
-      "outgoing": [
-        {"type": "ItemNode", "name": "Alice"},
-        {"type": "ItemNode", "name": "Bob"}
-      ]
-    }
-  ]
+  "atomese": "(Edge (Predicate \"follows\") (List (Item \"Alice\") (Item \"Bob\")))"
 }
 ```
