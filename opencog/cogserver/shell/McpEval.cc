@@ -152,7 +152,7 @@ void McpEval::eval_expr(const std::string &expr)
 			response["result"]["capabilities"]["prompts"] = promptsCapability;
 
 			response["result"]["serverInfo"]["name"] = "CogServer MCP";
-			response["result"]["serverInfo"]["version"] = "0.1.1";
+			response["result"]["serverInfo"]["version"] = "0.2.0";
 			response["result"]["serverInfo"]["instructions"] =
 				"The CogServer MCP provides access to a live, running instance of the "
 				"AtomSpace. It allows the MCP client to view and manipulate the contents "

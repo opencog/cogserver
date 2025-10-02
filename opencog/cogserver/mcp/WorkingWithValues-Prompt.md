@@ -1,11 +1,11 @@
 # Working with Values
 
-This prompt explains how to work with the Value system in the AtomSpace.
+This prompt explains how to work with the Value system in the AtomSpace using Atomese s-expressions.
 
 ## Value System Overview
 
 - Every Atom can have **key-value pairs** attached to it
-- Keys are Atoms (usually PredicateNodes)
+- Keys are Atoms (usually Predicates)
 - Values can be:
   - FloatValue (vectors of floats)
   - StringValue (vectors of strings)
@@ -13,21 +13,26 @@ This prompt explains how to work with the Value system in the AtomSpace.
   - SimpleTruthValue (strength and confidence - probabilistic values)
   - Other specialized Value types
 
+## Atomese Format
+
+All MCP commands use **s-expressions** for Atoms:
+- Input: `{"atomese": "(Concept \"cat\")"}` (shortened forms accepted)
+- Output: `(ConceptNode "cat")` (full type names always used)
+
 ## Key-Value Pairs
 
 ### Getting All Keys on an Atom
 
-**Tool**: `getKey`
+**Tool**: `getKeys`
 
 **Example**:
 ```json
 {
-  "type": "ConceptNode",
-  "name": "cat"
+  "atomese": "(Concept \"cat\")"
 }
 ```
 
-**Returns**: Array of Atoms that are used as keys
+**Returns**: `(alist (PredicateNode "weight")(PredicateNode "age")...)`
 
 ### Getting All Values on an Atom
 
@@ -36,12 +41,11 @@ This prompt explains how to work with the Value system in the AtomSpace.
 **Example**:
 ```json
 {
-  "type": "ConceptNode",
-  "name": "cat"
+  "atomese": "(Concept \"cat\")"
 }
 ```
 
-**Returns**: Object with all key-value pairs
+**Returns**: S-expression with all key-value pairs
 
 ### Getting a Specific Value
 
@@ -50,11 +54,9 @@ This prompt explains how to work with the Value system in the AtomSpace.
 **Example: Get the value at key "weight"**
 ```json
 {
-  "type": "ConceptNode",
-  "name": "cat",
+  "atomese": "(Concept \"cat\")",
   "key": {
-    "type": "PredicateNode",
-    "name": "weight"
+    "atomese": "(Predicate \"weight\")"
   }
 }
 ```
@@ -66,11 +68,9 @@ This prompt explains how to work with the Value system in the AtomSpace.
 **Example: Store a numeric measurement**
 ```json
 {
-  "type": "ConceptNode",
-  "name": "cat",
+  "atomese": "(Concept \"cat\")",
   "key": {
-    "type": "PredicateNode",
-    "name": "weight"
+    "atomese": "(Predicate \"weight\")"
   },
   "value": {
     "type": "FloatValue",
@@ -82,11 +82,9 @@ This prompt explains how to work with the Value system in the AtomSpace.
 **Example: Store multiple measurements**
 ```json
 {
-  "type": "ConceptNode",
-  "name": "experiment-001",
+  "atomese": "(Concept \"experiment-001\")",
   "key": {
-    "type": "PredicateNode",
-    "name": "measurements"
+    "atomese": "(Predicate \"measurements\")"
   },
   "value": {
     "type": "FloatValue",
@@ -98,11 +96,9 @@ This prompt explains how to work with the Value system in the AtomSpace.
 **Example: Store text data**
 ```json
 {
-  "type": "ConceptNode",
-  "name": "document-123",
+  "atomese": "(Concept \"document-123\")",
   "key": {
-    "type": "PredicateNode",
-    "name": "tags"
+    "atomese": "(Predicate \"tags\")"
   },
   "value": {
     "type": "StringValue",
@@ -154,21 +150,19 @@ Stores probabilistic truth information
 
 ```json
 // Create the person
-{"type": "ConceptNode", "name": "Alice"}
+{"atomese": "(Concept \"Alice\")"}
 
 // Store age
 {
-  "type": "ConceptNode",
-  "name": "Alice",
-  "key": {"type": "PredicateNode", "name": "age"},
+  "atomese": "(Concept \"Alice\")",
+  "key": {"atomese": "(Predicate \"age\")"},
   "value": {"type": "FloatValue", "value": [25.0]}
 }
 
 // Store weight
 {
-  "type": "ConceptNode",
-  "name": "Alice",
-  "key": {"type": "PredicateNode", "name": "weight-kg"},
+  "atomese": "(Concept \"Alice\")",
+  "key": {"atomese": "(Predicate \"weight-kg\")"},
   "value": {"type": "FloatValue", "value": [65.5]}
 }
 ```
@@ -179,9 +173,8 @@ Stores probabilistic truth information
 
 ```json
 {
-  "type": "ConceptNode",
-  "name": "word-cat",
-  "key": {"type": "PredicateNode", "name": "embedding"},
+  "atomese": "(Concept \"word-cat\")",
+  "key": {"atomese": "(Predicate \"embedding\")"},
   "value": {
     "type": "FloatValue",
     "value": [0.123, -0.456, 0.789]
@@ -195,9 +188,8 @@ Stores probabilistic truth information
 
 ```json
 {
-  "type": "ConceptNode",
-  "name": "paper-2024-001",
-  "key": {"type": "PredicateNode", "name": "keywords"},
+  "atomese": "(Concept \"paper-2024-001\")",
+  "key": {"atomese": "(Predicate \"keywords\")"},
   "value": {
     "type": "StringValue",
     "value": ["machine learning", "neural networks", "transformers"]
@@ -212,23 +204,14 @@ Stores probabilistic truth information
 ```json
 // Create the relationship
 {
-  "type": "InheritanceLink",
-  "outgoing": [
-    {"type": "ConceptNode", "name": "Tweety"},
-    {"type": "ConceptNode", "name": "bird"}
-  ]
+  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))"
 }
 
 // Set its truth value using setValue with the predefined truth-value key
 {
-  "type": "InheritanceLink",
-  "outgoing": [
-    {"type": "ConceptNode", "name": "Tweety"},
-    {"type": "ConceptNode", "name": "bird"}
-  ],
+  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))",
   "key": {
-    "type": "PredicateNode",
-    "name": "*-TruthValueKey-*"
+    "atomese": "(Predicate \"*-TruthValueKey-*\")"
   },
   "value": {
     "type": "SimpleTruthValue",
@@ -239,43 +222,61 @@ Stores probabilistic truth information
 
 ## Best Practices
 
-1. **Use PredicateNodes as keys**: This is the convention
+1. **Use Predicates as keys**: This is the convention
 2. **Choose appropriate Value types**: FloatValue for numbers, StringValue for text
-3. **Truth Values**: Use the predefined `*-TruthValueKey-*` key with setValue/getValueAtKey
+3. **Truth Values**: Use the predefined `*-TruthValueKey-*` Predicate with setValue/getValueAtKey
 4. **Vector nature**: Remember that Values are vectors, not single items
 5. **Immutability**: Atoms themselves are immutable, but Values can be changed
 
 ## Common Patterns
 
 ### Store and Retrieve Numeric Data
-```javascript
+```json
 // Store
-setValue(atom, "key-name", FloatValue([1.0, 2.0]))
+{
+  "atomese": "(Concept \"data\")",
+  "key": {"atomese": "(Predicate \"values\")"},
+  "value": {"type": "FloatValue", "value": [1.0, 2.0]}
+}
 
 // Retrieve
-getValueAtKey(atom, "key-name")
+{
+  "atomese": "(Concept \"data\")",
+  "key": {"atomese": "(Predicate \"values\")"}
+}
 ```
 
 ### Store and Retrieve Metadata
-```javascript
+```json
 // Store
-setValue(atom, "metadata", StringValue(["tag1", "tag2"]))
+{
+  "atomese": "(Concept \"item\")",
+  "key": {"atomese": "(Predicate \"metadata\")"},
+  "value": {"type": "StringValue", "value": ["tag1", "tag2"]}
+}
 
 // Retrieve all keys
-getKey(atom)
+{"atomese": "(Concept \"item\")"}
 
 // Retrieve all values
-getValues(atom)
+{"atomese": "(Concept \"item\")"}
 ```
 
 ### Work with Uncertain Knowledge
-```javascript
+```json
 // Create relationship
-makeAtom(InheritanceLink(concept1, concept2))
+{"atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))"}
 
 // Add uncertainty using setValue with truth-value key
-setValue(InheritanceLink(concept1, concept2), "*-TruthValueKey-*", SimpleTruthValue([strength, confidence]))
+{
+  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))",
+  "key": {"atomese": "(Predicate \"*-TruthValueKey-*\")"},
+  "value": {"type": "SimpleTruthValue", "value": [0.95, 0.90]}
+}
 
 // Check uncertainty using getValueAtKey
-getValueAtKey(InheritanceLink(concept1, concept2), "*-TruthValueKey-*")
+{
+  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))",
+  "key": {"atomese": "(Predicate \"*-TruthValueKey-*\")"}
+}
 ```
