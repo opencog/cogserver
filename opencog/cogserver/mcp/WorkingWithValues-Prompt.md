@@ -16,8 +16,8 @@ This prompt explains how to work with the Value system in the AtomSpace using At
 ## Atomese Format
 
 All MCP commands use **s-expressions** for Atoms:
-- Input: `{"atomese": "(Concept \"cat\")"}`
-- Output: `(Concept "cat")` or value representations
+- Input: `{"atomese": "(Concept \"cat\")"}` (shortened forms accepted)
+- Output: `(ConceptNode "cat")` (full type names always used)
 
 ## Key-Value Pairs
 
@@ -32,7 +32,7 @@ All MCP commands use **s-expressions** for Atoms:
 }
 ```
 
-**Returns**: `(alist (Predicate "weight")(Predicate "age")...)`
+**Returns**: `(alist (PredicateNode "weight")(PredicateNode "age")...)`
 
 ### Getting All Values on an Atom
 

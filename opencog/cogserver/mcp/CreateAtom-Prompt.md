@@ -15,9 +15,9 @@ All MCP commands use **s-expressions** wrapped in an `atomese` field:
 
 **Input**: `{"atomese": "(Concept \"cat\")"}`
 
-**Output**: `(Concept "cat")`
+**Output**: `(ConceptNode "cat")`
 
-**Note**: You can omit "Node" and "Link" suffixes. Write `Concept` instead of `ConceptNode`, `List` instead of `ListLink`, etc.
+**Note**: In input, you can omit "Node" and "Link" suffixes (write `Concept` instead of `ConceptNode`). In output, the full type names are always used.
 
 ## Common Atom Types
 
