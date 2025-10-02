@@ -738,8 +738,8 @@ function valueToSExpression(value) {
     } else if (Array.isArray(values)) {
         // FloatValue, LinkValue, etc.: just space-separated values
         return `(${valueType} ${values.join(' ')})`;
-    } else if (valueType === 'TruthValue' && values && Array.isArray(values.value)) {
-        // TruthValue has nested structure
+    } else if (valueType === 'SimpleTruthValue' && values && Array.isArray(values.value)) {
+        // SimpleTruthValue has nested structure
         return `(${valueType} ${values.value.join(' ')})`;
     } else {
         // Fallback: try to stringify the value part

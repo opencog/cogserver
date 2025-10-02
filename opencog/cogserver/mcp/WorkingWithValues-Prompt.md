@@ -1,4 +1,4 @@
-# Working with Values and Truth Values
+# Working with Values
 
 This prompt explains how to work with the Value system in the AtomSpace.
 
@@ -10,65 +10,10 @@ This prompt explains how to work with the Value system in the AtomSpace.
   - FloatValue (vectors of floats)
   - StringValue (vectors of strings)
   - LinkValue (vectors of other Values)
-  - TruthValue (strength and confidence)
+  - SimpleTruthValue (strength and confidence - probabilistic values)
   - Other specialized Value types
 
-## Truth Values (TruthValues)
-
-Truth Values are a special kind of Value that represent uncertainty.
-
-### Structure
-- **Strength**: Probability/confidence (0.0 to 1.0)
-- **Confidence**: How much evidence supports this (0.0 to 1.0)
-
-### Getting Truth Values
-
-**Tool**: `getTV`
-
-**Example: Get TV of a ConceptNode**
-```json
-{
-  "type": "ConceptNode",
-  "name": "cat"
-}
-```
-
-**Response Format**:
-```json
-[{
-  "value": {
-    "type": "SimpleTruthValue",
-    "value": [0.8, 0.9]
-  }
-}]
-```
-Meaning: strength=0.8, confidence=0.9
-
-### Setting Truth Values
-
-**Tool**: `setTV`
-
-**Example: Set TV on a Link**
-```json
-{
-  "type": "InheritanceLink",
-  "outgoing": [
-    {"type": "ConceptNode", "name": "cat"},
-    {"type": "ConceptNode", "name": "animal"}
-  ],
-  "value": {
-    "type": "SimpleTruthValue",
-    "value": [0.95, 0.99]
-  }
-}
-```
-
-**Use Cases**:
-- Representing probabilistic knowledge
-- Storing confidence in relationships
-- Implementing uncertain reasoning
-
-## General Key-Value Pairs
+## Key-Value Pairs
 
 ### Getting All Keys on an Atom
 
@@ -260,9 +205,9 @@ Stores probabilistic truth information
 }
 ```
 
-### Example 4: Probabilistic Facts
+### Example 4: Storing Truth Values
 
-**Goal**: Store uncertain knowledge
+**Goal**: Store probabilistic/uncertain knowledge using the truth-value key
 
 ```json
 // Create the relationship
@@ -274,13 +219,17 @@ Stores probabilistic truth information
   ]
 }
 
-// Set its truth value
+// Set its truth value using setValue with the predefined truth-value key
 {
   "type": "InheritanceLink",
   "outgoing": [
     {"type": "ConceptNode", "name": "Tweety"},
     {"type": "ConceptNode", "name": "bird"}
   ],
+  "key": {
+    "type": "PredicateNode",
+    "name": "*-TruthValueKey-*"
+  },
   "value": {
     "type": "SimpleTruthValue",
     "value": [0.95, 0.90]
@@ -292,7 +241,7 @@ Stores probabilistic truth information
 
 1. **Use PredicateNodes as keys**: This is the convention
 2. **Choose appropriate Value types**: FloatValue for numbers, StringValue for text
-3. **Truth Values are special**: Use `getTV`/`setTV`, not general value tools
+3. **Truth Values**: Use the predefined `*-TruthValueKey-*` key with setValue/getValueAtKey
 4. **Vector nature**: Remember that Values are vectors, not single items
 5. **Immutability**: Atoms themselves are immutable, but Values can be changed
 
@@ -324,9 +273,9 @@ getValues(atom)
 // Create relationship
 makeAtom(InheritanceLink(concept1, concept2))
 
-// Add uncertainty
-setTV(InheritanceLink(concept1, concept2), [strength, confidence])
+// Add uncertainty using setValue with truth-value key
+setValue(InheritanceLink(concept1, concept2), "*-TruthValueKey-*", SimpleTruthValue([strength, confidence]))
 
-// Check uncertainty
-getTV(InheritanceLink(concept1, concept2))
+// Check uncertainty using getValueAtKey
+getValueAtKey(InheritanceLink(concept1, concept2), "*-TruthValueKey-*")
 ```
