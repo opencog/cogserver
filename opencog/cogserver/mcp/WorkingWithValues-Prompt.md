@@ -23,7 +23,7 @@ All MCP commands use **s-expressions** for Atoms:
 
 ### Getting All Keys on an Atom
 
-**Tool**: `getKey`
+**Tool**: `getKeys`
 
 **Example**:
 ```json
