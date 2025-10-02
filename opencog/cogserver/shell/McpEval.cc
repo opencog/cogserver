@@ -47,6 +47,36 @@ McpEval::McpEval(const AtomSpacePtr& asp)
 	_done = false;
 }
 
+// Helper function to read a prompt file and format it as MCP prompt response
+static bool read_prompt_file(const std::string& prompt_base,
+                             const std::string& filename,
+                             const std::string& description,
+                             Json::Value& response)
+{
+	std::string prompt_path = prompt_base + filename;
+	std::ifstream file(prompt_path);
+	if (!file.is_open()) {
+		response["error"]["code"] = -32602;
+		response["error"]["message"] = "Failed to read prompt file: " + prompt_path;
+		return false;
+	}
+
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	file.close();
+
+	response["result"]["description"] = description;
+	response["result"]["messages"] = Json::arrayValue;
+	Json::Value message;
+	message["role"] = "user";
+	Json::Value content;
+	content["type"] = "text";
+	content["text"] = buffer.str();
+	message["content"] = content;
+	response["result"]["messages"].append(message);
+	return true;
+}
+
 McpEval::~McpEval()
 {
 }
@@ -115,6 +145,11 @@ void McpEval::eval_expr(const std::string &expr)
 			resourcesCapability["subscribe"] = false;  // No live updates for docs
 			resourcesCapability["listChanged"] = false;  // Static resource list
 			response["result"]["capabilities"]["resources"] = resourcesCapability;
+
+			// Indicate that we support prompts for guided tool usage
+			Json::Value promptsCapability;
+			promptsCapability["listChanged"] = false;  // Static prompt list
+			response["result"]["capabilities"]["prompts"] = promptsCapability;
 
 			response["result"]["serverInfo"]["name"] = "CogServer MCP";
 			response["result"]["serverInfo"]["version"] = "0.1.1";
@@ -191,6 +226,28 @@ void McpEval::eval_expr(const std::string &expr)
 			resources.append(guide_resource);
 
 			response["result"]["resources"] = resources;
+		} else if (method == "prompts/list") {
+			Json::Value prompts(Json::arrayValue);
+
+			// Prompt for creating Atoms
+			Json::Value create_prompt;
+			create_prompt["name"] = "create-atoms";
+			create_prompt["description"] = "Guide for creating Nodes and Links in the AtomSpace";
+			prompts.append(create_prompt);
+
+			// Prompt for querying AtomSpace
+			Json::Value query_prompt;
+			query_prompt["name"] = "query-atomspace";
+			query_prompt["description"] = "Guide for querying and exploring the AtomSpace effectively";
+			prompts.append(query_prompt);
+
+			// Prompt for working with Values
+			Json::Value values_prompt;
+			values_prompt["name"] = "work-with-values";
+			values_prompt["description"] = "Guide for working with Values, Truth Values, and key-value pairs";
+			prompts.append(values_prompt);
+
+			response["result"]["prompts"] = prompts;
 		} else if (method == "resources/read") {
 			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
 
@@ -238,6 +295,23 @@ void McpEval::eval_expr(const std::string &expr)
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Resource not found: " + uri;
+			}
+		} else if (method == "prompts/get") {
+			std::string prompt_name = params.isMember("name") ? params["name"].asString() : "";
+			std::string prompt_base = std::string(PROJECT_INSTALL_PREFIX) + "/share/cogserver/mcp/";
+
+			if (prompt_name == "create-atoms") {
+				read_prompt_file(prompt_base, "CreateAtom-Prompt.md",
+					"Guide for creating Nodes and Links in the AtomSpace", response);
+			} else if (prompt_name == "query-atomspace") {
+				read_prompt_file(prompt_base, "QueryAtom-Prompt.md",
+					"Guide for querying and exploring the AtomSpace effectively", response);
+			} else if (prompt_name == "work-with-values") {
+				read_prompt_file(prompt_base, "WorkingWithValues-Prompt.md",
+					"Guide for working with Values, Truth Values, and key-value pairs", response);
+			} else {
+				response["error"]["code"] = -32602;
+				response["error"]["message"] = "Prompt not found: " + prompt_name;
 			}
 		} else if (method == "tools/call") {
 			std::string tool_name = params.isMember("name") ? params["name"].asString() : "";
