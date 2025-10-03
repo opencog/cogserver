@@ -70,21 +70,6 @@ All MCP commands use **s-expressions** wrapped in an `atomese` field:
 }
 ```
 
-## Creating Multiple Atoms
-
-**Tool**: `loadAtoms`
-
-**Example: Create several Atoms at once**
-```json
-{
-  "atoms": [
-    {"atomese": "(Concept \"cat\")"},
-    {"atomese": "(Concept \"dog\")"},
-    {"atomese": "(Concept \"bird\")"}
-  ]
-}
-```
-
 ## Best Practices
 
 1. **Check if Atom exists first** - Use `haveNode` or `haveLink` before creating
