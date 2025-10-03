@@ -253,6 +253,12 @@ void McpEval::eval_expr(const std::string &expr)
 			pattern_prompt["description"] = "Guide for using MeetLink and QueryLink to search the AtomSpace with patterns";
 			prompts.append(pattern_prompt);
 
+			// Prompt for advanced pattern matching
+			Json::Value advanced_pattern_prompt;
+			advanced_pattern_prompt["name"] = "advanced-pattern-matching";
+			advanced_pattern_prompt["description"] = "Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries";
+			prompts.append(advanced_pattern_prompt);
+
 			response["result"]["prompts"] = prompts;
 		} else if (method == "resources/read") {
 			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
@@ -318,6 +324,9 @@ void McpEval::eval_expr(const std::string &expr)
 			} else if (prompt_name == "pattern-matching") {
 				read_prompt_file(prompt_base, "PatternMatching-Prompt.md",
 					"Guide for using MeetLink and QueryLink to search the AtomSpace with patterns", response);
+			} else if (prompt_name == "advanced-pattern-matching") {
+				read_prompt_file(prompt_base, "AdvancedPatternMatching-Prompt.md",
+					"Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries", response);
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Prompt not found: " + prompt_name;
