@@ -12,7 +12,7 @@ The AtomSpace can contain millions of Atoms. Before querying, always check count
 
 **Output**: Always uses full type names in s-expressions:
 - Single atom: `(ConceptNode "cat")`
-- Multiple atoms: `(alist (ConceptNode "cat")(ConceptNode "dog")...)`
+- Multiple atoms: `(list (ConceptNode "cat")(ConceptNode "dog")...)`
 
 ## Step-by-Step Query Process
 
@@ -88,7 +88,7 @@ The AtomSpace can contain millions of Atoms. Before querying, always check count
 }
 ```
 
-**Returns**: `(alist (ConceptNode "cat")(ConceptNode "dog")...)`
+**Returns**: `(list (ConceptNode "cat")(ConceptNode "dog")...)`
 
 **Example: Get all Links (including subtypes)**
 ```json
@@ -111,7 +111,7 @@ The AtomSpace can contain millions of Atoms. Before querying, always check count
 }
 ```
 
-**Returns**: `(alist (InheritanceLink (ConceptNode "cat")(ConceptNode "animal"))...)`
+**Returns**: `(list (InheritanceLink (ConceptNode "cat")(ConceptNode "animal"))...)`
 
 **Use Cases**:
 - Find relationships involving a concept
@@ -230,12 +230,12 @@ The AtomSpace can contain millions of Atoms. Before querying, always check count
 
 **Steps**:
 1. `reportCounts()` → See that there are 50 Concepts
-2. `getAtoms({"type": "Concept"})` → Returns: `(alist (ConceptNode "cat")(ConceptNode "dog")...)`
+2. `getAtoms({"type": "Concept"})` → Returns: `(list (ConceptNode "cat")(ConceptNode "dog")...)`
 3. Present the list to user
 
 **User**: "What relationships involve 'cat'?"
 
 **Steps**:
 1. `haveNode({"atomese": "(Concept \"cat\")"})` → Verify it exists
-2. `getIncoming({"atomese": "(Concept \"cat\")"})` → Returns: `(alist (InheritanceLink (ConceptNode "cat")...)...)`
+2. `getIncoming({"atomese": "(Concept \"cat\")"})` → Returns: `(list (InheritanceLink (ConceptNode "cat")...)...)`
 3. Analyze and present the relationships found

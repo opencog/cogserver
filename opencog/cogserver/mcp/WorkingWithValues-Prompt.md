@@ -32,7 +32,7 @@ All MCP commands use **s-expressions** for Atoms:
 }
 ```
 
-**Returns**: `(alist (PredicateNode "weight")(PredicateNode "age")...)`
+**Returns**: `(list (PredicateNode "weight")(PredicateNode "age")...)`
 
 ### Getting All Values on an Atom
 
