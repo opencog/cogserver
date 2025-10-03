@@ -247,6 +247,12 @@ void McpEval::eval_expr(const std::string &expr)
 			values_prompt["description"] = "Guide for working with Values, Truth Values, and key-value pairs";
 			prompts.append(values_prompt);
 
+			// Prompt for pattern matching queries
+			Json::Value pattern_prompt;
+			pattern_prompt["name"] = "pattern-matching";
+			pattern_prompt["description"] = "Guide for using MeetLink and QueryLink to search the AtomSpace with patterns";
+			prompts.append(pattern_prompt);
+
 			response["result"]["prompts"] = prompts;
 		} else if (method == "resources/read") {
 			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
@@ -309,6 +315,9 @@ void McpEval::eval_expr(const std::string &expr)
 			} else if (prompt_name == "work-with-values") {
 				read_prompt_file(prompt_base, "WorkingWithValues-Prompt.md",
 					"Guide for working with Values, Truth Values, and key-value pairs", response);
+			} else if (prompt_name == "pattern-matching") {
+				read_prompt_file(prompt_base, "PatternMatching-Prompt.md",
+					"Guide for using MeetLink and QueryLink to search the AtomSpace with patterns", response);
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Prompt not found: " + prompt_name;

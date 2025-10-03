@@ -6,6 +6,7 @@ INSTALL(FILES
 	CreateAtom-Prompt.md
 	QueryAtom-Prompt.md
 	WorkingWithValues-Prompt.md
+	PatternMatching-Prompt.md
 	DESTINATION share/cogserver/mcp
 	COMPONENT mcp
 )
