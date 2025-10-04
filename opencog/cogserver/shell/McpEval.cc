@@ -340,7 +340,27 @@ void McpEval::eval_expr(const std::string &expr)
 			if (it != _tool_to_plugin.end()) {
 				// Invoke the tool through the plugin
 				std::string arguments_json = json_to_string(arguments);
-				std::string tool_result_json = it->second->invoke_tool(tool_name, arguments_json);
+				std::string tool_result_json;
+
+				// Catch exceptions from tool execution and convert to MCP error format
+				try {
+					tool_result_json = it->second->invoke_tool(tool_name, arguments_json);
+				} catch (const std::exception& e) {
+					// Convert exception to MCP content format error
+					// Per MCP spec: tool execution errors use {"content": [...], "isError": true}
+					Json::Value error_content;
+					Json::Value content_item;
+					content_item["type"] = "text";
+					content_item["text"] = e.what();
+					error_content["content"].append(content_item);
+					error_content["isError"] = true;
+					response["result"] = error_content;
+
+					logger().info("[McpEval] replying: %s", json_to_string(response).c_str());
+					_result = json_to_string(response) + "\n";
+					_done = true;
+					return;
+				}
 
 				Json::Value tool_result;
 				Json::CharReaderBuilder builder;
@@ -350,12 +370,10 @@ void McpEval::eval_expr(const std::string &expr)
 				if (reader->parse(tool_result_json.c_str(),
 				                  tool_result_json.c_str() + tool_result_json.length(),
 				                  &tool_result, &errors)) {
-					// Check if the plugin returned an error
-					if (tool_result.isMember("error")) {
-						response["error"] = tool_result["error"];
-					} else {
-						response["result"] = tool_result;
-					}
+					// Per MCP spec: tool execution results (including errors) go in "result"
+					// Tool errors use {"content": [...], "isError": true} format
+					// Only JSON-RPC protocol errors use "error" field
+					response["result"] = tool_result;
 				} else {
 					response["error"]["code"] = -32700;
 					response["error"]["message"] = "Failed to parse tool result";
