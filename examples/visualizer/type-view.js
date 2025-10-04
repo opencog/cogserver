@@ -281,11 +281,23 @@ function sendCommand(command) {
 function handleResponse(response) {
     console.log('Received response for phase:', currentPhase);
 
-    // Check for various error formats
-    if (response.error) {
-        showError('Server error: ' + response.error);
-        showLoading(false);
-        return;
+    // Handle MCP content-based response
+    if (response.content && Array.isArray(response.content)) {
+        // Check for error
+        if (response.isError === true) {
+            const errorText = response.content[0]?.text || 'Unknown error';
+            showError('Server error: ' + errorText);
+            showLoading(false);
+            return;
+        }
+
+        // Parse content text (may be JSON string)
+        const contentText = response.content[0]?.text || '';
+        try {
+            response = JSON.parse(contentText);
+        } catch {
+            response = contentText;
+        }
     }
 
     // Extract the array from response

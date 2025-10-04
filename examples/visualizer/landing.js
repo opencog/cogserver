@@ -186,9 +186,24 @@ function onMessage(event) {
         // Display in debug console
         debugResponse.textContent = JSON.stringify(data, null, 2);
 
-        // Check if this is a success response
-        if (data.success === true && data.result !== undefined) {
-            const result = data.result;
+        // Check if this is an MCP content-based response
+        if (data.content && Array.isArray(data.content)) {
+            // Check for error first
+            if (data.isError === true) {
+                const errorText = data.content[0]?.text || 'Unknown error';
+                console.error('Server returned error:', errorText);
+                showError('Server error: ' + errorText);
+                return;
+            }
+
+            // Parse the content text (may be JSON string)
+            const contentText = data.content[0]?.text || '';
+            let result;
+            try {
+                result = JSON.parse(contentText);
+            } catch {
+                result = contentText;
+            }
 
             // Handle different result types
             if (typeof result === 'string') {
@@ -249,11 +264,6 @@ function onMessage(event) {
                     }
                 }
             }
-        } else if (data.success === false) {
-            // Error response
-            const errorMsg = data.error?.message || data.error || 'Unknown error';
-            console.error('Server returned error:', errorMsg);
-            showError('Server error: ' + errorMsg);
         } else {
             // Unknown response format
             console.warn('Unknown response format:', data);
