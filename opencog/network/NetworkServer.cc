@@ -29,20 +29,37 @@ NetworkServer::NetworkServer(unsigned short port, const char* name) :
     _name(name),
     _port(port),
     _running(false),
-    _acceptor(_io_service,
-        asio::ip::tcp::endpoint(asio::ip::tcp::v6(), port))
+    _acceptor(_io_service)
 {
     logger().debug("[NetworkServer] constructor for %s at %d", name, port);
 
-    // Enable dual-stack mode: accept both IPv6 and IPv4 connections.
-    // IPv4 connections will be mapped to IPv6 addresses (::ffff:x.x.x.x)
+    // Try IPv6 dual-stack mode first (accepts both IPv6 and IPv4)
+    bool ipv6_success = false;
     try {
+        _acceptor.open(asio::ip::tcp::v6());
         _acceptor.set_option(asio::ip::v6_only(false));
-        logger().debug("[NetworkServer] dual-stack IPv4/IPv6 mode enabled");
+        _acceptor.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v6(), port));
+        _acceptor.listen();
+        logger().info("[NetworkServer] dual-stack IPv4/IPv6 mode enabled");
+        ipv6_success = true;
     }
     catch (const std::system_error& e) {
-        logger().warn("[NetworkServer] Could not enable dual-stack mode: %s. "
-                      "IPv4 connections may not work.", e.what());
+        logger().info("[NetworkServer] IPv6 not available (%s), falling back to IPv4-only mode",
+                      e.what());
+    }
+
+    // Fall back to IPv4-only if IPv6 failed
+    if (!ipv6_success) {
+        try {
+            _acceptor.open(asio::ip::tcp::v4());
+            _acceptor.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
+            _acceptor.listen();
+            logger().info("[NetworkServer] IPv4-only mode enabled");
+        }
+        catch (const std::system_error& e) {
+            logger().error("[NetworkServer] Failed to bind to port %d: %s", port, e.what());
+            throw;
+        }
     }
 
     _start_time = time(nullptr);
