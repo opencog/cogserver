@@ -1,0 +1,132 @@
+/*
+ * tests/shell/IPv6UTest.cxxtest
+ *
+ * Copyright (C) 2025 BrainyBlaze Dynamics, Inc.
+ * All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License v3 as
+ * published by the Free Software Foundation and including the exceptions
+ * at http://opencog.org/wiki/Licenses
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program; if not, write to:
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+#include <thread>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#include <opencog/util/Config.h>
+#include <opencog/cogserver/server/CogServer.h>
+
+using namespace opencog;
+
+class IPv6UTest :  public CxxTest::TestSuite
+{
+private:
+	CogServer* csrv;
+	std::thread* main_loop;
+
+public:
+
+	IPv6UTest()
+	{
+		logger().set_level(Logger::DEBUG);
+		//logger().set_print_to_stdout_flag(true);
+	}
+
+	~IPv6UTest()
+	{
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp()
+	{
+		csrv = &cogserver();
+		csrv->loadModules();
+		csrv->enableNetworkServer(17444);
+		main_loop = new std::thread(&CogServer::serverLoop, csrv);
+
+		// Wait for the cogserver to finish initializing.
+		sleep(1);
+	}
+
+	void tearDown()
+	{
+		csrv->stop();
+		main_loop->join();
+		delete main_loop;
+	}
+
+	void testIPv6Connection()
+	{
+		logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+		// Open an IPv6 socket to the server.
+		int sock = socket(AF_INET6, SOCK_STREAM, 0);
+		TS_ASSERT(0 < sock);
+
+		struct sockaddr_in6 server;
+		memset(&server, 0, sizeof(server));
+		server.sin6_family = AF_INET6;
+		server.sin6_port = htons(17444);
+		// Connect to ::1 (IPv6 localhost)
+		inet_pton(AF_INET6, "::1", &server.sin6_addr);
+
+		int rc = connect(sock, (struct sockaddr *)&server, sizeof(server));
+		TS_ASSERT_EQUALS(0, rc);
+
+		// Send the help command
+		const char* cmd = "help\n";
+		rc = send(sock, cmd, strlen(cmd), 0);
+		TS_ASSERT(0 < rc);
+
+		// Receive the response - may arrive in multiple packets
+		// Wait up to 2 seconds for the complete response
+		std::string response;
+		for (int i = 0; i < 20; i++)
+		{
+			char buffer[4096];
+			memset(buffer, 0, sizeof(buffer));
+			rc = recv(sock, buffer, sizeof(buffer) - 1, 0);
+			if (rc > 0) {
+				response += buffer;
+			}
+			// Wait a bit for more data
+			usleep(100000);  // 100ms
+			// If we got a substantial response, we're done
+			if (response.size() > 500) break;
+		}
+
+		// The help command should return a list of available commands
+		// We expect to see at least some common commands in the response
+		TS_ASSERT(response.npos != response.find("help"));
+		TS_ASSERT(response.npos != response.find("quit"));
+		TS_ASSERT(response.npos != response.find("scm"));
+
+		// The response should be substantial (at least 200 bytes)
+		TS_ASSERT_LESS_THAN(200, response.size());
+
+		printf("IPv6 connection successful. Received %zu bytes\n", response.size());
+
+		// Be polite and close the socket
+		close(sock);
+
+		logger().debug("END TEST: %s", __FUNCTION__);
+	}
+};

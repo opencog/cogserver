@@ -35,8 +35,9 @@ namespace opencog
  * should use the 'start' method to start listening to a port.
  * Currently, the network server doesn't
  * support selecting the network interface that the server socket will bind to
- * (every server sockets binds to 0.0.0.0, i.e., all interfaces). Thus,
- * server sockets are identified/selected by the port they bind to.
+ * (server sockets bind to all interfaces in dual-stack mode, accepting both
+ * IPv4 and IPv6 connections). Thus, server sockets are identified/selected
+ * by the port they bind to.
  */
 class NetworkServer
 {
