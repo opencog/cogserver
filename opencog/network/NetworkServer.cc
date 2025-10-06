@@ -30,9 +30,21 @@ NetworkServer::NetworkServer(unsigned short port, const char* name) :
     _port(port),
     _running(false),
     _acceptor(_io_service,
-        asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port))
+        asio::ip::tcp::endpoint(asio::ip::tcp::v6(), port))
 {
     logger().debug("[NetworkServer] constructor for %s at %d", name, port);
+
+    // Enable dual-stack mode: accept both IPv6 and IPv4 connections.
+    // IPv4 connections will be mapped to IPv6 addresses (::ffff:x.x.x.x)
+    try {
+        _acceptor.set_option(asio::ip::v6_only(false));
+        logger().debug("[NetworkServer] dual-stack IPv4/IPv6 mode enabled");
+    }
+    catch (const std::system_error& e) {
+        logger().warn("[NetworkServer] Could not enable dual-stack mode: %s. "
+                      "IPv4 connections may not work.", e.what());
+    }
+
     _start_time = time(nullptr);
     _last_connect = 0;
     _nconnections = 0;
