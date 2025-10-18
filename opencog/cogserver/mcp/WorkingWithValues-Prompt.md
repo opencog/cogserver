@@ -10,7 +10,6 @@ This prompt explains how to work with the Value system in the AtomSpace using At
   - FloatValue (vectors of floats)
   - StringValue (vectors of strings)
   - LinkValue (vectors of other Values)
-  - SimpleTruthValue (strength and confidence - probabilistic values)
   - Other specialized Value types
 
 ## Atomese Format
@@ -131,17 +130,6 @@ Stores vectors of strings
 
 **Use cases**: Labels, categories, annotations, metadata
 
-### SimpleTruthValue
-Stores probabilistic truth information
-```json
-{
-  "type": "SimpleTruthValue",
-  "value": [0.8, 0.9]
-}
-```
-
-**Use cases**: Uncertain facts, learned knowledge, probabilistic reasoning
-
 ## Practical Examples
 
 ### Example 1: Storing Entity Properties
@@ -197,34 +185,10 @@ Stores probabilistic truth information
 }
 ```
 
-### Example 4: Storing Truth Values
-
-**Goal**: Store probabilistic/uncertain knowledge using the truth-value key
-
-```json
-// Create the relationship
-{
-  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))"
-}
-
-// Set its truth value using setValue with the predefined truth-value key
-{
-  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))",
-  "key": {
-    "atomese": "(Predicate \"*-TruthValueKey-*\")"
-  },
-  "value": {
-    "type": "SimpleTruthValue",
-    "value": [0.95, 0.90]
-  }
-}
-```
-
 ## Best Practices
 
 1. **Use Predicates as keys**: This is the convention
 2. **Choose appropriate Value types**: FloatValue for numbers, StringValue for text
-3. **Truth Values**: Use the predefined `*-TruthValueKey-*` Predicate with setValue/getValueAtKey
 4. **Vector nature**: Remember that Values are vectors, not single items
 5. **Immutability**: Atoms themselves are immutable, but Values can be changed
 
@@ -260,23 +224,4 @@ Stores probabilistic truth information
 
 // Retrieve all values
 {"atomese": "(Concept \"item\")"}
-```
-
-### Work with Uncertain Knowledge
-```json
-// Create relationship
-{"atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))"}
-
-// Add uncertainty using setValue with truth-value key
-{
-  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))",
-  "key": {"atomese": "(Predicate \"*-TruthValueKey-*\")"},
-  "value": {"type": "SimpleTruthValue", "value": [0.95, 0.90]}
-}
-
-// Check uncertainty using getValueAtKey
-{
-  "atomese": "(Inheritance (Concept \"Tweety\") (Concept \"bird\"))",
-  "key": {"atomese": "(Predicate \"*-TruthValueKey-*\")"}
-}
 ```

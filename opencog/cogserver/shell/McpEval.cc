@@ -244,7 +244,7 @@ void McpEval::eval_expr(const std::string &expr)
 			// Prompt for working with Values
 			Json::Value values_prompt;
 			values_prompt["name"] = "work-with-values";
-			values_prompt["description"] = "Guide for working with Values, Truth Values, and key-value pairs";
+			values_prompt["description"] = "Guide for working with Values and key-value pairs";
 			prompts.append(values_prompt);
 
 			// Prompt for pattern matching queries
@@ -320,7 +320,7 @@ void McpEval::eval_expr(const std::string &expr)
 					"Guide for querying and exploring the AtomSpace effectively", response);
 			} else if (prompt_name == "work-with-values") {
 				read_prompt_file(prompt_base, "WorkingWithValues-Prompt.md",
-					"Guide for working with Values, Truth Values, and key-value pairs", response);
+					"Guide for working with Values and key-value pairs", response);
 			} else if (prompt_name == "pattern-matching") {
 				read_prompt_file(prompt_base, "PatternMatching-Prompt.md",
 					"Guide for using MeetLink and QueryLink to search the AtomSpace with patterns", response);
