@@ -37,6 +37,7 @@ NetworkServer::NetworkServer(unsigned short port, const char* name) :
     bool ipv6_success = false;
     try {
         _acceptor.open(asio::ip::tcp::v6());
+        _acceptor.set_option(asio::socket_base::reuse_address(true));
         _acceptor.set_option(asio::ip::v6_only(false));
         _acceptor.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v6(), port));
         _acceptor.listen();
@@ -52,6 +53,7 @@ NetworkServer::NetworkServer(unsigned short port, const char* name) :
     if (!ipv6_success) {
         try {
             _acceptor.open(asio::ip::tcp::v4());
+            _acceptor.set_option(asio::socket_base::reuse_address(true));
             _acceptor.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
             _acceptor.listen();
             logger().info("[NetworkServer] IPv4-only mode enabled");
