@@ -9,6 +9,7 @@ LINK_LIBRARIES(
 	${ATOMSPACE_LIBRARIES}
 )
 
-# Disable for now. This passes for me, but fails in circleci
-# and I cannot tell why. Too lazy to fix.
-# ADD_CXXTEST(WriteThruProxyUTest)
+# Heh. No unit tests. The olld one didn't work. Removed.
+# The problem is that these unit tests cannot depend on rocks
+# or cog-storage, because those do not yet exist when these
+# tests are run in circle-ci
