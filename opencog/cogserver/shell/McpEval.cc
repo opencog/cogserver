@@ -229,6 +229,12 @@ void McpEval::eval_expr(const std::string &expr)
 		} else if (method == "prompts/list") {
 			Json::Value prompts(Json::arrayValue);
 
+			// Prompt for Atom types reference
+			Json::Value atomtypes_prompt;
+			atomtypes_prompt["name"] = "atom-types-reference";
+			atomtypes_prompt["description"] = "Comprehensive reference for 170+ Atom types organized by functional category";
+			prompts.append(atomtypes_prompt);
+
 			// Prompt for creating Atoms
 			Json::Value create_prompt;
 			create_prompt["name"] = "create-atoms";
@@ -312,7 +318,10 @@ void McpEval::eval_expr(const std::string &expr)
 			std::string prompt_name = params.isMember("name") ? params["name"].asString() : "";
 			std::string prompt_base = std::string(PROJECT_INSTALL_PREFIX) + "/share/cogserver/mcp/";
 
-			if (prompt_name == "create-atoms") {
+			if (prompt_name == "atom-types-reference") {
+				read_prompt_file(prompt_base, "AtomTypes-Prompt.md",
+					"Comprehensive reference for 170+ Atom types organized by functional category", response);
+			} else if (prompt_name == "create-atoms") {
 				read_prompt_file(prompt_base, "CreateAtom-Prompt.md",
 					"Guide for creating Nodes and Links in the AtomSpace", response);
 			} else if (prompt_name == "query-atomspace") {
