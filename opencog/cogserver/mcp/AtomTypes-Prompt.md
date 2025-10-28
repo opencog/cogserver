@@ -13,22 +13,350 @@
 **Purpose:** Process streams of Values through transformation pipelines
 
 ### FilterLink
-Filters and transforms streams of data, analogous to `filter-map` in functional programming. Takes a pattern or RuleLink and applies it to each element in a stream (from LinkValue, SetLink, ListLink, QueueValue). Can extract values by pattern matching (like "un-beta-reduction") or transform them via rewrite rules. Unlike QueryLink which searches the entire AtomSpace, FilterLink only operates on the provided collection. Type-checking is automatic - mismatched types are silently discarded. Returns same collection type as input (SetLink → SetLink, LinkValue → LinkValue). Essential for pipeline processing. See `/pattern-matcher/examples/filter.scm`.
+
+**Purpose:** Filters and transforms collections/streams by pattern matching. The functional programming `filter-map` for Atomese. Unlike QueryLink (which searches entire AtomSpace), FilterLink operates ONLY on the provided input collection.
+
+**Core Concept:** FilterLink is the "opposite" of PutLink - it EXTRACTS values from patterns (un-beta-reduction) instead of substituting them in. Think of it as an adjoint functor to PutLink.
+
+**Two Forms:**
+
+**Form 1: Filter + Lambda (Extraction)**
+```scheme
+(Filter
+  (Lambda <vardecls> <pattern>)
+  <input-collection>)
+```
+- Variables in pattern ARE the extraction points
+- Pattern matches input elements
+- Returns VALUES that matched the variables
+- No separate rewrite - the variables themselves are what you get
+
+**Form 2: Filter + Rule (Extraction + Transformation)**
+```scheme
+(Filter
+  (Rule <vardecls> <pattern> <rewrite>)
+  <input-collection>)
+```
+- Three-part structure: variables, pattern to match, rewrite template
+- Pattern matches input, rewrite transforms matches
+- Returns rewritten results
+- Equivalent to Filter+Lambda followed by PutLink
+
+**Input Types:** Single Atom, SetLink, ListLink, LinkValue, QueueValue
+
+**Output Preserves Input Type:**
+- SetLink input → SetLink output (unordered)
+- ListLink input → ListLink output (ordered preserved)
+- LinkValue input → LinkValue output
+- Single Atom input → matched value or empty
+
+**Type Filtering:** Automatic - elements not matching TypedVariable constraints are silently discarded (this IS the filtering behavior).
+
+**Examples:**
+
+*Single Variable Extraction:*
+```scheme
+(Filter
+  (Lambda
+    (Variable "$x")
+    (Evaluation (Predicate "foo")
+      (List (Concept "bar") (Variable "$x"))))
+  (Evaluation (Predicate "foo")
+    (List (Concept "bar") (Concept "baz"))))
+; Returns: (Concept "baz")
+; The variable $x matched "baz", so we get "baz"
+```
+
+*Extract from Set (multiple matches):*
+```scheme
+(Filter
+  (Lambda
+    (Variable "$x")
+    (Evaluation (Predicate "foo")
+      (List (Concept "bar") (Variable "$x"))))
+  (Set
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Number 3)))
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Concept "one")))
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Concept "two")))))
+; Returns: (SetLink (Number 3) (Concept "one") (Concept "two"))
+; All three $x matches extracted, wrapped in SetLink (input was Set)
+```
+
+*Type Filtering:*
+```scheme
+(Filter
+  (Lambda
+    (TypedVariable (Variable "$x") (Type 'ConceptNode))
+    (Evaluation (Predicate "foo")
+      (List (Concept "bar") (Variable "$x"))))
+  (Set
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Concept "one")))
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Number 3)))))
+; Returns: (SetLink (Concept "one"))
+; Number filtered out - doesn't match ConceptNode type
+```
+
+*Multi-Variable Extraction:*
+```scheme
+(Filter
+  (Lambda
+    (VariableList
+      (TypedVariable (Variable "$x") (Type 'ConceptNode))
+      (TypedVariable (Variable "$y") (Type 'ConceptNode)))
+    (Evaluation (Predicate "foo")
+      (List (Variable "$x") (Variable "$y"))))
+  (Set
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Concept "one")))
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Concept "two")))))
+; Returns: (SetLink
+;            (ListLink (Concept "bar") (Concept "one"))
+;            (ListLink (Concept "bar") (Concept "two")))
+; Each match returns ListLink of variable values in declaration order
+```
+
+*Rule Form - Transformation:*
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$x") (Type 'ConceptNode))
+      (TypedVariable (Variable "$y") (Type 'ConceptNode)))
+    ; Pattern
+    (Evaluation (Predicate "foo")
+      (List (Variable "$x") (Variable "$y")))
+    ; Rewrite - swap order
+    (Evaluation (Predicate "reverse-foo")
+      (List (Variable "$y") (Variable "$x"))))
+  (Set
+    (Evaluation (Predicate "foo") (List (Concept "bar") (Concept "one")))))
+; Returns: (SetLink
+;            (EvaluationLink (Predicate "reverse-foo")
+;              (ListLink (Concept "one") (Concept "bar"))))
+; Pattern matched, rewrite applied - order swapped
+```
+
+**Usage in Pipelines:** Chain Filters directly for efficiency. Don't store intermediate results with SetValue between stages.
+
+**Critical Details:**
+- Empty result if no matches (not error)
+- Type constraints filter automatically
+- Multi-variable returns ListLink per match (to track which var is which)
+- SignatureLink can constrain whole structure, not just node types
+
+**See:** `/pattern-matcher/examples/filter.scm` (comprehensive examples)
 
 ### ValueOfLink
-Retrieves a Value stored at a specific key on an Atom. When executed via `cog-execute!`, fetches the Value and if that Value is itself executable, executes it and returns the result. This dual nature makes it perfect for stream sources: store executable Atoms (like filters or parsers) on Anchors, then ValueOfLink executes them on demand. Not for simple value retrieval - use `cog-value` in Scheme for that. Works with Predicate keys by convention. Returns the Value or the result of executing it. Core component of pipeline architecture.
+
+**Purpose:** Retrieves and optionally EXECUTES a Value stored on an Atom. The "read" side of the key-value database.
+
+**Format:**
+```scheme
+(ValueOf <atom> <key>)
+```
+
+**Two Behaviors (automatic):**
+1. If Value at key is NOT executable → returns the Value as-is
+2. If Value IS executable → EXECUTES it and returns result
+
+**This Dual Nature is Critical for Pipelines:**
+- Store an executable Atom (Filter, parser, formula) at a key
+- ValueOfLink retrieves it AND runs it
+- Perfect for lazy evaluation and stream processing
+
+**Example - Simple Retrieval:**
+```scheme
+; Store a FloatValue
+(cog-set-value! (Concept "foo") (Predicate "data") (FloatValue 1 2 3))
+
+; Retrieve it
+(cog-execute! (ValueOf (Concept "foo") (Predicate "data")))
+; Returns: (FloatValue 1 2 3)
+```
+
+**Example - Execution:**
+```scheme
+; Store an executable computation
+(cog-execute!
+  (SetValue (Concept "foo") (Predicate "compute")
+    (DontExec (Plus (Number 2) (Number 3)))))
+
+; ValueOf retrieves AND executes
+(cog-execute! (ValueOf (Concept "foo") (Predicate "compute")))
+; Returns: (Number 5)  ← Plus was executed
+```
+
+**Pipeline Pattern - Anchor References:**
+```scheme
+; Store filter pipeline at anchor
+(cog-execute!
+  (SetValue (Anchor "pipeline") (Predicate "stage1")
+    (DontExec
+      (Filter <rule> <source>))))
+
+; Reference retrieves AND executes filter
+(define stage1-output
+  (ValueOf (Anchor "pipeline") (Predicate "stage1")))
+
+; Each cog-execute! on stage1-output runs the filter
+(cog-execute! stage1-output)  ; Processes one stream element
+```
+
+**Not for Scheme-side Retrieval:** If you just want to read a Value from Scheme without execution, use `(cog-value atom key)`, NOT ValueOfLink.
+
+**Convention:** Use PredicateNodes as keys. Standard message names: `*-open-*`, `*-close-*`, `*-read-*`, `*-write-*`, `*-stream-*`
+
+**See Also:** SetValueLink (stores Values), DontExecLink (prevents immediate execution)
+
+---
 
 ### SetValueLink
-Attaches a Value to an Atom at a specified key, or updates existing Value. Executes as a side-effect operation: takes three arguments (atom, key, value), sets the key-value pair, and returns the value that was set. If the third argument is executable, executes it first before storing. This allows complex formulas: `(SetValue atom key (Plus ...))` computes then stores. Mutable despite Atom immutability - Values can change. Thread-safe for atomic operations. Returns the Value for chaining. Essential for writing pipeline results.
+
+**Purpose:** Stores a Value on an Atom at a key. The "write" side of the key-value database. Executes as SIDE EFFECT.
+
+**Format:**
+```scheme
+(SetValue <atom> <key> <value>)
+```
+**Three-argument form** (most common)
+
+**Alternative Format:**
+```scheme
+(SetValue <atom> <key> <procedure> <arguments>)
+```
+**Four-argument form** for calling procedures
+
+**Behavior:**
+1. Evaluates third argument (if executable)
+2. Stores result at key on atom
+3. Returns the Value that was stored (for chaining)
+
+**Example - Simple Storage:**
+```scheme
+(cog-execute!
+  (SetValue (Concept "foo") (Predicate "data")
+    (FloatValue 1 2 3)))
+; Stores FloatValue, returns (FloatValue 1 2 3)
+```
+
+**Example - Compute Then Store:**
+```scheme
+(cog-execute!
+  (SetValue (Concept "result") (Predicate "sum")
+    (Plus (Number 5) (Number 3))))
+; Executes Plus, stores (Number 8), returns (Number 8)
+```
+
+**Example - Copy Value:**
+```scheme
+; Copy from foo to bar
+(cog-execute!
+  (SetValue (Concept "bar") (Predicate "data")
+    (ValueOf (Concept "foo") (Predicate "data"))))
+; ValueOf retrieves from foo, SetValue stores to bar
+```
+
+**Example - Procedure Call (4-arg form):**
+```scheme
+(cog-execute!
+  (SetValue (Concept "result") (Predicate "computed")
+    (DefinedProcedure "triangle-numbers")
+    (List (Number 5))))
+; Calls procedure with argument, stores result
+```
+
+**Pipeline Pattern - Store DontExec:**
+```scheme
+; Store executable pipeline WITHOUT running it
+(cog-execute!
+  (SetValue (Anchor "pipeline") (Predicate "parser")
+    (DontExec
+      (Filter
+        (Rule ...)
+        text-stream))))
+; Filter is stored, not executed. Later ValueOf will execute it.
+```
+
+**Mutability:** Values CAN change even though Atoms are immutable. The Atom stays the same, but Values attached to it can be updated.
+
+**Thread Safety:** Atomic for single operations. Use IncrementValueLink or GrantLink for complex thread-safe updates.
+
+**Returns:** The Value that was stored (allows chaining SetValue calls)
+
+**See Also:** ValueOfLink (retrieves), DontExecLink (stores without executing), IncrementValueLink (thread-safe math)
+
+---
+
+### DontExecLink
+
+**Purpose:** Prevents immediate execution of executable Atoms. "Quote for execution" - stores the recipe, not the result.
+
+**Format:**
+```scheme
+(DontExec <executable-atom>)
+```
+
+**Why This Exists:**
+- SetValueLink executes its third argument before storing
+- But sometimes you want to STORE the executable itself, not run it
+- DontExec wraps the executable to prevent evaluation
+- Later, ValueOfLink unwraps and THEN executes
+
+**Example - Without DontExec (executes immediately):**
+```scheme
+(cog-execute!
+  (SetValue (Anchor "test") (Predicate "data")
+    (Plus (Number 2) (Number 3))))
+; Plus executes NOW, stores (Number 5)
+; You stored the RESULT, not the computation
+```
+
+**Example - With DontExec (stores computation):**
+```scheme
+(cog-execute!
+  (SetValue (Anchor "test") (Predicate "compute")
+    (DontExec (Plus (Number 2) (Number 3)))))
+; Plus NOT executed, stored as PlusLink
+; Value at key is the PlusLink itself
+
+; Later, ValueOf retrieves and executes
+(cog-execute! (ValueOf (Anchor "test") (Predicate "compute")))
+; NOW Plus executes, returns (Number 5)
+```
+
+**Pipeline Setup Pattern:**
+```scheme
+; Setup: store entire filter pipeline
+(cog-execute!
+  (SetValue (Anchor "pipeline") (Predicate "stage1")
+    (DontExec
+      (Filter
+        (Rule
+          (Variable "$x")
+          (Variable "$x")
+          (LgParseBonds (Variable "$x") (LgDict "en") (Number 4)))
+        text-source))))
+
+; Usage: reference executes the filter
+(define parse-stage
+  (ValueOf (Anchor "pipeline") (Predicate "stage1")))
+
+; Each call processes one element through pipeline
+(cog-execute! parse-stage)
+```
+
+**Not Like QuoteLink:** QuoteLink prevents pattern matching. DontExec prevents execution. Different purposes.
+
+**Returns:** The wrapped executable (unchanged)
+
+**Critical for:** Pipeline setup, lazy evaluation, storing procedures for later
+
+**See Also:** SetValueLink (uses DontExec), ValueOfLink (unwraps and executes), QuoteLink (prevents pattern matching)
 
 ### IncrementValueLink
 Atomically increments a numeric Value, providing thread-safe counting and accumulation. Takes an Atom, key, and optional increment amount (defaults to 1). If no Value exists at key, creates FloatValue starting at increment amount. Vector Values are incremented component-wise. Thread-safe via internal locking, allowing concurrent updates without corruption. Commonly used for statistics, event counting, and parallel processing. Returns the new Value after increment. Much faster than read-modify-write in application code.
 
 ### DontExecLink
 Prevents immediate execution of an executable Atom, storing it for later evaluation. Used when you want to store a "recipe" rather than execute it now. Critical for pipeline setup: `(SetValue anchor key (DontExec (Filter ...)))` stores the Filter without running it. Later, `(ValueOf anchor key)` retrieves and executes it. Without DontExec, executable Atoms would run during SetValue. Also called "quoting for execution" - like QuoteLink but for executable Atoms. Returns the wrapped Atom unchanged.
-
-### PromiseLink
-Declares that a Value has a specific type when executed, enabling type-driven stream processing. Format: `(Promise (Type 'TypeName) source)`. Most commonly used with FlatStream to unbundle batched results: `(Promise (Type 'FlatStream) parse-source)` takes a stream producing LinkValues and doles out one element at a time. Lazy evaluation - doesn't execute until consumed. Type argument guides downstream processing. Also works with FutureStream for async computation. Essential for handling parsers that return multiple results per input.
 
 ### AnchorNode
 Named reference point for storing stream sources and pipeline stages. By convention, uses Predicates as keys: `(SetValue (Anchor "pipeline") (Predicate "stage1") source)`. Enables pipeline organization: each stage stores its output on an Anchor, next stage reads via ValueOfLink. Not special - just a Node type, but conventionally used for this purpose. Helps debugging by naming pipeline components. Multiple pipelines can coexist using different Anchor names. Cleaner than threading stream objects through code.
@@ -40,7 +368,96 @@ Named reference point for storing stream sources and pipeline stages. By convent
 **Purpose:** Extract data from AtomSpace and convert to stream format
 
 ### StringOfLink
-Converts between Node types by extracting/using the node name as a string. Format: `(StringOf (Type 'TargetType) source-atom)`. Takes a Node, extracts its name, creates new Node of target type with same name. Example: `(StringOf (Type 'ConceptNode) (Word "cat"))` → `(Concept "cat")`. Executable - use with cog-execute!. Inverse operation also works: extracts name from any Node. Essential for Link Grammar where you extract Word nodes but need Concept nodes for knowledge graphs. Also works in reverse to create typed nodes from strings. Pure type conversion - no string manipulation.
+
+**Purpose:** Type conversion between Nodes and StringValues, and between different Node types. Critical bridge between streaming Values and concrete Atoms.
+
+**Core Problem Solved:** Atomese has no "naked strings" - you cannot directly place string literals into Link patterns. StringOfLink bridges this gap by converting between:
+- Node types (e.g., Word → Concept)
+- Nodes ↔ StringValues (stream data ↔ AtomSpace storage)
+
+**Three Primary Conversion Patterns:**
+
+**1. Node → Node Conversion (Type Transformation)**
+```scheme
+(StringOf (Type 'ConceptNode) (Word "cat"))
+; Extracts "cat" from WordNode, creates (ConceptNode "cat")
+; This is THE critical operation for Link Grammar semantic extraction
+```
+
+**2. StringValue → Node (Stream to Storage)**
+```scheme
+(StringOf (Type 'ConceptNode) (ValueOf (Anchor "x") (Predicate "key")))
+; If anchor holds (StringValue "hello"), creates (ConceptNode "hello")
+; AtomSpace acts as "sink" - flow stops, freezes into Nodes
+```
+
+**3. Node → StringValue (Storage to Stream)**
+```scheme
+(StringOf (Type 'StringValue) (Concept "hello"))
+; Creates (StringValue "hello") from ConceptNode
+; AtomSpace acts as "source" - Nodes flow out as Values
+```
+
+**Syntax:**
+```scheme
+(StringOf <target-type> <source>)
+```
+Where:
+- `<target-type>`: Either `(Type 'SomeNode)` or `(Type 'StringValue)`
+- `<source>`: Node, StringValue, Variable, or expression producing one
+
+**Usage in Patterns (FilterLink):**
+
+StringOfLink can encode StringValue literals in patterns (since Values can't appear directly):
+```scheme
+(Filter
+  (Rule
+    (Variable "$filename")
+    ; Match pattern - StringOf creates StringValue from Node name
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$filename")
+      (StringOf (Type 'StringValue) (Node "reg")))  ; Matches StringValue "reg"
+    (Variable "$filename"))
+  stream)
+```
+
+**Usage in Rewrites (Stream Processing):**
+
+Common pattern: Convert streaming StringValues into tagged Nodes:
+```scheme
+(Filter
+  (Rule
+    (Variable "$strv")
+    (Variable "$strv")
+    ; Rewrite: Convert to ConceptNode and tag
+    (Edge (Predicate "sentence word")
+      (StringOf (Type 'Concept)
+        (ValueOf (Variable "$strv")))))
+  string-stream)
+```
+Result: Stream data becomes queryable Nodes in AtomSpace.
+
+**"Sink" vs "Source" Semantics:**
+
+- **AtomSpace as Sink:** Streaming data (StringValues) flows in, StringOfLink converts to Nodes, data "freezes" into permanent storage
+- **AtomSpace as Source:** Nodes flow out, StringOfLink converts to StringValues for streaming to external systems
+
+**Common Use Cases:**
+
+1. **Link Grammar Processing:** Convert `(Word "runs")` → `(Concept "runs")` for semantic graphs
+2. **Chat/Web Interfaces:** Capture streaming text as Nodes for storage/memory
+3. **File Processing:** Convert file paths from StringValues to ItemNodes with metadata
+4. **Knowledge Integration:** Stream data in, query AtomSpace later without re-accessing source
+
+**Key Properties:**
+
+- Executable via `cog-execute!`
+- Pure type conversion - no string manipulation
+- Name preservation - only type changes
+- Works with Variables in patterns
+- Can chain with ValueOf to process stored Values
+
+**Critical for:** Semantic extraction pipelines (Word → Concept), stream-to-storage workflows, external system integration.
 
 ### NumberOfLink
 Converts FloatValue to NumberNode by extracting the first component of the vector. FloatValue `[3.14, 2.71]` becomes `(Number "3.14")`. Only uses first element, discards rest. Commonly used after arithmetic operations that return FloatValues when you need a Node in the AtomSpace. Executable via cog-execute!. Counterpart to numeric operations which often return Values. Returns a Node, not a Value.
@@ -70,7 +487,126 @@ Checks if a specific key exists on an Atom, returns TrueLink or FalseLink. Forma
 **Purpose:** Parse natural language text using Link Grammar parser
 
 ### LgParseBonds
-Modern Link Grammar parser that returns bond structures as LinkValue. Format: `(LgParseBonds (Phrase "text") (LgDict "en") (Number num-linkages))`. Returns nested LinkValue: outer contains one LinkValue per linkage (parse), each containing word-list and bond-list. Bond-list has Edge atoms: `(Edge (Bond "Ss*s") (List (Word "cat") (Word "sat")))`. Number argument requests multiple parses (4 is common). Use with FilterLink + Glob patterns to extract specific bonds. Preferred over LgParseLink (old format). Pure data return - no AtomSpace pollution.
+
+**Purpose:** Modern Link Grammar parser - returns bond (link) structures as pure data (LinkValue). Does NOT pollute AtomSpace with parse results.
+
+**Format:**
+```scheme
+(LgParseBonds
+  (Phrase "sentence text")
+  (LgDict "language")        ; "en" for English, "ru" for Russian, etc.
+  (Number num-linkages))     ; How many parses to return (4 is common)
+```
+
+**Return Structure:** NESTED LinkValues (this is critical to understand):
+
+```
+LinkValue [                              ← Outer: one element per linkage
+  LinkValue [                            ← Linkage 1
+    LinkValue [word1, word2, word3, ...] ← Word-list (all words in sentence)
+    LinkValue [bond1, bond2, bond3, ...] ← Bond-list (grammatical links)
+  ]
+  LinkValue [                            ← Linkage 2 (alternate parse)
+    LinkValue [word1, word2, word3, ...]
+    LinkValue [bond1, bond2, ...]
+  ]
+  ...                                    ← Up to num-linkages parses
+]
+```
+
+**Word-list:** LinkValue of Word nodes
+- Example: `LinkValue [(Word "Phase") (Word "2") (Word "implements") ...]`
+- Word order matches sentence order
+- Each word appears once even if used in multiple bonds
+
+**Bond-list:** LinkValue of Edge atoms showing grammatical relationships
+- Each bond: `(Edge (Bond "type") (List (Word "word1") (Word "word2")))`
+- Bond type examples: "Ss*s" (singular subject), "Os" (object), "MVp" (verb modifier)
+- Bonds connect words by grammatical role
+
+**Example Output for "Phase 2 implements processing":**
+```scheme
+LinkValue [
+  LinkValue [
+    LinkValue [(Word "Phase") (Word "2") (Word "implements") (Word "processing")]
+    LinkValue [
+      (Edge (Bond "Ss*s") (List (Word "Phase") (Word "implements")))
+      (Edge (Bond "Os") (List (Word "implements") (Word "processing")))
+      (Edge (Bond "AN") (List (Word "2") (Word "Phase")))
+      ...
+    ]
+  ]
+]
+```
+
+**Multiple Linkages:** If you request 4 parses, outer LinkValue has 4 elements (different interpretations). Parser returns up to N, may return fewer if sentence is unambiguous.
+
+**Processing Pattern with FlatStream:**
+```scheme
+; Parser returns 4 linkages bundled together
+(define parse-result (LgParseBonds (Phrase "text") (LgDict "en") (Number 4)))
+
+; Unbundle them with FlatStream so you process one linkage at a time
+(define flattened
+  (LinkSignature (Type 'LinkValue)
+    (Promise (Type 'FlatStream) parse-result)))
+; Now each cog-execute! on flattened returns ONE linkage: [words, bonds]
+```
+
+**Extracting Bonds from Linkage:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$words") (Type 'LinkValue))
+      (TypedVariable (Variable "$bonds") (Type 'LinkValue)))
+    ; Pattern: linkage is two-element LinkValue
+    (LinkSignature (TypeInh 'LinkValue)
+      (Variable "$words")
+      (Variable "$bonds"))
+    ; Rewrite: keep only bonds
+    (Variable "$bonds"))
+  linkage-stream)
+```
+
+**Finding Specific Bond with Glob:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$words") (Type 'LinkValue))
+      (Glob "$before")                    ; Bonds before target
+      (TypedVariable (Variable "$subj") (Type 'Word))
+      (TypedVariable (Variable "$verb") (Type 'Word))
+      (Glob "$after"))                    ; Bonds after target
+    ; Pattern: find Ss*s bond anywhere in bond-list
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$words")                 ; First element: word-list
+      (LinkSignature (Type 'LinkValue)    ; Second element: bond-list
+        (Glob "$before")                  ; Match bonds before
+        (Edge (Bond "Ss*s")               ; The bond we want
+          (List (Variable "$subj") (Variable "$verb")))
+        (Glob "$after")))                 ; Match bonds after
+    ; Rewrite: return subject-verb pair
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$subj")
+      (Variable "$verb")))
+  parse-stream)
+```
+
+**Common Bond Types:**
+- **Ss*s** - Singular subject to singular verb
+- **Os** - Object (verb to object)
+- **MVp** - Past tense verb modifier
+- **AN** - Adjective/number to noun
+- **Ds** - Determiner to noun
+- Hundreds more - see Link Grammar documentation
+
+**Why Two Elements (words + bonds)?** Parser may tokenize differently or choose different word forms (spell-checker). Word-list shows actual words used in THIS parse. Usually identical across linkages but not guaranteed.
+
+**Executable:** Use `cog-execute!` or MCP `execute` tool
+
+**See:** `/sensory/examples/parse-pipeline.scm` (complete pipeline), `/diary/lg_learning/complete_svo_extraction.scm` (extraction patterns)
 
 ### Phrase (aka PhraseNode)
 Input text for Link Grammar parser. Simply wraps a string: `(Phrase "The cat sat")`. Not the parsed result - just the input. Node type created for type safety. Use as first argument to LgParseBonds. UTF-8 text.
@@ -100,10 +636,233 @@ Finds all Atoms matching a pattern, returns results as QueueValue (thread-safe s
 Pattern matching WITH rewriting: finds matches and creates new Atoms based on template. Format: `(Query vardecls pattern rewrite)`. Like MeetLink but adds third argument: rewrite template. For each match, substitutes variables in rewrite template with matched values. Returns QueueValue of rewritten Atoms. Mathematically: MeetLink + PutLink. Use when you want to transform matches, not just find them. Core tool for inference and rule application.
 
 ### RuleLink
-Pattern-matching rewrite rule for use with FilterLink. Format: `(Rule vardecls pattern rewrite)`. Like LambdaLink but with rewrite clause. FilterLink applies Rule to each stream element: if element matches pattern, returns rewrite; if no match, discards. Used for stream transformation. Not for AtomSpace queries - use QueryLink for that. Essential for pipeline processing: `(Filter (Rule ...) stream)`. Pattern can use Glob for flexible matching.
+
+**Purpose:** Pattern-matching rewrite rule for stream processing with FilterLink. Combines pattern matching with transformation in one atom.
+
+**Structure:** THREE parts (not two like Lambda):
+```scheme
+(Rule
+  <variable-declarations>    ; Part 1: VariableNode, TypedVariable, or VariableList
+  <pattern-to-match>         ; Part 2: Pattern with variables
+  <rewrite-template>)        ; Part 3: What to return when matched
+```
+
+**How It Works:**
+1. FilterLink feeds stream elements to Rule
+2. Rule tries to match pattern against each element
+3. If match succeeds: variables get grounded, rewrite template executed with those values, result returned
+4. If match fails: element discarded (filtered out)
+5. No match = filtering, match = transformation
+
+**Comparison to Lambda:**
+- **LambdaLink:** 2 parts (vardecls + body). Body IS the pattern. Variables ARE the extraction.
+- **RuleLink:** 3 parts (vardecls + pattern + rewrite). Pattern for matching, rewrite for output.
+- Rule = "if pattern matches, return rewrite"
+- Lambda = "extract what matches variables"
+
+**Example - Simple Transformation:**
+```scheme
+(Filter
+  (Rule
+    (TypedVariable (Variable "$x") (Type 'StringStream))
+    (Variable "$x")                    ; Pattern: match anything of type StringStream
+    (LgParseBonds                      ; Rewrite: parse it
+      (Variable "$x")
+      (LgDict "en")
+      (Number 4)))
+  text-stream)
+; Each string from text-stream gets parsed, returns parse results
+```
+
+**Example - Pattern + Rewrite:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$words") (Type 'LinkValue))
+      (TypedVariable (Variable "$bonds") (Type 'LinkValue)))
+    ; Pattern: match LinkValue with two elements
+    (LinkSignature (TypeInh 'LinkValue)
+      (Variable "$words")
+      (Variable "$bonds"))
+    ; Rewrite: keep only bonds, discard words
+    (Variable "$bonds"))
+  linkage-stream)
+; Extracts bond-list from [word-list, bond-list] pairs
+```
+
+**Example - Complex Pattern with Glob:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$words") (Type 'LinkValue))
+      (Glob "$before")
+      (TypedVariable (Variable "$subj") (Type 'Word))
+      (TypedVariable (Variable "$verb") (Type 'Word))
+      (Glob "$after"))
+    ; Pattern: find Ss*s bond anywhere in bond-list
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$words")
+      (LinkSignature (Type 'LinkValue)
+        (Glob "$before")
+        (Edge (Bond "Ss*s") (List (Variable "$subj") (Variable "$verb")))
+        (Glob "$after")))
+    ; Rewrite: return just subject and verb
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$subj")
+      (Variable "$verb")))
+  parse-output)
+; Finds Ss*s bond in parse, extracts subject-verb pair
+```
+
+**When to Use Rule vs Lambda:**
+- Use **Lambda** when you just want to extract variables from pattern
+- Use **Rule** when you need to transform/rewrite the match
+- Rule is more powerful but more verbose
+
+**Not for AtomSpace Queries:** Rule is for FilterLink (stream processing). For AtomSpace pattern matching use QueryLink.
+
+**See Also:** FilterLink (uses Rules), QueryLink (AtomSpace equivalent)
 
 ### GlobNode
-Matches zero or more consecutive Atoms in a sequence. Like regex `*` but for Atoms. Format: `(Glob "$varname")`. Must appear in ordered context (ListLink, not SetLink). Example: `(List (Concept "I") (Glob "$middle") (Concept "you"))` matches any list starting with "I" and ending with "you", binding `$middle` to everything between. Critical for LinkValue processing where you don't know how many bonds appear before/after target. Type-constrainable: `(TypedVariable (Glob "$g") (Type 'Word))`. Must match at least one atom (currently - may change).
+
+**Purpose:** Matches variable-length sequences of Atoms in ordered collections. The pattern-matching equivalent of regex wildcards for Atomese.
+
+**Core Concept:** While VariableNode matches exactly one Atom, GlobNode matches zero or more consecutive Atoms in a sequence. Essential for patterns where you don't know how many elements appear between known anchors.
+
+**Basic Syntax:**
+```scheme
+(Glob "$varname")
+```
+
+**Default Behavior:** Without constraints, Glob matches **one or more** Atoms (like regex `+`, not `*`). To match zero Atoms, use IntervalLink.
+
+**Context Requirements:**
+- Must appear in **ordered** collections: ListLink, LinkValue (via LinkSignature)
+- Cannot appear in unordered collections: SetLink
+- Binding returns a ListLink of matched Atoms (even for single match)
+
+**Example 1 - Basic Wildcard Matching:**
+```scheme
+; Pattern
+(ListLink (Concept "I") (Glob "$middle") (Concept "you"))
+
+; Matches:
+(ListLink (Concept "I") (Concept "love") (Concept "you"))
+; $middle = (ListLink (Concept "love"))
+
+(ListLink (Concept "I") (Concept "really") (Concept "totally") (Concept "need") (Concept "you"))
+; $middle = (ListLink (Concept "really") (Concept "totally") (Concept "need"))
+```
+
+**Example 2 - Type Constraints:**
+
+Limit Glob to specific Atom types:
+```scheme
+(TypedVariable (Glob "$numbers") (Type "NumberNode"))
+
+; Pattern
+(ListLink (Concept "I") (Concept "love") (Glob "$numbers"))
+
+; Matches:
+(ListLink (Concept "I") (Concept "love") (Number 42))
+; $numbers = (ListLink (Number 42))
+
+; Does NOT match:
+(ListLink (Concept "I") (Concept "love") (Concept "you"))
+; "you" is not a NumberNode
+```
+
+**Example 3 - Interval Constraints (Match Count):**
+
+Control how many Atoms the Glob must match:
+```scheme
+; Match exactly 0 or 1 Atoms
+(TypedVariable (Glob "$maybe") (IntervalLink (Number 0) (Number 1)))
+
+; Match 0 to infinity (true regex * behavior)
+(TypedVariable (Glob "$any") (IntervalLink (Number 0) (Number -1)))
+
+; Match exactly 1 (forces non-empty)
+(TypedVariable (Glob "$one") (IntervalLink (Number 1) (Number 1)))
+
+; Match 2 to 5 Atoms
+(TypedVariable (Glob "$few") (IntervalLink (Number 2) (Number 5)))
+```
+Where: `(IntervalLink min max)` with -1 meaning infinity.
+
+**Example 4 - Combined Type + Interval:**
+
+Use TypeSetLink to combine both constraints:
+```scheme
+(TypedVariable (Glob "$concepts")
+  (TypeSetLink
+    (IntervalLink (Number 0) (Number -1))  ; 0 to infinity
+    (Type "ConceptNode")))                 ; Only ConceptNodes
+
+; Matches any number of ConceptNodes (including zero)
+```
+
+**Example 5 - Multiple Globs in One Pattern:**
+```scheme
+(QueryLink
+  (VariableList
+    (TypedVariable (Glob "$before") (IntervalLink (Number 0) (Number -1)))
+    (TypedVariable (Glob "$verb")
+      (TypeSetLink (Type "ConceptNode") (IntervalLink (Number 1) (Number 1))))
+    (TypedVariable (Glob "$after") (IntervalLink (Number 0) (Number -1))))
+  (ListLink
+    (Glob "$before")
+    (Concept "I")
+    (Glob "$verb")
+    (Concept "you")
+    (Glob "$after"))
+  ...)
+; Finds any verb between "I" and "you" with optional words before/after
+```
+
+**Example 6 - LinkValue Processing (Link Grammar):**
+
+Critical for bond extraction where position is unknown:
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$words") (Type 'LinkValue))
+      (Glob "$before")
+      (TypedVariable (Variable "$subj") (Type 'Word))
+      (TypedVariable (Variable "$verb") (Type 'Word))
+      (Glob "$after"))
+    ; Pattern: Find Ss bond anywhere in bond list
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$words")
+      (LinkSignature (Type 'LinkValue)
+        (Glob "$before")
+        (Edge (Bond "Ss*s") (List (Variable "$subj") (Variable "$verb")))
+        (Glob "$after")))
+    ; Rewrite: Extract just subject and verb
+    (LinkSignature (Type 'LinkValue) (Variable "$subj") (Variable "$verb")))
+  parse-output)
+```
+This finds the Ss bond regardless of position in the bond list.
+
+**Key Behavior Details:**
+
+1. **Greedy Matching:** When multiple Globs appear, matcher tries to satisfy constraints but behavior depends on context
+2. **Type Filtering:** Type constraints apply to EACH matched Atom - all must satisfy the type
+3. **Empty Matches:** Return empty ListLink when Glob matches zero Atoms (if interval allows)
+4. **QueryLink vs FilterLink:** Works in both, but FilterLink more common for stream processing
+
+**Common Patterns:**
+
+- **Prefix match:** `(Glob "$rest")` at end
+- **Suffix match:** `(Glob "$rest")` at start
+- **Infix extraction:** `(Glob "$before") <target> (Glob "$after")`
+- **Optional elements:** IntervalLink (0, 1) for maybe-present items
+- **Unbounded wildcard:** IntervalLink (0, -1) for true regex `*`
+
+**Critical for:** Link Grammar bond extraction, flexible list patterns, natural language processing, sequence matching with unknown lengths.
 
 ### VariableNode
 Pattern variable for matching single Atoms. Format: `(Variable "$name")`. Dollar-sign convention but not required. In pattern, acts as placeholder: `(Edge (Predicate "rel") (List (Variable "$x") (Concept "target")))` matches any first element. Grounding is the matched Atom. Use TypedVariable to constrain type. Distinguished from regular Nodes by context (pattern matching) not type alone.
@@ -118,7 +877,136 @@ Declares multiple variables for pattern. Format: `(VariableList (Variable "$x") 
 Type pattern for matching Atom structure. Uses TypeNodes instead of Variables. Format: `(Signature (Type 'EdgeLink) (Type 'PredicateNode) (Type 'ListLink))`. Matches any Edge with Predicate and List children. More rigid than Variables - only checks types, doesn't bind values. Used with FilterLink for type-based filtering. Polymorphic via TypeChoice. Different from LinkSignature (which constructs LinkValues).
 
 ### LinkSignature (aka LinkSignatureLink)
-Constructs LinkValue in rewrite rules. Format: `(LinkSignature (Type 'LinkValue) elem1 elem2 ...)`. Essential for FilterLink rewrites operating on LinkValues. Creates new LinkValue containing specified elements. Can nest: `(LinkSignature (TypeInh 'LinkValue) ...)` with type inheritance. Not a pattern - a constructor. Used in Rule rewrite clauses to build output.
+
+**Purpose:** Has TWO different uses depending on context - this is confusing but critical to understand!
+
+---
+
+**USE 1: In Rewrite Clauses - CONSTRUCTS LinkValue**
+
+When used in the rewrite part of a Rule (or as executable), LinkSignature BUILDS a new LinkValue from its arguments.
+
+**Format:**
+```scheme
+(LinkSignature (Type 'LinkValue) elem1 elem2 elem3 ...)
+```
+
+**Example - Constructing Output:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (Variable "$subj")
+      (Variable "$verb"))
+    <pattern>
+    ; REWRITE: construct new LinkValue with two elements
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$subj")
+      (Variable "$verb")))
+  input)
+; Returns LinkValue containing subject and verb
+```
+
+**Type Inheritance Variant:**
+```scheme
+(LinkSignature (TypeInh 'LinkValue) ...)  ; Matches LinkValue and subtypes
+```
+
+**Nesting:**
+```scheme
+; Construct nested LinkValue structure
+(LinkSignature (Type 'LinkValue)
+  (Variable "$outer")
+  (LinkSignature (Type 'LinkValue)  ; Inner LinkValue
+    (Variable "$inner1")
+    (Variable "$inner2")))
+```
+
+---
+
+**USE 2: In Pattern Clauses - MATCHES LinkValue Structure**
+
+When used in the pattern part of a Rule, LinkSignature specifies structure to match by checking types and positions.
+
+**Format:**
+```scheme
+(LinkSignature (Type 'LinkValue)
+  <type-or-variable-1>
+  <type-or-variable-2>
+  ...)
+```
+
+**Example - Matching Structure:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$words") (Type 'LinkValue))
+      (TypedVariable (Variable "$bonds") (Type 'LinkValue)))
+    ; PATTERN: match LinkValue with exactly 2 elements of specified types
+    (LinkSignature (TypeInh 'LinkValue)
+      (Variable "$words")   ; First element (any LinkValue)
+      (Variable "$bonds"))  ; Second element (any LinkValue)
+    <rewrite>)
+  input)
+; Matches LinkValue with two LinkValue elements, binds them to variables
+```
+
+**Example - Nested Pattern:**
+```scheme
+(Rule
+  (VariableList
+    (TypedVariable (Variable "$words") (Type 'LinkValue))
+    (Glob "$before")
+    (TypedVariable (Variable "$subject") (Type 'Word))
+    (TypedVariable (Variable "$verb") (Type 'Word))
+    (Glob "$after"))
+  ; PATTERN: match nested LinkValue structure
+  (LinkSignature (Type 'LinkValue)
+    (Variable "$words")                    ; Outer first element
+    (LinkSignature (Type 'LinkValue)      ; Outer second element - also LinkValue
+      (Glob "$before")                    ; Inner: variable-length prefix
+      (Edge (Bond "Ss*s")                 ; Inner: specific bond
+        (List (Variable "$subject") (Variable "$verb")))
+      (Glob "$after")))                   ; Inner: variable-length suffix
+  <rewrite>)
+; Matches LgParseBonds output: [words, [bonds with Ss*s somewhere]]
+```
+
+---
+
+**Key Differences:**
+
+**In Patterns (matching):**
+- Checks that input HAS specified structure
+- Variables BIND to elements at those positions
+- Type constraints filter mismatches
+- Globs match variable-length sequences
+
+**In Rewrites (constructing):**
+- CREATES new LinkValue from arguments
+- Variables are SUBSTITUTED with their grounded values
+- Result is actual LinkValue data structure
+- No matching - pure construction
+
+**Common Pattern: Match → Extract → Reconstruct:**
+```scheme
+(Rule
+  <vardecls>
+  ; Match structure
+  (LinkSignature (Type 'LinkValue) pattern...)
+  ; Reconstruct different structure
+  (LinkSignature (Type 'LinkValue) rewrite...))
+```
+
+**Type vs TypeInh:**
+- `(Type 'LinkValue)` - Match exactly LinkValue type
+- `(TypeInh 'LinkValue)` - Match LinkValue or any subtype (type inheritance)
+- Use TypeInh when you want flexible matching
+
+**Critical for:** Processing LgParseBonds output, any nested LinkValue manipulation, stream transformations
+
+**See Also:** RuleLink (uses LinkSignature), LgParseBonds (produces nested LinkValues)
 
 ---
 
