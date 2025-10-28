@@ -125,6 +125,245 @@ Constructs LinkValue in rewrite rules. Format: `(LinkSignature (Type 'LinkValue)
 
 ---
 
+## Category: Scoping & Lambda Calculus
+
+**Purpose:** Variable binding, lambda expressions, beta reduction
+
+### LambdaLink
+Lambda abstraction for creating anonymous functions. Format: `(Lambda vardecls body)`. Vardecls specify parameters, body is expression using those variables. When executed with PutLink, performs beta reduction: substitutes arguments for variables. Used to define DefinedProcedureNode and DefinedSchemaNode bodies. Unlike ScopeLink (change of variable only), LambdaLink allows free beta-reduction with any values. Example: `(Lambda (Variable "$x") (Plus (Variable "$x") (Number 1)))` is increment function. Execute via PutLink to apply.
+
+### PutLink
+Beta reduction: substitutes values for variables in a lambda expression or pattern. Format: `(Put lambda-or-pattern (List arg1 arg2 ...))` or `(Put vardecls body (List args))`. Creates new Atom/Value with variables replaced by arguments. Core of function application in Atomese. QueryLink = MeetLink + PutLink conceptually. Can explicitly specify variables as ScopeLink. Returns the result of substitution. Example: `(Put (Lambda (Variable "$x") (Plus (Variable "$x") (Number 1))) (List (Number 5)))` → `(Number 6)`.
+
+### ScopeLink
+Base class for links with scoped variables (LambdaLink, QueryLink, MeetLink, etc.). Provides variable scoping infrastructure. Not typically used directly - use subclasses. Defines variable scope boundaries. Only allows beta-reductions equivalent to change-of-variable (alpha conversion), unlike LambdaLink's free reduction. Ensures variable names don't clash. Foundation for all variable-using Atoms.
+
+### JoinLink
+Pattern matching for partial graphs: finds containing structures when given subgraphs. Dual to MeetLink. While MeetLink finds subgraphs matching a pattern, JoinLink finds "super-graphs" containing known elements. Format: `(Join vardecls pattern)`. Searches for unknown containers of known subgraphs. Named for lattice theory "join" operation (MeetLink is "meet"). Less commonly used than MeetLink but powerful for structural queries. Returns QueueValue of matching containers.
+
+### DualLink
+Inverse pattern matching: given a ground term (answer), finds patterns (questions) that would match it. Used for pattern recognition and rule engine construction. Finds all queries/rules that this data satisfies. Essential for SRAI/chatbot systems: match input to response patterns. Also useful for finding applicable rules in forward chaining. Given concrete data, returns patterns with variables that would match. Enables meta-reasoning: "what rules apply here?"
+
+### GetLink, BindLink
+Deprecated query links that return SetLink (pollutes AtomSpace). GetLink is old MeetLink, BindLink is old QueryLink. Both create SetLinks containing results, which must be manually cleaned up. Replaced by MeetLink/QueryLink which return QueueValues. Kept for backwards compatibility only. Do not use in new code. Documentation exists for legacy code understanding.
+
+### FreeLink
+Marks variables as free (not to be bound) in a pattern. Normally all variables in scope are bound; FreeLink prevents binding specific ones. Used when you want some variables to remain as variables in result. Format: `(Free (Variable "$x") body)`. Variable `$x` stays as `$x` instead of being grounded. Rare use case but essential when needed.
+
+### QuoteLink, UnquoteLink
+Prevents pattern matching/execution within quoted region. QuoteLink treats contents literally - variables aren't variables, executable Links aren't executed. UnquoteLink escapes back to normal interpretation within quoted region. Similar to Lisp quote/unquote. Used when you want to match the structure of a pattern itself, not use it as a pattern. LocalQuoteLink is variant for local quoting.
+
+---
+
+## Category: Arithmetic & Numeric Functions
+
+**Purpose:** Symbolic and computational arithmetic
+
+### PlusLink
+Addition operation, both symbolic and computational. Format: `(Plus arg1 arg2 ...)`. Works on NumberNodes, FloatValues, returns appropriate type. Performs term reduction: `0 + x → x`, `2 + 3 → 5`, `x + x → 2*x`. Vector addition component-wise. Symbolic: represents formula in AtomSpace for learning/reasoning. Computational: actually computes when executed. Built on FoldLink for associative reduction. Fast but not CPU-native speed (100x slower than raw CPU).
+
+### TimesLink
+Multiplication with symbolic manipulation and computation. Format: `(Times arg1 arg2 ...)`. Reductions: `1 * x → x`, `0 * x → 0`, `2 * 3 → 6`. Component-wise for vectors. Can multiply matrices via vector operations. Accumulate sums components; Times multiplies them. Also built on FoldLink. Used extensively in formula representation for PLN, learning systems.
+
+### MinusLink
+Subtraction: `(Minus arg1 arg2)`. Binary operation. Performs reductions: `x - 0 → x`, `x - x → 0`, `5 - 3 → 2`. Vector subtraction component-wise. Less commonly used than Plus (can use Plus with negative numbers).
+
+### DivideLink
+Division: `(Divide numerator denominator)`. Binary operation. Reductions: `x / 1 → x`, `0 / x → 0`, `6 / 2 → 3`. Component-wise for vectors. Beware division by zero - may throw or return NaN depending on context.
+
+### AccumulateLink
+Sums all components of a vector FloatValue. `FloatValue [1, 2, 3]` → `FloatValue [6]`. Reduces vector to single number. Essential for vector processing pipelines. Different from PlusLink which adds multiple vectors component-wise. Common pattern: arithmetic on vectors → AccumulateLink → NumberOfLink → Node.
+
+### FoldLink
+Generic associative reduction operation over lists. PlusLink and TimesLink built on top of this. Implements comp-sci fold/reduce concept. Takes binary operation and list, applies operation iteratively. Most users use PlusLink/TimesLink rather than FoldLink directly. Foundation for iterated operations.
+
+### GreaterThanLink, LessThanLink, EqualLink
+Comparison operations returning TrueLink or FalseLink. Virtual links - don't store all possible comparisons, compute on demand. Example: `(GreaterThan (Number 5) (Number 3))` → TrueLink. Work with NumberNodes and FloatValues. Essential for conditional logic. Used in pattern matching as evaluatable conditions. GreaterThan and others allow reasoning about order without computing all combinations.
+
+### ExpLink, LogLink, SineLink, CosineLink, TanLink, PowLink
+Mathematical functions for scientific computation. All executable. ExpLink is e^x, LogLink is natural log, trig functions self-explanatory. PowLink is exponentiation: `(Pow base exponent)`. Work on NumberNodes and FloatValues. Used in formulas for PLN, statistics, signal processing. Combined with arithmetic for complex expressions.
+
+### MinLink, MaxLink
+Return minimum/maximum of arguments. `(Min arg1 arg2 ...)` returns smallest. Works on numbers and vectors (component-wise). Used in optimization, bounds checking. Executable.
+
+### FloorLink, HeavisideLink, ImpulseLink
+Specialized math functions. FloorLink rounds down. HeavisideLink is step function (0 below threshold, 1 above). ImpulseLink is delta function. Used in signal processing and piecewise functions.
+
+### RandomNumberLink
+Generates random number when executed. Returns FloatValue. Non-deterministic - each execution gives different result. Seed not controllable via Atomese (uses system random). Used for probabilistic algorithms.
+
+---
+
+## Category: Boolean Logic & Conditions
+
+**Purpose:** Logical operations and conditional execution
+
+### AndLink, OrLink, NotLink
+Classical boolean logic on TrueLink/FalseLink. AndLink: all arguments must be True. OrLink: any argument can be True. NotLink: inverts single argument. Executable - evaluate boolean sub-expressions. Used in pattern matching conditions and conditional execution. Different from SequentialAndLink (which sequences actions).
+
+### TrueLink, FalseLink
+Boolean constants. No arguments, just represent True/False. Returned by comparisons and predicates. Used as success/failure indicators. Execute to themselves.
+
+### SequentialAndLink, SequentialOrLink
+Execute arguments in order, short-circuit on failure/success. SequentialAnd stops at first failure. SequentialOr stops at first success. Unlike AndLink/OrLink which are declarative, these are imperative control flow. Used for sequencing actions where order matters. Returns last executed value.
+
+### ChoiceLink
+Try alternatives in order until one succeeds. Format: `(Choice option1 option2 ...)`. Executes options sequentially, returns first non-failing result. Used for fallback logic. Pattern matching: try multiple patterns. Different from OrLink which evaluates all.
+
+### PresentLink
+Tests if pattern exists in AtomSpace, returns TrueLink/FalseLink. Like SatisfactionLink but returns boolean. Used in conditional logic: "if this pattern exists, then...". Evaluatable in queries. Finds at least one grounding of pattern. Non-polluting check for existence.
+
+### AbsentLink
+Negation: pattern must NOT exist. Returns TrueLink if pattern not found. Implements intuitionistic logic - represents "unknown" not "known false". Variables in Absent leak to outer scope. Essential for negative constraints: "find X that is NOT Y". Used with And to combine positive and negative conditions. See `/pattern-matcher/examples/absent.scm`.
+
+### AlwaysLink
+Universal quantifier: pattern must hold for ALL instances. "For-all" semantics. Different from pattern matching's default "there-exists". Tests that condition holds universally. Returns TrueLink if all instances satisfy, FalseLink otherwise. Used for global constraints.
+
+### GroupLink
+Groups results by shared variable values, like SQL GROUP BY. Returns nested structure: outer level groups, inner level group members. Used when you want to cluster results. Example: group people by city. Less common than other pattern atoms but powerful for aggregation.
+
+---
+
+## Category: External Systems - Callbacks & Integration
+
+**Purpose:** Call external code (Python, Scheme, C++) from Atomese
+
+### GroundedSchemaNode
+Calls external code when executed. Format: `(GroundedSchema "lang:function")`. Language prefixes: `py:` for Python, `scm:` for Scheme, `lib:` for C++ shared libraries. Function must be in PYTHONPATH/load-path. Used with ExecutionOutputLink to pass arguments. Returns Value. Example: `(GroundedSchema "py:my_function")` calls Python function `my_function`. Essential bridge to external processing, sensors, actuators. Allows Atomese to control external systems.
+
+### GroundedPredicateNode
+External predicate returning boolean (TrueLink/FalseLink). Format: `(GroundedPredicate "lang:function")`. Used in pattern matching to check external conditions. Example: sensor reading above threshold. Function receives arguments, returns boolean. Enables reactive behavior: patterns trigger only when external condition holds. Used in robotics, game AI, chatbots for environmental awareness.
+
+### DefinedSchemaNode
+Named Atomese function defined via DefineLink. Pure Atomese (no external code). Format: Define a name, then reference it. Example: `(Define (DefinedSchema "increment") (Lambda ...))`. Reusable functions in Atomese. Cleaner than copying lambdas everywhere. Can be recursive. Preferred over Grounded when logic can be expressed in Atomese.
+
+### DefinedProcedureNode
+Like DefinedSchema but for procedures (side effects OK). Named via DefineLink. Returns general Values, not just specific types. Used for complex Atomese procedures that modify state or produce varied outputs. Distinction from Schema is historical/semantic - both work similarly.
+
+### DefinedPredicateNode
+Named boolean predicate in pure Atomese. Defined via DefineLink with boolean-returning body. Used in pattern matching like GroundedPredicate but implemented in Atomese. Reusable logical conditions.
+
+### ExecutionOutputLink
+Executes Schema/Procedure with arguments. Format: `(ExecutionOutput schema (List arg1 arg2 ...))`. Schema can be Grounded* or Defined*. Passes arguments to function/procedure, returns result. Execute with cog-execute!. Essential for actually calling external code or defined functions. Arguments available to external function as list of Atoms.
+
+### SchemaNode, ProcedureNode
+Base classes. SchemaNode for functions, ProcedureNode for procedures. Not usually instantiated directly - use Grounded* or Defined* subtypes. Provide type hierarchy for callable entities.
+
+---
+
+## Category: Storage & Persistence
+
+**Purpose:** Save/load AtomSpace to disk, network, databases
+
+### StorageNode
+Base class for all persistence backends. Provides store/fetch/load operations. Not used directly - use specific subtypes. Enables AtomSpace persistence and distribution. Load brings Atoms from storage into RAM. Store writes Atoms from RAM to storage. Fetch retrieves specific Atoms. All operations preserve uniqueness.
+
+### RocksStorageNode
+RocksDB backend - recommended for local persistence. Format: `(RocksStorage "rocks:///path/to/db")`. Fast, embedded database. Stores Atoms and Values. Good for single-machine persistence. No network overhead. Handles millions of Atoms efficiently. Use for checkpointing, long-term storage.
+
+### FileStorageNode
+Plain text file storage in s-expression format. Human-readable. Format: `(FileStorage "file:///path/to/file.scm")`. Slow but debuggable. Good for small AtomSpaces, configuration, sharing. Not for large datasets.
+
+### MonoStorageNode
+Single-file compact format. Fast loading. Format: `(MonoStorage "mono:///path/to/file")`. Optimized for bulk load/store. Less flexible than Rocks but faster for checkpoint/restore.
+
+### CogStorageNode, CogSimpleStorageNode
+Network client to remote CogServer. Format: `(CogStorage "cog://hostname:port")`. Enables distributed AtomSpace. Multiple clients can connect to same server. CogSimple is lightweight version. Used for multi-machine setups, cloud deployments. Atoms fetched on demand over network.
+
+### ProxyNode
+Composite/proxy pattern for multiple backends. Base class for various proxy types. Enables mirroring, load balancing, caching strategies. Wraps multiple StorageNodes.
+
+### ReadThruProxyNode, WriteThruProxyNode, ReadWriteProxyNode
+Caching proxies. ReadThru: read from storage, cache in RAM. WriteTh
+
+ru: write immediately to storage. ReadWrite: both. Used to optimize storage access patterns. Reduces network/disk latency.
+
+### WriteBufferProxyNode
+Batches writes to reduce I/O. Accumulates changes, flushes periodically. Improves performance when many small updates. Trade-off: delayed persistence for throughput.
+
+### SequentialReadProxyNode
+Reads from multiple storages in sequence until found. Enables fallback chains. Try local cache, then remote server, then archive.
+
+### NullProxyNode, CachingProxyNode, DynamicDataProxyNode
+Specialized proxies. Null discards data (testing). Caching adds caching layer. DynamicData for generated/computed data.
+
+### FetchValueOfLink, StoreValueOfLink
+Fetch/store specific Values from storage. Like ValueOfLink but for persistence. Fetch loads from remote/disk. Store saves immediately. Granular control over what gets persisted.
+
+---
+
+## Category: Execution Control & State
+
+**Purpose:** Control flow, state management, threading
+
+### CondLink
+Conditional execution (if-then-else). Format: `(Cond condition then-clause else-clause)`. Evaluates condition (boolean or pattern), executes appropriate branch. Returns result of executed branch. Used for branching logic. Condition can be comparison, PresentLink, GroundedPredicate, etc.
+
+### StateLink
+Unique state: ensures only one value for a key. Format: `(State key value)`. When new State created with same key, old one removed. Thread-safe. Used for singleton state like "current mode", "active user". Differs from SetValue (which allows multiple values per key in key-value database). StateLink is in the graph, SetValue is attached data.
+
+### DefineLink
+Names an Atom for reuse. Format: `(Define name-atom body)`. Name is usually DefinedPredicate/Schema/Procedure. Body is the definition. Enables named functions, predicates, patterns. Once defined, use name to reference body. Can be redefined (replaces previous).
+
+### DeleteLink
+Removes Atom from AtomSpace. Format: `(Delete atom)` or `(Delete atom recursive-flag)`. Immediate removal. Recursive deletes all incoming Links too. Use carefully - breaks references. Returns deleted Atom.
+
+### UniqueLink
+Creates unique instance even if duplicate structure. Overrides normal uniqueness constraint. Rarely needed. Used when you need multiple "identical" Atoms distinguished by instance.
+
+### SequenceLink
+Executes arguments in order, returns last result. Format: `(Sequence step1 step2 ...)`. Pure sequencing - all steps execute regardless. Different from SequentialAnd (short-circuit). Used for ordered side effects.
+
+### ParallelLink
+Creates threads, executes arguments in parallel. Format: `(Parallel task1 task2 ...)`. Each argument runs in new thread. Returns ListLink of results (order matches argument order). Blocks until all complete. Thread-safe - AtomSpace handles locking. Use for CPU-bound parallel work.
+
+### ExecuteThreadedLink
+Older parallel execution. ParallelLink preferred. Similar functionality.
+
+### SleepLink
+Delays execution. Format: `(Sleep (Number seconds))`. Blocks for specified time. Returns after delay. Used for timing, rate limiting. Seconds can be fractional.
+
+### RandomChoiceLink
+Randomly selects one argument to execute. Format: `(RandomChoice option1 option2 ...)`. Equal probability (currently). Returns result of chosen option. Non-deterministic. Used for stochastic behavior.
+
+### GrantLink
+Thread-safe state update with locking. More sophisticated than StateLink. Prevents race conditions in complex updates.
+
+---
+
+##  Category: Type System
+
+**Purpose:** Runtime type system, type constructors, signatures
+
+### TypeNode
+References an Atom type by name. Format: `(Type 'ConceptNode')` or `(Type "ConceptNode")`. Used in TypedVariable, type patterns, type checking. Not the type itself - a reference to it. Enables meta-programming on types. Can get supertypes/subtypes dynamically.
+
+### TypeChoice
+Union type: accepts any of several types. Format: `(TypeChoice (Type 'ConceptNode) (Type 'PredicateNode'))`. Used in TypedVariable for polymorphism. Variable can match any listed type. Enables flexible patterns.
+
+### DefinedTypeNode
+User-defined type name. Created via DefineLink. Allows custom type aliases. Less common than TypeNode.
+
+### SignatureLink
+Type signature for pattern matching (already covered in Pattern section - here for completeness). Declares expected structure using types.
+
+### ArrowLink
+Function type: input types → output type. Format: `(Arrow input-types output-type)`. Describes function signatures. Used in type checking and inference. Enables typed lambda calculus.
+
+### TypeIntersectionLink
+Intersection of types: must satisfy all. Less common than TypeChoice. Used for multi-constraint type specifications.
+
+### TypeInheritanceLink (TypeInhNode, TypeCoInhNode)
+Type inheritance relationships. Rarely used directly - type hierarchy built into C++ classes. TypeInhNode checks if subtype, TypeCoInhNode for covariance. Advanced type theory features.
+
+### TypedAtomLink
+Associates type signature with an Atom. Meta-type information. Used in type inference systems.
+
+### IntervalLink
+Numeric range type. Specifies min/max bounds. Used for bounded numeric types. Type constructor for intervals.
+
+---
+
 ## Quick Reference - Common Tasks
 
 **Parse text and extract semantic relationships:**
