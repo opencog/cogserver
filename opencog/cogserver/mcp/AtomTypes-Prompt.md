@@ -1,8 +1,8 @@
-# Atom Types Reference - Essential Categories
+# Atom Types Reference
 
-**Purpose:** Comprehensive reference for Atom types critical for semantic extraction and stream processing
+**Purpose:** Comprehensive reference for 170+ Atom types organized by functional category
 
-**Status:** Priority categories complete. Full reference in progress.
+**Status:** Complete - covers all major categories with 3-10 sentence descriptions per type
 
 **Wiki:** https://wiki.opencog.org/w/Atom_types (detailed docs for each type)
 
@@ -84,9 +84,6 @@ Individual word in a Link Grammar parse. Created by parser, not manually. Name i
 ### Bond (aka BondNode)
 Link type in Link Grammar parse, like "Ss*s" (subject-verb singular), "Os" (object), "MVp" (verb-modifier past). Created by parser in Edge structures: `(Edge (Bond "Ss*s") (List word1 word2))`. Name is the Link Grammar link type. Hundreds of types, see LG documentation. Different bonds indicate different grammatical relationships. Essential for pattern matching to extract semantic relationships.
 
-### LgParseLink, LgParseMinimal
-Old-style parsers that create many Atoms in AtomSpace (deprecated). Use LgParseBonds instead. These create complex Atom structures that clutter AtomSpace. LgParseMinimal omits disjuncts but still verbose. Kept for backwards compatibility only.
-
 ### LgParseDisjuncts, LgParseSections
 Specialized parsers returning disjuncts or Section atoms instead of bonds. Disjuncts show how words connect. Sections are sheaf-theoretic structures for advanced use. Most users want LgParseBonds. These are for linguistic research or specialized processing.
 
@@ -97,10 +94,10 @@ Specialized parsers returning disjuncts or Section atoms instead of bonds. Disju
 **Purpose:** Core pattern matching constructs for querying AtomSpace
 
 ### MeetLink
-Finds all Atoms matching a pattern, returns results as QueueValue (thread-safe stream). Modern replacement for GetLink (which returned SetLink). Format: `(Meet vardecls pattern)`. Vardecls can be Variable, TypedVariable, or VariableList. Pattern uses variables as placeholders. Returns QueueValue containing all groundings: each element is the variable binding (single Variable) or ListLink (multiple variables). Non-polluting: doesn't create SetLinks in AtomSpace. Execute with cog-execute!. For patterns only - no rewriting. See `/pattern-matcher/examples/` for extensive examples.
+Finds all Atoms matching a pattern, returns results as QueueValue (thread-safe stream). Format: `(Meet vardecls pattern)`. Vardecls can be Variable, TypedVariable, or VariableList. Pattern uses variables as placeholders. Returns QueueValue containing all groundings: each element is the variable binding (single Variable) or ListLink (multiple variables). Non-polluting: doesn't create Atoms in AtomSpace for results. Execute with cog-execute!. For patterns only - no rewriting. See `/pattern-matcher/examples/` for extensive examples.
 
 ### QueryLink
-Pattern matching WITH rewriting: finds matches and creates new Atoms based on template. Format: `(Query vardecls pattern rewrite)`. Like MeetLink but adds third argument: rewrite template. For each match, substitutes variables in rewrite template with matched values. Returns QueueValue of rewritten Atoms. Mathematically: MeetLink + PutLink. Use when you want to transform matches, not just find them. Replaces deprecated BindLink (which returned SetLink). Core tool for inference and rule application.
+Pattern matching WITH rewriting: finds matches and creates new Atoms based on template. Format: `(Query vardecls pattern rewrite)`. Like MeetLink but adds third argument: rewrite template. For each match, substitutes variables in rewrite template with matched values. Returns QueueValue of rewritten Atoms. Mathematically: MeetLink + PutLink. Use when you want to transform matches, not just find them. Core tool for inference and rule application.
 
 ### RuleLink
 Pattern-matching rewrite rule for use with FilterLink. Format: `(Rule vardecls pattern rewrite)`. Like LambdaLink but with rewrite clause. FilterLink applies Rule to each stream element: if element matches pattern, returns rewrite; if no match, discards. Used for stream transformation. Not for AtomSpace queries - use QueryLink for that. Essential for pipeline processing: `(Filter (Rule ...) stream)`. Pattern can use Glob for flexible matching.
@@ -143,9 +140,6 @@ Pattern matching for partial graphs: finds containing structures when given subg
 
 ### DualLink
 Inverse pattern matching: given a ground term (answer), finds patterns (questions) that would match it. Used for pattern recognition and rule engine construction. Finds all queries/rules that this data satisfies. Essential for SRAI/chatbot systems: match input to response patterns. Also useful for finding applicable rules in forward chaining. Given concrete data, returns patterns with variables that would match. Enables meta-reasoning: "what rules apply here?"
-
-### GetLink, BindLink
-Deprecated query links that return SetLink (pollutes AtomSpace). GetLink is old MeetLink, BindLink is old QueryLink. Both create SetLinks containing results, which must be manually cleaned up. Replaced by MeetLink/QueryLink which return QueueValues. Kept for backwards compatibility only. Do not use in new code. Documentation exists for legacy code understanding.
 
 ### FreeLink
 Marks variables as free (not to be bound) in a pattern. Normally all variables in scope are bound; FreeLink prevents binding specific ones. Used when you want some variables to remain as variables in result. Format: `(Free (Variable "$x") body)`. Variable `$x` stays as `$x` instead of being grounded. Rare use case but essential when needed.
@@ -364,6 +358,231 @@ Numeric range type. Specifies min/max bounds. Used for bounded numeric types. Ty
 
 ---
 
+## Category: NLP - Natural Language Processing
+
+**Purpose:** Represent linguistic structures and parse results
+
+### WordNode
+Represents a word in text. Name is the word itself: `(Word "cat")`. Used in NLP processing to track vocabulary. Different from Word (Link Grammar) which is parser output. WordNode is general-purpose word representation. Used in language learning, semantic graphs. Can have linguistic properties attached via Values.
+
+### SentenceNode
+Anchor for sentence parses and linguistic analysis. One SentenceNode per sentence. ParseNodes link to SentenceNode via ParseLink to show different parses of same sentence. Name typically identifies sentence uniquely. Used to group all parse interpretations together.
+
+### ParseNode
+Represents a specific parse of a sentence. Links to SentenceNode via ParseLink. Multiple ParseNodes can exist for one SentenceNode (different interpretations). Contains or references parse tree structure. Used in ambiguity resolution, parse ranking.
+
+### DocumentNode
+Represents a document or text collection. Can contain multiple sentences. Used to group related content. Name identifies document. Enables document-level analysis and processing.
+
+### WordInstanceNode
+Unique instance of word occurrence in a parse. Same word appearing twice gets two WordInstanceNodes with unique names (e.g., "cat@123", "cat@456"). Needed because pattern matching requires unique atoms for each occurrence. Links to WordNode to show which word it instantiates.
+
+### WordInstanceLink
+Connects WordInstanceNode to its WordNode. Shows this instance is of that word type. Used to resolve instances back to word types.
+
+### ReferenceLink
+Links words/concepts to their referents or definitions. Used in coreference resolution, entity linking. Shows what a word refers to in context.
+
+### SentenceLink
+Associates sentence structure. May link parse to sentence. Various NLP relationships at sentence level.
+
+### SequenceLink, WordSequenceLink, SentenceSequenceLink, DocumentSequenceLink
+Ordered sequences of linguistic elements. WordSequence for word order. SentenceSequence for sentence order in paragraph. DocumentSequence for document order. Preserve ordering critical for language processing. Used in n-grams, context windows, text generation.
+
+### WordClassNode
+Class or category of words (e.g., "nouns", "animals"). Used for word type classification. Groups words with similar properties. Enables class-based operations.
+
+---
+
+## Category: Sensory I/O - External System Interaction
+
+**Purpose:** Interface with files, terminals, network, external data (requires sensory module)
+
+### SensoryNode
+Base class for sensory-motor objects that interact with external systems. Subclass of ObjectNode. Implements message-passing interface with open/close/read/write messages. Foundation for all I/O atom types. Not instantiated directly - use specialized subtypes.
+
+### TextFileNode, TextStreamNode
+File I/O for text data. TextFile reads from files on disk. Format: `(TextFile "file:///path/to/file.txt")`. Supports streaming modes: read entire file, tail mode (like `tail -f`), or line-by-line. Open with `*-open-*` message, read with `*-read-*` or `*-stream-*`. TextStream is more general stream abstraction. Returns StringValue or stream of lines. Essential for file-based pipelines.
+
+### FileSysNode
+Filesystem navigator and monitor. Can watch directories with inotify for file changes. List directory contents. Monitor file creation/deletion. Format: `(FileSys "file:///path/to/dir")`. Streams filesystem events as they occur. Used for reactive systems that respond to file changes. Returns stream of ItemNodes (filenames).
+
+### TerminalNode
+Interactive terminal I/O via xterm or similar. Bidirectional: read from terminal, write to terminal. Format: `(Terminal "xterm:display")`. Opens xterm window, captures input, displays output. Used for interactive agents, debugging, demos. Reads return StringValues, writes display text. See `xterm-io.scm` example.
+
+### IRChatNode (or IrcNode)
+IRC chat client interface. Connect to IRC servers, join channels, send/receive messages. Format: `(IRC "irc://server:port/channel")`. Streams incoming messages, sends outgoing. Used for chatbots, monitoring, communication agents. Messages as StringValues with metadata. See `irc-api.scm`, `irc-echo-bot.scm` examples.
+
+### StreamNode
+Base class for streaming data sources. Provides stream interface. Subclassed by specific stream types. Not used directly.
+
+### ObjectNode
+Base class for message-passing objects representing external entities or systems. Every ObjectNode has key-value database where specific keys are interpreted as messages (methods). Getting/setting message keys invokes behavior. Convention: `*-open-*`, `*-close-*`, `*-read-*`, `*-write-*` as standard messages. Subclass to create new external interfaces. Essential pattern for extensibility.
+
+---
+
+## Category: Graph Representation - Knowledge Graphs
+
+**Purpose:** Basic graph database structures for knowledge
+
+### ConceptNode
+Represents a concept or entity in knowledge base. Name is concept identifier: `(Concept "cat")`, `(Concept "animal")`. Most common Node type. Used in semantic networks, ontologies, knowledge graphs. Can have properties via Values, relationships via Links. Foundation of knowledge representation.
+
+### PredicateNode
+Represents a relation, property, or predicate. Name is predicate identifier: `(Predicate "has-color")`, `(Predicate "larger-than")`. Used in EdgeLink to label relationships. Also used as keys in key-value databases by convention. Distinguishes relationships from entities.
+
+### ItemNode
+Generic item or vertex in graph. More neutral than Concept. Used when item isn't really a concept - just a graph node. Filenames, identifiers, arbitrary vertices. Less semantic weight than Concept.
+
+### TagNode
+Tagging and categorization. Lightweight labels. Name is the tag. Used to mark or categorize other Atoms. Can create tag clouds, folksonomy structures.
+
+### TagLink
+Associates tags with atoms. Links TagNode to tagged Atom. Enables tag-based retrieval and organization.
+
+### EdgeLink
+Labeled directed edge in knowledge graph. **Canonical form:** `(Edge (Predicate "relation") (List source target))`. Predicate names the relationship. List contains endpoint vertices (usually ItemNode or ConceptNode). Can have more than 2 endpoints for n-ary relations. Modern replacement for EvaluationLink. Uses less RAM/CPU. Preferred for graph databases.
+
+### ListLink
+Ordered list of Atoms. Format: `(List atom1 atom2 ...)`. Order matters. Used everywhere: function arguments, sequences, compound structures. Fundamental building block. Immutable like all Links.
+
+### SetLink
+Unordered set of Atoms. Format: `(Set atom1 atom2 ...)`. Order doesn't matter: `(Set A B)` equals `(Set B A)`. Used for collections where order irrelevant. Note: for stream processing results, QueueValue preferred over SetLink.
+
+### MemberLink
+Set membership: element is member of set. Format: `(Member element set)`. Used in knowledge graphs for category membership. Different from contains-in-list.
+
+### SubsetLink
+Subset relation between sets. Format: `(Subset smaller-set larger-set)`. Used in taxonomies, hierarchies. All members of first are members of second.
+
+### InheritanceLink, SimilarityLink
+Inheritance and similarity relationships. InheritanceLink: `(Inheritance subtype supertype)` for is-a relationships. SimilarityLink: `(Similarity thing1 thing2)` for similarity. Used in ontologies, semantic networks. Enable reasoning about categories and analogies.
+
+### ContextLink
+Associates context with a statement or atom. Enables context-dependent truth, temporal logic. Less commonly used but powerful for modal logic.
+
+---
+
+## Category: Vector Operations - Matrix/GPU Processing
+
+**Purpose:** Efficient vector and matrix operations for ML pipelines
+
+### ElementOfLink
+Extracts element from vector. Format: `(ElementOf (Number index) value-with-vector)`. Index 0 is first element. Works on FloatValue, StringValue, LinkValue. Returns single element as appropriate Value type. Used to unpack vectors for scalar operations. Example: `(ElementOf (Number 0) (ValueOf atom key))` gets first component.
+
+### DecimateLink
+Downsamples vector by factor. Keeps every Nth element. Format: `(Decimate (Number N) vector-value)`. Used in signal processing, data reduction. Returns smaller FloatValue.
+
+### Column, FloatColumn, LinkColumn, SexprColumn, TransposeColumn
+Column types for matrix operations and GPU processing. FloatColumn holds column of floats. LinkColumn holds column of Atoms. Used to pack data for vectorized operations. TransposeColumn transposes matrix. Enables batch processing, SIMD operations. Bridges to GPU computation. See `vector-column.scm` example.
+
+### BoolOpLink, BoolAndLink, BoolOrLink, BoolNotLink
+Boolean operations on boolean vectors (BoolValue). Component-wise AND, OR, NOT on bit vectors. Different from AndLink (scalar boolean logic). Used for bitwise operations, masks, filters on vector data.
+
+---
+
+## Category: Sheaves - Linguistic & Chemical Structures
+
+**Purpose:** Partially assembled structures, connectors (chemistry, linguistics)
+
+### Section
+Partially assembled structure in sheaf theory. Represents incomplete molecule, sentence fragment, or pattern. Can be combined with other Sections via connectors. Foundation for compositional assembly. Used in chemistry for molecule building, in linguistics for grammar.
+
+### Connector
+Connection point for assembly. Has directionality and type. Sections expose Connectors showing how they can combine. Mating Connectors creates assemblies. Linguistic: verb needs subject (Connector). Chemical: bond site on molecule.
+
+### ConnectorSeq, ConnectorSet, ConnectorChoice
+Collections of Connectors. ConnectorSeq is ordered sequence. ConnectorSet is unordered. ConnectorChoice offers alternatives. Used in Section definitions to specify multiple connection possibilities.
+
+### ConnectorDir
+Directional connector - has source/sink polarity. Used in directed assembly. Ensures proper orientation.
+
+### SexNode (Section Node?)
+Node type related to sections or partial structures. Name unclear - may be "Section Node" or different semantic.
+
+### ShapeLink
+Specifies geometric or topological shape. Used in spatial reasoning, molecular geometry. Associates shape properties with structures.
+
+### CrossSection
+Intersection or cross-section of sections. Sheaf theory operation. Finds common structure between partial assemblies.
+
+### LgConnNode, LgConnMultiNode, LgConnDirNode, LgConnector, LgSeq, LgAnd, LgOr, LgWordCset, LgDisjunct, LgLinkNode, LgLinkInstanceNode, LgLinkInstanceLink
+Link Grammar internal types for dictionary representation and disjunct structures. LgConn* types represent connectors in LG formalism. LgDisjunct is disjunctive expression of connector requirements. LgSeq/And/Or are logical combinations. These are advanced LG internals - most users use LgParseBonds output, not these directly. For LG dictionary manipulation and linguistic research.
+
+### LgHaveDictEntry, LgDictEntry
+Link Grammar dictionary entries. Check if word has entry, get entry details. Used for dictionary queries and validation.
+
+---
+
+## Category: Utilities & Base Types
+
+**Purpose:** Foundational types and utilities
+
+### AnyNode
+Wildcard node type. Matches any Node in patterns. Used when node type doesn't matter. Enables very general patterns.
+
+### NumberNode
+Represents a number as a Node. Name is number as string: `(Number "3.14")`, `(Number "42")`. Different from FloatValue (which is not in graph). Use when number must be part of graph structure for queries. Less efficient than FloatValue for computation. Created by NumberOfLink from FloatValue.
+
+### Frame
+Hybrid: has both name (like Node) and outgoing set (like Link). Rare and specialized. Used in membrane computing, frame-based representations. Breaks normal Node/Link dichotomy. Handle with care.
+
+### AtomSpace
+Represents an AtomSpace as an Atom. Enables nested AtomSpaces, references to other AtomSpaces. Used in multi-space systems, membrane computing. Advanced feature rarely needed.
+
+### OrderedLink, UnorderedLink
+Base classes for ordered vs unordered Links. OrderedLink subclasses respect argument order. UnorderedLink subclasses treat arguments as set (order irrelevant). Not instantiated directly - subclassed. Determines Link equality semantics.
+
+### ValuableLink, EvaluatableLink, ExecutableLink
+Base classes categorizing Link capabilities. ValuableLink can have/produce Values. EvaluatableLink can be evaluated to truth value. ExecutableLink can be executed. Used in type hierarchy for validation. Not instantiated directly.
+
+### FunctionLink, NumericFunctionLink, BooleanLink
+Base classes for functional Links. FunctionLink represents functions. NumericFunction returns numbers. BooleanLink returns boolean. Subclassed by PlusLink, GreaterThanLink, AndLink, etc. Provides type structure.
+
+### CrispInputLink, CrispOutputLink, BooleanInputLink, BooleanOutputLink, NumericInputLink, NumericOutputLink, TypeInputLink, TypeOutputLink
+Type-checking base classes. Specify expected input/output types for Links. Used in ClassServer validation. Ensures type safety at construction time. Not instantiated - used in type definitions.
+
+### AlphaConvertibleLink
+Base class for Links that support alpha conversion (variable renaming). Includes LambdaLink, ScopeLink variants. Enables safe variable name changes without semantic change.
+
+### CollectionLink
+Base class for collection Links (ListLink, SetLink). Provides common collection interface.
+
+### PatternLink, SatisfyingLink, RewriteLink, PrenexLink
+Base classes for pattern matching Links. PatternLink is pattern base. SatisfyingLink for satisfaction checking. RewriteLink for rewrite rules. PrenexLink for prenex normal form. Advanced pattern infrastructure.
+
+### VardeclOfLink, PremiseOfLink, ConclusionOfLink
+Extract parts of rules/patterns. VardeclOf gets variable declarations. PremiseOf gets pattern (antecedent). ConclusionOf gets rewrite (consequent). Used for meta-manipulation of rules.
+
+### SatisfactionLink, EvaluationLink, ImplicationLink, EquivalenceLink, AssociativeLink, ExecutionLink
+Legacy or specialized Links. SatisfactionLink checks if pattern satisfiable. EvaluationLink old-style predicate application (use EdgeLink). Implication/Equivalence for logical relations. AssociativeLink for commutative operations. ExecutionLink older execution (use ExecutionOutputLink).
+
+### SplitLink, JsonSplitLink, ConcatenateLink
+String operations. SplitLink splits string by delimiter into stream. JsonSplitLink parses JSON into Atomese. ConcatenateLink joins strings. Used in text processing pipelines.
+
+### TimeLink, Log2Link, ModuloLink
+Additional math/utility. TimeLink gets current time. Log2Link is log base 2. ModuloLink is modulo operation. Specialized functions for specific use cases.
+
+### LexicalNode, SignNode
+Lexical items and signs. Used in specialized linguistic or semiotic representations. Less common than WordNode.
+
+### DeleteLink, UniqueLink, ReplacementLink, ContinuationLink
+Utilities. Delete removes atoms. Unique creates unique instances. Replacement for substitution. Continuation for continuation-passing style. Advanced or specialized uses.
+
+### MinimalJoinLink, UpperSetLink, MaximalJoinLink
+Specialized query variants. Minimal/maximal refer to lattice order. UpperSet for upward closure. Advanced pattern matching features.
+
+### IdenticalLink, AlphaEqualLink, ExclusiveLink, IsClosedLink
+Comparison and property tests. Identical checks same atom. AlphaEqual checks equal up to variable naming. Exclusive for exclusive OR. IsClosed checks if pattern is closed (no free variables).
+
+### PureExecLink, DirectlyEvaluatableLink, ValueShimLink, VirtualLink
+Execution system internals. PureExec for side-effect-free execution. DirectlyEvaluatable for direct evaluation. ValueShim for value wrapping. Virtual for virtual links (like GreaterThanLink). Advanced features.
+
+### ForeignAst, SexprAst, DatalogAst, JsonAst, PythonAst
+Foreign AST representations. Stores external language syntax trees in AtomSpace. Sexpr for s-expressions. Datalog for Datalog code. Json for JSON. Python for Python AST. Experimental - enables code-as-data, meta-programming on foreign languages.
+
+---
+
 ## Quick Reference - Common Tasks
 
 **Parse text and extract semantic relationships:**
@@ -425,13 +644,38 @@ Numeric range type. Specifies min/max bounds. Used for bounded numeric types. Ty
 
 ## Notes
 
-- All executable Atoms use `cog-execute!` in Scheme
-- MCP execute tool works on same Atoms
-- Stream types: QueueValue (FIFO), LinkValue (vector), SetLink (unordered)
-- FlatStream unbundles batched results
-- Glob matches 1+, not 0+ (currently)
-- Bond types from LG dict, see LG documentation
-- Type hierarchy: use getSuperTypes/getSubTypes MCP tools
+- **All executable Atoms** use `cog-execute!` in Scheme, MCP `execute` tool in this interface
+- **Stream types:** QueueValue (FIFO, thread-safe), LinkValue (vector), SetLink (unordered Atoms)
+- **FlatStream** unbundles batched results via `(Promise (Type 'FlatStream) source)`
+- **Glob** currently matches 1+, not 0+ (may change - check latest docs)
+- **Bond types** (Ss*s, Os, MVp, etc.) from LG dictionary - see Link Grammar documentation
+- **Type hierarchy:** use `getSuperTypes`/`getSubTypes` MCP tools for exploration
+- **Deprecated types excluded:** GetLink, BindLink, LgParseLink, LgParseMinimal, EvaluationLink (for graphs)
+- **Base classes** (OrderedLink, ValuableLink, etc.) listed for completeness - not directly instantiated
+- **Module dependencies:** Sensory I/O requires sensory module, Storage requires storage modules
+- **Online docs authoritative:** Wiki pages updated more frequently than this reference
+
+## Categories Covered
+
+1. **Flows** (7 types) - FilterLink, ValueOfLink, SetValueLink, etc.
+2. **Streams** (8 types) - StringOfLink, NumberOfLink, CollectionOfLink, etc.
+3. **Link Grammar** (6 types) - LgParseBonds, Word, Bond, Phrase, etc.
+4. **Pattern Matching** (9 types) - MeetLink, QueryLink, RuleLink, GlobNode, Variables, etc.
+5. **Scoping & Lambda** (8 types) - LambdaLink, PutLink, ScopeLink, JoinLink, DualLink, etc.
+6. **Arithmetic** (18 types) - PlusLink, TimesLink, AccumulateLink, GreaterThanLink, etc.
+7. **Boolean Logic** (10 types) - AndLink, ChoiceLink, PresentLink, AbsentLink, AlwaysLink, etc.
+8. **External Systems** (7 types) - GroundedSchemaNode, ExecutionOutputLink, Defined*, etc.
+9. **Storage** (14 types) - RocksStorage, FileStorage, MonoStorage, Proxies, etc.
+10. **Execution Control** (10 types) - CondLink, StateLink, DefineLink, ParallelLink, etc.
+11. **Type System** (9 types) - TypeNode, TypeChoice, ArrowLink, SignatureLink, etc.
+12. **NLP** (12 types) - WordNode, SentenceNode, ParseNode, DocumentNode, etc.
+13. **Sensory I/O** (7 types) - TextFileNode, FileSysNode, TerminalNode, IRChatNode, etc.
+14. **Graph Representation** (12 types) - ConceptNode, PredicateNode, EdgeLink, ListLink, etc.
+15. **Vector Operations** (7 types) - ElementOfLink, DecimateLink, Columns, BoolOp, etc.
+16. **Sheaves** (14 types) - Section, Connector, ConnectorSeq, ShapeLink, LG internals, etc.
+17. **Utilities & Base** (30+ types) - AnyNode, NumberNode, Frame, base classes, string ops, etc.
+
+**Total: ~170 atom types documented**
 
 **Last updated:** 2025-10-28
-**Status:** Priority categories complete - covers semantic extraction essentials
+**Maintainer:** Auto-generated from OpenCog wiki and codebase analysis
