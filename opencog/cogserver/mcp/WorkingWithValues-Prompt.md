@@ -2,6 +2,29 @@
 
 This prompt explains how to work with the Value system in the AtomSpace using Atomese s-expressions.
 
+## CRITICAL: Atoms vs Values
+
+**Before working with Values, understand this fundamental distinction:**
+
+### Atoms (Stored in AtomSpace)
+- **Can be stored** in the AtomSpace
+- **Have Incoming Sets** - back-links enabling graph traversal
+- **Can be queried** with MeetLink/QueryLink (query engine)
+- Examples: ConceptNode, PredicateNode, ListLink, EdgeLink
+
+### Values (NOT Stored in AtomSpace)
+- **Cannot be stored** in the AtomSpace directly
+- **No Incoming Sets** - cannot be traversed by query engine
+- **Cannot be queried** with MeetLink/QueryLink
+- **Pattern matching**: Use FilterLink instead (not query engine)
+- Examples: FloatValue, StringValue, LinkValue, Section
+
+**Why this matters:**
+- Values are data containers, not graph nodes
+- The query engine (MeetLink/QueryLink) works ONLY on Atoms
+- Values require FilterLink for pattern matching
+- Both use s-expressions, but have completely different capabilities
+
 ## Value System Overview
 
 - Every Atom can have **key-value pairs** attached to it
@@ -11,6 +34,7 @@ This prompt explains how to work with the Value system in the AtomSpace using At
   - StringValue (vectors of strings)
   - LinkValue (vectors of other Values)
   - Other specialized Value types
+- Values are attached to Atoms but are NOT stored in the AtomSpace themselves
 
 ## Atomese Format
 
@@ -185,12 +209,83 @@ Stores vectors of strings
 }
 ```
 
+## Pattern Matching on Values with FilterLink
+
+**Important**: Since Values don't have Incoming Sets, you **cannot** use MeetLink or QueryLink on them.
+
+**Use FilterLink instead** for pattern matching on Value structures.
+
+### FilterLink Overview
+
+FilterLink is a pattern matcher (not a query/traversal engine) designed for Values:
+- Works on LinkValue, Section, and other Value structures
+- Uses LinkSignature to specify Value types in patterns
+- Uses GlobNode to match variable-length sequences
+- Returns matched Values (not traversing a graph)
+
+### Basic FilterLink Structure
+
+```scheme
+(Filter
+  (Rule
+    <variable-declarations>
+    <pattern-to-match>
+    <rewrite-template>)
+  <value-structure-to-filter>)
+```
+
+### Example: Extracting from LinkValue
+
+**Input LinkValue structure:**
+```scheme
+(LinkValue
+  (LinkValue
+    (Word "cat")
+    (Word "sat")
+    (Word "mat")))
+```
+
+**FilterLink to extract words:**
+```scheme
+(Filter
+  (Rule
+    (VariableList
+      (TypedVariable (Variable "$lv") (Type 'LinkValue))
+      (TypedVariable (Variable "$word") (Type 'Word)))
+    (LinkSignature (Type 'LinkValue)
+      (Variable "$lv")
+      (Variable "$word"))
+    (Variable "$word"))
+  <input-linkvalue>)
+```
+
+**Key differences from MeetLink/QueryLink:**
+- LinkSignature declares the Value type being matched
+- No graph traversal - pure pattern matching on Value structure
+- GlobNode works perfectly in FilterLink patterns
+- Cannot use Incoming Sets (Values don't have them)
+
+### When to Use FilterLink
+
+**Use FilterLink when:**
+- Working with LinkValue, Section, or other Values
+- Processing results from LgParse, LgParseBonds, etc. (these return Values)
+- Pattern matching on hierarchical Value structures
+- Extracting specific elements from Value sequences
+
+**Do NOT use MeetLink/QueryLink for:**
+- LinkValue structures
+- Values returned by executable Atoms
+- Any Value type (FloatValue, StringValue, etc.)
+
 ## Best Practices
 
 1. **Use Predicates as keys**: This is the convention
 2. **Choose appropriate Value types**: FloatValue for numbers, StringValue for text
+3. **Pattern matching**: Use FilterLink for Values, MeetLink/QueryLink for Atoms
 4. **Vector nature**: Remember that Values are vectors, not single items
 5. **Immutability**: Atoms themselves are immutable, but Values can be changed
+6. **No queries on Values**: Cannot use query engine on Values - use FilterLink instead
 
 ## Common Patterns
 

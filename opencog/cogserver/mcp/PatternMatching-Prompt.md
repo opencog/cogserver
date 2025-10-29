@@ -1,10 +1,33 @@
 # Pattern Matching and Queries in AtomSpace
 
-This prompt explains how to use pattern matching to search the AtomSpace for Atoms that match specific patterns.
+This prompt explains how to use pattern matching to search the AtomSpace for **Atoms** that match specific patterns.
+
+## CRITICAL: This is for Atoms Only
+
+**The query engine (MeetLink, QueryLink, BindLink, GetLink) works ONLY on Atoms.**
+
+### Atoms vs Values
+
+**Atoms** (what these tools work on):
+- Stored in the AtomSpace
+- Have Incoming Sets (back-links for graph traversal)
+- Can be queried with MeetLink/QueryLink
+- Examples: ConceptNode, PredicateNode, ListLink, EdgeLink
+
+**Values** (these tools do NOT work on):
+- NOT stored in the AtomSpace
+- NO Incoming Sets - cannot be traversed
+- Cannot be queried with MeetLink/QueryLink
+- **Use FilterLink instead** for pattern matching on Values
+- Examples: FloatValue, StringValue, LinkValue, Section
+
+**The query engine is a recursive graph traversal engine** that walks the graph both upwards (via Incoming Sets) and downwards (via Outgoing lists). Since Values don't have Incoming Sets, they cannot be traversed by the query engine.
+
+**For pattern matching on Values, see the WorkingWithValues-Prompt.md documentation about FilterLink.**
 
 ## Overview: The Four Query Link Types
 
-The AtomSpace provides four link types for pattern matching queries. **Two are modern and recommended, two are deprecated:**
+The AtomSpace provides four link types for pattern matching queries on Atoms. **Two are modern and recommended, two are deprecated:**
 
 ### ✅ RECOMMENDED: Use These
 
