@@ -68,55 +68,6 @@ what a user is asking you to do.
   lists of bits (bitvectors), lists of strings, or lists of other values.
 * The Atom Type is a subtype of Value.
 
-## CRITICAL: Atoms vs Values - The Fundamental Distinction
-
-**This distinction is essential to understand how the AtomSpace works:**
-
-### Atoms (Stored in AtomSpace)
-* **Can be stored** in the AtomSpace
-* **Have an Incoming Set** - a back-link index recording all atoms that contain them
-* **Can be traversed** by the query engine (MeetLink, QueryLink, BindLink, GetLink)
-* **Support graph traversal** - can walk upwards (via Incoming Set) and downwards (via Outgoing list)
-* **Examples**: ConceptNode, PredicateNode, ListLink, EdgeLink, etc.
-* **Structure**: Form trees and graphs through their connections
-* **S-expression**: Both have s-expression format like `(Concept "cat")`
-
-### Values (NOT Stored in AtomSpace)
-* **Cannot be stored** in the AtomSpace directly
-* **Do NOT have an Incoming Set** - no back-links, no indexing
-* **Cannot be traversed** by the query engine (MeetLink/QueryLink don't work on Values)
-* **Cannot support graph traversal** - no way to walk upwards through a Value hierarchy
-* **Examples**: FloatValue, StringValue, LinkValue, Section, etc.
-* **Structure**: Simple data containers, not graph nodes
-* **S-expression**: Also have s-expression format like `(FloatValue 1.0 2.0 3.0)`
-* **Pattern matching**: Use FilterLink (not MeetLink/QueryLink) to pattern match on Values
-
-### Why This Matters
-
-**The Query Engine** (MeetLink, QueryLink, BindLink, GetLink):
-- Is a **recursive graph traversal engine**
-- Walks graphs composed of trees, moving both upwards and downwards
-- **Requires Atoms** because only Atoms have Incoming Sets
-- **Cannot work on Values** because Values lack the Incoming Set needed for traversal
-
-**FilterLink** (for Values):
-- Is a **pattern matcher** for Values (not a traversal engine)
-- Works on Value structures like LinkValue, Section, etc.
-- Uses LinkSignature to describe Value types in patterns
-- Does NOT traverse graphs - simply matches patterns in Value hierarchies
-
-### Common Confusion
-
-**Both Atoms and Values use s-expressions**, which makes them look similar:
-```
-(ConceptNode "cat")           # This is an Atom
-(FloatValue 1.0 2.0)          # This is a Value
-(LinkValue (...))             # This is a Value
-```
-
-**But only Atoms can be queried with MeetLink/QueryLink!**
-**Values require FilterLink for pattern matching.**
-
 * Every Atom holds a key-value database.
 * The key can be any Atom, but is usually a PredicateNode.
 * The value can be any Value.
