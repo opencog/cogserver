@@ -246,3 +246,126 @@ Before adding any kind of ID field:
 
 **The s-expression IS the universal ID. Nothing else is needed.**
 
+## SetLink vs ListLink: Ordering and Search Performance
+
+**A critical design decision when storing collections of atoms.**
+
+### The Fundamental Difference
+
+**ListLink:**
+- **Ordered** - elements have a defined sequence
+- Pattern matching respects order
+- Example: `(List (Concept "first") (Concept "second") (Concept "third"))`
+
+**SetLink:**
+- **Unordered** - no defined sequence for elements
+- Pattern matching considers all permutations
+- Example: `(Set (Concept "A") (Concept "B") (Concept "C"))`
+
+### Performance Implications
+
+**SetLink causes combinatorial explosion during pattern matching:**
+
+When you write a pattern like:
+```scheme
+(Set (Variable "$x") (Variable "$y") (Glob "$rest"))
+```
+
+The pattern matcher must explore **all N-factorial permutations** of the SetLink:
+- 3 elements: 6 permutations
+- 4 elements: 24 permutations
+- 5 elements: 120 permutations
+- 10 elements: 3,628,800 permutations
+
+This affects:
+- **QueryLink/MeetLink**: Must try all permutations to find matches
+- **FilterLink**: Must explore permutations for pattern matching
+- **CPU time**: Can become very expensive for large sets
+
+**ListLink avoids permutation explosion but requires complex Glob patterns:**
+
+To find two elements at unknown positions in a List:
+```scheme
+;; Need this pattern
+(List
+  (Glob "$front")           ;; stuff before X
+  (Variable "$x")
+  (Glob "$middle")          ;; stuff between X and Y
+  (Variable "$y")
+  (Glob "$end"))            ;; stuff after Y
+
+;; AND also need the reversed pattern
+(List
+  (Glob "$front")
+  (Variable "$y")           ;; Y before X
+  (Glob "$middle")
+  (Variable "$x")
+  (Glob "$end"))
+```
+
+Glob patterns also cause combinatorial search (trying all possible ways to split the list), but typically less severe than N-factorial permutations.
+
+### When to Use SetLink
+
+**Use SetLink when:**
+- Order genuinely doesn't matter semantically
+- You need position-independent matching
+- Set size is small (< 10 elements typically)
+- You're willing to pay the permutation cost for simpler patterns
+
+**Example use case:**
+```scheme
+;; Storing all bonds from a sentence parse
+(Edge (Predicate "parse-of")
+  (List
+    (Concept "The cat sat")
+    (Set
+      (Edge (Bond "Ss*s") (List (Word "cat") (Word "sat")))
+      (Edge (Bond "Dsu") (List (Word "the") (Word "cat")))
+      ;; ... more bonds
+    )))
+```
+
+Here SetLink makes sense because:
+- Bond order in the parse is semantically meaningless
+- Queries like "find sentences with Ss*s and Os bonds" don't care about order
+- Avoids needing multiple Glob patterns for different bond positions
+
+**But be aware:** If a sentence has 20 bonds, pattern matching will explore permutations of those 20 elements.
+
+### When to Use ListLink
+
+**Use ListLink when:**
+- Order matters semantically (sequences, temporal ordering)
+- Set size is large (> 10 elements)
+- Performance is critical
+- You can write explicit positional patterns
+
+**Example use case:**
+```scheme
+;; Temporal sequence - order matters
+(List
+  (Event "wake-up")
+  (Event "eat-breakfast")
+  (Event "go-to-work"))
+```
+
+### The Tradeoff
+
+**SetLink:**
+- ✓ Simpler query patterns (position-independent)
+- ✗ N-factorial permutation explosion in pattern matching
+
+**ListLink:**
+- ✓ No permutation explosion
+- ✗ Complex Glob patterns for position-independent matching
+- ✗ Need multiple patterns for different orderings
+
+**Choose based on:**
+1. Does order matter semantically?
+2. How large is the collection?
+3. What queries will you run?
+4. What performance cost can you tolerate?
+
+**There is no perfect answer** - both have tradeoffs. Choose consciously based on your use case.
+
