@@ -77,6 +77,69 @@ In AtomSpace:
 - Like string interning or hash-consing
 - Content-addressable memory
 
+### CRITICAL: Atomese vs Programming Languages
+
+**Atomese is NOT Scheme, NOT Python, NOT any programming language.**
+
+**Only Atomese can be stored in the AtomSpace.**
+
+This distinction is fundamental:
+
+**Atomese:**
+- Declarative data structure language
+- Lives IN the AtomSpace
+- Describes relationships between concepts
+- Has no variables, no execution, no procedures
+- Examples: `(Concept "cat")`, `(Edge (Predicate "eats") (List ...))`
+
+**Scheme/Python:**
+- Imperative programming languages
+- Run OUTSIDE the AtomSpace
+- Manipulate atoms but don't live in the AtomSpace
+- Have variables, procedures, execution flow
+- Examples: `(define x ...)`, `for i in range(...)`, `if/then/else`
+
+**What this means:**
+
+When you write:
+```scheme
+(define my-atom (Concept "cat"))
+```
+
+- `(Concept "cat")` is Atomese - this DOES live in the AtomSpace
+- `(define my-atom ...)` is Scheme - this does NOT live in the AtomSpace
+- The Scheme variable `my-atom` is just a temporary handle to reference the atom from Scheme code
+- The Atomese `(Concept "cat")` is permanent, globally unique, stored in the AtomSpace
+
+**In Atomese, atoms reference other atoms by direct inclusion:**
+
+```scheme
+;; This is pure Atomese - all of this lives in the AtomSpace
+(Edge (Predicate "eats")
+  (List
+    (Concept "cat")        ;; This atom is included directly
+    (Concept "fish")))     ;; This atom is included directly
+
+;; The Edge atom directly CONTAINS the Concept atoms
+;; No variables, no pointers, no indirection
+;; Just direct structural inclusion
+```
+
+**Why this matters for ID design:**
+
+You cannot "store a reference" to an atom using Scheme variables or Python variables - those don't exist in the AtomSpace. In Atomese, you reference atoms by including them directly in other atoms' structure.
+
+```scheme
+;; ❌ WRONG thinking - trying to use IDs like database foreign keys
+(Concept "cat-id-123")
+(Edge (Predicate "eats") (List (Concept "cat-id-123") (Concept "fish")))
+;; This treats "cat-id-123" as if it's a pointer, but it's just another concept!
+
+;; ✓ CORRECT - direct structural inclusion
+(Edge (Predicate "eats") (List (Concept "cat") (Concept "fish")))
+;; The Concept "cat" is directly included in the Edge's structure
+```
+
 ### Deep Implications
 
 **1. Never use artificial ID numbers**
