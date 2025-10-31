@@ -86,11 +86,11 @@ In AtomSpace:
 This distinction is fundamental:
 
 **Atomese:**
-- Declarative data structure language
+- Both declarative AND functional
 - Lives IN the AtomSpace
-- Describes relationships between concepts
-- Has no variables, no execution, no procedures
-- Examples: `(Concept "cat")`, `(Edge (Predicate "eats") (List ...))`
+- Some atoms are literal constants: `(List (Concept "cat") (Concept "mat"))` - cannot be executed
+- Some atoms are executable: `(Plus (Number 2) (Number 2))` - can execute to get `(Number 4)`
+- The dual declarative/functional nature is fundamental to Atomese design
 
 **Scheme/Python:**
 - Imperative programming languages
