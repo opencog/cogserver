@@ -241,6 +241,12 @@ void McpEval::eval_expr(const std::string &expr)
 			create_prompt["description"] = "Guide for creating Nodes and Links in the AtomSpace";
 			prompts.append(create_prompt);
 
+			// Prompt for designing structures in Atomese
+			Json::Value design_prompt;
+			design_prompt["name"] = "designing-structures";
+			design_prompt["description"] = "Guide for designing data structures in Atomese: global uniqueness, avoiding IDs, Atomese vs programming languages";
+			prompts.append(design_prompt);
+
 			// Prompt for querying AtomSpace
 			Json::Value query_prompt;
 			query_prompt["name"] = "query-atomspace";
@@ -324,6 +330,9 @@ void McpEval::eval_expr(const std::string &expr)
 			} else if (prompt_name == "create-atoms") {
 				read_prompt_file(prompt_base, "CreateAtom-Prompt.md",
 					"Guide for creating Nodes and Links in the AtomSpace", response);
+			} else if (prompt_name == "designing-structures") {
+				read_prompt_file(prompt_base, "DesigningStructures-Prompt.md",
+					"Guide for designing data structures in Atomese: global uniqueness, avoiding IDs, Atomese vs programming languages", response);
 			} else if (prompt_name == "query-atomspace") {
 				read_prompt_file(prompt_base, "QueryAtom-Prompt.md",
 					"Guide for querying and exploring the AtomSpace effectively", response);

@@ -6,6 +6,7 @@ INSTALL(FILES
 	AtomSpace-Overview.md
 	AtomTypes-Prompt.md
 	CreateAtom-Prompt.md
+	DesigningStructures-Prompt.md
 	QueryAtom-Prompt.md
 	WorkingWithValues-Prompt.md
 	PatternMatching-Prompt.md
