@@ -623,6 +623,66 @@ Link type in Link Grammar parse, like "Ss*s" (subject-verb singular), "Os" (obje
 ### LgParseDisjuncts, LgParseSections
 Specialized parsers returning disjuncts or Section atoms instead of bonds. Disjuncts show how words connect. Sections are sheaf-theoretic structures for advanced use. Most users want LgParseBonds. These are for linguistic research or specialized processing.
 
+### LgConnExpand
+
+**Purpose:** Expands Bond strings into component parts, decomposing bond types into primary type and subtypes.
+
+**Format:**
+```scheme
+(LgConnExpand (Bond "Ss*s"))
+```
+
+**What It Does:** Breaks down Link Grammar bond type strings into their constituent parts:
+- **Capital letter** = Primary bond type (semantic role)
+  - S = Subject
+  - O = Object
+  - D = Determiner
+  - M = Modifier
+  - And many more (see LG documentation)
+- **Lowercase letters** = Properties/subtypes. Meaning is position-dependent.
+  - s = singular when appearing in the first location.
+  - p = plural when appearing in the first location.
+  - And many more (see LG documentation)
+
+**Example:**
+```scheme
+(cog-execute! (LgConnExpand (Bond "Ss*s")))
+; Returns: (Connector (LgConnType "S") (LgSubType "s") ...)
+; Shows: S = subject bond, first lower-case s = singular property
+```
+
+**Why This Matters for Queries:**
+
+Instead of matching ALL bond variants with verbose Choice patterns:
+```scheme
+(Choice
+  (Edge (Bond "Ss*s") ...)
+  (Edge (Bond "Ss") ...)
+  (Edge (Bond "Ss*o") ...)
+  (Edge (Bond "Sp") ...))
+; Listing every singular/plural/modified variant
+```
+
+You can match by PRIMARY type after expansion:
+```scheme
+; Extract primary type, then match on "S" regardless of properties
+```
+
+**Use Case:** Simplifies semantic extraction queries by focusing on grammatical role (S, O, D) rather than surface properties (singular/plural). Reduces Choice clause proliferation and makes queries more semantically meaningful.
+
+**Common Bond Primary Types:**
+- **S** - Subject relationship
+- **O** - Object relationship
+- **D** - Determiner
+- **M** - Modifier
+- **J** - Preposition
+- **I** - Infinitive marker
+- Many others - consult Link Grammar dictionary documentation
+
+**Returns:** Connector structure showing decomposed bond components. Exact structure depends on bond complexity.
+
+**Executable:** Yes, via cog-execute!
+
 ---
 
 ## Category: Pattern Matching - Queries and Variables
@@ -1394,8 +1454,8 @@ Specifies geometric or topological shape. Used in spatial reasoning, molecular g
 ### CrossSection
 Intersection or cross-section of sections. Sheaf theory operation. Finds common structure between partial assemblies.
 
-### LgConnNode, LgConnMultiNode, LgConnDirNode, LgConnector, LgSeq, LgAnd, LgOr, LgWordCset, LgDisjunct, LgLinkNode, LgLinkInstanceNode, LgLinkInstanceLink
-Link Grammar internal types for dictionary representation and disjunct structures. LgConn* types represent connectors in LG formalism. LgDisjunct is disjunctive expression of connector requirements. LgSeq/And/Or are logical combinations. These are advanced LG internals - most users use LgParseBonds output, not these directly. For LG dictionary manipulation and linguistic research.
+### LgConnNode, LgConnMultiNode, LgConnDirNode, LgConnector, LgSeq, LgDisjunct, LgLinkNode
+Link Grammar internal types for dictionary representation and disjunct structures. LgConn* types represent connectors in LG formalism. LgDisjunct is disjunctive expression of connector requirements. LgSeq for sequential combinations. These are advanced LG internals - most users use LgParseBonds output, not these directly. For LG dictionary manipulation and linguistic research.
 
 ### LgHaveDictEntry, LgDictEntry
 Link Grammar dictionary entries. Check if word has entry, get entry details. Used for dictionary queries and validation.
