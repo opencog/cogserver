@@ -91,7 +91,7 @@ void McpEval::eval_expr(const std::string &expr)
 	if (0 == expr.compare("\n")) return;
 
 #if HAVE_MCP
-	logger().info("[McpEval] received %s", expr.c_str());
+	logger().debug("[McpEval] received %s", expr.c_str());
 	try
 	{
 		Json::Value request;
@@ -374,7 +374,7 @@ void McpEval::eval_expr(const std::string &expr)
 					error_content["isError"] = true;
 					response["result"] = error_content;
 
-					logger().info("[McpEval] replying: %s", json_to_string(response).c_str());
+					logger().debug("[McpEval] replying: %s", json_to_string(response).c_str());
 					_result = json_to_string(response) + "\n";
 					_done = true;
 					return;
@@ -405,7 +405,7 @@ void McpEval::eval_expr(const std::string &expr)
 			response["error"]["message"] = "Method not found: " + method;
 		}
 
-		logger().info("[McpEval] replying: %s", json_to_string(response).c_str());
+		logger().debug("[McpEval] replying: %s", json_to_string(response).c_str());
 
 		// Trailing newline is mandatory; jsonrpc uses line discipline.
 		_result = json_to_string(response) + "\n";
@@ -418,7 +418,7 @@ void McpEval::eval_expr(const std::string &expr)
 		error_response["id"] = Json::Value::null;
 		error_response["error"]["code"] = -32700;
 		error_response["error"]["message"] = "Parse error: " + std::string(e.what());
-		logger().info("[McpEval] error reply: %s", json_to_string(error_response).c_str());
+		logger().debug("[McpEval] error reply: %s", json_to_string(error_response).c_str());
 		_result = json_to_string(error_response) + "\n";
 		_done = true;
 	}
