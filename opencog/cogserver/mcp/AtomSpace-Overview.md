@@ -68,6 +68,12 @@ what a user is asking you to do.
   lists of bits (bitvectors), lists of strings, or lists of other values.
 * The Atom Type is a subtype of Value.
 
+* Although all Atoms are Values, the revierse does not hold: not all
+  Values are not Atoms. In particular, FloatValue,, StringValue and
+  ListValue are not Atoms.
+* A Link is a list of Atoms; only Atoms can be in that list. Values
+  that aren't already Atoms cannot appear in that list.
+
 * Every Atom holds a key-value database.
 * The key can be any Atom, but is usually a PredicateNode.
 * The value can be any Value.
