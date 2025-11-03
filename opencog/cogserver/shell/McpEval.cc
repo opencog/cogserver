@@ -225,6 +225,14 @@ void McpEval::eval_expr(const std::string &expr)
 			guide_resource["mimeType"] = "text/markdown";
 			resources.append(guide_resource);
 
+			// Add the CogServer MCP access guide
+			Json::Value cogserver_resource;
+			cogserver_resource["uri"] = "atomspace://docs/cogserver-mcp";
+			cogserver_resource["name"] = "CogServer and MCP Access";
+			cogserver_resource["description"] = "How to access the CogServer, MCP tools, port numbers, and documentation locations";
+			cogserver_resource["mimeType"] = "text/markdown";
+			resources.append(cogserver_resource);
+
 			response["result"]["resources"] = resources;
 		} else if (method == "prompts/list") {
 			Json::Value prompts(Json::arrayValue);
@@ -300,6 +308,25 @@ void McpEval::eval_expr(const std::string &expr)
 			} else if (uri == "atomspace://docs/atomspace-guide") {
 				// Read the AtomSpace-Details.md file (longer detailed guide)
 				std::string doc_path = doc_base + "AtomSpace-Details.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/cogserver-mcp") {
+				// Read the CogServer-Prompt.md file (MCP access guide)
+				std::string doc_path = doc_base + "CogServer-Prompt.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;

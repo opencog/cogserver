@@ -5,6 +5,7 @@ INSTALL(FILES
 	AtomSpace-Details.md
 	AtomSpace-Overview.md
 	AtomTypes-Prompt.md
+	CogServer-Prompt.md
 	CreateAtom-Prompt.md
 	DesigningStructures-Prompt.md
 	QueryAtom-Prompt.md
