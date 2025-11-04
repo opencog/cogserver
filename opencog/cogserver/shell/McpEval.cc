@@ -32,8 +32,8 @@
 #endif // HAVE_MCP
 
 #include <opencog/util/Logger.h>
-#include <opencog/persist/json/McpPlugin.h>
-#include <opencog/persist/json/McpPlugAtomSpace.h>
+#include <opencog/cogserver/mcp-tools/McpPlugin.h>
+#include <opencog/cogserver/mcp-tools/McpPlugAtomSpace.h>
 #include "McpPlugEcho.h"
 #include "McpEval.h"
 

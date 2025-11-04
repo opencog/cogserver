@@ -21,7 +21,7 @@
  */
 
 #include "McpPlugAtomSpace.h"
-#include "JSCommands.h"
+#include <opencog/persist/json/JSCommands.h>
 
 using namespace opencog;
 

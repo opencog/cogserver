@@ -83,6 +83,7 @@ IF (HAVE_MCP)
 		McpPlugEcho.cc
 	)
 	TARGET_LINK_LIBRARIES(mcp-eval
+		mcp-tools
 		${ATOMSPACE_STORAGE_LIBRARIES}
 		${JSONCPP_LIBRARIES}
 	)

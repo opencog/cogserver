@@ -4,6 +4,7 @@ ADD_LIBRARY (mcp-tools SHARED
 )
 
 TARGET_LINK_LIBRARIES(mcp-tools
+	json
 	sexpr
 	atomspace
 	execution
@@ -11,7 +12,7 @@ TARGET_LINK_LIBRARIES(mcp-tools
 	${COGUTIL_LIBRARY}
 )
 
-INSTALL (TARGETS mcp-tools EXPORT AtomSpaceStorageTargets
+INSTALL (TARGETS mcp-tools EXPORT CogServerTargets
 	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
 )
 

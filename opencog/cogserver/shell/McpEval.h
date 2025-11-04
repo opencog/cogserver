@@ -29,7 +29,7 @@
 #include <vector>
 #include <opencog/eval/GenericEval.h>
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/persist/json/McpPlugin.h>
+#include <opencog/cogserver/mcp-tools/McpPlugin.h>
 
 /**
  * The McpEval class implements a the generic evaluator API for
