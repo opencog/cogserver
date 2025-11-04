@@ -20,22 +20,20 @@ All three ports access the same shared AtomSpace instance, so changes made throu
 
 ## MCP Documentation Resources
 
-The MCP server documentation files are located in the cogserver source tree at:
+The CogServer provides comprehensive documentation through MCP resources accessible via `atomspace://docs/` URIs:
 
-**cogserver/opencog/cogserver/mcp/**
+* `atomspace://docs/introduction` - Introduction to AtomSpace concepts
+* `atomspace://docs/atomspace-guide` - Comprehensive guide to Atomese and the AtomSpace
+* `atomspace://docs/cogserver-mcp` - CogServer and MCP tools guide (this document)
+* `atomspace://docs/atom-types` - Reference for 170+ Atom types
+* `atomspace://docs/create-atom` - Guide for creating Nodes and Links
+* `atomspace://docs/designing-structures` - Guide for designing data structures
+* `atomspace://docs/pattern-matching` - Guide for pattern matching queries
+* `atomspace://docs/query-atom` - Guide for querying the AtomSpace
+* `atomspace://docs/working-with-values` - Guide for working with Values
+* `atomspace://docs/advanced-pattern-matching` - Advanced pattern matching techniques
 
-This directory contains:
-* AtomSpace-Overview.md - Introduction to AtomSpace concepts
-* AtomSpace-Details.md - Comprehensive guide to Atomese and the AtomSpace
-* AtomTypes-Prompt.md - Reference for 170+ Atom types
-* CreateAtom-Prompt.md - Guide for creating Nodes and Links
-* DesigningStructures-Prompt.md - Guide for designing data structures
-* PatternMatching-Prompt.md - Guide for pattern matching queries
-* QueryAtom-Prompt.md - Guide for querying the AtomSpace
-* WorkingWithValues-Prompt.md - Guide for working with Values
-* AdvancedPatternMatching-Prompt.md - Advanced pattern matching techniques
-
-These files are installed to **/usr/local/share/cogserver/mcp/** during installation.
+These resources are served by the CogServer's MCP implementation and are always available when connected to the MCP server.
 
 ## Important Usage Notes
 
@@ -215,6 +213,6 @@ mcp__atomese__execute({
 ### For More Information
 
 * **Atomese basics** - See `atomspace://docs/atomspace-guide`
-* **Value types and usage** - See WorkingWithValues-Prompt.md in cogserver/mcp/
-* **Pattern matching** - See PatternMatching-Prompt.md and QueryAtom-Prompt.md
-* **Atom types** - See AtomTypes-Prompt.md for complete type reference
+* **Value types and usage** - See `atomspace://docs/working-with-values`
+* **Pattern matching** - See `atomspace://docs/pattern-matching` and `atomspace://docs/query-atom`
+* **Atom types** - See `atomspace://docs/atom-types` for complete type reference
