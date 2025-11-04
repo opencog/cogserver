@@ -34,7 +34,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/cogserver/mcp-tools/McpPlugin.h>
 #include <opencog/cogserver/mcp-tools/McpPlugAtomSpace.h>
-#include "McpPlugEcho.h"
+#include <opencog/cogserver/mcp-tools/McpPlugEcho.h>
 #include "McpEval.h"
 
 using namespace opencog;

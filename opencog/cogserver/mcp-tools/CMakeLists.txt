@@ -1,6 +1,7 @@
 
 ADD_LIBRARY (mcp-tools SHARED
 	McpPlugAtomSpace.cc
+	McpPlugEcho.cc
 )
 
 TARGET_LINK_LIBRARIES(mcp-tools
@@ -19,6 +20,7 @@ INSTALL (TARGETS mcp-tools EXPORT CogServerTargets
 INSTALL (FILES
 	McpPlugin.h
 	McpPlugAtomSpace.h
+	McpPlugEcho.h
 	DESTINATION "include/opencog/cogserver/mcp-tools"
 )
 

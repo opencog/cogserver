@@ -80,7 +80,6 @@ TARGET_LINK_LIBRARIES(top-shell
 IF (HAVE_MCP)
 	ADD_LIBRARY (mcp-eval SHARED
 		McpEval.cc
-		McpPlugEcho.cc
 	)
 	TARGET_LINK_LIBRARIES(mcp-eval
 		mcp-tools
