@@ -16,7 +16,7 @@
 
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
-#include <opencog/cogserver/shell/McpEval.h>
+#include <opencog/cogserver/mcp-eval/McpEval.h>
 
 using namespace opencog;
 

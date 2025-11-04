@@ -20,7 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "McpEval.h"
+#include <opencog/cogserver/mcp-eval/McpEval.h>
 #include "McpShell.h"
 
 using namespace opencog;

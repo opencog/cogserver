@@ -17,7 +17,7 @@ INSTALL (TARGETS mcp-eval
 	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
 )
 
-# ---------------------- install targets
-
-INSTALL (TARGETS mcp-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+INSTALL (FILES
+	McpEval.h
+	DESTINATION "include/opencog/cogserver/mcp-eval"
+)
