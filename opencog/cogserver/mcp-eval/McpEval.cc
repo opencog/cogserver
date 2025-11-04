@@ -32,9 +32,9 @@
 #endif // HAVE_MCP
 
 #include <opencog/util/Logger.h>
-#include <opencog/persist/json/McpPlugin.h>
-#include <opencog/persist/json/McpPlugAtomSpace.h>
-#include "McpPlugEcho.h"
+#include <opencog/cogserver/mcp-tools/McpPlugin.h>
+#include <opencog/cogserver/mcp-tools/McpPlugAtomSpace.h>
+#include <opencog/cogserver/mcp-tools/McpPlugEcho.h>
 #include "McpEval.h"
 
 using namespace opencog;
@@ -233,6 +233,62 @@ void McpEval::eval_expr(const std::string &expr)
 			cogserver_resource["mimeType"] = "text/markdown";
 			resources.append(cogserver_resource);
 
+			// Add Atom Types reference
+			Json::Value atomtypes_resource;
+			atomtypes_resource["uri"] = "atomspace://docs/atom-types";
+			atomtypes_resource["name"] = "Atom Types Reference";
+			atomtypes_resource["description"] = "Comprehensive reference for 170+ Atom types organized by functional category";
+			atomtypes_resource["mimeType"] = "text/markdown";
+			resources.append(atomtypes_resource);
+
+			// Add Creating Atoms guide
+			Json::Value createatom_resource;
+			createatom_resource["uri"] = "atomspace://docs/create-atom";
+			createatom_resource["name"] = "Creating Atoms Guide";
+			createatom_resource["description"] = "Guide for creating Nodes and Links in the AtomSpace";
+			createatom_resource["mimeType"] = "text/markdown";
+			resources.append(createatom_resource);
+
+			// Add Designing Structures guide
+			Json::Value designing_resource;
+			designing_resource["uri"] = "atomspace://docs/designing-structures";
+			designing_resource["name"] = "Designing Structures Guide";
+			designing_resource["description"] = "Guide for designing data structures in Atomese: global uniqueness, avoiding IDs, Atomese vs programming languages";
+			designing_resource["mimeType"] = "text/markdown";
+			resources.append(designing_resource);
+
+			// Add Query AtomSpace guide
+			Json::Value query_resource;
+			query_resource["uri"] = "atomspace://docs/query-atom";
+			query_resource["name"] = "Querying the AtomSpace";
+			query_resource["description"] = "Guide for querying and exploring the AtomSpace effectively";
+			query_resource["mimeType"] = "text/markdown";
+			resources.append(query_resource);
+
+			// Add Working with Values guide
+			Json::Value values_resource;
+			values_resource["uri"] = "atomspace://docs/working-with-values";
+			values_resource["name"] = "Working with Values";
+			values_resource["description"] = "Guide for working with Values and key-value pairs";
+			values_resource["mimeType"] = "text/markdown";
+			resources.append(values_resource);
+
+			// Add Pattern Matching guide
+			Json::Value pattern_resource;
+			pattern_resource["uri"] = "atomspace://docs/pattern-matching";
+			pattern_resource["name"] = "Pattern Matching Guide";
+			pattern_resource["description"] = "Guide for using MeetLink and QueryLink to search the AtomSpace with patterns";
+			pattern_resource["mimeType"] = "text/markdown";
+			resources.append(pattern_resource);
+
+			// Add Advanced Pattern Matching guide
+			Json::Value advanced_pattern_resource;
+			advanced_pattern_resource["uri"] = "atomspace://docs/advanced-pattern-matching";
+			advanced_pattern_resource["name"] = "Advanced Pattern Matching";
+			advanced_pattern_resource["description"] = "Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries";
+			advanced_pattern_resource["mimeType"] = "text/markdown";
+			resources.append(advanced_pattern_resource);
+
 			response["result"]["resources"] = resources;
 		} else if (method == "prompts/list") {
 			Json::Value prompts(Json::arrayValue);
@@ -333,6 +389,125 @@ void McpEval::eval_expr(const std::string &expr)
 					buffer << file.rdbuf();
 					file.close();
 
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/atom-types") {
+				std::string doc_path = doc_base + "AtomTypes-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/create-atom") {
+				std::string doc_path = doc_base + "CreateAtom-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/designing-structures") {
+				std::string doc_path = doc_base + "DesigningStructures-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/query-atom") {
+				std::string doc_path = doc_base + "QueryAtom-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/working-with-values") {
+				std::string doc_path = doc_base + "WorkingWithValues-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/pattern-matching") {
+				std::string doc_path = doc_base + "PatternMatching-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
+			} else if (uri == "atomspace://docs/advanced-pattern-matching") {
+				std::string doc_path = doc_base + "AdvancedPatternMatching-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
 					Json::Value content;
 					content["uri"] = uri;
 					content["mimeType"] = "text/markdown";

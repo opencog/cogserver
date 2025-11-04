@@ -1,0 +1,23 @@
+INCLUDE_DIRECTORIES(
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_BINARY_DIR}
+)
+
+ADD_LIBRARY (mcp-eval SHARED
+	McpEval.cc
+)
+TARGET_LINK_LIBRARIES(mcp-eval
+	mcp-tools
+	${ATOMSPACE_STORAGE_LIBRARIES}
+	${JSONCPP_LIBRARIES}
+)
+
+INSTALL (TARGETS mcp-eval
+	EXPORT CogServerTargets
+	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+)
+
+INSTALL (FILES
+	McpEval.h
+	DESTINATION "include/opencog/cogserver/mcp-eval"
+)

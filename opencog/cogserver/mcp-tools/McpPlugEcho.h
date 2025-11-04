@@ -23,7 +23,7 @@
 #ifndef _OPENCOG_MCP_PLUG_ECHO_H
 #define _OPENCOG_MCP_PLUG_ECHO_H
 
-#include <opencog/persist/json/McpPlugin.h>
+#include <opencog/cogserver/mcp-tools/McpPlugin.h>
 
 namespace opencog {
 
