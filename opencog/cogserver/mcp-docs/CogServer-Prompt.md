@@ -18,22 +18,51 @@ Your Atomese MCP tools (mcp__atomese__makeAtom, mcp__atomese__execute, mcp__atom
 
 All three ports access the same shared AtomSpace instance, so changes made through one interface are immediately visible through the others.
 
-## MCP Documentation Resources
+### Connection Behavior
 
-The CogServer provides comprehensive documentation through MCP resources accessible via `atomspace://docs/` URIs:
+**TCP/IP Port (18888):**
+* Creates a persistent connection that remains open until explicitly closed
+* The server sends JSON-RPC responses but does not close the connection
+* When using tools like `netcat` or `telnet`, you must manually close the connection (Ctrl-C or Ctrl-D)
+* Each JSON-RPC request gets a response, but the socket remains active for additional requests
+* This allows multiple requests over a single connection for better performance
+
+**HTTP Port (18080):**
+* Standard HTTP request/response cycle - connection closes after each request
+* Use POST to `/mcp` endpoint with JSON-RPC payload
+* More suitable for one-off requests or web-based clients
+
+**WebSocket Port (18080):**
+* Persistent bidirectional connection like raw TCP
+* Use `/mcp` WebSocket endpoint
+* Connection remains open for streaming requests/responses
+
+## MCP Documentation
+
+The CogServer provides comprehensive documentation through MCP resources that are always available for reading.
+
+### MCP Resources (Always-Available Documentation)
+
+Access via `resources/read` with these URIs:
 
 * `atomspace://docs/introduction` - Introduction to AtomSpace concepts
 * `atomspace://docs/atomspace-guide` - Comprehensive guide to Atomese and the AtomSpace
 * `atomspace://docs/cogserver-mcp` - CogServer and MCP tools guide (this document)
-* `atomspace://docs/atom-types` - Reference for 170+ Atom types
-* `atomspace://docs/create-atom` - Guide for creating Nodes and Links
-* `atomspace://docs/designing-structures` - Guide for designing data structures
-* `atomspace://docs/pattern-matching` - Guide for pattern matching queries
-* `atomspace://docs/query-atom` - Guide for querying the AtomSpace
-* `atomspace://docs/working-with-values` - Guide for working with Values
-* `atomspace://docs/advanced-pattern-matching` - Advanced pattern matching techniques
+* `atomspace://docs/atom-types` - Comprehensive reference for 170+ Atom types organized by functional category
+* `atomspace://docs/create-atom` - Guide for creating Nodes and Links in the AtomSpace
+* `atomspace://docs/designing-structures` - Guide for designing data structures in Atomese
+* `atomspace://docs/query-atom` - Guide for querying and exploring the AtomSpace effectively
+* `atomspace://docs/working-with-values` - Guide for working with Values and key-value pairs
+* `atomspace://docs/pattern-matching` - Guide for using MeetLink and QueryLink to search the AtomSpace
+* `atomspace://docs/advanced-pattern-matching` - Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink
 
-These resources are served by the CogServer's MCP implementation and are always available when connected to the MCP server.
+### MCP Prompts (Alternative Access for Context Injection)
+
+The same documentation is also available via `prompts/get` for user-initiated context injection:
+
+* `atom-types-reference`, `create-atoms`, `designing-structures`, `query-atomspace`, `work-with-values`, `pattern-matching`, `advanced-pattern-matching`
+
+**Note:** LLM clients should read the resources proactively to build comprehensive knowledge. Prompts are primarily for user-directed context injection.
 
 ## Important Usage Notes
 
@@ -215,4 +244,7 @@ mcp__atomese__execute({
 * **Atomese basics** - See `atomspace://docs/atomspace-guide`
 * **Value types and usage** - See `atomspace://docs/working-with-values`
 * **Pattern matching** - See `atomspace://docs/pattern-matching` and `atomspace://docs/query-atom`
+* **Advanced patterns** - See `atomspace://docs/advanced-pattern-matching`
 * **Atom types** - See `atomspace://docs/atom-types` for complete type reference
+* **Designing structures** - See `atomspace://docs/designing-structures`
+* **Creating atoms** - See `atomspace://docs/create-atom`
