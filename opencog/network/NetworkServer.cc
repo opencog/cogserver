@@ -96,6 +96,26 @@ void NetworkServer::stop()
     _listener_thread->join();
     delete _listener_thread;
     _listener_thread = nullptr;
+
+    // Give connection handlers time to finish before allowing
+    // NetworkServer destruction. This is a workaround for the race
+    // condition where detached connection handler threads may still
+    // be executing when the shared library is being torn down.
+    // A proper fix would track all handler threads and join them.
+    // This is a hack only because some of the atomspace-cog unit
+    // tests intermittently fail. A "proper fix" seems unwarrented
+    // over-engineering.
+    unsigned int open_socks = ServerSocket::get_num_open_sockets();
+    if (open_socks > 0)
+    {
+        for (int i = 0; i < 50 && ServerSocket::get_num_open_sockets() > 0; i++)
+            usleep(100000);  // 100ms
+
+        open_socks = ServerSocket::get_num_open_sockets();
+        if (open_socks > 0)
+            logger().warn("[NetworkServer] Stopped server but %u socks still open!",
+                         open_socks);
+    }
 }
 
 void NetworkServer::listen(void)
