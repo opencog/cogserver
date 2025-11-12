@@ -289,6 +289,14 @@ void McpEval::eval_expr(const std::string &expr)
 			advanced_pattern_resource["mimeType"] = "text/markdown";
 			resources.append(advanced_pattern_resource);
 
+			// Add Streams guide
+			Json::Value streams_resource;
+			streams_resource["uri"] = "atomspace://docs/streams";
+			streams_resource["name"] = "Working with Streams";
+			streams_resource["description"] = "Comprehensive guide for creating and processing data streams: FormulaStream, FutureStream, FlatStream, FilterLink, DrainLink";
+			streams_resource["mimeType"] = "text/markdown";
+			resources.append(streams_resource);
+
 			response["result"]["resources"] = resources;
 		} else if (method == "prompts/list") {
 			Json::Value prompts(Json::arrayValue);
@@ -334,6 +342,12 @@ void McpEval::eval_expr(const std::string &expr)
 			advanced_pattern_prompt["name"] = "advanced-pattern-matching";
 			advanced_pattern_prompt["description"] = "Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries";
 			prompts.append(advanced_pattern_prompt);
+
+			// Prompt for working with streams
+			Json::Value streams_prompt;
+			streams_prompt["name"] = "work-with-streams";
+			streams_prompt["description"] = "Comprehensive guide for creating and processing data streams: FormulaStream, FutureStream, FlatStream, FilterLink, DrainLink";
+			prompts.append(streams_prompt);
 
 			response["result"]["prompts"] = prompts;
 		} else if (method == "resources/read") {
@@ -518,6 +532,23 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["code"] = -32602;
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
+			} else if (uri == "atomspace://docs/streams") {
+				std::string doc_path = doc_base + "Streams-Prompt.md";
+				std::ifstream file(doc_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					Json::Value content;
+					content["uri"] = uri;
+					content["mimeType"] = "text/markdown";
+					content["text"] = buffer.str();
+					response["result"]["contents"] = Json::arrayValue;
+					response["result"]["contents"].append(content);
+				} else {
+					response["error"]["code"] = -32602;
+					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+				}
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Resource not found: " + uri;
@@ -547,6 +578,9 @@ void McpEval::eval_expr(const std::string &expr)
 			} else if (prompt_name == "advanced-pattern-matching") {
 				read_prompt_file(prompt_base, "AdvancedPatternMatching-Prompt.md",
 					"Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries", response);
+			} else if (prompt_name == "work-with-streams") {
+				read_prompt_file(prompt_base, "Streams-Prompt.md",
+					"Comprehensive guide for creating and processing data streams: FormulaStream, FutureStream, FlatStream, FilterLink, DrainLink", response);
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Prompt not found: " + prompt_name;

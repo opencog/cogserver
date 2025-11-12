@@ -9,6 +9,7 @@ INSTALL(FILES
 	CreateAtom-Prompt.md
 	DesigningStructures-Prompt.md
 	QueryAtom-Prompt.md
+	Streams-Prompt.md
 	WorkingWithValues-Prompt.md
 	PatternMatching-Prompt.md
 	DESTINATION share/cogserver/mcp
