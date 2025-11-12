@@ -47,36 +47,6 @@ McpEval::McpEval(const AtomSpacePtr& asp)
 	_done = false;
 }
 
-// Helper function to read a prompt file and format it as MCP prompt response
-static bool read_prompt_file(const std::string& prompt_base,
-                             const std::string& filename,
-                             const std::string& description,
-                             Json::Value& response)
-{
-	std::string prompt_path = prompt_base + filename;
-	std::ifstream file(prompt_path);
-	if (!file.is_open()) {
-		response["error"]["code"] = -32602;
-		response["error"]["message"] = "Failed to read prompt file: " + prompt_path;
-		return false;
-	}
-
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-	file.close();
-
-	response["result"]["description"] = description;
-	response["result"]["messages"] = Json::arrayValue;
-	Json::Value message;
-	message["role"] = "user";
-	Json::Value content;
-	content["type"] = "text";
-	content["text"] = buffer.str();
-	message["content"] = content;
-	response["result"]["messages"].append(message);
-	return true;
-}
-
 McpEval::~McpEval()
 {
 }
@@ -145,11 +115,6 @@ void McpEval::eval_expr(const std::string &expr)
 			resourcesCapability["subscribe"] = false;  // No live updates for docs
 			resourcesCapability["listChanged"] = false;  // Static resource list
 			response["result"]["capabilities"]["resources"] = resourcesCapability;
-
-			// Indicate that we support prompts for guided tool usage
-			Json::Value promptsCapability;
-			promptsCapability["listChanged"] = false;  // Static prompt list
-			response["result"]["capabilities"]["prompts"] = promptsCapability;
 
 			response["result"]["serverInfo"]["name"] = "CogServer MCP";
 			response["result"]["serverInfo"]["version"] = "0.2.0";
@@ -298,58 +263,6 @@ void McpEval::eval_expr(const std::string &expr)
 			resources.append(streams_resource);
 
 			response["result"]["resources"] = resources;
-		} else if (method == "prompts/list") {
-			Json::Value prompts(Json::arrayValue);
-
-			// Prompt for Atom types reference
-			Json::Value atomtypes_prompt;
-			atomtypes_prompt["name"] = "atom-types-reference";
-			atomtypes_prompt["description"] = "Comprehensive reference for 170+ Atom types organized by functional category";
-			prompts.append(atomtypes_prompt);
-
-			// Prompt for creating Atoms
-			Json::Value create_prompt;
-			create_prompt["name"] = "create-atoms";
-			create_prompt["description"] = "Guide for creating Nodes and Links in the AtomSpace";
-			prompts.append(create_prompt);
-
-			// Prompt for designing structures in Atomese
-			Json::Value design_prompt;
-			design_prompt["name"] = "designing-structures";
-			design_prompt["description"] = "Guide for designing data structures in Atomese: global uniqueness, avoiding IDs, Atomese vs programming languages";
-			prompts.append(design_prompt);
-
-			// Prompt for querying AtomSpace
-			Json::Value query_prompt;
-			query_prompt["name"] = "query-atomspace";
-			query_prompt["description"] = "Guide for querying and exploring the AtomSpace effectively";
-			prompts.append(query_prompt);
-
-			// Prompt for working with Values
-			Json::Value values_prompt;
-			values_prompt["name"] = "work-with-values";
-			values_prompt["description"] = "Guide for working with Values and key-value pairs";
-			prompts.append(values_prompt);
-
-			// Prompt for pattern matching queries
-			Json::Value pattern_prompt;
-			pattern_prompt["name"] = "pattern-matching";
-			pattern_prompt["description"] = "Guide for using MeetLink and QueryLink to search the AtomSpace with patterns";
-			prompts.append(pattern_prompt);
-
-			// Prompt for advanced pattern matching
-			Json::Value advanced_pattern_prompt;
-			advanced_pattern_prompt["name"] = "advanced-pattern-matching";
-			advanced_pattern_prompt["description"] = "Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries";
-			prompts.append(advanced_pattern_prompt);
-
-			// Prompt for working with streams
-			Json::Value streams_prompt;
-			streams_prompt["name"] = "work-with-streams";
-			streams_prompt["description"] = "Comprehensive guide for creating and processing data streams: FormulaStream, FutureStream, FlatStream, FilterLink, DrainLink";
-			prompts.append(streams_prompt);
-
-			response["result"]["prompts"] = prompts;
 		} else if (method == "resources/read") {
 			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
 
@@ -395,8 +308,8 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/cogserver-mcp") {
-				// Read the CogServer-Prompt.md file (MCP access guide)
-				std::string doc_path = doc_base + "CogServer-Prompt.md";
+				// Read the CogServer-Resource.md file (MCP access guide)
+				std::string doc_path = doc_base + "CogServer-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -414,7 +327,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/atom-types") {
-				std::string doc_path = doc_base + "AtomTypes-Prompt.md";
+				std::string doc_path = doc_base + "AtomTypes-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -431,7 +344,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/create-atom") {
-				std::string doc_path = doc_base + "CreateAtom-Prompt.md";
+				std::string doc_path = doc_base + "CreateAtom-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -448,7 +361,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/designing-structures") {
-				std::string doc_path = doc_base + "DesigningStructures-Prompt.md";
+				std::string doc_path = doc_base + "DesigningStructures-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -465,7 +378,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/query-atom") {
-				std::string doc_path = doc_base + "QueryAtom-Prompt.md";
+				std::string doc_path = doc_base + "QueryAtom-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -482,7 +395,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/working-with-values") {
-				std::string doc_path = doc_base + "WorkingWithValues-Prompt.md";
+				std::string doc_path = doc_base + "WorkingWithValues-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -499,7 +412,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/pattern-matching") {
-				std::string doc_path = doc_base + "PatternMatching-Prompt.md";
+				std::string doc_path = doc_base + "PatternMatching-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -516,7 +429,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/advanced-pattern-matching") {
-				std::string doc_path = doc_base + "AdvancedPatternMatching-Prompt.md";
+				std::string doc_path = doc_base + "AdvancedPatternMatching-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -533,7 +446,7 @@ void McpEval::eval_expr(const std::string &expr)
 					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
 				}
 			} else if (uri == "atomspace://docs/streams") {
-				std::string doc_path = doc_base + "Streams-Prompt.md";
+				std::string doc_path = doc_base + "Streams-Resource.md";
 				std::ifstream file(doc_path);
 				if (file.is_open()) {
 					std::stringstream buffer;
@@ -552,38 +465,6 @@ void McpEval::eval_expr(const std::string &expr)
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Resource not found: " + uri;
-			}
-		} else if (method == "prompts/get") {
-			std::string prompt_name = params.isMember("name") ? params["name"].asString() : "";
-			std::string prompt_base = std::string(PROJECT_INSTALL_PREFIX) + "/share/cogserver/mcp/";
-
-			if (prompt_name == "atom-types-reference") {
-				read_prompt_file(prompt_base, "AtomTypes-Prompt.md",
-					"Comprehensive reference for 170+ Atom types organized by functional category", response);
-			} else if (prompt_name == "create-atoms") {
-				read_prompt_file(prompt_base, "CreateAtom-Prompt.md",
-					"Guide for creating Nodes and Links in the AtomSpace", response);
-			} else if (prompt_name == "designing-structures") {
-				read_prompt_file(prompt_base, "DesigningStructures-Prompt.md",
-					"Guide for designing data structures in Atomese: global uniqueness, avoiding IDs, Atomese vs programming languages", response);
-			} else if (prompt_name == "query-atomspace") {
-				read_prompt_file(prompt_base, "QueryAtom-Prompt.md",
-					"Guide for querying and exploring the AtomSpace effectively", response);
-			} else if (prompt_name == "work-with-values") {
-				read_prompt_file(prompt_base, "WorkingWithValues-Prompt.md",
-					"Guide for working with Values and key-value pairs", response);
-			} else if (prompt_name == "pattern-matching") {
-				read_prompt_file(prompt_base, "PatternMatching-Prompt.md",
-					"Guide for using MeetLink and QueryLink to search the AtomSpace with patterns", response);
-			} else if (prompt_name == "advanced-pattern-matching") {
-				read_prompt_file(prompt_base, "AdvancedPatternMatching-Prompt.md",
-					"Guide for using AbsentLink, ChoiceLink, AlwaysLink, and GroupLink in sophisticated queries", response);
-			} else if (prompt_name == "work-with-streams") {
-				read_prompt_file(prompt_base, "Streams-Prompt.md",
-					"Comprehensive guide for creating and processing data streams: FormulaStream, FutureStream, FlatStream, FilterLink, DrainLink", response);
-			} else {
-				response["error"]["code"] = -32602;
-				response["error"]["message"] = "Prompt not found: " + prompt_name;
 			}
 		} else if (method == "tools/call") {
 			std::string tool_name = params.isMember("name") ? params["name"].asString() : "";

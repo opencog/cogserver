@@ -1,17 +1,17 @@
 
 # By default, the install location is /usr/local/share/cogserver/mcp/
 INSTALL(FILES
-	AdvancedPatternMatching-Prompt.md
+	AdvancedPatternMatching-Resource.md
 	AtomSpace-Details.md
 	AtomSpace-Overview.md
-	AtomTypes-Prompt.md
-	CogServer-Prompt.md
-	CreateAtom-Prompt.md
-	DesigningStructures-Prompt.md
-	QueryAtom-Prompt.md
-	Streams-Prompt.md
-	WorkingWithValues-Prompt.md
-	PatternMatching-Prompt.md
+	AtomTypes-Resource.md
+	CogServer-Resource.md
+	CreateAtom-Resource.md
+	DesigningStructures-Resource.md
+	QueryAtom-Resource.md
+	Streams-Resource.md
+	WorkingWithValues-Resource.md
+	PatternMatching-Resource.md
 	DESTINATION share/cogserver/mcp
 	COMPONENT mcp
 )
