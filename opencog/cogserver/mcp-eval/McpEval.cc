@@ -47,6 +47,33 @@ McpEval::McpEval(const AtomSpacePtr& asp)
 	_done = false;
 }
 
+// Helper function to publish a resource file as MCP resource response
+static bool publish_resource(const std::string& doc_base,
+                              const std::string& uri,
+                              const std::string& filename,
+                              Json::Value& response)
+{
+	std::string doc_path = doc_base + filename;
+	std::ifstream file(doc_path);
+	if (!file.is_open()) {
+		response["error"]["code"] = -32602;
+		response["error"]["message"] = "Failed to read documentation file: " + doc_path;
+		return false;
+	}
+
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	file.close();
+
+	Json::Value content;
+	content["uri"] = uri;
+	content["mimeType"] = "text/markdown";
+	content["text"] = buffer.str();
+	response["result"]["contents"] = Json::arrayValue;
+	response["result"]["contents"].append(content);
+	return true;
+}
+
 McpEval::~McpEval()
 {
 }
@@ -270,198 +297,27 @@ void McpEval::eval_expr(const std::string &expr)
 			std::string doc_base = std::string(PROJECT_INSTALL_PREFIX) + "/share/cogserver/mcp/";
 
 			if (uri == "atomspace://docs/introduction") {
-				// Read the AtomSpace-Overview.md file (shorter introduction)
-				std::string doc_path = doc_base + "AtomSpace-Overview.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "AtomSpace-Overview.md", response);
 			} else if (uri == "atomspace://docs/atomspace-guide") {
-				// Read the AtomSpace-Details.md file (longer detailed guide)
-				std::string doc_path = doc_base + "AtomSpace-Details.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "AtomSpace-Details.md", response);
 			} else if (uri == "atomspace://docs/cogserver-mcp") {
-				// Read the CogServer-Resource.md file (MCP access guide)
-				std::string doc_path = doc_base + "CogServer-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "CogServer-Resource.md", response);
 			} else if (uri == "atomspace://docs/atom-types") {
-				std::string doc_path = doc_base + "AtomTypes-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "AtomTypes-Resource.md", response);
 			} else if (uri == "atomspace://docs/create-atom") {
-				std::string doc_path = doc_base + "CreateAtom-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "CreateAtom-Resource.md", response);
 			} else if (uri == "atomspace://docs/designing-structures") {
-				std::string doc_path = doc_base + "DesigningStructures-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "DesigningStructures-Resource.md", response);
 			} else if (uri == "atomspace://docs/query-atom") {
-				std::string doc_path = doc_base + "QueryAtom-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "QueryAtom-Resource.md", response);
 			} else if (uri == "atomspace://docs/working-with-values") {
-				std::string doc_path = doc_base + "WorkingWithValues-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "WorkingWithValues-Resource.md", response);
 			} else if (uri == "atomspace://docs/pattern-matching") {
-				std::string doc_path = doc_base + "PatternMatching-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "PatternMatching-Resource.md", response);
 			} else if (uri == "atomspace://docs/advanced-pattern-matching") {
-				std::string doc_path = doc_base + "AdvancedPatternMatching-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "AdvancedPatternMatching-Resource.md", response);
 			} else if (uri == "atomspace://docs/streams") {
-				std::string doc_path = doc_base + "Streams-Resource.md";
-				std::ifstream file(doc_path);
-				if (file.is_open()) {
-					std::stringstream buffer;
-					buffer << file.rdbuf();
-					file.close();
-					Json::Value content;
-					content["uri"] = uri;
-					content["mimeType"] = "text/markdown";
-					content["text"] = buffer.str();
-					response["result"]["contents"] = Json::arrayValue;
-					response["result"]["contents"].append(content);
-				} else {
-					response["error"]["code"] = -32602;
-					response["error"]["message"] = "Failed to read documentation file: " + doc_path;
-				}
+				publish_resource(doc_base, uri, "Streams-Resource.md", response);
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Resource not found: " + uri;
