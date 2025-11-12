@@ -288,7 +288,7 @@ SUMMARY_ADD("WebSockets"   "WebSockets network server" HAVE_OPENSSL)
 SUMMARY_ADD("MCP"          "Model Context Protocol network server" HAVE_MCP)
 SUMMARY_ADD("Cython"       "Cython (python) bindings" HAVE_CYTHON)
 SUMMARY_ADD("Doxygen"      "Code documentation" DOXYGEN_FOUND)
-SUMMARY_ADD("Python tests" "Python bindings nose tests" HAVE_NOSETESTS)
+SUMMARY_ADD("Python tests" "Python bindings pytest tests" HAVE_PYTEST)
 SUMMARY_ADD("Unit tests"   "Unit tests" CXXTEST_FOUND)
 
 SUMMARY_SHOW()
