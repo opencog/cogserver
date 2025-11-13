@@ -367,56 +367,76 @@ Named reference point for storing stream sources and pipeline stages. By convent
 
 **Purpose:** Extract data from AtomSpace and convert to stream format
 
-### StringOfLink
+### LinkSignatureLink
 
-**Purpose:** Type conversion between Nodes and StringValues, and between different Node types. Critical bridge between streaming Values and concrete Atoms.
+**Purpose:** Universal type constructor for converting between Atoms and Values. Critical bridge between streaming Values and concrete Atoms in the AtomSpace.
 
-**Core Problem Solved:** Atomese has no "naked strings" - you cannot directly place string literals into Link patterns. StringOfLink bridges this gap by converting between:
-- Node types (e.g., Word → Concept)
-- Nodes ↔ StringValues (stream data ↔ AtomSpace storage)
+**Core Function:** LinkSignatureLink is a type constructor that creates Values of specified types when executed. It addresses that Values cannot be stored directly in the AtomSpace by providing typed construction and conversion.
 
-**Three Primary Conversion Patterns:**
+**What It Replaces:** LinkSignatureLink replaces the deprecated `StringOfLink` and `NumberOfLink`, unifying type conversion under a single, more general mechanism.
+
+**Primary Conversion Patterns:**
 
 **1. Node → Node Conversion (Type Transformation)**
 ```scheme
-(StringOf (Type 'ConceptNode) (Word "cat"))
+(cog-execute! (LinkSignature (Type 'ConceptNode) (Word "cat")))
 ; Extracts "cat" from WordNode, creates (ConceptNode "cat")
-; This is THE critical operation for Link Grammar semantic extraction
+; Critical operation for Link Grammar semantic extraction
 ```
 
-**2. StringValue → Node (Stream to Storage)**
+**2. Node → StringValue (Storage to Stream)**
 ```scheme
-(StringOf (Type 'ConceptNode) (ValueOf (Anchor "x") (Predicate "key")))
-; If anchor holds (StringValue "hello"), creates (ConceptNode "hello")
-; AtomSpace acts as "sink" - flow stops, freezes into Nodes
-```
-
-**3. Node → StringValue (Storage to Stream)**
-```scheme
-(StringOf (Type 'StringValue) (Concept "hello"))
+(cog-execute! (LinkSignature (Type 'StringValue) (Concept "hello")))
 ; Creates (StringValue "hello") from ConceptNode
 ; AtomSpace acts as "source" - Nodes flow out as Values
 ```
 
+**3. StringValue → Node (Stream to Storage)**
+```scheme
+(cog-execute!
+  (LinkSignature (Type 'ConceptNode)
+    (ValueOf (Anchor "x") (Predicate "key"))))
+; If anchor holds (StringValue "hello"), creates (ConceptNode "hello")
+; AtomSpace acts as "sink" - flow stops, freezes into Nodes
+```
+
+**4. FloatValue → NumberNode (Numeric Conversion)**
+```scheme
+(cog-execute! (LinkSignature (Type 'NumberNode) (Plus (Number 2) (Number 3))))
+; Converts FloatValue result to (NumberNode "5")
+; Use when arithmetic results must become Nodes in graph structure
+```
+
+**5. Creating LinkValues**
+```scheme
+(cog-execute!
+  (LinkSignature (Type 'LinkValue)
+    (Concept "A")
+    (Concept "B")
+    (Concept "C")))
+; Creates LinkValue containing the three Concepts
+; Essential for stream construction and processing
+```
+
 **Syntax:**
 ```scheme
-(StringOf <target-type> <source>)
+(LinkSignature (Type '<target-type>) <source-args>...)
 ```
 Where:
-- `<target-type>`: Either `(Type 'SomeNode)` or `(Type 'StringValue)`
-- `<source>`: Node, StringValue, Variable, or expression producing one
+- `<target-type>`: Node type (Concept, Predicate, Number, etc.), Value type (StringValue, FloatValue, LinkValue), or other constructible type
+- `<source-args>`: One or more Atoms, Values, Variables, or expressions
 
 **Usage in Patterns (FilterLink):**
 
-StringOfLink can encode StringValue literals in patterns (since Values can't appear directly):
+LinkSignatureLink encodes Value literals in patterns (since Values can't appear directly):
 ```scheme
 (Filter
   (Rule
     (Variable "$filename")
-    ; Match pattern - StringOf creates StringValue from Node name
+    ; Match pattern - creates StringValue from Node name for matching
     (LinkSignature (Type 'LinkValue)
       (Variable "$filename")
-      (StringOf (Type 'StringValue) (Node "reg")))  ; Matches StringValue "reg"
+      (LinkSignature (Type 'StringValue) (Node "reg")))  ; Matches StringValue "reg"
     (Variable "$filename"))
   stream)
 ```
@@ -431,7 +451,7 @@ Common pattern: Convert streaming StringValues into tagged Nodes:
     (Variable "$strv")
     ; Rewrite: Convert to ConceptNode and tag
     (Edge (Predicate "sentence word")
-      (StringOf (Type 'Concept)
+      (LinkSignature (Type 'Concept)
         (ValueOf (Variable "$strv")))))
   string-stream)
 ```
@@ -439,28 +459,23 @@ Result: Stream data becomes queryable Nodes in AtomSpace.
 
 **"Sink" vs "Source" Semantics:**
 
-- **AtomSpace as Sink:** Streaming data (StringValues) flows in, StringOfLink converts to Nodes, data "freezes" into permanent storage
-- **AtomSpace as Source:** Nodes flow out, StringOfLink converts to StringValues for streaming to external systems
+- **AtomSpace as Sink:** Streaming data (StringValues, FloatValues) flows in, LinkSignatureLink converts to Nodes, data "freezes" into permanent storage
+- **AtomSpace as Source:** Nodes flow out, LinkSignatureLink converts to Values for streaming to external systems
 
 **Common Use Cases:**
 
 1. **Link Grammar Processing:** Convert `(Word "runs")` → `(Concept "runs")` for semantic graphs
 2. **Chat/Web Interfaces:** Capture streaming text as Nodes for storage/memory
-3. **File Processing:** Convert file paths from StringValues to ItemNodes with metadata
-4. **Knowledge Integration:** Stream data in, query AtomSpace later without re-accessing source
+3. **Numeric Results:** Convert arithmetic FloatValue results to NumberNodes for graph queries
+4. **Stream Construction:** Build LinkValues from Atoms for pipeline processing
+5. **Type Conversion:** Convert between Node types (Word → Concept, Concept → Predicate)
 
-**Key Properties:**
+**vs CollectionOfLink:**
 
-- Executable via `cog-execute!`
-- Pure type conversion - no string manipulation
-- Name preservation - only type changes
-- Works with Variables in patterns
-- Can chain with ValueOf to process stored Values
+- **LinkSignatureLink:** Preserves argument structure, best for Value types needing multiple arguments
+- **CollectionOfLink:** Unwraps arguments before construction, best for wrapping executables into streams
 
-**Critical for:** Semantic extraction pipelines (Word → Concept), stream-to-storage workflows, external system integration.
-
-### NumberOfLink
-Converts FloatValue to NumberNode by extracting the first component of the vector. FloatValue `[3.14, 2.71]` becomes `(Number "3.14")`. Only uses first element, discards rest. Commonly used after arithmetic operations that return FloatValues when you need a Node in the AtomSpace. Executable via cog-execute!. Counterpart to numeric operations which often return Values. Returns a Node, not a Value.
+**Execution Required:** LinkSignatureLink must be executed via `cog-execute!` to perform the conversion. When used in patterns like FilterLink, execution happens automatically during pattern matching.
 
 ### CollectionOfLink
 Converts between Atoms and Values, primarily LinkValue ↔ SetLink/ListLink. Without type argument, defaults to SetLink. Can specify: `(CollectionOf (Type 'ListLink) linkvalue-source)`. Takes a stream of individual Values/Atoms and bundles them into a Link. Used when FilterLink or other stream operations produce LinkValue but you need actual Atoms in AtomSpace. Type-preserving: respects ordered vs unordered. Inverse operation: can convert SetLink to LinkValue for stream processing. Essential bridge between Value-based pipelines and Atom-based queries.
@@ -615,7 +630,7 @@ Input text for Link Grammar parser. Simply wraps a string: `(Phrase "The cat sat
 Specifies which Link Grammar dictionary to use. `(LgDict "en")` for English, `(LgDict "ru")` for Russian, etc. Required argument to LgParseBonds. Dictionaries must be installed separately. Dictionary determines what languages can be parsed and what link types are recognized.
 
 ### Word (aka WordNode)
-Individual word in a Link Grammar parse. Created by parser, not manually. Name is the actual word: `(Word "cat")`. Appears in bond structures. Type-separate from ConceptNode intentionally - distinguishes syntax (Word) from semantics (Concept). Use StringOfLink to convert: `(StringOf (Type 'ConceptNode) (Word "cat"))` → `(Concept "cat")`.
+Individual word in a Link Grammar parse. Created by parser, not manually. Name is the actual word: `(Word "cat")`. Appears in bond structures. Type-separate from ConceptNode intentionally - distinguishes syntax (Word) from semantics (Concept). Use LinkSignatureLink to convert: `(LinkSignature (Type 'ConceptNode) (Word "cat"))` → `(Concept "cat")`.
 
 ### Bond (aka BondNode)
 Link type in Link Grammar parse, like "Ss*s" (subject-verb singular), "Os" (object), "MVp" (verb-modifier past). Created by parser in Edge structures: `(Edge (Bond "Ss*s") (List word1 word2))`. Name is the Link Grammar link type. Hundreds of types, see LG documentation. Different bonds indicate different grammatical relationships. Essential for pattern matching to extract semantic relationships.
@@ -1114,7 +1129,7 @@ Subtraction: `(Minus arg1 arg2)`. Binary operation. Performs reductions: `x - 0 
 Division: `(Divide numerator denominator)`. Binary operation. Reductions: `x / 1 → x`, `0 / x → 0`, `6 / 2 → 3`. Component-wise for vectors. Beware division by zero - may throw or return NaN depending on context.
 
 ### AccumulateLink
-Sums all components of a vector FloatValue. `FloatValue [1, 2, 3]` → `FloatValue [6]`. Reduces vector to single number. Essential for vector processing pipelines. Different from PlusLink which adds multiple vectors component-wise. Common pattern: arithmetic on vectors → AccumulateLink → NumberOfLink → Node.
+Sums all components of a vector FloatValue. `FloatValue [1, 2, 3]` → `FloatValue [6]`. Reduces vector to single number. Essential for vector processing pipelines. Different from PlusLink which adds multiple vectors component-wise. Common pattern: arithmetic on vectors → AccumulateLink → LinkSignatureLink → Node.
 
 ### FoldLink
 Generic associative reduction operation over lists. PlusLink and TimesLink built on top of this. Implements comp-sci fold/reduce concept. Takes binary operation and list, applies operation iteratively. Most users use PlusLink/TimesLink rather than FoldLink directly. Foundation for iterated operations.
@@ -1470,7 +1485,7 @@ Link Grammar dictionary entries. Check if word has entry, get entry details. Use
 Wildcard node type. Matches any Node in patterns. Used when node type doesn't matter. Enables very general patterns.
 
 ### NumberNode
-Represents a number as a Node. Name is number as string: `(Number "3.14")`, `(Number "42")`. Different from FloatValue (which is not in graph). Use when number must be part of graph structure for queries. Less efficient than FloatValue for computation. Created by NumberOfLink from FloatValue.
+Represents a number as a Node. Name is number as string: `(Number "3.14")`, `(Number "42")`. Different from FloatValue (which is not in graph). Use when number must be part of graph structure for queries. Less efficient than FloatValue for computation. Created by LinkSignatureLink from FloatValue.
 
 ### Frame
 Hybrid: has both name (like Node) and outgoing set (like Link). Rare and specialized. Used in membrane computing, frame-based representations. Breaks normal Node/Link dichotomy. Handle with care.
@@ -1547,7 +1562,7 @@ Foreign AST representations. Stores external language syntax trees in AtomSpace.
   <parse-source>)
 
 ; 3. Convert Word → Concept
-(StringOf (Type 'ConceptNode) (Word "cat"))
+(LinkSignature (Type 'ConceptNode) (Word "cat"))
 ```
 
 **Process a data stream:**
