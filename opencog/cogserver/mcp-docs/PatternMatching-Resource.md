@@ -23,7 +23,7 @@ This prompt explains how to use pattern matching to search the AtomSpace for **A
 
 **The query engine is a recursive graph traversal engine** that walks the graph both upwards (via Incoming Sets) and downwards (via Outgoing lists). Since Values don't have Incoming Sets, they cannot be traversed by the query engine.
 
-**For pattern matching on Values, see the WorkingWithValues-Prompt.md documentation about FilterLink.**
+**For pattern matching on Values, see the "Working with Values" resource (atomspace://docs/working-with-values) for FilterLink documentation.**
 
 ## Overview: The Four Query Link Types
 
