@@ -1606,7 +1606,8 @@ Foreign AST representations. Stores external language syntax trees in AtomSpace.
 ## Categories Covered
 
 1. **Flows** (7 types) - FilterLink, ValueOfLink, SetValueLink, etc.
-2. **Streams** (8 types) - StringOfLink, NumberOfLink, CollectionOfLink, etc.
+2. **Streams** (8 types) - FutureStream, FormulaStream, SortedStream, LinkSignatureLink
+, etc.
 3. **Link Grammar** (6 types) - LgParseBonds, Word, Bond, Phrase, etc.
 4. **Pattern Matching** (9 types) - MeetLink, QueryLink, RuleLink, GlobNode, Variables, etc.
 5. **Scoping & Lambda** (8 types) - LambdaLink, PutLink, ScopeLink, JoinLink, DualLink, etc.
