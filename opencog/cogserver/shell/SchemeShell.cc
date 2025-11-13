@@ -68,7 +68,7 @@ SchemeShell::~SchemeShell()
 
 GenericEval* SchemeShell::get_evaluator(void)
 {
-	return SchemeEval::get_evaluator(_shellspace);
+	return SchemeEval::get_scheme_evaluator(_shellspace);
 }
 
 /**
