@@ -35,6 +35,7 @@
 #define PYTHONSHELL_H
 
 #include <opencog/network/GenericShell.h>
+#include <opencog/atomspace/AtomSpace.h>
 
 namespace opencog
 {
@@ -44,10 +45,10 @@ namespace opencog
 
 class PythonShell: public GenericShell
 {
-private:
-    GenericEval* evaluator;
+protected:
+    AtomSpacePtr _shellspace;
 public:
-    PythonShell(void);
+    PythonShell(const AtomSpacePtr&);
     virtual ~PythonShell();
     virtual GenericEval* get_evaluator(void);
     virtual void eval(const std::string &);

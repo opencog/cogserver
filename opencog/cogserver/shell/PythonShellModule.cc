@@ -48,9 +48,6 @@ PythonShellModule::PythonShellModule(CogServer& cs) : Module(cs)
 {
 	// Initialize Python.
 	global_python_initialize();
-
-	// Tell the python evaluator to create its singleton instance
-	PythonEval::create_singleton_instance();
 }
 
 PythonShellModule::~PythonShellModule()
@@ -70,7 +67,7 @@ std::string PythonShellModule::shellout(Request *req, std::list<std::string> arg
     ConsoleSocket *con = req->get_console();
     OC_ASSERT(con, "Invalid Request object");
 
-    PythonShell *sh = new PythonShell();
+    PythonShell *sh = new PythonShell(_cogserver.getAtomSpace());
     sh->set_socket(con);
 
     bool hush = false;
@@ -101,27 +98,27 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
         expr += arg + " ";
     }
 
-    PythonEval& eval = PythonEval::instance();
-    eval.begin_eval();
+    PythonEval* pyev = PythonEval::get_python_evaluator(_cogserver.getAtomSpace());
+    pyev->begin_eval();
 
     out = "";
     // The current python evaluator is fond of throwing errors.
     try {
-        eval.eval_expr(expr);
+        pyev->eval_expr(expr);
     } catch (const RuntimeException& ex) {
         out += ex.what();
         out += "\n";
     }
 
-    out += eval.poll_result();
+    out += pyev->poll_result();
 
-    // if (eval.eval_error()) {
+    // if (pyev->eval_error()) {
     //     out += "An error occurred\n";
     // }
-    if (eval.input_pending()) {
+    if (pyev->input_pending()) {
         out += "Invalid Python expression: missing something";
     }
-    eval.clear_pending();
+    pyev->clear_pending();
 
     return out;
 }

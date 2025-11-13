@@ -36,28 +36,24 @@
 
 using namespace opencog;
 
-PythonShell::PythonShell()
+PythonShell::PythonShell(const AtomSpacePtr& asp) :
+    _shellspace(asp)
 {
     normal_prompt = "py> ";
     pending_prompt = "... ";
     abort_prompt += normal_prompt;
     _name = "pyth";
-    evaluator = NULL;
 }
 
 PythonShell::~PythonShell()
 {
-    // Don't delete, its currently set to a singleton instance.
-    //	if (evaluator) delete evaluator;
+    // Stall until the evaluator is done.
+    while_not_done();
 }
 
 GenericEval* PythonShell::get_evaluator(void)
 {
-    // We are using a singleton instance here, because the current
-    // Python evaluator isn't thread safe.  If/when it does become
-    // thread-safe, we should probably go multi-threaed, instead.
-    if (!evaluator) evaluator = &PythonEval::instance();
-    return evaluator;
+    return PythonEval::get_python_evaluator(_shellspace);
 }
 
 void PythonShell::eval(const std::string &expr)
