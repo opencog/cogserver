@@ -568,6 +568,20 @@ void ServerSocket::handle_connection(void)
         catch (const std::system_error& e)
         {
             if (e.code() == asio::error::eof) {
+                // EOF received, but there may still be data in the socket
+                // buffer that hasn't been read yet. Try to drain it before
+                // breaking. This handles the case where a client sends
+                // multiple commands and immediately closes (nc -q 0).
+                try {
+                    std::error_code ec;
+                    size_t avail = _socket->available(ec);
+                    if (not ec and 0 < avail) {
+                        asio::read(*_socket, b, asio::transfer_exactly(avail), ec);
+                        // If we successfully read more data, continue the loop
+                        // to process it. Otherwise, break out.
+                        if (not ec) continue;
+                    }
+                } catch (...) {}
                 break;
             } else if (e.code() == asio::error::connection_reset) {
                 break;
