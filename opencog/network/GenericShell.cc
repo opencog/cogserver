@@ -87,8 +87,12 @@ GenericShell::~GenericShell()
 {
 	self_destruct = true;
 
-	// It can happen that we already cancelled (e.g. control-D)
-	try { evalque.cancel(); }
+	// Wake up eval thread without cancelling the queue.
+	// We cannot use cancel() here because it prevents any further
+	// push() operations. This creates a race: if the socket is still
+	// draining buffers and trying to queue commands, those pushes
+	// will fail. Instead, push an empty string to wake up the thread.
+	try { evalque.push(""); }
 	catch (const std::exception& ex) {}
 
 	if (evalthr)
@@ -531,6 +535,11 @@ void GenericShell::eval_loop(void)
 			// Note that this pop will stall until the queue
 			// becomes non-empty.
 			evalque.pop(in);
+
+			// Skip empty strings - these are sentinel wake-up signals.
+			if (in.empty())
+				continue;
+
 			logger().debug("[GenericShell] start eval %s of '%s'",
 				 _evaluator->get_name().c_str(), in.c_str());
 
@@ -588,6 +597,10 @@ void GenericShell::eval_loop(void)
 			evalque.cancel_reset();
 			continue;
 		}
+
+		// Skip empty strings - these are sentinel wake-up signals.
+		if (in.empty())
+			continue;
 
 		logger().debug("[GenericShell] finishing; eval of '%s'", in.c_str());
 		start_eval();
