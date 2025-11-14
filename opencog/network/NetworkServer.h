@@ -10,6 +10,8 @@
 #define _OPENCOG_SIMPLE_NETWORK_SERVER_H
 
 #include <atomic>
+#include <list>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <thread>
@@ -48,6 +50,10 @@ protected:
     asio::io_service _io_service;
     asio::ip::tcp::acceptor _acceptor;
     std::thread* _listener_thread;
+
+    /** Track all handler threads for proper cleanup */
+    std::mutex _handler_threads_mtx;
+    std::list<std::thread*> _handler_threads;
 
     /** The network server's main listener thread.  */
     void listen();

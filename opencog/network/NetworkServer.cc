@@ -97,25 +97,25 @@ void NetworkServer::stop()
     delete _listener_thread;
     _listener_thread = nullptr;
 
-    // Give connection handlers time to finish before allowing
-    // NetworkServer destruction. This is a workaround for the race
-    // condition where detached connection handler threads may still
-    // be executing when the shared library is being torn down.
-    // A proper fix would track all handler threads and join them.
-    // This is a hack only because some of the atomspace-cog unit
-    // tests intermittently fail. A "proper fix" seems unwarrented
-    // over-engineering.
-    unsigned int open_socks = ServerSocket::get_num_open_sockets();
-    if (open_socks > 0)
-    {
-        for (int i = 0; i < 50 && ServerSocket::get_num_open_sockets() > 0; i++)
-            usleep(100000);  // 100ms
+    // Join all connection handler threads to ensure complete shutdown.
+    // This guarantees all TCP/IP packets have been processed and all
+    // handler threads have finished before serverLoop() returns.
+    logger().debug("[NetworkServer] Joining %zu handler threads",
+                   _handler_threads.size());
 
-        open_socks = ServerSocket::get_num_open_sockets();
-        if (open_socks > 0)
-            logger().warn("[NetworkServer] Stopped server but %u socks still open!",
-                         open_socks);
+    std::list<std::thread*> threads_to_join;
+    {
+        std::lock_guard<std::mutex> lock(_handler_threads_mtx);
+        threads_to_join.swap(_handler_threads);
     }
+
+    for (std::thread* thr : threads_to_join)
+    {
+        thr->join();
+        delete thr;
+    }
+
+    logger().debug("[NetworkServer] All handler threads joined");
 }
 
 void NetworkServer::listen(void)
@@ -160,7 +160,13 @@ void NetworkServer::listen(void)
         // too many.
         ServerSocket* ss = _getServer();
         ss->set_connection(sock);
-        std::thread(&ServerSocket::handle_connection, ss).detach();
+
+        // Create handler thread and track it for proper cleanup.
+        std::thread* handler_thread = new std::thread(&ServerSocket::handle_connection, ss);
+        {
+            std::lock_guard<std::mutex> lock(_handler_threads_mtx);
+            _handler_threads.push_back(handler_thread);
+        }
     }
 }
 
