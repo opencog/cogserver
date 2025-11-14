@@ -231,6 +231,7 @@ public:
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
+		csrv->getAtomSpace()->clear();
 	}
 
 	void tearDown()
@@ -238,6 +239,7 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
+		csrv->getAtomSpace()->clear();
 	}
 
 	void testControlD()
