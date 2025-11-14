@@ -57,17 +57,6 @@ private:
 protected:
     GenericShell* _shell;
 
-    /**
-     * Connection callback: called whenever a new connection arrives
-     */
-    virtual void OnConnection(void) = 0;
-
-    /**
-     * OnLine callback: called when a newline-terminated line is received
-     * from the client.
-     */
-    virtual void OnLine(const std::string&) = 0;
-
     /** Status printing */
     virtual std::string connection_header(void);
     virtual std::string connection_stats(void);
