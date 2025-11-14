@@ -173,6 +173,9 @@ void CogServer::disableMCPServer()
 void CogServer::stop()
 {
     _running = false;
+
+    // Cancel the request queue to wake up barrier() in serverLoop().
+    requestQueue.cancel();
 }
 
 void CogServer::serverLoop()
@@ -181,13 +184,16 @@ void CogServer::serverLoop()
     logger().info("Starting CogServer loop.");
     while (_running)
     {
-        while (0 < getRequestQueueSize())
-            runLoopStep();
-
-        // XXX FIXME. terrible terrible hack. What we should be
-        // doing is running in our own thread, waiting on a semaphore,
-        // until some request is queued. Spinning is .. just wrong.
-        usleep(20000);
+        try
+        {
+            requestQueue.barrier();
+            while (0 < getRequestQueueSize())
+                runLoopStep();
+        }
+        catch (const concurrent_queue<Request*>::Canceled& ex)
+        {
+            break;
+        }
     }
 
     // Prevent the Network server from accepting any more connections,
@@ -198,6 +204,9 @@ void CogServer::serverLoop()
         _webServer->stop();
     if (_consoleServer)
         _consoleServer->stop();
+
+    // Reset queue cancellation to allow draining remaining requests.
+    requestQueue.cancel_reset();
 
     // Drain whatever is left in the queue.
     while (0 < getRequestQueueSize())
