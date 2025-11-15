@@ -27,6 +27,8 @@ class GenericShell;
  */
 class SocketManager
 {
+	friend class ServerSocket;
+
 private:
 	// Socket registry
 	std::mutex _sock_lock;
@@ -42,30 +44,30 @@ private:
 	// Global flags
 	bool _network_gone;
 
+	// Internal helper methods
+	void half_ping();
+	std::string display_stats(int nlines);
+
+protected:
+	// Methods for ServerSocket (friend class) to manage its lifecycle
+	void add_sock(ServerSocket*);
+	void rem_sock(ServerSocket*);
+	void wait_available_slot();
+	void release_slot();
+	bool is_network_gone() const { return _network_gone; }
+
 public:
 	SocketManager();
 	~SocketManager();
 
-	// Socket registration
-	void add_sock(ServerSocket*);
-	void rem_sock(ServerSocket*);
-
-	// Connection management
-	void wait_available_slot();
-	void release_slot();
-	unsigned int get_max_open_sockets() const { return _max_open_sockets; }
-	unsigned int get_num_open_sockets() const { return _num_open_sockets; }
-	size_t get_num_open_stalls() const { return _num_open_stalls; }
+	// Configuration
 	void set_max_open_sockets(unsigned int m) { _max_open_sockets = m; }
 
-	// Network status
+	// Network status control
 	void network_gone() { _network_gone = true; }
-	bool is_network_gone() const { return _network_gone; }
 
-	// Socket operations
+	// Public socket operations
 	std::string display_stats_full(const char* title, time_t start_time, int nlines = -1);
-	std::string display_stats(int nlines);
-	void half_ping();
 	bool kill(pid_t tid);
 
 	/**
