@@ -319,8 +319,14 @@ public:
 			"echo 'scm\n (Concept \"A\")\n (sleep 1)\n (Concept \"B\")\n"
 			"(sleep 1)\n (Concept \"C\")\n' | nc -q 0 localhost 17333");
 
-		// Wait for above to finish
-		sleep(4);
+		// Force above to finish before printing atomspace below.
+		// I think there is still a race condition here: the barrier
+		// might run before the above command is received (!)
+		// We could fix this by setting `nc -q 1` above, but that
+		// then defeats the purpose of this test. Hmmm. At any rate,
+		// the `nc q 1` below. *should* cause the barrier to be
+		// processed before the print below. I think ... I hope ...
+		cmd_exec("echo 'scm\n (cog-barrier)' | nc -q 1 localhost 17333");
 
 		// nc -q 1 means "wait for a reply, doofus"
 		std::string ply = cmd_exec(
