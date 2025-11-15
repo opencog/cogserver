@@ -84,8 +84,9 @@ public:
     /** Get the socket manager */
     SocketManager* get_socket_manager() { return _socket_manager; }
 
-    /** Print network stats in human-readable tabular form */
-    std::string display_stats(int nlines = -1);
+    /** Get server start time for stats display */
+    time_t get_start_time() const { return _start_time; }
+    const char* get_name() const { return _name.c_str(); }
 
     /** Get the port this server is listening on */
     short getPort() const { return _port; }

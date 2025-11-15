@@ -63,6 +63,7 @@ public:
 	bool is_network_gone() const { return _network_gone; }
 
 	// Socket operations
+	std::string display_stats_full(const char* title, time_t start_time, int nlines = -1);
 	std::string display_stats(int nlines);
 	void half_ping();
 	bool kill(pid_t tid);

@@ -103,6 +103,76 @@ void SocketManager::release_slot()
 	_max_cv.notify_all();
 }
 
+std::string SocketManager::display_stats_full(const char* title, time_t start_time, int nlines)
+{
+	struct tm tm;
+	char sbuf[40];
+	gmtime_r(&start_time, &tm);
+	strftime(sbuf, 40, "%d %b %H:%M:%S %Y", &tm);
+
+	char nbuf[40];
+	time_t now = time(nullptr);
+	gmtime_r(&now, &tm);
+	strftime(nbuf, 40, "%d %b %H:%M:%S %Y", &tm);
+
+	// Current max_open_sockets is 60 which requires a terminal
+	// size of 66x80 to display correctly. So reserve a reasonable
+	// string size.
+	std::string rc;
+	rc.reserve(4000);
+
+	rc = "----- OpenCog ";
+	rc += title;
+	rc += ": type help or ^C to exit\n";
+	rc += nbuf;
+	rc += " UTC ---- up-since: ";
+	rc += sbuf;
+	rc += "\n";
+
+	// Count open file descs
+	int nfd = 0;
+	for (int j=0; j<4096; j++) {
+		int fd = dup(j);
+		if (fd < 0) continue;
+		close(fd);
+		nfd++;
+	}
+
+	char buff[180];
+	snprintf(buff, sizeof(buff),
+		"max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d  stalls: %zd\n",
+		_max_open_sockets, _num_open_sockets, nfd, _num_open_stalls);
+	rc += buff;
+
+	clock_t clk = clock();
+	int sec = clk / CLOCKS_PER_SEC;
+	clock_t rem = clk - sec * CLOCKS_PER_SEC;
+	int msec = (1000 * rem) / CLOCKS_PER_SEC;
+
+	struct rusage rus;
+	getrusage(RUSAGE_SELF, &rus);
+
+	snprintf(buff, sizeof(buff),
+		"cpu: %d.%03d secs  user: %ld.%03ld  sys: %ld.%03ld     tot-lines: %lu\n",
+		sec, msec,
+		rus.ru_utime.tv_sec, rus.ru_utime.tv_usec / 1000,
+		rus.ru_stime.tv_sec, rus.ru_stime.tv_usec / 1000,
+		ServerSocket::total_line_count.load());
+	rc += buff;
+
+	snprintf(buff, sizeof(buff),
+		"maxrss: %ld KB  majflt: %ld  inblk: %ld  outblk: %ld\n",
+		rus.ru_maxrss, rus.ru_majflt, rus.ru_inblock, rus.ru_oublock);
+	rc += buff;
+
+	// The above chews up 7 lines of display. Byobu/tmux needs a line.
+	// Blank line for accepting commands. So subtract 9.
+	rc += "\n";
+	rc += display_stats(nlines - 9);
+
+	return rc;
+}
+
 std::string SocketManager::display_stats(int nlines)
 {
 	// Hack(?) Send a half-ping, in an attempt to close

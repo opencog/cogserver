@@ -237,7 +237,8 @@ void CogServer::runLoopStep(void)
 std::string CogServer::display_stats(int nlines)
 {
     if (_consoleServer)
-        return _consoleServer->display_stats(nlines);
+        return _socket_manager.display_stats_full(
+            _consoleServer->get_name(), _consoleServer->get_start_time(), nlines);
     else
         return "Console server is not running";
 }
@@ -245,7 +246,8 @@ std::string CogServer::display_stats(int nlines)
 std::string CogServer::display_web_stats(void)
 {
     if (_webServer)
-        return _webServer->display_stats();
+        return _socket_manager.display_stats_full(
+            _webServer->get_name(), _webServer->get_start_time());
     else
         return "Web server is not running";
 }
