@@ -118,6 +118,10 @@ class GenericShell
 		bool eval_done() const { return _eval_done; }
 		size_t pending() const { return _pending_output.size(); }
 		size_t queued() const { return evalque.size(); }
+
+		// Return true if the current thread is this shell's eval thread
+		bool is_eval_thread() const
+		{ return evalthr and evalthr->get_id() == std::this_thread::get_id(); }
 };
 
 /** @}*/

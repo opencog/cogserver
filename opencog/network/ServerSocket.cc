@@ -28,6 +28,7 @@ using namespace opencog;
 char ServerSocket::START[6] = "start";
 char ServerSocket::BLOCK[6] = "block";
 char ServerSocket::IWAIT[6] = "iwait";
+char ServerSocket::BAR[6]   = "-bar-";
 char ServerSocket::DTOR[6]  = "dtor ";
 char ServerSocket::RUN[6]   = " run ";
 char ServerSocket::CLOSE[6] = "close";

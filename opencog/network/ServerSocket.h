@@ -135,6 +135,7 @@ public:
     static char START[6];
     static char BLOCK[6];
     static char IWAIT[6];
+    static char BAR[6];
     static char DTOR[6];
     static char RUN[6];
     static char CLOSE[6];

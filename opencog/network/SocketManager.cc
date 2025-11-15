@@ -277,7 +277,27 @@ bool SocketManager::kill(pid_t tid)
 // fire-and-forget command streams sent on different connections.
 void SocketManager::barrier()
 {
-	// Loop until all shells are idle
+	// Find the calling socket and mark it as BAR
+	ServerSocket* calling_socket = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(_sock_lock);
+		for (ServerSocket* ss : _sock_list)
+		{
+			ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
+			if (cs)
+			{
+				GenericShell* shell = cs->getShell();
+				if (shell and shell->is_eval_thread())
+				{
+					calling_socket = ss;
+					ss->_status = ServerSocket::BAR;
+					break;
+				}
+			}
+		}
+	}
+
+	// Loop until all non-BAR shells are idle
 	while (true)
 	{
 		bool all_idle = true;
@@ -285,6 +305,10 @@ void SocketManager::barrier()
 			std::lock_guard<std::mutex> lock(_sock_lock);
 			for (ServerSocket* ss : _sock_list)
 			{
+				// Skip sockets in barrier state
+				if (ServerSocket::BAR == ss->_status)
+					continue;
+
 				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
 				if (cs)
 				{
@@ -304,4 +328,8 @@ void SocketManager::barrier()
 		// Sleep briefly before checking again
 		usleep(10000); // 10ms
 	}
+
+	// Restore calling socket status
+	if (calling_socket)
+		calling_socket->_status = ServerSocket::IWAIT;
 }
