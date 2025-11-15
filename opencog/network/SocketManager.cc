@@ -352,6 +352,7 @@ void SocketManager::barrier()
 	}
 }
 
+/// Prevent shells from enqueueing new work.
 void SocketManager::block_on_bar()
 {
 	std::unique_lock<std::mutex> lock(_barrier_mtx);

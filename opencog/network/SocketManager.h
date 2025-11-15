@@ -28,6 +28,7 @@ class GenericShell;
 class SocketManager
 {
 	friend class ServerSocket;
+	friend class GenericShell;   // Calls block_on_bar()
 
 private:
 	// Socket registry
@@ -61,6 +62,9 @@ protected:
 	void release_slot();
 	bool is_network_gone() const { return _network_gone; }
 
+	// Bar shells from enqueueing new work.
+	void block_on_bar();
+
 public:
 	SocketManager();
 	~SocketManager();
@@ -86,11 +90,6 @@ public:
 	 * from enqueueing new work until all of them have drained.
 	 */
 	void barrier();
-
-	/**
-	 * Block, if a barrier is currently active.
-	 */
-	void block_on_bar();
 };
 
 } // namespace
