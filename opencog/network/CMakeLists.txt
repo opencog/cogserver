@@ -5,6 +5,7 @@ ADD_LIBRARY (network SHARED
 	GenericShell.cc
 	NetworkServer.cc
 	ServerSocket.cc
+	SocketManager.cc
 	WebSocket.cc
 )
 
@@ -26,5 +27,6 @@ INSTALL (FILES
 	GenericShell.h
 	NetworkServer.h
 	ServerSocket.h
+	SocketManager.h
 	DESTINATION "include/opencog/network"
 )
