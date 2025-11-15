@@ -281,24 +281,18 @@ void SocketManager::barrier()
 	while (true)
 	{
 		bool all_idle = true;
-
 		{
 			std::lock_guard<std::mutex> lock(_sock_lock);
 			for (ServerSocket* ss : _sock_list)
 			{
-				// Try to cast to ConsoleSocket
 				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
 				if (cs)
 				{
 					GenericShell* shell = cs->getShell();
-					if (shell)
+					if (shell and (shell->queued() > 0 or not shell->eval_done()))
 					{
-						// Shell is busy if queue is non-empty or eval not done
-						if (shell->queued() > 0 || !shell->eval_done())
-						{
-							all_idle = false;
-							break;
-						}
+						all_idle = false;
+						break;
 					}
 				}
 			}
