@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <opencog/util/Logger.h>
+#include <opencog/util/oc_assert.h>
 #include <opencog/network/SocketManager.h>
 #include <opencog/network/ServerSocket.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -284,8 +285,8 @@ void SocketManager::barrier()
 		_barrier_active = true;
 	}
 
-	// Find the calling socket and mark it as BAR
-	ServerSocket* calling_socket = nullptr;
+	// Find out which of these socekts is ourself.
+	ServerSocket* our_socket = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(_sock_lock);
 		for (ServerSocket* ss : _sock_list)
@@ -296,15 +297,16 @@ void SocketManager::barrier()
 				GenericShell* shell = cs->getShell();
 				if (shell and shell->is_eval_thread())
 				{
-					calling_socket = ss;
+					our_socket = ss;
 					ss->_status = ServerSocket::BAR;
 					break;
 				}
 			}
 		}
 	}
+	OC_ASSERT(nullptr != our_socket, "Barrier called out-of-band!");
 
-	// Loop until all non-BAR shells are idle
+	// Loop until all shells have drained thier work queues.
 	while (true)
 	{
 		bool all_idle = true;
@@ -312,19 +314,25 @@ void SocketManager::barrier()
 			std::lock_guard<std::mutex> lock(_sock_lock);
 			for (ServerSocket* ss : _sock_list)
 			{
-				// Skip sockets in barrier state
-				if (ServerSocket::BAR == ss->_status)
+				if (ss == our_socket)
 					continue;
 
-				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
-				if (cs)
+				// There might be multiple concurrent bars. Avoid deadlock.
+				if (ServerSocket::BAR == ss->_status)
 				{
-					GenericShell* shell = cs->getShell();
-					if (shell and (shell->queued() > 0 or not shell->eval_done()))
-					{
-						all_idle = false;
-						break;
-					}
+					all_idle = false;
+					break;
+				}
+
+				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
+				if (nullptr == cs)
+					continue;
+
+				GenericShell* shell = cs->getShell();
+				if (shell and (shell->queued() > 0 or not shell->eval_done()))
+				{
+					all_idle = false;
+					break;
 				}
 			}
 		}
@@ -336,11 +344,7 @@ void SocketManager::barrier()
 		usleep(10000); // 10ms
 	}
 
-	// Restore calling socket status
-	if (calling_socket)
-		calling_socket->_status = ServerSocket::IWAIT;
-
-	// Clear barrier and wake all waiting enqueue_work() calls
+	our_socket->_status = ServerSocket::IWAIT;
 	{
 		std::lock_guard<std::mutex> lock(_barrier_mtx);
 		_barrier_active = false;
