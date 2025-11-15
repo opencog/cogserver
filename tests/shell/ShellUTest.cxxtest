@@ -316,21 +316,25 @@ public:
 	{
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 		cmd_exec(
-			"echo 'scm\n (Concept \"A\")\n (sleep 1)\n (Concept \"B\")\n"
-			"(sleep 1)\n (Concept \"C\")\n' | nc -q 0 localhost 17333");
+			"echo 'scm\n (sleep 3) (Concept \"A\")\n"
+			"(sleep 3)\n (Concept \"B\")\n"
+			"(sleep 3)\n (Concept \"C\")\n' | nc -q 0 localhost 17333");
 
-		// Force above to finish before printing atomspace below.
-		// I think there is still a race condition here: the barrier
-		// might run before the above command is received (!)
-		// We could fix this by setting `nc -q 1` above, but that
-		// then defeats the purpose of this test. Hmmm. At any rate,
-		// the `nc q 1` below. *should* cause the barrier to be
-		// processed before the print below. I think ... I hope ...
-		cmd_exec("echo 'scm\n (cog-barrier)' | nc -q 1 localhost 17333");
+		// The barrier call here will force above to finish before the
+		// atomspace print below. We sleep one second, to make sure the
+		// above got started; we don't want the barrier to finish before
+		// the above starts.
+		sleep(1);
+		cmd_exec("echo 'scm\n (cog-barrier)' | nc -q 0 localhost 17333");
 
-		// nc -q 1 means "wait for a reply, doofus"
+		// Sleep one second, so as to let the barrier at least get started,
+		// before we ask to print the AtomSpace. The barrier should block
+		// for about nine seconds (the sum of the sleeps above). We won't
+		// notice the block, but the attempt to cog-prt-atomspace will.
+		// Use `nc -q 15` because it will take a while to respond.
+		sleep(1);
 		std::string ply = cmd_exec(
-			"echo 'scm\n (cog-prt-atomspace)' | nc -q 1 localhost 17333");
+			"echo 'scm\n (cog-prt-atomspace)' | nc -q 15 localhost 17333");
 
 		// Expect between 189 and 205 bytes; it seems a trailing
 		// prompt string is sometimes not received. I don't know
