@@ -208,7 +208,7 @@ void GenericShell::eval(const std::string &expr)
 	if (apply_discipline)
 		line_discipline(expr);
 	else
-		evalque.push(expr);
+		enqueue_work(expr);
 
 	// The user is exiting the shell. No one will ever call a method on
 	// this instance ever again. So stop hogging space, and self-destruct.
@@ -268,7 +268,7 @@ void GenericShell::line_discipline(const std::string &expr)
 
 	if (0 == len)
 	{
-		evalque.push("\n");
+		enqueue_work("\n");
 		return;
 	}
 
@@ -377,7 +377,7 @@ void GenericShell::line_discipline(const std::string &expr)
 					mute[breakpt] = 0;
 					logger().warn("[GenericShell] Telnet sent RFC 860 TIMING MARK -- Probably garbled UTF-8: %s",
 						mute.c_str());
-					evalque.push(mute);
+					enqueue_work(mute);
 					return;
 				}
 
@@ -459,7 +459,7 @@ void GenericShell::line_discipline(const std::string &expr)
 	 *
 	 * XXX Is this still true?
 	 */
-	evalque.push(expr + "\n");
+	enqueue_work(expr + "\n");
 }
 
 /* ============================================================== */
@@ -738,6 +738,11 @@ std::string GenericShell::poll_output()
 	if (show_prompt and (show_output or _evaluator->eval_error()))
 		return normal_prompt;
 	return "";
+}
+
+void GenericShell::enqueue_work(const std::string& expr)
+{
+	evalque.push(expr);
 }
 
 /* ===================== END OF FILE ============================ */

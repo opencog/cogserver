@@ -64,6 +64,8 @@ class GenericShell
 		concurrent_queue<std::string> evalque;
 		volatile bool _init_done;
 
+		void enqueue_work(const std::string&);
+
 	protected:
 		std::string abort_prompt;
 		std::string normal_prompt;
