@@ -25,24 +25,34 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/guile/SchemeEval.h>
+#include <opencog/guile/SchemePrimitive.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/network/SocketManager.h>
 
 #include "SchemeShell.h"
 #include "ShellModule.h"
 
 using namespace opencog;
 
-DEFINE_SHELL_MODULE(SchemeShellModule);
+DEFINE_SHELL_MODULE2(SchemeShellModule, void barrier(void));
 DECLARE_MODULE(SchemeShellModule);
+
+void SchemeShellModule::barrier(void)
+{
+	_cogserver.getSocketManager()->barrier();
+}
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)
 {
 	// Tell scheme which atomspace to use.
 	SchemeEval::init_scheme();
 	SchemeEval::set_scheme_as(cs.getAtomSpace().get());
+
+	// Register cog-barrier in the extension module (auto-loaded)
+	define_scheme_primitive("cog-barrier", &SchemeShellModule::barrier, this);
 }
 
 void SchemeShellModule::init(void)
