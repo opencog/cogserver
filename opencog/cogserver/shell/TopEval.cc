@@ -74,7 +74,8 @@ void TopEval::eval_expr(const std::string &expr)
 		}
 
 		size_t tid = std::atoi(expr.substr(pos).c_str());
-		bool rc = ServerSocket::kill(tid);
+		SocketManager* mgr = _cserver.getSocketManager();
+		bool rc = mgr->kill(tid);
 		if (rc)
 			_msg = "Killed thread " + std::to_string(tid);
 		else

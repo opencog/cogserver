@@ -22,7 +22,8 @@ using namespace opencog;
 
 std::string ServerConsole::_prompt;
 
-ServerConsole::ServerConsole(CogServer& cs) :
+ServerConsole::ServerConsole(CogServer& cs, SocketManager* mgr) :
+	ConsoleSocket(mgr),
 	_cserver(cs)
 {
     if (nullptr == &config()) {

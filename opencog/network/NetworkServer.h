@@ -18,6 +18,7 @@
 
 #include <asio.hpp>
 #include <opencog/network/ServerSocket.h>
+#include <opencog/network/SocketManager.h>
 
 namespace opencog
 {
@@ -55,9 +56,12 @@ protected:
     std::mutex _handler_threads_mtx;
     std::list<std::thread*> _handler_threads;
 
+    /** Socket manager for tracking and managing all sockets (shared across all servers) */
+    SocketManager* _socket_manager;
+
     /** The network server's main listener thread.  */
     void listen();
-    ServerSocket* (*_getServer)(void);
+    ServerSocket* (*_getServer)(SocketManager*);
 
     /** monitoring stats */
     time_t _start_time;
@@ -70,12 +74,15 @@ public:
      * Starts the NetworkServer in a new thread.
      * The socket listen happens in the new thread.
      */
-    NetworkServer(unsigned short port, const char* name);
+    NetworkServer(unsigned short port, const char* name, SocketManager* mgr);
     ~NetworkServer();
 
     /** Start and stop the server */
-    void run(ServerSocket* (*)(void));
+    void run(ServerSocket* (*)(SocketManager*));
     void stop();
+
+    /** Get the socket manager */
+    SocketManager* get_socket_manager() { return _socket_manager; }
 
     /** Print network stats in human-readable tabular form */
     std::string display_stats(int nlines = -1);

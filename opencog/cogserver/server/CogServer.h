@@ -53,6 +53,7 @@ class CogServer :
 {
 protected:
     AtomSpacePtr _atomSpace;
+    SocketManager _socket_manager;
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
@@ -129,6 +130,9 @@ public:
     std::string display_stats(int nlines = -1);
     std::string display_web_stats(void);
     static std::string stats_legend(void);
+
+    /** Get the shared socket manager */
+    SocketManager* getSocketManager() { return &_socket_manager; }
 
 }; // class
 

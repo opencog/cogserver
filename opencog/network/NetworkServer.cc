@@ -25,11 +25,12 @@
 
 using namespace opencog;
 
-NetworkServer::NetworkServer(unsigned short port, const char* name) :
+NetworkServer::NetworkServer(unsigned short port, const char* name, SocketManager* mgr) :
     _name(name),
     _port(port),
     _running(false),
-    _acceptor(_io_service)
+    _acceptor(_io_service),
+    _socket_manager(mgr)
 {
     logger().debug("[NetworkServer] constructor for %s at %d", name, port);
 
@@ -83,7 +84,7 @@ void NetworkServer::stop()
 {
     if (not _running) return;
     _running = false;
-    ServerSocket::network_gone();
+    _socket_manager->network_gone();
 
     std::error_code ec;
     _acceptor.cancel(ec);
@@ -156,9 +157,8 @@ void NetworkServer::listen(void)
         setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &flags, sizeof(flags));
 
         // The total number of concurrently open sockets is managed by
-        // keeping a count in ConsoleSocket, and blocking when there are
-        // too many.
-        ServerSocket* ss = _getServer();
+        // the SocketManager, which blocks when there are too many.
+        ServerSocket* ss = _getServer(_socket_manager);
         ss->set_connection(sock);
 
         // Create handler thread and track it for proper cleanup.
@@ -170,7 +170,7 @@ void NetworkServer::listen(void)
     }
 }
 
-void NetworkServer::run(ServerSocket* (*handler)(void))
+void NetworkServer::run(ServerSocket* (*handler)(SocketManager*))
 {
     if (_running) return;
     _running = true;
@@ -232,10 +232,10 @@ std::string NetworkServer::display_stats(int nlines)
 
     snprintf(buff, sizeof(buff),
         "max-open-socks: %d   cur-open-socks: %d   num-open-fds: %d  stalls: %zd\n",
-        ConsoleSocket::get_max_open_sockets(),
-        ConsoleSocket::get_num_open_sockets(),
+        _socket_manager->get_max_open_sockets(),
+        _socket_manager->get_num_open_sockets(),
         nfd,
-        ConsoleSocket::get_num_open_stalls());
+        _socket_manager->get_num_open_stalls());
     rc += buff;
 
     clock_t clk = clock();
@@ -262,7 +262,7 @@ std::string NetworkServer::display_stats(int nlines)
     // The above chews up 8 lines of display. Byobu/tmux needs a line.
     // Blank line for accepting commands. So subtract 10.
     rc += "\n";
-    rc += ServerSocket::display_stats(nlines - 10);
+    rc += _socket_manager->display_stats(nlines - 10);
 
     return rc;
 }

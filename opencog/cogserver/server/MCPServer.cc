@@ -20,7 +20,8 @@
 
 using namespace opencog;
 
-MCPServer::MCPServer(CogServer& cs) :
+MCPServer::MCPServer(CogServer& cs, SocketManager* mgr) :
+	ConsoleSocket(mgr),
 	_cserver(cs)
 {
 	_eval = nullptr;

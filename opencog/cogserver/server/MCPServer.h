@@ -34,7 +34,7 @@ protected:
 	virtual void OnLine (const std::string&);
 
 public:
-    MCPServer(CogServer&);
+    MCPServer(CogServer&, SocketManager*);
     ~MCPServer();
 
 }; // class

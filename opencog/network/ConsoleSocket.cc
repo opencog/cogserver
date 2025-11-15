@@ -16,7 +16,8 @@
 
 using namespace opencog;
 
-ConsoleSocket::ConsoleSocket(void)
+ConsoleSocket::ConsoleSocket(SocketManager* mgr) :
+    ServerSocket(mgr)
 {
     _shell = nullptr;
     _use_count = 0;

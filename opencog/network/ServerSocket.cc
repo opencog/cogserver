@@ -18,115 +18,20 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 #include <opencog/network/ServerSocket.h>
+#include <opencog/network/SocketManager.h>
 
 using namespace opencog;
 
 // ==================================================================
 // Infrastrucure for printing connection stats
 //
-static char START[6] = "start";
-static char BLOCK[6] = "block";
-static char IWAIT[6] = "iwait";
-static char DTOR [6] = "dtor ";
-static char RUN  [6] = " run ";
-static char CLOSE[6] = "close";
-static char DOWN [6] = "down ";
-
-static std::mutex _sock_lock;
-static std::set<ServerSocket*> _sock_list;
-
-static void add_sock(ServerSocket* ss)
-{
-    std::lock_guard<std::mutex> lock(_sock_lock);
-    _sock_list.insert(ss);
-}
-
-static void rem_sock(ServerSocket* ss)
-{
-    std::lock_guard<std::mutex> lock(_sock_lock);
-    _sock_list.erase(ss);
-}
-
-std::string ServerSocket::display_stats(int nlines)
-{
-    // Hack(?) Send a half-ping, in an attempt to close
-    // dead connections.
-    half_ping();
-
-    // Current max sockets is 20
-    // A standard terminal 24 rows x 80 columns is 1920 bytes.
-    std::string rc;
-    rc.reserve(2000);
-
-    // Report under a lock so that sockets don't change while
-    // we access them.
-    std::lock_guard<std::mutex> lock(_sock_lock);
-
-    // Make a copy, and sort it.
-    std::vector<ServerSocket*> sov;
-    for (ServerSocket* ss : _sock_list)
-        sov.push_back(ss);
-
-    std::sort (sov.begin(), sov.end(),
-        [](ServerSocket* sa, ServerSocket* sb) -> bool
-        { return sa->_start_time == sb->_start_time ?
-            sa->_tid < sb->_tid :
-            sa->_start_time < sb->_start_time; });
-
-    // Print the sorted list; use the first to print a header.
-    int nprt = 0;
-    for (ServerSocket* ss : sov)
-    {
-        if (0 == nprt)
-        {
-            rc += ss->connection_header() + "\n";
-            nprt ++;
-        }
-        rc += ss->connection_stats() + "\n";
-        nprt ++;
-
-        // Print at most nlines; negative nlines is unlimited.
-        if (0 < nlines and nlines < nprt) break;
-    }
-
-    return rc;
-}
-
-// Send a single blank character to each socket.
-// If the socket is only half-open, this should result
-// in the socket closing fully.  If the socket is fully
-// open, then the remote end will receive a blank space.
-// Since we are running a UTF-8 character protocol, this
-// should be harmless. Another possibility is to send
-// hex 0x16 ASCII SYN synchronous idle. Will this confuse
-// any users of the cogserver? I dunno.  Lets go for SYN.
-// It's slightly cleaner.
-//
-// For websockets, this sends the pong frame, which has
-// the same effect.
-void ServerSocket::half_ping(void)
-{
-    // static const char buf[2] = " ";
-    static const char buf[2] = {0x16, 0x0};
-
-    std::lock_guard<std::mutex> lock(_sock_lock);
-    time_t now = time(nullptr);
-
-    for (ServerSocket* ss : _sock_list)
-    {
-        // If the socket is waiting on input, and has been idle
-        // for more than ten seconds, then ping it to see if it
-        // is still alive.
-        if (ss->_status == IWAIT and
-            now - ss->_last_activity > 10)
-        {
-            if (ss->_do_frame_io)
-                ss->send_websocket_pong();
-            else
-                ss->Send(buf);
-        }
-    }
-}
+char ServerSocket::START[6] = "start";
+char ServerSocket::BLOCK[6] = "block";
+char ServerSocket::IWAIT[6] = "iwait";
+char ServerSocket::DTOR[6]  = "dtor ";
+char ServerSocket::RUN[6]   = " run ";
+char ServerSocket::CLOSE[6] = "close";
+char ServerSocket::DOWN[6]  = "down ";
 
 std::string ServerSocket::connection_header(void)
 {
@@ -160,57 +65,11 @@ std::string ServerSocket::connection_stats(void)
 
 // ==================================================================
 
-/// Kill the indicated thread id.
-// TODO: should use std::jthread, once c++20 is widely available.
-bool ServerSocket::kill(pid_t tid)
-{
-    std::lock_guard<std::mutex> lock(_sock_lock);
-
-    for (ServerSocket* ss : _sock_list)
-    {
-        if (tid == ss->_tid)
-        {
-            ss->Exit();
-            // pthread_cancel(ss->_pth);
-            return true;
-        }
-    }
-    return false;
-}
-
-// ==================================================================
-
 std::atomic_size_t ServerSocket::total_line_count(0);
 
-// _max_open_sockets is the largest number of concurrently open
-// sockets we will allow in the server. Currently set to 60.
-// Note that each SchemeShell (actually, SchemeEval) will open
-// another half-dozen pipes and what-not, so actually, the number
-// of open files will increase by 4 or 6 or so for each network
-// connection. With the default `ulimit -a` of 1024 open files,
-// this should work OK (including open files for the logger, the
-// databases, etc.).
-//
-// July 2019 - change to 10. When it is 60, it just thrashes like
-// crazy, mostly because there are 60 threads thrashing in guile
-// on some lock. And that's pretty pointless...
-//
-// May 2024 - change to number of hardware cpus.
-// The guile thrashing is real, and is cured by redesigning apps
-// to do less in guile and more in Atomese.
-// The max parallelism is now limited by number of hardware CPU's.
-// Tested for 64 cpus and pair counting: this seems to use them all.
-//
-unsigned int ServerSocket::_max_open_sockets = 0;
-volatile unsigned int ServerSocket::_num_open_sockets = 0;
-std::mutex ServerSocket::_max_mtx;
-std::condition_variable ServerSocket::_max_cv;
-size_t ServerSocket::_num_open_stalls = 0;
-
-bool ServerSocket::_network_gone = false;
-
-ServerSocket::ServerSocket(void) :
+ServerSocket::ServerSocket(SocketManager* mgr) :
     _socket(nullptr),
+    _socket_manager(mgr),
     _got_first_line(false),
     _got_http_header(false),
     _do_frame_io(false),
@@ -221,68 +80,18 @@ ServerSocket::ServerSocket(void) :
     _content_length(0),
     _is_mcp_socket(false)
 {
-    if (0 == _max_open_sockets)
-    {
-        unsigned int hwlim = std::thread::hardware_concurrency();
-        if (0 == hwlim) hwlim = 32;
-        _max_open_sockets = hwlim;
-
-        // Revise number of open files upwards, if needed.
-        // A typical operating condition is that each network
-        // connection to the cogserver results in 6-8 other open
-        // file descriptors. We'll be paranoid, and set this to 16x.
-        rlim_t wanted = 16 * _max_open_sockets;
-
-        // The only problem here is that we don't have CAP_SYS_RESOURCE
-        // and only the shell user can set this. So in reality, it is
-        // already the case that rlim.rlim_cur == rlim.rlim_max and
-        // we can't do anything to change this. So instead, just print
-        // a warning. Oh well.
-        struct rlimit rlim;
-        int rc = getrlimit(RLIMIT_NOFILE, &rlim);
-        if (0 == rc and rlim.rlim_cur < wanted)
-        {
-            if (rlim.rlim_max < wanted)
-            {
-                fprintf(stderr,
-   "Warning: Cogserver: you may want to increase the max open files\n"
-   "Use the `ulimit -a` command to view this, and `ulimit -n` to set it.\n"
-   "Recommend setting this to %lu open file descriptors.\n", wanted);
-                logger().warn(
-   "Warning: Cogserver: you may want to increase the max open files\n"
-   "Use the `ulimit -a` command to view this, and `ulimit -n` to set it.\n"
-   "Recommend setting this to %lu open file descriptors.\n", wanted);
-                wanted = rlim.rlim_max;
-            }
-            rlim.rlim_cur = wanted;
-            setrlimit(RLIMIT_NOFILE, &rlim);
-        }
-    }
-
     _start_time = time(nullptr);
     _last_activity = _start_time;
     _tid = 0;
     _pth = 0;
     _status = BLOCK;
     _line_count = 0;
-    add_sock(this);
 
-    _network_gone = false;
+    // Register with socket manager
+    _socket_manager->add_sock(this);
 
     // Block here, if there are too many concurrently-open sockets.
-    std::unique_lock<std::mutex> lck(_max_mtx);
-    _num_open_sockets++;
-
-    // If we are just below the max limit, send a half-ping in an
-    // attempt to force any half-open connections to close.
-    if (_max_open_sockets <= _num_open_sockets)
-        half_ping();
-
-    // Report how often we stall because we hit the max.
-    if (_max_open_sockets < _num_open_sockets)
-        _num_open_stalls ++;
-
-    while (_max_open_sockets < _num_open_sockets) _max_cv.wait(lck);
+    _socket_manager->wait_available_slot();
     _status = START;
 }
 
@@ -298,18 +107,17 @@ ServerSocket::~ServerSocket()
     // inside asio. Failing to delete is also obviously a memleak,
     // but for now, well accept a memleak in exchange for stability.
     // See notes in the body of the Exit() method below (circa line 322).
-    if (not _network_gone)
+    if (not _socket_manager->is_network_gone())
         delete _socket;
 
     _socket = nullptr;
-    rem_sock(this);
+
+    // Unregister from socket manager
+    _socket_manager->rem_sock(this);
 
     // If anyone is waiting for a socket, let them know that
     // we've freed one up.
-    std::unique_lock<std::mutex> mxlck(_max_mtx);
-    _num_open_sockets--;
-    _max_cv.notify_all();
-    mxlck.unlock();
+    _socket_manager->release_slot();
 }
 
 // ==================================================================
@@ -407,7 +215,7 @@ void ServerSocket::Exit()
         //
         // The long-term solution is to rewrite this code to not use
         // asio. But that is just a bit more than a weekend project.
-        if (not _network_gone)
+        if (not _socket_manager->is_network_gone())
             _socket->close();
     }
     catch (const std::system_error& e)

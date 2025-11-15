@@ -65,7 +65,7 @@ CogServer::CogServer(AtomSpacePtr as) :
 /// overflows the ulimit max of 1024.)
 void CogServer::set_max_open_sockets(int max_open_socks)
 {
-    ServerSocket::set_max_open_sockets(max_open_socks);
+    _socket_manager.set_max_open_sockets(max_open_socks);
 }
 
 /// Open the given port number for network service.
@@ -74,7 +74,7 @@ void CogServer::enableNetworkServer(int port)
     if (_consoleServer) return;
     try
     {
-        _consoleServer = new NetworkServer(port, "Telnet Server");
+        _consoleServer = new NetworkServer(port, "Telnet Server", &_socket_manager);
     }
     catch (const std::system_error& ex)
     {
@@ -85,8 +85,8 @@ void CogServer::enableNetworkServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](void)->ServerSocket*
-            { return new ServerConsole(cogserver()); };
+    auto make_console = [](SocketManager* mgr)->ServerSocket*
+            { return new ServerConsole(cogserver(), mgr); };
     _consoleServer->run(make_console);
     _running = true;
     logger().info("Network server running on port %d", port);
@@ -99,7 +99,7 @@ void CogServer::enableWebServer(int port)
     if (_webServer) return;
     try
     {
-        _webServer = new NetworkServer(port, "WebSocket Server");
+        _webServer = new NetworkServer(port, "WebSocket Server", &_socket_manager);
     }
     catch (const std::system_error& ex)
     {
@@ -110,8 +110,8 @@ void CogServer::enableWebServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](void)->ServerSocket* {
-        ServerSocket* ss = new WebServer(cogserver());
+    auto make_console = [](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new WebServer(cogserver(), mgr);
         ss->act_as_http_socket();
         return ss;
     };
@@ -131,7 +131,7 @@ void CogServer::enableMCPServer(int port)
     if (_mcpServer) return;
     try
     {
-        _mcpServer = new NetworkServer(port, "Model Context Protocol Server");
+        _mcpServer = new NetworkServer(port, "Model Context Protocol Server", &_socket_manager);
     }
     catch (const std::system_error& ex)
     {
@@ -142,8 +142,8 @@ void CogServer::enableMCPServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](void)->ServerSocket* {
-        ServerSocket* ss = new MCPServer(cogserver());
+    auto make_console = [](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new MCPServer(cogserver(), mgr);
         ss->act_as_mcp();
         return ss;
     };

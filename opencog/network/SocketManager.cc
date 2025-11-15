@@ -173,7 +173,7 @@ void SocketManager::half_ping(void)
 		// If the socket is waiting on input, and has been idle
 		// for more than ten seconds, then ping it to see if it
 		// is still alive.
-		if (ss->_status == ss->IWAIT and
+		if (ss->_status == ServerSocket::IWAIT and
 			now - ss->_last_activity > 10)
 		{
 			if (ss->_do_frame_io)

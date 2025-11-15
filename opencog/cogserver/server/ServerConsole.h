@@ -67,7 +67,7 @@ public:
      * Ctor. Defines the socket's mime-type as 'text/plain' and then
      * configures the Socket to use line protocol.
      */
-    ServerConsole(CogServer&);
+    ServerConsole(CogServer&, SocketManager*);
     ~ServerConsole();
 
     /**

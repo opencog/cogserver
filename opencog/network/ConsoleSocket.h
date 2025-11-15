@@ -65,7 +65,7 @@ public:
      * Ctor. Defines the socket's mime-type as 'text/plain' and then
      * configures the Socket to use line protocol.
      */
-    ConsoleSocket(void);
+    ConsoleSocket(SocketManager*);
     virtual ~ConsoleSocket();
 
     void get() { std::unique_lock<std::mutex> lck(_in_use_mtx); _use_count++; }
