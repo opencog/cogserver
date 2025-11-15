@@ -41,6 +41,11 @@ private:
 	std::condition_variable _max_cv;
 	size_t _num_open_stalls;
 
+	// Barrier synchronization
+	std::mutex _barrier_mtx;
+	std::condition_variable _barrier_cv;
+	bool _barrier_active;
+
 	// Global flags
 	bool _network_gone;
 
@@ -71,12 +76,21 @@ public:
 	bool kill(pid_t tid);
 
 	/**
-	 * Barrier: wait for all shells to finish pending work.
-	 * Blocks until all registered shells have empty queues
-	 * and completed evaluations. Provides synchronization
-	 * for fire-and-forget command streams.
+	 * Synchronization point. Barrier-fence. Force shells to drain thier
+	 * pending-work queues. Shell sockets will not be able to enqueue
+	 * new work, until after all work queues have drained.
+	 *
+	 * This is a "global" sync point, synchronizing all shells. The
+	 * current implementation is simple: calling this will block until
+	 * all shells have drained. The block_on_bar() below prevents shells
+	 * from enqueueing new work until all of them have drained.
 	 */
 	void barrier();
+
+	/**
+	 * Block, if a barrier is currently active.
+	 */
+	void block_on_bar();
 };
 
 } // namespace

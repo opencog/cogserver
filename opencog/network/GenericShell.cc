@@ -30,6 +30,7 @@
 #include <opencog/util/oc_assert.h>
 
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/network/SocketManager.h>
 #include <opencog/eval/GenericEval.h>
 #include "GenericShell.h"
 
@@ -742,6 +743,8 @@ std::string GenericShell::poll_output()
 
 void GenericShell::enqueue_work(const std::string& expr)
 {
+	// New work cannot be enqueued as long as there is a barrier in place.
+	socket->get_socket_manager()->block_on_bar();
 	evalque.push(expr);
 }
 

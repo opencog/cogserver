@@ -24,6 +24,7 @@ SocketManager::SocketManager()
 	: _max_open_sockets(0),
 	  _num_open_sockets(0),
 	  _num_open_stalls(0),
+	  _barrier_active(false),
 	  _network_gone(false)
 {
 	// Set max open sockets to number of hardware CPUs
@@ -277,6 +278,12 @@ bool SocketManager::kill(pid_t tid)
 // fire-and-forget command streams sent on different connections.
 void SocketManager::barrier()
 {
+	// Set barrier active to block new work from being enqueued
+	{
+		std::lock_guard<std::mutex> lock(_barrier_mtx);
+		_barrier_active = true;
+	}
+
 	// Find the calling socket and mark it as BAR
 	ServerSocket* calling_socket = nullptr;
 	{
@@ -332,4 +339,20 @@ void SocketManager::barrier()
 	// Restore calling socket status
 	if (calling_socket)
 		calling_socket->_status = ServerSocket::IWAIT;
+
+	// Clear barrier and wake all waiting enqueue_work() calls
+	{
+		std::lock_guard<std::mutex> lock(_barrier_mtx);
+		_barrier_active = false;
+		_barrier_cv.notify_all();
+	}
+}
+
+void SocketManager::block_on_bar()
+{
+	std::unique_lock<std::mutex> lock(_barrier_mtx);
+	while (_barrier_active)
+	{
+		_barrier_cv.wait(lock);
+	}
 }
