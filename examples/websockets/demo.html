@@ -321,12 +321,11 @@ $ python3
      <tr><td>Python initialization:</td>
          <td><tt>from opencog.atomspace import *<br>
                  from opencog.type_constructors import *</tt></td>
-         <td><button class="run-btn" onclick='runCommand("from opencog.atomspace
-import *\nfrom opencog.type_constructors import *\n", "py")'>Run this</button></td></tr>
+         <td><button class="run-btn" onclick='runCommand("from opencog.atomspace import *\nfrom opencog.type_constructors import *\n", "py")'>Run this</button></td></tr>
      <tr><td>Create a ConceptNode:</td>
-         <td><tt>cc = Concept("foo")<br>
+         <td><tt>cc = Concept("py thing")<br>
                  print("Created this:", cc)</tt></td>
-         <td><button class="run-btn" onclick='runCommand("cc = Concept(\"foo\")\nprint(\"Created this:\", cc)", "py")'>Run this</button></td></tr>
+         <td><button class="run-btn" onclick='runCommand("cc = Concept(\"py thing\")\nprint(\"Created this:\", cc)", "py")'>Run this</button></td></tr>
      <tr><td>Fetch all Atoms:</td>
          <td><tt>spacey = get_default_atomspace()<br>
                  all = spacey.get_atoms_by_type(types.Atom, True)<br>
