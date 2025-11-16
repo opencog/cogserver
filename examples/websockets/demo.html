@@ -272,7 +272,7 @@ $ python3
          <td><button class="run-btn" onclick='runCommand("(Concept \"bar\")", "scm")'>Run this</button></td></tr>
      <tr><td>Fetch all Atoms:</td>
          <td><tt>(cog-get-atoms 'Atom #t)</tt></td>
-         <td><button class="run-btn" onclick="runCommand('(cog-get-atoms \\'Atom #t)', 'scm')">Run this</button></td></tr>
+         <td><button class="run-btn" onclick="runCommand('(cog-get-atoms \'Atom #t)', 'scm')">Run this</button></td></tr>
      <tr><td>Print a Summary report:</td>
          <td><tt>(cog-report-counts)</tt></td>
          <td><button class="run-btn" onclick="runCommand('(cog-report-counts)', 'scm')">Run this</button></td></tr>
@@ -295,7 +295,7 @@ $ python3
          <td><button class="run-btn" onclick='runCommand("(cog-set-value! (Concept \"zinger\") (Predicate \"ignore\") #f)", "sexpr")'>Run this</button></td></tr>
      <tr><td>Fetch all Atoms:</td>
          <td><tt>(cog-get-atoms 'Atom #t)</tt></td>
-         <td><button class="run-btn" onclick="runCommand('(cog-get-atoms \\'Atom #t)', 'sexpr')">Run this</button></td></tr>
+         <td><button class="run-btn" onclick="runCommand('(cog-get-atoms \'Atom #t)', 'sexpr')">Run this</button></td></tr>
      <tr><td>Set a value on an Atom:</td>
          <td><tt>(cog-set-value! (Concept "foo") (Predicate "key") (FloatValue 1 2 3))</tt></td>
          <td><button class="run-btn" onclick='runCommand("(cog-set-value! (Concept \"foo\") (Predicate \"key\") (FloatValue 1 2 3))", "sexpr")'>Run this</button></td></tr>
