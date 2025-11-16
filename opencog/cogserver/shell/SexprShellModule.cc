@@ -27,6 +27,7 @@
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
+#include <opencog/network/SocketManager.h>
 #include <opencog/persist/sexcom/SexprEval.h>
 
 #include "SexprShell.h"
@@ -90,6 +91,14 @@ SexprShellModule::shelloutRequest::execute(void)
 	OC_ASSERT(con, "Invalid Request object");
 
 	SexprShell *sh = new SexprShell(_cogserver.getAtomSpace());
+
+	// Install cog-barrier handler
+	SexprEval* eval = dynamic_cast<SexprEval*>(sh->get_evaluator());
+	eval->install_handler("cog-barrier)",
+		[con](const std::string&) -> std::string {
+			con->get_socket_manager()->barrier();
+			return "";
+		});
 
 	sh->set_socket(con);
 	send("");
