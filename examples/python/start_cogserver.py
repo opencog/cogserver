@@ -28,7 +28,7 @@ from opencog.type_constructors import *
 my_atomspace = AtomSpace()
 
 # Tell the type constructors to use it.
-set_default_atomspace(my_atomspace)
+set_thread_atomspace(my_atomspace)
 
 print("\nCreating an AtomSpace and putting some data into it...")
 A = ConceptNode('Apple')
