@@ -279,6 +279,10 @@ bool SocketManager::kill(pid_t tid)
 // fire-and-forget command streams sent on different connections.
 void SocketManager::barrier()
 {
+// XXX FIXME. This sometimes deadlocks. Disable for now, until fixed.
+// FYI, this is brand-new code, anyway, so we are not disabling
+// something old that used to work. It never quite worked right.
+return;
 	// Set barrier active to block new work from being enqueued
 	{
 		std::lock_guard<std::mutex> lock(_barrier_mtx);
