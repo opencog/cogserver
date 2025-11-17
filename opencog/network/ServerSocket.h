@@ -74,14 +74,17 @@ protected:
     // WebSocket stuff that users will be interested in.
     bool _is_http_socket;
     bool _got_websock_header;
-    std::string _url;
-    std::string _host_header;  // Host header from HTTP request
+    bool _is_mcp_socket;
 
     // KeepAlive connections will repeatedly send HTTP headers.
     bool _keep_alive;
+
+    bool _in_barrier;
+
     size_t _content_length;
 
-    bool _is_mcp_socket;
+    std::string _url;
+    std::string _host_header;  // Host header from HTTP request
 
     /**
      * Connection callback: called whenever a new connection arrives
@@ -135,9 +138,9 @@ public:
     static char START[6];
     static char BLOCK[6];
     static char IWAIT[6];
+    static char QUING[6];
     static char BAR[6];
     static char DTOR[6];
-    static char RUN[6];
     static char CLOSE[6];
     static char DOWN[6];
 

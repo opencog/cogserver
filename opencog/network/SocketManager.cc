@@ -279,16 +279,6 @@ bool SocketManager::kill(pid_t tid)
 // fire-and-forget command streams sent on different connections.
 void SocketManager::barrier()
 {
-// XXX FIXME. This sometimes deadlocks. Disable for now, until fixed.
-// FYI, this is brand-new code, anyway, so we are not disabling
-// something old that used to work. It never quite worked right.
-return;
-	// Set barrier active to block new work from being enqueued
-	{
-		std::lock_guard<std::mutex> lock(_barrier_mtx);
-		_barrier_active = true;
-	}
-
 	// Find out which of these socekts is ourself.
 	ServerSocket* our_socket = nullptr;
 	{
@@ -302,13 +292,21 @@ return;
 				if (shell and shell->is_eval_thread())
 				{
 					our_socket = ss;
-					ss->_status = ServerSocket::BAR;
 					break;
 				}
 			}
 		}
 	}
 	OC_ASSERT(nullptr != our_socket, "Barrier called out-of-band!");
+
+	our_socket->_in_barrier = true;
+	our_socket->_status = ServerSocket::BAR;
+
+	// Set barrier active to block new work from being enqueued
+	{
+		std::lock_guard<std::mutex> lock(_barrier_mtx);
+		_barrier_active = true;
+	}
 
 	// Loop until all shells have drained thier work queues.
 	while (true)
@@ -322,7 +320,7 @@ return;
 					continue;
 
 				// There might be multiple concurrent bars. Avoid deadlock.
-				if (ServerSocket::BAR == ss->_status)
+				if (ss->_in_barrier)
 					continue;
 
 				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
@@ -345,7 +343,12 @@ return;
 		usleep(10000); // 10ms
 	}
 
-	our_socket->_status = ServerSocket::IWAIT;
+	our_socket->_in_barrier = false;
+	std::lock_guard<std::mutex> lock(_sock_lock);
+	for (ServerSocket* ss : _sock_list)
+		if (ss->_in_barrier) return;
+
+	// Release barrier only if we are the last one out.
 	{
 		std::lock_guard<std::mutex> lock(_barrier_mtx);
 		_barrier_active = false;

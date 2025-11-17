@@ -30,7 +30,7 @@ char ServerSocket::BLOCK[6] = "block";
 char ServerSocket::IWAIT[6] = "iwait";
 char ServerSocket::BAR[6]   = "-bar-";
 char ServerSocket::DTOR[6]  = "dtor ";
-char ServerSocket::RUN[6]   = " run ";
+char ServerSocket::QUING[6] = "quing";
 char ServerSocket::CLOSE[6] = "close";
 char ServerSocket::DOWN[6]  = "down ";
 
@@ -76,10 +76,11 @@ ServerSocket::ServerSocket(SocketManager* mgr) :
     _do_frame_io(false),
     _is_http_socket(false),
     _got_websock_header(false),
-    _host_header(""),
+    _is_mcp_socket(false),
     _keep_alive(false),
+    _in_barrier(false),
     _content_length(0),
-    _is_mcp_socket(false)
+    _host_header("")
 {
     _start_time = time(nullptr);
     _last_activity = _start_time;
@@ -324,9 +325,9 @@ void ServerSocket::handle_connection(void)
             _status = IWAIT;
             std::string line;
             if (not _do_frame_io)
-               line = get_telnet_line(b);
+                line = get_telnet_line(b);
             else
-               line = get_websocket_line();
+                line = get_websocket_line();
 
             // Some local Linux D-Bus daemon desperately wants to
             // talk to us, sending us binary garbage of some kind.
@@ -343,7 +344,7 @@ void ServerSocket::handle_connection(void)
             _last_activity = time(nullptr);
             _line_count++;
             total_line_count++;
-            _status = RUN;
+            _status = QUING;
 
             // If its not an http sock, then the API is simple.
             if (not _is_http_socket)
