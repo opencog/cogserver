@@ -19,39 +19,19 @@ jobs:
             - ccache-{{ checksum "/tmp/date" }}
             - ccache-
       - run:
-          name: Temp hack until Docker pulls latest octool
-          command: apt install libasio-dev
-      - run:
-          name: Install CogUtil
+          name: Checkout, Build, Install CogUtil
           command: |
             git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/cogutil /ws/cogutil
             mkdir -p /ws/cogutil/build
             cd /ws/cogutil/build && cmake .. && make -j2 && make -j2 install
             ldconfig
+
       - run:
-          name: Checkout AtomSpace
-          command: git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace /ws/atomspace
-      - run:
-          name: Install AtomSpace
+          name: Checkout, Build, Install AtomSpace
           command: |
+            git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace /ws/atomspace
             mkdir -p /ws/atomspace/build
             cd /ws/atomspace/build && cmake .. && make -j2 && make -j2 install
-            ldconfig
-      - run:
-          name: Checkout AtomSpace Storage
-          command: |
-            git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-storage /ws/atomspace-storage
-            mkdir -p /ws/atomspace-storage/build
-            cd /ws/atomspace-storage/build && cmake .. && make -j2 && make -j2 install
-            ldconfig
-      - run:
-          name: Checkout RocksStorageNode
-          command: git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-rocks /ws/atomspace-rocks
-      - run:
-          name: Install RocksStorageNode
-          command: |
-            mkdir -p /ws/atomspace-rocks/build
-            cd /ws/atomspace-rocks/build && cmake .. && make -j2 && make -j2 install
             ldconfig
 
       # The checkout directive only works if there is a deploy key
@@ -67,20 +47,21 @@ jobs:
       #
       # - checkout
       - run:
+          name:  Checkout CogServer
           command: |
             git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/cogserver /ws/cogserver
 
       - run:
-          name: CMake Configure
+          name: CMake Configure CogServer
           command: mkdir build && cd build && cmake ..
       - run:
-          name: Build
+          name: Build CogServer
           command: cd build && make -j2
       - run:
-          name: Build tests
+          name: Build CogServer tests
           command: cd build && make -j2 tests
       - run:
-          name: Run tests
+          name: Run CogServer tests
           command: cd build && make -j2 check ARGS=-j2
       - run:
           name: Install CogServer
@@ -89,13 +70,40 @@ jobs:
           name: Print test log
           command: cat build/tests/Testing/Temporary/LastTest.log
           when: always
+
+      # CogServer does not need Storage, but CogStorage does.
+      - run:
+          name: Checkout, Build, Install Storage
+          command: |
+            git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-storage /ws/atomspace-storage
+            mkdir -p /ws/atomspace-storage/build
+            cd /ws/atomspace-storage/build && cmake .. && make -j2 && make -j2 install
+            ldconfig
+
+      # CogStorage depends on a working Cogserver.
+      - run:
+          name: Checkout CogStorageNode
+          command: git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-cog /ws/atomspace-cog
+      - run:
+          name: Build CogStorageNode
+          command: |
+            mkdir -p /ws/atomspace-cog/build
+            cd /ws/atomspace-cog/build && cmake .. && make -j2
+            ldconfig
+      - run:
+          name: Run CogStorageNode tests
+          command: cd build && make -j2 check ARGS=-j2
+      - run:
+          name: Install CogStorageNode
+          command: cd build && make -j2 install && ldconfig
+
       - persist_to_workspace:
           root: /ws/
           paths:
             - cogutil
             - atomspace
-            - atomspace-rocks
             - cogserver
+            - atomspace-cog
             - ccache
 
   package: #Place holder
