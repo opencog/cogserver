@@ -1,4 +1,3 @@
-ENABLE_TESTING()
 INCLUDE(AddCxxtest)
 
 # Perform tests in component-dependency order, as much as possible.
