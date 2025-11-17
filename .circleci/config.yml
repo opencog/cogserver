@@ -34,6 +34,15 @@ jobs:
             cd /ws/atomspace/build && cmake .. && make -j2 && make -j2 install
             ldconfig
 
+      # Storage needed for s-expression handling in cogserver.
+      - run:
+          name: Checkout, Build, Install Storage
+          command: |
+            git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-storage /ws/atomspace-storage
+            mkdir -p /ws/atomspace-storage/build
+            cd /ws/atomspace-storage/build && cmake .. && make -j2 && make -j2 install
+            ldconfig
+
       # The checkout directive only works if there is a deploy key
       # configured in github. Most repos have this, but some do not.
       # Work around this by doing the clone manually. This is all
@@ -70,15 +79,6 @@ jobs:
           name: Print test log
           command: cat build/tests/Testing/Temporary/LastTest.log
           when: always
-
-      # CogServer does not need Storage, but CogStorage does.
-      - run:
-          name: Checkout, Build, Install Storage
-          command: |
-            git clone --depth 1 https://github.com/$CIRCLE_PROJECT_USERNAME/atomspace-storage /ws/atomspace-storage
-            mkdir -p /ws/atomspace-storage/build
-            cd /ws/atomspace-storage/build && cmake .. && make -j2 && make -j2 install
-            ldconfig
 
       # CogStorage depends on a working Cogserver.
       - run:
