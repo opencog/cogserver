@@ -323,10 +323,7 @@ return;
 
 				// There might be multiple concurrent bars. Avoid deadlock.
 				if (ServerSocket::BAR == ss->_status)
-				{
-					all_idle = false;
-					break;
-				}
+					continue;
 
 				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
 				if (nullptr == cs)
