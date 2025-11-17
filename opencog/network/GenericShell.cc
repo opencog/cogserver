@@ -215,7 +215,14 @@ void GenericShell::eval(const std::string &expr)
 	// this instance ever again. So stop hogging space, and self-destruct.
 	// We have to do this here; there is no other opportunity to call dtor.
 	if (self_destruct)
+	{
+		// The atomspace-cog unit tests are unhappy if we don't send
+		// some reply message; they perceive an abnormal socket close.
+		// So we send them some garbage. They're using the hush sexpr
+		// prompt, so sending a lonely newline will get filtered.
+		socket->Send("goodbye!\n");
 		delete this;
+	}
 }
 
 /**
