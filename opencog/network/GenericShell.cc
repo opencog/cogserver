@@ -215,10 +215,7 @@ void GenericShell::eval(const std::string &expr)
 	// this instance ever again. So stop hogging space, and self-destruct.
 	// We have to do this here; there is no other opportunity to call dtor.
 	if (self_destruct)
-	{
-		socket->SetShell(nullptr);
 		delete this;
-	}
 }
 
 /**
@@ -612,6 +609,7 @@ void GenericShell::eval_loop(void)
 		usleep(10000);
 		poll_and_send();
 	}
+	socket->SetShell(nullptr);
 
 	// After we exit, the _evaluator will be reclaimed by the
 	// thread dtor running in the evaluator pool.
