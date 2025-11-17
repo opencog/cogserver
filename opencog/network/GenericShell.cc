@@ -466,11 +466,7 @@ void GenericShell::line_discipline(const std::string &expr)
 /* ============================================================== */
 // The problem being addressed here is that the shell destructor
 // can start running (because the socket was closed) before the
-// evaluator has even started running. This is not really a
-// problem for this class; however, if a derived class
-// (specifically, the SchemeShell) is destroyed before it has a
-// chance to run thread_init() during evaluation, then crashes
-// will result (in this case, because the atomspace was not set).
+// evaluator has even started running. Need to hold off.
 
 void GenericShell::start_eval()
 {
@@ -517,8 +513,8 @@ void GenericShell::eval_loop(void)
 	auto poll_wrapper = [&](void) { poll_loop(); };
 	pollthr = new std::thread(poll_wrapper);
 
-	// Derived-class initializer. (The scheme shell uses this to set
-	// the atomspace).
+	// Derived-class initializer. (None of the shells use this
+	// at this time ... this is left over from earlier times.)
 	thread_init();
 
 	// Go through the body of the loop at least once.

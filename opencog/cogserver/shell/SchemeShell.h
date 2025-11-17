@@ -39,7 +39,6 @@ class SchemeShell : public GenericShell
 {
 	protected:
 		AtomSpacePtr _shellspace;
-		void thread_init();
 		static std::string _prompt;
 
 	public:

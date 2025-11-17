@@ -47,9 +47,7 @@ void SchemeShellModule::barrier(void)
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)
 {
-	// Tell scheme which atomspace to use.
 	SchemeEval::init_scheme();
-	SchemeEval::set_scheme_as(cs.getAtomSpace().get());
 
 	// Register cog-barrier in the extension module (auto-loaded)
 	define_scheme_primitive("cog-barrier", &SchemeShellModule::barrier, this);

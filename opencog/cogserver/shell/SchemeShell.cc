@@ -52,31 +52,17 @@ SchemeShell::SchemeShell(const AtomSpacePtr& asp) :
 	abort_prompt = _prompt;
 	pending_prompt = "... ";
 	_name = " scm";
-
-	// Set the initial atomspace for this thread.
-	SchemeEval::set_scheme_as(_shellspace.get());
 }
 
 SchemeShell::~SchemeShell()
 {
-	// We must stall until after the evaluator has finished
-	// evaluating. Otherwise, the thread_init() method (below)
-	// might never get a chance to run, leading to a NULL
-	// atomspace, leading to a crash.  Bug #2328.
+	// Stall until after all evaluators have finished evaluating.
 	while_not_done();
 }
 
 GenericEval* SchemeShell::get_evaluator(void)
 {
 	return SchemeEval::get_scheme_evaluator(_shellspace);
-}
-
-/**
- * Register this shell with the console.
- */
-void SchemeShell::thread_init(void)
-{
-	SchemeEval::set_scheme_as(_shellspace.get());
 }
 
 #endif
