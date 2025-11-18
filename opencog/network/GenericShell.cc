@@ -674,10 +674,11 @@ void GenericShell::poll_loop(void)
 	// polling the output, eventually causing the evalthr to stay
 	// in while_not_done() forever. So let's poll again, one more
 	// time, here.
+	usleep(250);
 	do
 	{
-		usleep(1);
 		poll_and_send();
+		usleep(10000);
 	}
 	while (not _eval_done);
 }
