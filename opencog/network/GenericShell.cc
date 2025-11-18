@@ -735,10 +735,15 @@ std::string GenericShell::poll_output()
 	// with data might not always notice these, so at least record them
 	// in the log file, where they might get noticed by some human.
 	if (_evaluator->eval_error())
-		logger().info("[GenericShell] evaluator error:\n%s",
-			_evaluator->get_error_string().c_str());
+	{
+		std::string errmsg(_evaluator->get_error_string());
+		_evaluator->clear_pending();
+		logger().info("[GenericShell] evaluator error:\n%s", errmsg.c_str());
+		if (show_output) return errmsg;
+		return "";
+	}
 
-	if (show_prompt and (show_output or _evaluator->eval_error()))
+	if (show_output and show_prompt)
 		return normal_prompt;
 	return "";
 }
