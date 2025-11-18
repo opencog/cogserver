@@ -397,6 +397,9 @@ void ServerSocket::handle_connection(void)
                 break;
             } else if (e.code() == asio::error::not_connected) {
                 break;
+            } else if (e.code() == asio::error::bad_descriptor) {
+                // We hit this during cogserver shutdown.
+                break;
             } else {
                 logger().error("ServerSocket::handle_connection(): Error reading data. Message: %s", e.what());
             }
