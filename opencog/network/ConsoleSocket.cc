@@ -42,12 +42,10 @@ ConsoleSocket::~ConsoleSocket()
     // still have to be handled.
     std::unique_lock<std::mutex> lck(_in_use_mtx);
     while (_use_count) _in_use_cv.wait(lck);
-    GenericShell* rms = _shell;
-    _shell = nullptr;
     lck.unlock();
 
     // If there's a shell, kill it.
-    if (rms) delete rms;
+    if (_shell) delete _shell;
 
     logger().debug("[ConsoleSocket] destructor finished");
 }
