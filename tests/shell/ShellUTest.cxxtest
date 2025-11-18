@@ -236,10 +236,12 @@ public:
 
 	void tearDown()
 	{
+		logger().debug("AFTER TEST stop cogserver: %s", __FUNCTION__);
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
 		csrv->getAtomSpace()->clear();
+		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
 	}
 
 	void testControlD()
