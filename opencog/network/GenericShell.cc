@@ -482,12 +482,10 @@ void GenericShell::start_eval()
 
 void GenericShell::finish_eval()
 {
-	{
-		// Repeated control-C will send us here with _eval_done already set..
-		std::unique_lock<std::mutex> lck(_eval_mtx);
-		_eval_done = true;
-		_eval_cv.notify_all();
-	}
+	// Repeated control-C will send us here with _eval_done already set..
+	std::unique_lock<std::mutex> lck(_eval_mtx);
+	_eval_done = true;
+	_eval_cv.notify_all();
 }
 
 void GenericShell::while_not_done()
