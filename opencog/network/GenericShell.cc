@@ -719,29 +719,33 @@ std::string GenericShell::poll_output()
 		return get_output() + result;
 
 	// If we are here, the evaluator is done. Return shell prompts.
-	if (_eval_done) return "";
+	if (_eval_done)
+	{
+		// Record evaluator errors. Automated scripts pumping the cogserver
+		// with data might not always notice these, so at least record them
+		// in the log file, where they might get noticed by some human.
+		if (_evaluator->eval_error())
+		{
+			std::string errmsg(_evaluator->get_error_string());
+			_evaluator->clear_pending(); // clear the error bit.
+			logger().info("[GenericShell] evaluator error:\n%s", errmsg.c_str());
+			if (show_output) return errmsg;
+		}
+		return "";
+	}
+
+	// If we are here, the result size was zero, and so we know we are
+	// done, but the _eval_done flag had not been set. Use this to wake
+	// up everyone.
 	finish_eval();
 
-	if (_evaluator->input_pending())
-	{
-		if (show_output and show_prompt)
-			return pending_prompt;
-		return "";
-	}
-
-	// Record evaluator errors. Automated scripts pumping the cogserver
-	// with data might not always notice these, so at least record them
-	// in the log file, where they might get noticed by some human.
-	if (_evaluator->eval_error())
-	{
-		std::string errmsg(_evaluator->get_error_string());
-		logger().info("[GenericShell] evaluator error:\n%s", errmsg.c_str());
-		if (show_output) return errmsg;
-		return "";
-	}
-
 	if (show_output and show_prompt)
+	{
+		if (_evaluator->input_pending())
+			return pending_prompt;
 		return normal_prompt;
+	}
+
 	return "";
 }
 
