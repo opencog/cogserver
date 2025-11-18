@@ -92,10 +92,10 @@ jobs:
             ldconfig
       - run:
           name: Run CogStorageNode tests
-          command: cd build && make -j2 check ARGS=-j2
+          command: cd /ws/atomspace-cog/build && make -j2 check ARGS=-j2
       - run:
           name: Install CogStorageNode
-          command: cd build && make -j2 install && ldconfig
+          command: cd /ws/atomspace-cog/build && make -j2 install && ldconfig
 
       - persist_to_workspace:
           root: /ws/
