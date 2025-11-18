@@ -52,7 +52,22 @@ ConsoleSocket::~ConsoleSocket()
 
 void ConsoleSocket::SetShell(GenericShell *g)
 {
-	_shell = g;
+    std::unique_lock<std::mutex> lck(_in_use_mtx);
+    _shell = g;
+}
+
+/// Return true, if we have a shell, and it's busy. We have
+/// to do this under a lock, because the shell could disapear
+/// out from under us, destroyed in a differrent thread.
+/// Before it is destroyed, though, the SetShell() above will
+/// be called with a nullptr. So we are sae, under a lock.
+bool ConsoleSocket::busyShell(void)
+{
+    std::unique_lock<std::mutex> lck(_in_use_mtx);
+    if (0 == _use_count) return false;
+    if (nullptr == _shell) return false;
+
+    return (_shell->queued() > 0 or not _shell->eval_done());
 }
 
 // ==================================================================

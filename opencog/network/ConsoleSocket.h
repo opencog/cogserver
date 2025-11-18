@@ -78,6 +78,9 @@ public:
     void SetShell(GenericShell *);
     GenericShell * getShell(void) { return _shell; }
 
+    /** Predicate: is there a shell, and is it busy? */
+    bool busyShell(void);
+
     /**
      * Assorted debugging utilities.
      */

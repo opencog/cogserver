@@ -324,11 +324,7 @@ void SocketManager::barrier()
 					continue;
 
 				ConsoleSocket* cs = dynamic_cast<ConsoleSocket*>(ss);
-				if (nullptr == cs)
-					continue;
-
-				GenericShell* shell = cs->getShell();
-				if (shell and (shell->queued() > 0 or not shell->eval_done()))
+				if (cs and cs->busyShell())
 				{
 					all_idle = false;
 					break;
