@@ -747,7 +747,14 @@ void GenericShell::enqueue_work(const std::string& expr)
 {
 	// New work cannot be enqueued as long as there is a barrier in place.
 	socket->get_socket_manager()->block_on_bar();
-	evalque.push(expr);
+
+	// If the cogserver is shutting down, while there are still
+	// open sockets with data on them, we might end up here, trying
+	// to queue up work onto a closed queue. This is a race, and
+	// curing that race in some other way is ... not worth the effort.
+	// The goal here is to not crash with an uncaught exception.
+	try { evalque.push(expr); }
+	catch (const concurrent_queue<std::string>::Canceled& ex) {}
 }
 
 /* ===================== END OF FILE ============================ */
