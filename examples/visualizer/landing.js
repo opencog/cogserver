@@ -255,7 +255,8 @@ function onMessage(event) {
                 } else {
                     // Check if it's the reportCounts response (object with type names as keys)
                     const keys = Object.keys(result);
-                    if (keys.length > 0 && keys.every(key => typeof result[key] === 'number')) {
+                    // Handle both empty objects (empty atomspace) and populated count objects
+                    if (keys.length === 0 || keys.every(key => typeof result[key] === 'number')) {
                         console.log('Received atom counts:', result);
                         processAtomCounts(result);
                     } else {
