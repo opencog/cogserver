@@ -25,7 +25,7 @@ ConsoleSocket::ConsoleSocket(SocketManager* mgr) :
 
 ConsoleSocket::~ConsoleSocket()
 {
-    logger().debug("[ConsoleSocket] destructor");
+    logger().debug("[ConsoleSocket] enter destructor");
 
     // We need the use-count and the condition variables because
     // the design of asio is broken. Basically, the asio
@@ -42,15 +42,17 @@ ConsoleSocket::~ConsoleSocket()
     // still have to be handled.
     std::unique_lock<std::mutex> lck(_in_use_mtx);
     while (_use_count) _in_use_cv.wait(lck);
+    GenericShell* rms = _shell;
+    _shell = nullptr;
     lck.unlock();
 
     // If there's a shell, kill it.
-    if (_shell) delete _shell;
+    if (rms) delete rms;
 
     logger().debug("[ConsoleSocket] destructor finished");
 }
 
-void ConsoleSocket::SetShell(GenericShell *g)
+void ConsoleSocket::SetShell(GenericShell* g)
 {
     std::unique_lock<std::mutex> lck(_in_use_mtx);
     _shell = g;
@@ -64,9 +66,7 @@ void ConsoleSocket::SetShell(GenericShell *g)
 bool ConsoleSocket::busyShell(void)
 {
     std::unique_lock<std::mutex> lck(_in_use_mtx);
-    if (0 == _use_count) return false;
     if (nullptr == _shell) return false;
-
     return (_shell->queued() > 0 or not _shell->eval_done());
 }
 
