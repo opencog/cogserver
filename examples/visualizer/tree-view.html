@@ -77,19 +77,22 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
-            background: var(--background);
+            background: var(--background) !important;
             color: var(--text-primary);
         }
         #controls input[type="number"] {
             width: 80px;
         }
         /* Number input spinner buttons styling */
-        #controls input[type="number"]::-webkit-inner-spin-button {
+        #controls input[type="number"]::-webkit-inner-spin-button,
+        #controls input[type="number"]::-webkit-outer-spin-button {
             opacity: 1;
             cursor: pointer;
+            background-color: var(--background);
         }
-        /* Ensure spinner is visible in dark mode */
-        [data-theme="dark"] #controls input[type="number"]::-webkit-inner-spin-button {
+        /* Ensure spinner arrows are visible in dark mode */
+        [data-theme="dark"] #controls input[type="number"]::-webkit-inner-spin-button,
+        [data-theme="dark"] #controls input[type="number"]::-webkit-outer-spin-button {
             filter: invert(1);
         }
         #controls input[type="number"]:hover,
