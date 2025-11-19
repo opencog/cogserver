@@ -539,12 +539,22 @@ class AtomSpaceCache extends EventTarget {
             const rawResponse = JSON.parse(event.data);
             let response;
 
-            // Handle wrapped response format
-            if (rawResponse.hasOwnProperty('success')) {
+            // Handle MCP content format
+            if (rawResponse.content && Array.isArray(rawResponse.content)) {
+                const contentItem = rawResponse.content[0];
+                if (contentItem && contentItem.type === 'text' && contentItem.text) {
+                    // Parse the nested JSON string
+                    response = JSON.parse(contentItem.text);
+                }
+            }
+            // Handle wrapped response format with success
+            else if (rawResponse.hasOwnProperty('success')) {
                 if (rawResponse.success && rawResponse.result) {
                     response = rawResponse.result;
                 }
-            } else {
+            }
+            // Handle direct response
+            else {
                 response = rawResponse;
             }
 
@@ -554,9 +564,11 @@ class AtomSpaceCache extends EventTarget {
             } else if (this.pendingRegularRequest && response && Array.isArray(response)) {
                 // Process regular atom response
                 this.processRegularAtomResponse(response);
+            } else {
+                console.log('Received non-array response:', response);
             }
         } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            console.error('Error parsing WebSocket message:', error, 'Raw data:', event.data);
         }
     }
 
