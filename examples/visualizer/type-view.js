@@ -661,9 +661,6 @@ function drawEdges(container, positions) {
     const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     edgeGroup.setAttribute('id', 'edges');
 
-    // Get colors from CSS variables
-    const textColor = getCSSVar('--text-primary');
-
     let edgeCount = 0;
 
     for (const [typeName, typeInfo] of Object.entries(typeData)) {
@@ -688,9 +685,8 @@ function drawEdges(container, positions) {
 
             const d = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
             path.setAttribute('d', d);
-            path.setAttribute('stroke', textColor);
-            path.setAttribute('stroke-width', '1.5');
-            path.setAttribute('fill', 'none');
+            // Stroke color now controlled by CSS via .tree-link class
+            path.setAttribute('class', 'tree-link');
 
             edgeGroup.appendChild(path);
             edgeCount++;
@@ -720,36 +716,26 @@ function drawNodes(container, positions) {
     const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     nodeGroup.setAttribute('id', 'nodes');
 
-    // Get colors from CSS variables
-    const surfaceColor = getCSSVar('--surface');
-    const textColor = getCSSVar('--text-primary');
-    const hoverColor = getCSSVar('--primary-light');
-    const primaryColor = getCSSVar('--primary-color');
-
     let nodeCount = 0;
     for (const [typeName, position] of Object.entries(positions)) {
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('class', 'tree-node');
         g.setAttribute('transform', `translate(${position.x}, ${position.y})`);
 
-        // Rectangle background
+        // Rectangle background - styling controlled by CSS
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('width', '100');
         rect.setAttribute('height', '30');
         rect.setAttribute('rx', '3');
         rect.setAttribute('ry', '3');
-        rect.setAttribute('fill', surfaceColor);
-        rect.setAttribute('stroke', textColor);
-        rect.setAttribute('stroke-width', '1');
+        // Fill and stroke controlled by .tree-node rect CSS rule
 
-        // Text label
+        // Text label - styling controlled by CSS
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', '50');
         text.setAttribute('y', '20');
         text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', textColor);
-        text.setAttribute('font-size', '12px');
-        text.setAttribute('font-family', 'sans-serif');
+        // Fill controlled by .tree-node text CSS rule
         text.textContent = typeName;
 
         // Add tooltip
@@ -770,18 +756,7 @@ function drawNodes(container, positions) {
             e.stopPropagation();
         });
 
-        // Add hover effect
-        g.addEventListener('mouseenter', () => {
-            rect.setAttribute('fill', hoverColor);
-            rect.setAttribute('stroke', primaryColor);
-            rect.setAttribute('stroke-width', '2');
-        });
-
-        g.addEventListener('mouseleave', () => {
-            rect.setAttribute('fill', surfaceColor);
-            rect.setAttribute('stroke', textColor);
-            rect.setAttribute('stroke-width', '1');
-        });
+        // Hover effects are now controlled by CSS (.tree-node:hover rect)
 
         // Change cursor to pointer
         g.style.cursor = 'pointer';
