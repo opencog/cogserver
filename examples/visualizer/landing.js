@@ -88,6 +88,9 @@ function connect() {
     const normalizedURL = baseURL.endsWith('/') ? baseURL : baseURL + '/';
     serverURL = normalizedURL + endpoint;
 
+    // Save the base URL to localStorage so other pages can use it
+    localStorage.setItem('cogserver-url', normalizedURL);
+
     console.log('Connecting to:', serverURL);
 
     try {
@@ -912,7 +915,7 @@ function openStatsPage() {
 function openGraphVisualization(atom) {
     // Encode the atom data in the URL
     const atomData = encodeURIComponent(JSON.stringify(atom));
-    const graphUrl = `tree-view.html?atom=${atomData}&server=${encodeURIComponent(serverInput.value)}`;
+    const graphUrl = `tree-view.html?atom=${atomData}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');
@@ -929,7 +932,7 @@ function visualizeCheckedAtoms() {
 
     // Encode the atoms data in the URL
     const atomsData = encodeURIComponent(JSON.stringify(atoms));
-    const graphUrl = `tree-view.html?atoms=${atomsData}&server=${encodeURIComponent(serverInput.value)}`;
+    const graphUrl = `tree-view.html?atoms=${atomsData}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');

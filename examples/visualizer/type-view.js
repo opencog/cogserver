@@ -31,8 +31,12 @@ function setupEventListeners() {
 function connect() {
     const statusElement = document.getElementById('connection-status');
 
-    // Use current hostname/IP instead of hardcoded localhost
-    const serverUrl = `ws://${window.location.hostname}:18080/json`;
+    // Try to get saved server URL from localStorage, otherwise use default
+    const savedBaseUrl = localStorage.getItem('cogserver-url');
+    const baseUrl = savedBaseUrl || `ws://${window.location.hostname}:18080/`;
+    const serverUrl = baseUrl + 'json';
+
+    console.log('Connecting to:', serverUrl, savedBaseUrl ? '(from localStorage)' : '(default)');
 
     showLoading(true);
     showError(null);

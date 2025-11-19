@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const atomParam = urlParams.get('atom');
     const atomsParam = urlParams.get('atoms');
-    const serverParam = urlParams.get('server');
 
     // Handle single atom parameter
     if (atomParam) {
@@ -57,10 +56,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (serverParam) {
-        serverUrl = decodeURIComponent(serverParam);
-        console.log('Server URL:', serverUrl);
-    }
+    // Get server URL from localStorage (same as type-view)
+    const savedBaseUrl = localStorage.getItem('cogserver-url');
+    serverUrl = savedBaseUrl || `ws://${window.location.hostname}:18080/`;
+    console.log('Server URL:', serverUrl, savedBaseUrl ? '(from localStorage)' : '(default)');
 
     // Initialize the graph
     initializeGraph();
