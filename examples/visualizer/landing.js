@@ -15,40 +15,11 @@ let refreshBtn, lastUpdate;
 let debugCommand, sendCommand, debugResponse;
 let atomTypesBreakdown, typesList;
 let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing, visualizeCheckedBtn;
-let themeToggle, themeIcon;
-
-// Theme management
-function initTheme() {
-    // Check if user has a saved preference, otherwise default to dark
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-}
-
-function setTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-
-    // Update icon
-    if (themeIcon) {
-        themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    }
-}
-
-function toggleTheme() {
-    const currentTheme = document.body.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-}
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
-    // Initialize theme first
-    themeToggle = document.getElementById('theme-toggle');
-    themeIcon = document.getElementById('theme-icon');
-    initTheme();
-
     // Get DOM elements
     serverInput = document.getElementById('server-url');
     connectBtn = document.getElementById('connect-btn');
@@ -82,7 +53,6 @@ function init() {
     visualizeCheckedBtn = document.getElementById('visualize-checked');
 
     // Set up event listeners
-    themeToggle.addEventListener('click', toggleTheme);
     connectBtn.addEventListener('click', toggleConnection);
     closeAtomListing.addEventListener('click', hideAtomListing);
     visualizeCheckedBtn.addEventListener('click', visualizeCheckedAtoms);
@@ -117,6 +87,9 @@ function connect() {
     // Ensure URL ends with /
     const normalizedURL = baseURL.endsWith('/') ? baseURL : baseURL + '/';
     serverURL = normalizedURL + endpoint;
+
+    // Save the base URL to localStorage so other pages can use it
+    localStorage.setItem('cogserver-url', normalizedURL);
 
     console.log('Connecting to:', serverURL);
 
@@ -942,7 +915,7 @@ function openStatsPage() {
 function openGraphVisualization(atom) {
     // Encode the atom data in the URL
     const atomData = encodeURIComponent(JSON.stringify(atom));
-    const graphUrl = `tree-view.html?atom=${atomData}&server=${encodeURIComponent(serverInput.value)}`;
+    const graphUrl = `tree-view.html?atom=${atomData}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');
@@ -959,7 +932,7 @@ function visualizeCheckedAtoms() {
 
     // Encode the atoms data in the URL
     const atomsData = encodeURIComponent(JSON.stringify(atoms));
-    const graphUrl = `tree-view.html?atoms=${atomsData}&server=${encodeURIComponent(serverInput.value)}`;
+    const graphUrl = `tree-view.html?atoms=${atomsData}`;
 
     // Open in new tab
     window.open(graphUrl, '_blank');

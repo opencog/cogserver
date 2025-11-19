@@ -13,6 +13,7 @@ INSTALL(FILES
 	atomspace-cache.js
 	graph-view.js
 	landing.js
+	theme.js
 	tree-view.js
 	type-view.js
 	styles.css
