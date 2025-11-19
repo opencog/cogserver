@@ -22,7 +22,7 @@ let pendingOperation = null;
 let operationStartTime = null;
 let stopButtonTimer = null;
 const LARGE_ATOM_THRESHOLD = 300; // Warn if more than 300 atoms
-const STOP_BUTTON_DELAY = 2000;   // Show stop button after 2 seconds
+const STOP_BUTTON_DELAY = 5000;   // Show stop button after 5 seconds
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
