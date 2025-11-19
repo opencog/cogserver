@@ -15,40 +15,11 @@ let refreshBtn, lastUpdate;
 let debugCommand, sendCommand, debugResponse;
 let atomTypesBreakdown, typesList;
 let atomListingPanel, atomListingTitle, atomListingContent, closeAtomListing, visualizeCheckedBtn;
-let themeToggle, themeIcon;
-
-// Theme management
-function initTheme() {
-    // Check if user has a saved preference, otherwise default to dark
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-}
-
-function setTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-
-    // Update icon
-    if (themeIcon) {
-        themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    }
-}
-
-function toggleTheme() {
-    const currentTheme = document.body.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-}
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
-    // Initialize theme first
-    themeToggle = document.getElementById('theme-toggle');
-    themeIcon = document.getElementById('theme-icon');
-    initTheme();
-
     // Get DOM elements
     serverInput = document.getElementById('server-url');
     connectBtn = document.getElementById('connect-btn');
@@ -82,7 +53,6 @@ function init() {
     visualizeCheckedBtn = document.getElementById('visualize-checked');
 
     // Set up event listeners
-    themeToggle.addEventListener('click', toggleTheme);
     connectBtn.addEventListener('click', toggleConnection);
     closeAtomListing.addEventListener('click', hideAtomListing);
     visualizeCheckedBtn.addEventListener('click', visualizeCheckedAtoms);

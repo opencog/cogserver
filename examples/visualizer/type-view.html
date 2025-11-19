@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AtomType Hierarchy - AtomSpace Visualizer</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
     <style>
         .type-tree-container {
             background: var(--surface);
@@ -186,39 +187,5 @@
             <p>AtomSpace Type Visualizer • <a href="https://wiki.opencog.org/w/AtomSpace" target="_blank">Documentation</a></p>
         </footer>
     </div>
-
-    <script>
-        // Theme management - shares localStorage with index.html
-        function initTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            setTheme(savedTheme);
-        }
-
-        function setTheme(theme) {
-            document.body.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-            const themeIcon = document.getElementById('theme-icon');
-            if (themeIcon) {
-                themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-            }
-        }
-
-        function toggleTheme() {
-            const currentTheme = document.body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            setTheme(newTheme);
-        }
-
-        // Initialize theme immediately
-        initTheme();
-
-        // Set up theme toggle button
-        document.addEventListener('DOMContentLoaded', function() {
-            const themeToggle = document.getElementById('theme-toggle');
-            if (themeToggle) {
-                themeToggle.addEventListener('click', toggleTheme);
-            }
-        });
-    </script>
 </body>
 </html>

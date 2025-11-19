@@ -4,23 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AtomSpace Graph Visualization</title>
+    <link rel="stylesheet" href="styles.css">
     <script type="text/javascript" src="vis-network/vis-network.min.js"></script>
+    <script src="theme.js"></script>
     <style>
-        /* Light mode colors (default fallback) */
+        /* Additional CSS variables for tree-view specific elements */
         :root {
-            --primary-color: #2196F3;
-            --primary-dark: #1976D2;
-            --primary-light: #BBDEFB;
-            --success-color: #4CAF50;
-            --error-color: #F44336;
-            --warning-color: #FF9800;
-            --background: #F5F5F5;
-            --surface: #FFFFFF;
-            --text-primary: #212121;
-            --text-secondary: #666666;
-            --border-color: #E0E0E0;
-            --shadow: rgba(0,0,0,0.1);
-            --shadow-md: rgba(0,0,0,0.3);
             --overlay-bg: rgba(255, 255, 255, 0.9);
             --warning-bg: #FFF3CD;
             --warning-text: #856404;
@@ -30,21 +19,7 @@
             --cancel-btn-text: #333;
         }
 
-        /* Dark mode colors */
         [data-theme="dark"] {
-            --primary-color: #42A5F5;
-            --primary-dark: #1E88E5;
-            --primary-light: #1E3A5F;
-            --success-color: #66BB6A;
-            --error-color: #EF5350;
-            --warning-color: #FFA726;
-            --background: #0D1117;
-            --surface: #161B22;
-            --text-primary: #E6EDF3;
-            --text-secondary: #8B949E;
-            --border-color: #30363D;
-            --shadow: rgba(0,0,0,0.4);
-            --shadow-md: rgba(0,0,0,0.6);
             --overlay-bg: rgba(22, 27, 34, 0.9);
             --warning-bg: #3D2E00;
             --warning-text: #FFA726;
@@ -316,43 +291,6 @@
     </div>
     <div id="mynetwork"></div>
     <div id="status" class="loading">Initializing...</div>
-
-    <script>
-        // Theme management - initialize as early as possible
-        function initTheme() {
-            // Check if user has a saved preference, otherwise default to dark
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            setTheme(savedTheme);
-        }
-
-        function setTheme(theme) {
-            document.body.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-
-            // Update icon
-            const themeIcon = document.getElementById('theme-icon');
-            if (themeIcon) {
-                themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-            }
-        }
-
-        function toggleTheme() {
-            const currentTheme = document.body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            setTheme(newTheme);
-        }
-
-        // Initialize theme immediately
-        initTheme();
-
-        // Set up theme toggle button when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            const themeToggle = document.getElementById('theme-toggle');
-            if (themeToggle) {
-                themeToggle.addEventListener('click', toggleTheme);
-            }
-        });
-    </script>
 
     <script src="atomspace-cache.js"></script>
     <script src="tree-view.js"></script>
