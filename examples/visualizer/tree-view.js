@@ -1,6 +1,12 @@
 // AtomSpace Graph Visualization using vis-network
 // This file handles the graph rendering and interaction logic
 
+// Helper function to get current edge color from theme
+function getEdgeColor() {
+    const color = getComputedStyle(document.body).getPropertyValue('--text-primary').trim();
+    return color || '#212121'; // Fallback to light mode color
+}
+
 // Global variables
 let network = null;
 let vertices = null;  // vis-network vertices (not to be confused with AtomSpace Nodes)
@@ -71,6 +77,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set up event handlers
     setupEventHandlers();
+
+    // Set up theme change listener
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                console.log('Theme changed, updating edge colors');
+                updateEdgeColorsForTheme();
+            }
+        });
+    });
+
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
 });
 
 function initializeGraph() {
@@ -122,6 +143,11 @@ function initializeGraph() {
             },
             smooth: {
                 enabled: false  // Straight lines
+            },
+            color: {
+                color: getEdgeColor(),
+                highlight: getEdgeColor(),
+                hover: getEdgeColor()
             }
         },
         physics: {
@@ -702,6 +728,11 @@ function setupEventHandlers() {
                                 enabled: true,
                                 scaleFactor: 0.5
                             }
+                        },
+                        color: {
+                            color: getEdgeColor(),
+                            highlight: getEdgeColor(),
+                            hover: getEdgeColor()
                         }
                     },
                     physics: {
@@ -759,6 +790,11 @@ function setupEventHandlers() {
                                 enabled: true,
                                 scaleFactor: 0.5
                             }
+                        },
+                        color: {
+                            color: getEdgeColor(),
+                            highlight: getEdgeColor(),
+                            hover: getEdgeColor()
                         }
                     },
                     physics: {
@@ -878,6 +914,30 @@ function updateStatus(message, className) {
     const statusElement = document.getElementById('status');
     statusElement.textContent = message;
     statusElement.className = className || '';
+}
+
+// Update all edge colors when theme changes
+function updateEdgeColorsForTheme() {
+    if (!edges) return;
+
+    const newColor = getEdgeColor();
+    console.log('Updating edge colors to:', newColor);
+
+    // Get all edge IDs
+    const allEdges = edges.get();
+
+    // Update each edge with new color
+    const updatedEdges = allEdges.map(edge => ({
+        id: edge.id,
+        color: {
+            color: newColor,
+            highlight: newColor,
+            hover: newColor
+        }
+    }));
+
+    // Batch update all edges
+    edges.update(updatedEdges);
 }
 
 // Warning and cancellation functions
