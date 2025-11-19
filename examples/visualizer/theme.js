@@ -24,11 +24,12 @@ function toggleTheme() {
     setTheme(newTheme);
 }
 
-// Initialize theme as early as possible
-initTheme();
-
-// Set up theme toggle button when DOM is ready
+// Set up theme when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize theme first
+    initTheme();
+
+    // Then set up the toggle button
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
