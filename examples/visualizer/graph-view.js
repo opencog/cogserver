@@ -114,9 +114,9 @@ function addLabeledEdge(fromId, toId, label, edgeType) {
             hover: '#FFD93D'
         },
         font: {
-            color: '#333333',
+            color: getEdgeColor(),
             size: 12,
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: getComputedStyle(document.body).getPropertyValue('--surface').trim() || 'rgba(255, 255, 255, 0.8)',
             strokeWidth: 0,
             align: 'middle'
         },
@@ -182,6 +182,11 @@ function initializeGraphViewWithAtomCache() {
                 font: {
                     size: 10,
                     align: 'middle'
+                },
+                color: {
+                    color: getEdgeColor(),
+                    highlight: getEdgeColor(),
+                    hover: getEdgeColor()
                 }
             });
         }
@@ -379,7 +384,14 @@ function getGraphViewOptions() {
             },
             font: {
                 size: 12,
-                align: 'middle'
+                align: 'middle',
+                color: getEdgeColor(),
+                background: getComputedStyle(document.body).getPropertyValue('--surface').trim() || '#FFFFFF'
+            },
+            color: {
+                color: getEdgeColor(),
+                highlight: getEdgeColor(),
+                hover: getEdgeColor()
             }
         },
         physics: {
