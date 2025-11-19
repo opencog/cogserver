@@ -1104,9 +1104,6 @@ Pattern matching for partial graphs: finds containing structures when given subg
 ### DualLink
 Inverse pattern matching: given a ground term (answer), finds patterns (questions) that would match it. Used for pattern recognition and rule engine construction. Finds all queries/rules that this data satisfies. Essential for SRAI/chatbot systems: match input to response patterns. Also useful for finding applicable rules in forward chaining. Given concrete data, returns patterns with variables that would match. Enables meta-reasoning: "what rules apply here?"
 
-### FreeLink
-Marks variables as free (not to be bound) in a pattern. Normally all variables in scope are bound; FreeLink prevents binding specific ones. Used when you want some variables to remain as variables in result. Format: `(Free (Variable "$x") body)`. Variable `$x` stays as `$x` instead of being grounded. Rare use case but essential when needed.
-
 ### QuoteLink, UnquoteLink
 Prevents pattern matching/execution within quoted region. QuoteLink treats contents literally - variables aren't variables, executable Links aren't executed. UnquoteLink escapes back to normal interpretation within quoted region. Similar to Lisp quote/unquote. Used when you want to match the structure of a pattern itself, not use it as a pattern. LocalQuoteLink is variant for local quoting.
 
@@ -1130,9 +1127,6 @@ Division: `(Divide numerator denominator)`. Binary operation. Reductions: `x / 1
 
 ### AccumulateLink
 Sums all components of a vector FloatValue. `FloatValue [1, 2, 3]` → `FloatValue [6]`. Reduces vector to single number. Essential for vector processing pipelines. Different from PlusLink which adds multiple vectors component-wise. Common pattern: arithmetic on vectors → AccumulateLink → LinkSignatureLink → Node.
-
-### FoldLink
-Generic associative reduction operation over lists. PlusLink and TimesLink built on top of this. Implements comp-sci fold/reduce concept. Takes binary operation and list, applies operation iteratively. Most users use PlusLink/TimesLink rather than FoldLink directly. Foundation for iterated operations.
 
 ### GreaterThanLink, LessThanLink, EqualLink
 Comparison operations returning TrueLink or FalseLink. Virtual links - don't store all possible comparisons, compute on demand. Example: `(GreaterThan (Number 5) (Number 3))` → TrueLink. Work with NumberNodes and FloatValues. Essential for conditional logic. Used in pattern matching as evaluatable conditions. GreaterThan and others allow reasoning about order without computing all combinations.
