@@ -459,16 +459,16 @@ function renderTree() {
     svg.setAttribute('height', height);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-    // Use CSS variable for background color
-    const surfaceColor = getCSSVar('--surface');
-    svg.setAttribute('style', `background: ${surfaceColor};`);
+    // Background color is now handled by CSS (see #type-tree rule)
+    // Don't set inline style as it would override CSS theme changes
 
     // Add a background rectangle to capture all mouse events
+    // Fill color is controlled by CSS via .svg-background class
     const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     bgRect.setAttribute('width', width);
     bgRect.setAttribute('height', height);
-    bgRect.setAttribute('fill', surfaceColor);
     bgRect.setAttribute('pointer-events', 'all');
+    bgRect.setAttribute('class', 'svg-background');
     svg.appendChild(bgRect);
 
     // Create main group for zooming/panning
