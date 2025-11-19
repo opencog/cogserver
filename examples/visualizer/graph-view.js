@@ -83,53 +83,6 @@ function addVertexToGraph(atom) {
     return vertexId;
 }
 
-// Add a labeled edge between two vertices
-function addLabeledEdge(fromId, toId, label, edgeType) {
-    // Every Atom is unique in AtomSpace - always add the edge
-    // Different style for graph edges
-    const edgeColor = edgeType === 'EdgeLink' ? '#FF6B6B' : '#4ECDC4';
-
-    // Count existing edges between these vertices to offset curves
-    const existingEdges = edges.get({
-        filter: function(item) {
-            return (item.from === fromId && item.to === toId) ||
-                   (item.from === toId && item.to === fromId);
-        }
-    });
-    const curveOffset = existingEdges.length;
-
-    edges.add({
-        from: fromId,
-        to: toId,
-        label: label,
-        arrows: {
-            to: {
-                enabled: true,
-                scaleFactor: 0.7
-            }
-        },
-        color: {
-            color: edgeColor,
-            highlight: '#FFD93D',
-            hover: '#FFD93D'
-        },
-        font: {
-            color: getEdgeColor(),
-            size: 12,
-            background: getComputedStyle(document.body).getPropertyValue('--surface').trim() || 'rgba(255, 255, 255, 0.8)',
-            strokeWidth: 0,
-            align: 'middle'
-        },
-        smooth: {
-            enabled: true,
-            type: curveOffset === 0 ? 'dynamic' : 'curvedCW',
-            roundness: 0.2 + (curveOffset * 0.15) // Increase curve for each additional edge
-        },
-        width: 2,
-        dashes: edgeType === 'EvaluationLink' ? [5, 5] : false
-    });
-}
-
 // Initialize graph view using atom cache
 function initializeGraphViewWithAtomCache() {
     // Clear existing vertices and edges
@@ -180,7 +133,7 @@ function initializeGraphViewWithAtomCache() {
                     }
                 },
                 font: {
-                    size: 10,
+                    size: 12,
                     align: 'middle'
                 },
                 color: {
