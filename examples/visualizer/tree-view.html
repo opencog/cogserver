@@ -83,6 +83,20 @@
         #controls input[type="number"] {
             width: 80px;
         }
+        /* Number input spinner buttons styling */
+        #controls input[type="number"]::-webkit-inner-spin-button {
+            opacity: 1;
+            cursor: pointer;
+        }
+        /* Ensure spinner is visible in dark mode */
+        [data-theme="dark"] #controls input[type="number"]::-webkit-inner-spin-button {
+            filter: invert(1);
+        }
+        #controls input[type="number"]:hover,
+        #controls input[type="number"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
         #cacheInfo {
             margin-left: auto;
             display: flex;
