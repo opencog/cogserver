@@ -3,7 +3,16 @@
 
 // Helper function to get CSS variable value
 function getCSSVar(varName) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    // Read computed style from body element
+    const value = getComputedStyle(document.body).getPropertyValue(varName).trim();
+    console.log(`getCSSVar(${varName}) = "${value}" (theme: ${document.body.getAttribute('data-theme')})`);
+
+    // If we got an empty value, something is wrong - log it
+    if (!value) {
+        console.error(`CSS variable ${varName} returned empty! Theme: ${document.body.getAttribute('data-theme')}`);
+    }
+
+    return value;
 }
 
 let ws = null;
