@@ -539,13 +539,30 @@ class AtomSpaceCache extends EventTarget {
             const rawResponse = JSON.parse(event.data);
             let response;
 
-            // Handle wrapped response format
-            if (rawResponse.hasOwnProperty('success')) {
-                if (rawResponse.success && rawResponse.result) {
-                    response = rawResponse.result;
+            // Handle MCP content format (the only format cogserver uses)
+            if (rawResponse.content && Array.isArray(rawResponse.content)) {
+                // Check for error first
+                if (rawResponse.isError === true) {
+                    const errorText = rawResponse.content[0]?.text || 'Unknown error';
+                    console.error('Server returned error:', errorText);
+                    this.dispatchEvent(new CustomEvent('error', {
+                        detail: { message: 'Server error: ' + errorText }
+                    }));
+                    return;
+                }
+
+                const contentItem = rawResponse.content[0];
+                if (contentItem && contentItem.type === 'text' && contentItem.text) {
+                    // Parse the nested JSON string
+                    try {
+                        response = JSON.parse(contentItem.text);
+                    } catch {
+                        response = contentItem.text;
+                    }
                 }
             } else {
-                response = rawResponse;
+                console.warn('Unexpected response format (not MCP):', rawResponse);
+                return;
             }
 
             // Process the response based on what we're waiting for
@@ -554,9 +571,11 @@ class AtomSpaceCache extends EventTarget {
             } else if (this.pendingRegularRequest && response && Array.isArray(response)) {
                 // Process regular atom response
                 this.processRegularAtomResponse(response);
+            } else {
+                console.log('Received non-array response:', response);
             }
         } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            console.error('Error parsing WebSocket message:', error, 'Raw data:', event.data);
         }
     }
 
