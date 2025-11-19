@@ -539,23 +539,30 @@ class AtomSpaceCache extends EventTarget {
             const rawResponse = JSON.parse(event.data);
             let response;
 
-            // Handle MCP content format
+            // Handle MCP content format (the only format cogserver uses)
             if (rawResponse.content && Array.isArray(rawResponse.content)) {
+                // Check for error first
+                if (rawResponse.isError === true) {
+                    const errorText = rawResponse.content[0]?.text || 'Unknown error';
+                    console.error('Server returned error:', errorText);
+                    this.dispatchEvent(new CustomEvent('error', {
+                        detail: { message: 'Server error: ' + errorText }
+                    }));
+                    return;
+                }
+
                 const contentItem = rawResponse.content[0];
                 if (contentItem && contentItem.type === 'text' && contentItem.text) {
                     // Parse the nested JSON string
-                    response = JSON.parse(contentItem.text);
+                    try {
+                        response = JSON.parse(contentItem.text);
+                    } catch {
+                        response = contentItem.text;
+                    }
                 }
-            }
-            // Handle wrapped response format with success
-            else if (rawResponse.hasOwnProperty('success')) {
-                if (rawResponse.success && rawResponse.result) {
-                    response = rawResponse.result;
-                }
-            }
-            // Handle direct response
-            else {
-                response = rawResponse;
+            } else {
+                console.warn('Unexpected response format (not MCP):', rawResponse);
+                return;
             }
 
             // Process the response based on what we're waiting for
