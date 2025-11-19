@@ -1,6 +1,20 @@
 // AtomType Hierarchy Visualizer
 // Displays the inheritance hierarchy of AtomSpace types using a left-to-right tree
 
+// Helper function to get CSS variable value
+function getCSSVar(varName) {
+    // Read computed style from body element
+    const value = getComputedStyle(document.body).getPropertyValue(varName).trim();
+    console.log(`getCSSVar(${varName}) = "${value}" (theme: ${document.body.getAttribute('data-theme')})`);
+
+    // If we got an empty value, something is wrong - log it
+    if (!value) {
+        console.error(`CSS variable ${varName} returned empty! Theme: ${document.body.getAttribute('data-theme')}`);
+    }
+
+    return value;
+}
+
 let ws = null;
 let typeHierarchy = null;
 let svgElement = null;
@@ -444,14 +458,17 @@ function renderTree() {
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    svg.setAttribute('style', 'background: white;');
+
+    // Background color is now handled by CSS (see #type-tree rule)
+    // Don't set inline style as it would override CSS theme changes
 
     // Add a background rectangle to capture all mouse events
+    // Fill color is controlled by CSS via .svg-background class
     const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     bgRect.setAttribute('width', width);
     bgRect.setAttribute('height', height);
-    bgRect.setAttribute('fill', 'white');
     bgRect.setAttribute('pointer-events', 'all');
+    bgRect.setAttribute('class', 'svg-background');
     svg.appendChild(bgRect);
 
     // Create main group for zooming/panning
@@ -668,9 +685,8 @@ function drawEdges(container, positions) {
 
             const d = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
             path.setAttribute('d', d);
-            path.setAttribute('stroke', '#333');
-            path.setAttribute('stroke-width', '1.5');
-            path.setAttribute('fill', 'none');
+            // Stroke color now controlled by CSS via .tree-link class
+            path.setAttribute('class', 'tree-link');
 
             edgeGroup.appendChild(path);
             edgeCount++;
@@ -706,24 +722,20 @@ function drawNodes(container, positions) {
         g.setAttribute('class', 'tree-node');
         g.setAttribute('transform', `translate(${position.x}, ${position.y})`);
 
-        // Rectangle background
+        // Rectangle background - styling controlled by CSS
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('width', '100');
         rect.setAttribute('height', '30');
         rect.setAttribute('rx', '3');
         rect.setAttribute('ry', '3');
-        rect.setAttribute('fill', 'white');
-        rect.setAttribute('stroke', '#333');
-        rect.setAttribute('stroke-width', '1');
+        // Fill and stroke controlled by .tree-node rect CSS rule
 
-        // Text label
+        // Text label - styling controlled by CSS
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', '50');
         text.setAttribute('y', '20');
         text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', 'black');
-        text.setAttribute('font-size', '12px');
-        text.setAttribute('font-family', 'sans-serif');
+        // Fill controlled by .tree-node text CSS rule
         text.textContent = typeName;
 
         // Add tooltip
@@ -744,18 +756,7 @@ function drawNodes(container, positions) {
             e.stopPropagation();
         });
 
-        // Add hover effect
-        g.addEventListener('mouseenter', () => {
-            rect.setAttribute('fill', '#e3f2fd');
-            rect.setAttribute('stroke', '#1976d2');
-            rect.setAttribute('stroke-width', '2');
-        });
-
-        g.addEventListener('mouseleave', () => {
-            rect.setAttribute('fill', 'white');
-            rect.setAttribute('stroke', '#333');
-            rect.setAttribute('stroke-width', '1');
-        });
+        // Hover effects are now controlled by CSS (.tree-node:hover rect)
 
         // Change cursor to pointer
         g.style.cursor = 'pointer';

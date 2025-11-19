@@ -24,10 +24,16 @@
             width: 100%;
             height: auto;
             cursor: grab;
+            background: var(--surface) !important;
         }
 
         #type-tree.grabbing {
             cursor: grabbing;
+        }
+
+        /* SVG background rectangle should match theme */
+        .svg-background {
+            fill: var(--surface);
         }
 
         .tree-controls {
