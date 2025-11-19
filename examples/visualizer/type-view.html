@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         .type-tree-container {
-            background: white;
+            background: var(--surface);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-sm);
             padding: 30px;
@@ -35,6 +35,10 @@
             margin-bottom: 20px;
         }
 
+        .tree-controls span {
+            color: var(--text-secondary);
+        }
+
         .tree-node {
             cursor: pointer;
             user-select: none;
@@ -43,51 +47,53 @@
         .tree-node text {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 12px;
+            fill: var(--text-primary);
         }
 
         .tree-node rect {
-            fill: white;
-            stroke: #333;
+            fill: var(--surface);
+            stroke: var(--text-primary);
             stroke-width: 1px;
         }
 
         .tree-node:hover rect {
-            fill: #f0f8ff;
+            fill: var(--primary-light);
         }
 
         .tree-link {
             fill: none;
-            stroke: #333;
+            stroke: var(--text-primary);
             stroke-width: 1.5px;
         }
 
         .tree-link.secondary {
-            stroke: #999;
+            stroke: var(--text-secondary);
             stroke-width: 1px;
             stroke-dasharray: 2,2;
         }
 
         .tree-link.distant {
-            stroke: #ccc;
+            stroke: var(--border-color);
             stroke-width: 0.5px;
         }
 
         .loading {
             text-align: center;
             padding: 50px;
-            color: #666;
+            color: var(--text-secondary);
         }
 
         .error {
             color: var(--error-color);
             padding: 20px;
-            background: #fee;
+            background: var(--surface);
+            border: 1px solid var(--error-color);
             border-radius: var(--border-radius);
             margin-top: 20px;
         }
 
         .info-panel {
-            background: #f9f9f9;
+            background: var(--background);
             padding: 15px;
             border-radius: var(--border-radius);
             margin-bottom: 20px;
@@ -99,7 +105,7 @@
         }
 
         .selected-type {
-            background: #e3f2fd;
+            background: var(--primary-light);
             padding: 10px;
             border-radius: 4px;
             margin-top: 10px;
@@ -117,7 +123,12 @@
     </style>
     <script src="type-view.js"></script>
 </head>
-<body>
+<body data-theme="dark">
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light mode">
+        <span id="theme-icon">☀️</span>
+    </button>
+
     <div class="container">
         <header>
             <h1>AtomType Hierarchy</h1>
@@ -175,5 +186,39 @@
             <p>AtomSpace Type Visualizer • <a href="https://wiki.opencog.org/w/AtomSpace" target="_blank">Documentation</a></p>
         </footer>
     </div>
+
+    <script>
+        // Theme management - shares localStorage with index.html
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            setTheme(savedTheme);
+        }
+
+        function setTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        // Initialize theme immediately
+        initTheme();
+
+        // Set up theme toggle button
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+        });
+    </script>
 </body>
 </html>

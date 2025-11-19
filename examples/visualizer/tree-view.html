@@ -6,17 +6,67 @@
     <title>AtomSpace Graph Visualization</title>
     <script type="text/javascript" src="vis-network/vis-network.min.js"></script>
     <style>
+        /* Light mode colors (default fallback) */
+        :root {
+            --primary-color: #2196F3;
+            --primary-dark: #1976D2;
+            --primary-light: #BBDEFB;
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+            --warning-color: #FF9800;
+            --background: #F5F5F5;
+            --surface: #FFFFFF;
+            --text-primary: #212121;
+            --text-secondary: #666666;
+            --border-color: #E0E0E0;
+            --shadow: rgba(0,0,0,0.1);
+            --shadow-md: rgba(0,0,0,0.3);
+            --overlay-bg: rgba(255, 255, 255, 0.9);
+            --warning-bg: #FFF3CD;
+            --warning-text: #856404;
+            --warning-border: #FFE69C;
+            --dialog-bg: #FFFFFF;
+            --cancel-btn-bg: #f0f0f0;
+            --cancel-btn-text: #333;
+        }
+
+        /* Dark mode colors */
+        [data-theme="dark"] {
+            --primary-color: #42A5F5;
+            --primary-dark: #1E88E5;
+            --primary-light: #1E3A5F;
+            --success-color: #66BB6A;
+            --error-color: #EF5350;
+            --warning-color: #FFA726;
+            --background: #0D1117;
+            --surface: #161B22;
+            --text-primary: #E6EDF3;
+            --text-secondary: #8B949E;
+            --border-color: #30363D;
+            --shadow: rgba(0,0,0,0.4);
+            --shadow-md: rgba(0,0,0,0.6);
+            --overlay-bg: rgba(22, 27, 34, 0.9);
+            --warning-bg: #3D2E00;
+            --warning-text: #FFA726;
+            --warning-border: #6B5300;
+            --dialog-bg: #161B22;
+            --cancel-btn-bg: #21262D;
+            --cancel-btn-text: #E6EDF3;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             margin: 0;
             padding: 0;
             overflow: hidden;
+            background: var(--background);
+            color: var(--text-primary);
         }
         #header {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
             color: white;
             padding: 15px 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px var(--shadow);
         }
         #header h1 {
             margin: 0;
@@ -24,16 +74,16 @@
             font-weight: 300;
         }
         #controls {
-            background: white;
+            background: var(--surface);
             padding: 10px 20px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             gap: 10px;
             align-items: center;
         }
         #controls button {
             padding: 8px 16px;
-            background: #2196F3;
+            background: var(--primary-color);
             color: white;
             border: none;
             border-radius: 4px;
@@ -41,17 +91,19 @@
             font-size: 14px;
         }
         #controls button:hover {
-            background: #1976D2;
+            background: var(--primary-dark);
         }
         #controls label {
             font-size: 14px;
-            color: #666;
+            color: var(--text-secondary);
         }
         #controls input, #controls select {
             padding: 6px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
+            background: var(--background);
+            color: var(--text-primary);
         }
         #controls input[type="number"] {
             width: 80px;
@@ -65,7 +117,7 @@
         }
         #cacheCount {
             font-weight: bold;
-            color: #2196F3;
+            color: var(--primary-color);
         }
         #cacheWarning {
             display: none;
@@ -73,10 +125,10 @@
             top: 0;
             left: 0;
             right: 0;
-            background: #FFF3CD;
-            color: #856404;
+            background: var(--warning-bg);
+            color: var(--warning-text);
             padding: 10px 20px;
-            border-bottom: 2px solid #FFE69C;
+            border-bottom: 2px solid var(--warning-border);
             font-size: 14px;
             z-index: 500;
         }
@@ -96,20 +148,21 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--overlay-bg);
             padding: 10px 15px;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px var(--shadow);
             font-size: 14px;
+            color: var(--text-primary);
         }
         .loading {
-            color: #FF9800;
+            color: var(--warning-color);
         }
         .connected {
-            color: #4CAF50;
+            color: var(--success-color);
         }
         .error {
-            color: #F44336;
+            color: var(--error-color);
         }
         /* Warning dialog styles */
         #warningDialog {
@@ -118,16 +171,20 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: var(--dialog-bg);
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px var(--shadow-md);
             padding: 20px;
             z-index: 1000;
             max-width: 400px;
+            border: 1px solid var(--border-color);
         }
         #warningDialog h3 {
             margin-top: 0;
-            color: #FF9800;
+            color: var(--warning-color);
+        }
+        #warningDialog p {
+            color: var(--text-primary);
         }
         #warningDialog .button-group {
             margin-top: 20px;
@@ -143,12 +200,12 @@
             font-size: 14px;
         }
         #warningDialog .proceed-btn {
-            background: #2196F3;
+            background: var(--primary-color);
             color: white;
         }
         #warningDialog .cancel-btn {
-            background: #f0f0f0;
-            color: #333;
+            background: var(--cancel-btn-bg);
+            color: var(--cancel-btn-text);
         }
         /* Stop button styles */
         #stopButton {
@@ -158,14 +215,14 @@
             left: 50%;
             transform: translate(-50%, -50%);
             padding: 12px 24px;
-            background: #F44336;
+            background: var(--error-color);
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
             z-index: 1001;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px var(--shadow-md);
         }
         #stopButton:hover {
             background: #D32F2F;
@@ -181,9 +238,41 @@
             background: rgba(0,0,0,0.5);
             z-index: 999;
         }
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px var(--shadow);
+            z-index: 1000;
+        }
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 8px 16px var(--shadow-md);
+            border-color: var(--primary-color);
+        }
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
-<body>
+<body data-theme="dark">
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light mode">
+        <span id="theme-icon">☀️</span>
+    </button>
+
     <!-- Warning Dialog -->
     <div id="overlay"></div>
     <div id="warningDialog">
@@ -227,6 +316,43 @@
     </div>
     <div id="mynetwork"></div>
     <div id="status" class="loading">Initializing...</div>
+
+    <script>
+        // Theme management - initialize as early as possible
+        function initTheme() {
+            // Check if user has a saved preference, otherwise default to dark
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            setTheme(savedTheme);
+        }
+
+        function setTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+
+            // Update icon
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        // Initialize theme immediately
+        initTheme();
+
+        // Set up theme toggle button when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+        });
+    </script>
 
     <script src="atomspace-cache.js"></script>
     <script src="tree-view.js"></script>
