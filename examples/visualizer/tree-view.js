@@ -22,7 +22,7 @@ let pendingOperation = null;
 let operationStartTime = null;
 let stopButtonTimer = null;
 const LARGE_ATOM_THRESHOLD = 300; // Warn if more than 300 atoms
-const STOP_BUTTON_DELAY = 2000;   // Show stop button after 2 seconds
+const STOP_BUTTON_DELAY = 5000;   // Show stop button after 5 seconds
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -921,18 +921,24 @@ function updateEdgeColorsForTheme() {
     if (!edges) return;
 
     const newColor = getEdgeColor();
-    console.log('Updating edge colors to:', newColor);
+    const newBackground = getComputedStyle(document.body).getPropertyValue('--surface').trim() || '#FFFFFF';
+    console.log('Updating edge colors to:', newColor, 'background:', newBackground);
 
     // Get all edge IDs
     const allEdges = edges.get();
 
-    // Update each edge with new color
+    // Update each edge with new color and font color
     const updatedEdges = allEdges.map(edge => ({
         id: edge.id,
         color: {
             color: newColor,
             highlight: newColor,
             hover: newColor
+        },
+        font: {
+            ...edge.font,
+            color: newColor,
+            background: newBackground
         }
     }));
 

@@ -602,7 +602,7 @@ class AtomSpaceCache extends EventTarget {
                 atom: atom,
                 command: command
             };
-            this.socket.send(command);
+            this.socket.send(command + '\n');
         }
     }
 
@@ -626,7 +626,7 @@ class AtomSpaceCache extends EventTarget {
         this.isProcessingListLink = true;
         const request = this.pendingListLinkRequests.shift();
         this.currentListLinkRequest = request;
-        this.socket.send(request.command);
+        this.socket.send(request.command + '\n');
     }
 
     // Process ListLink response
