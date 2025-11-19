@@ -1,6 +1,11 @@
 // AtomType Hierarchy Visualizer
 // Displays the inheritance hierarchy of AtomSpace types using a left-to-right tree
 
+// Helper function to get CSS variable value
+function getCSSVar(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
 let ws = null;
 let typeHierarchy = null;
 let svgElement = null;
@@ -444,13 +449,16 @@ function renderTree() {
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    svg.setAttribute('style', 'background: white;');
+
+    // Use CSS variable for background color
+    const surfaceColor = getCSSVar('--surface');
+    svg.setAttribute('style', `background: ${surfaceColor};`);
 
     // Add a background rectangle to capture all mouse events
     const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     bgRect.setAttribute('width', width);
     bgRect.setAttribute('height', height);
-    bgRect.setAttribute('fill', 'white');
+    bgRect.setAttribute('fill', surfaceColor);
     bgRect.setAttribute('pointer-events', 'all');
     svg.appendChild(bgRect);
 
@@ -644,6 +652,9 @@ function drawEdges(container, positions) {
     const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     edgeGroup.setAttribute('id', 'edges');
 
+    // Get colors from CSS variables
+    const textColor = getCSSVar('--text-primary');
+
     let edgeCount = 0;
 
     for (const [typeName, typeInfo] of Object.entries(typeData)) {
@@ -668,7 +679,7 @@ function drawEdges(container, positions) {
 
             const d = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
             path.setAttribute('d', d);
-            path.setAttribute('stroke', '#333');
+            path.setAttribute('stroke', textColor);
             path.setAttribute('stroke-width', '1.5');
             path.setAttribute('fill', 'none');
 
@@ -700,6 +711,12 @@ function drawNodes(container, positions) {
     const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     nodeGroup.setAttribute('id', 'nodes');
 
+    // Get colors from CSS variables
+    const surfaceColor = getCSSVar('--surface');
+    const textColor = getCSSVar('--text-primary');
+    const hoverColor = getCSSVar('--primary-light');
+    const primaryColor = getCSSVar('--primary-color');
+
     let nodeCount = 0;
     for (const [typeName, position] of Object.entries(positions)) {
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -712,8 +729,8 @@ function drawNodes(container, positions) {
         rect.setAttribute('height', '30');
         rect.setAttribute('rx', '3');
         rect.setAttribute('ry', '3');
-        rect.setAttribute('fill', 'white');
-        rect.setAttribute('stroke', '#333');
+        rect.setAttribute('fill', surfaceColor);
+        rect.setAttribute('stroke', textColor);
         rect.setAttribute('stroke-width', '1');
 
         // Text label
@@ -721,7 +738,7 @@ function drawNodes(container, positions) {
         text.setAttribute('x', '50');
         text.setAttribute('y', '20');
         text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', 'black');
+        text.setAttribute('fill', textColor);
         text.setAttribute('font-size', '12px');
         text.setAttribute('font-family', 'sans-serif');
         text.textContent = typeName;
@@ -746,14 +763,14 @@ function drawNodes(container, positions) {
 
         // Add hover effect
         g.addEventListener('mouseenter', () => {
-            rect.setAttribute('fill', '#e3f2fd');
-            rect.setAttribute('stroke', '#1976d2');
+            rect.setAttribute('fill', hoverColor);
+            rect.setAttribute('stroke', primaryColor);
             rect.setAttribute('stroke-width', '2');
         });
 
         g.addEventListener('mouseleave', () => {
-            rect.setAttribute('fill', 'white');
-            rect.setAttribute('stroke', '#333');
+            rect.setAttribute('fill', surfaceColor);
+            rect.setAttribute('stroke', textColor);
             rect.setAttribute('stroke-width', '1');
         });
 
