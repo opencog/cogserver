@@ -60,7 +60,6 @@ private:
     std::vector<std::string> _requestNames;
     std::vector<PythonRequestFactory*> _requestFactories;
 
-    bool preloadModules();
     bool unregisterRequests();
 public:
 

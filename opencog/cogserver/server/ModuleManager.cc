@@ -16,7 +16,6 @@
 
 #include <filesystem>
 
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/exceptions.h>
 #include <opencog/util/misc.h>
@@ -344,20 +343,15 @@ bool ModuleManager::loadModule(const std::string& path,
 
 void ModuleManager::loadModules(CogServer& cs)
 {
-    // Load modules specified in the config file
-    std::string modlist;
-    if (config().has("MODULES"))
-        modlist = config().get("MODULES");
-    else
-        // Defaults: search the build dirs first, then the install dirs.
-        modlist =
-            "libbuiltinreqs.so, "
-            "libtop-shell.so, "
-            "libscheme-shell.so, "
-            "libsexpr-shell.so, "
-            "libjson-shell.so, "
-            "libmcp-shell.so, "
-            "libpy-shell.so";
+    // Search the build dirs first, then the install dirs.
+    std::string modlist =
+        "libbuiltinreqs.so, "
+        "libtop-shell.so, "
+        "libscheme-shell.so, "
+        "libsexpr-shell.so, "
+        "libjson-shell.so, "
+        "libmcp-shell.so, "
+        "libpy-shell.so";
 
     std::vector<std::string> modules;
     tokenize(modlist, std::back_inserter(modules), ", ");

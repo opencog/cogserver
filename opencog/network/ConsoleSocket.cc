@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
 
