@@ -2,9 +2,12 @@
 // Shared across all visualizer pages
 
 function initTheme() {
-    // Check if user has a saved preference, otherwise default to dark
+    // Check URL parameter first, then saved preference, otherwise default to dark
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTheme = urlParams.get('theme');
     const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
+    const theme = urlTheme || savedTheme;
+    setTheme(theme);
 }
 
 function setTheme(theme) {

@@ -65,6 +65,17 @@ function init() {
     // Set default values - use current hostname/IP
     const defaultUrl = `ws://${window.location.hostname}:18080/`;
     serverInput.value = serverInput.value || defaultUrl;
+
+    // Check for autoconnect URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoconnect = urlParams.get('autoconnect');
+    if (autoconnect === 'true') {
+        // Auto-connect after a short delay to ensure UI is ready
+        setTimeout(() => {
+            console.log('Auto-connecting based on URL parameter...');
+            connect();
+        }, 500);
+    }
 }
 
 function toggleConnection() {
