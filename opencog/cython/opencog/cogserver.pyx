@@ -2,7 +2,7 @@
 # cython: language_level=3
 
 from opencog.cogserver cimport cCogServer, cogserver, cython_server_atomspace, cAtomSpacePtr
-from opencog.atomspace cimport AtomSpace, AtomSpace_factoid, cValuePtr, cValue, cAtomSpace
+from opencog.atomspace cimport AtomSpace, AtomSpace_factoid, cValuePtr, cValue, cAtomSpace, cHandle, cAtom
 from libcpp cimport bool as cbool
 from libcpp.memory cimport shared_ptr, static_pointer_cast
 import threading
@@ -21,9 +21,9 @@ def get_server_atomspace():
     if not _server_running:
         return None
     cdef cAtomSpacePtr casp = cython_server_atomspace()
-    # Cast AtomSpacePtr to ValuePtr for AtomSpace_factoid
-    cdef cValuePtr vptr = static_pointer_cast[cValue, cAtomSpace](casp)
-    asp = AtomSpace_factoid(vptr)
+    # Cast AtomSpacePtr to Handle for AtomSpace_factoid
+    cdef cHandle h = static_pointer_cast[cAtom, cAtomSpace](casp)
+    asp = AtomSpace_factoid(h)
     return asp
 
 def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port=18888,
@@ -63,7 +63,7 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
     if atomspace is not None:
         if not isinstance(atomspace, AtomSpace):
             raise TypeError("atomspace must be an instance of AtomSpace")
-        atomspace_ptr = (<AtomSpace>atomspace).get_atomspace_ptr()
+        atomspace_ptr = static_pointer_cast[cAtomSpace, cAtom](<cHandle&>(<AtomSpace>atomspace).shared_ptr)
         server_ptr = &cogserver(atomspace_ptr)
     else:
         server_ptr = &cogserver()
