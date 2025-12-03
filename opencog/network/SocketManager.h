@@ -72,8 +72,8 @@ public:
 	// Configuration
 	void set_max_open_sockets(unsigned int m) { _max_open_sockets = m; }
 
-	// Network status control
-	void network_gone() { _network_gone = true; }
+	// Network status control - closes all sockets so handler threads can exit
+	void network_gone();
 
 	// Public socket operations
 	std::string display_stats_full(const char* title, time_t start_time, int nlines = -1);

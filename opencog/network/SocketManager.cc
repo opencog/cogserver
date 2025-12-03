@@ -274,6 +274,20 @@ bool SocketManager::kill(pid_t tid)
 	return false;
 }
 
+/// Shut down the network by force.
+/// This closes all open sockets. Any handler threads that happen to
+/// be blocked in recv() will receive an error and exit their loops,
+/// the return from the thread (ending the thread). This allows the
+/// threads to be joined.
+void SocketManager::network_gone()
+{
+	_network_gone = true;
+
+	std::lock_guard<std::mutex> lock(_sock_lock);
+	for (ServerSocket* ss : _sock_list)
+		ss->Exit();
+}
+
 // Wait for all shells to finish evaluating pending commands.
 // This provides a barrier/fence for synchronization between
 // fire-and-forget command streams sent on different connections.
