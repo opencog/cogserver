@@ -25,7 +25,7 @@ SocketManager::SocketManager()
 	: _max_open_sockets(0),
 	  _num_open_sockets(0),
 	  _num_open_stalls(0),
-	  _barrier_active(false),
+	  _work_barrier_active(false),
 	  _network_gone(false)
 {
 	// Set max open sockets to number of hardware CPUs
@@ -318,8 +318,8 @@ void SocketManager::work_barrier()
 
 	// Set barrier active to block new work from being enqueued
 	{
-		std::lock_guard<std::mutex> lock(_barrier_mtx);
-		_barrier_active = true;
+		std::lock_guard<std::mutex> lock(_work_barrier_mtx);
+		_work_barrier_active = true;
 	}
 
 	// Loop until all shells have drained thier work queues.
@@ -360,9 +360,9 @@ void SocketManager::work_barrier()
 
 	// Release barrier only if we are the last one out.
 	{
-		std::lock_guard<std::mutex> lock(_barrier_mtx);
-		_barrier_active = false;
-		_barrier_cv.notify_all();
+		std::lock_guard<std::mutex> lock(_work_barrier_mtx);
+		_work_barrier_active = false;
+		_work_barrier_cv.notify_all();
 	}
 }
 
@@ -371,13 +371,13 @@ void SocketManager::work_barrier()
 // then drains work queues and returns.
 void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 {
-	std::unique_lock<std::mutex> lock(_bar_uuid_mtx);
+	std::unique_lock<std::mutex> lock(_recv_barrier_mtx);
 
-	auto it = _barriers.find(uuid);
-	if (it == _barriers.end()) {
+	auto it = _recv_barriers.find(uuid);
+	if (it == _recv_barriers.end()) {
 		// First arrival: expect n-1 more
-		_barriers[uuid] = {uint8_t(n - 1), n, false, {}};
-		it = _barriers.find(uuid);
+		_recv_barriers[uuid] = {uint8_t(n - 1), n, false, {}};
+		it = _recv_barriers.find(uuid);
 	} else {
 		it->second.remaining--;
 	}
@@ -387,7 +387,7 @@ void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 		lock.unlock();
 		work_barrier();
 		lock.lock();
-		it = _barriers.find(uuid);
+		it = _recv_barriers.find(uuid);
 		it->second.complete = true;
 		it->second.cv.notify_all();
 	}
@@ -399,15 +399,15 @@ void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 	// Everyone exits; last one cleans up
 	it->second.to_exit--;
 	if (it->second.to_exit == 0)
-		_barriers.erase(it);
+		_recv_barriers.erase(it);
 }
 
 /// Prevent shells from enqueueing new work.
 void SocketManager::block_on_bar()
 {
-	std::unique_lock<std::mutex> lock(_barrier_mtx);
-	while (_barrier_active)
+	std::unique_lock<std::mutex> lock(_work_barrier_mtx);
+	while (_work_barrier_active)
 	{
-		_barrier_cv.wait(lock);
+		_work_barrier_cv.wait(lock);
 	}
 }

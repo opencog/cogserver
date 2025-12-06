@@ -45,9 +45,9 @@ private:
 	size_t _num_open_stalls;
 
 	// Barrier synchronization (for work_barrier)
-	std::mutex _barrier_mtx;
-	std::condition_variable _barrier_cv;
-	bool _barrier_active;
+	std::mutex _work_barrier_mtx;
+	std::condition_variable _work_barrier_cv;
+	bool _work_barrier_active;
 
 	// UUID-based barrier tracking (for recv_barrier)
 	struct BarrierState {
@@ -56,8 +56,8 @@ private:
 		bool complete;
 		std::condition_variable cv;
 	};
-	std::unordered_map<std::string, BarrierState> _barriers;
-	std::mutex _bar_uuid_mtx;
+	std::unordered_map<std::string, BarrierState> _recv_barriers;
+	std::mutex _recv_barrier_mtx;
 
 	// Global flags
 	bool _network_gone;
