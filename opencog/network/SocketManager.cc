@@ -376,8 +376,7 @@ void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 	auto it = _recv_barriers.find(uuid);
 	if (it == _recv_barriers.end()) {
 		// First arrival: expect n-1 more
-		_recv_barriers[uuid] = {uint8_t(n - 1), n, false, {}};
-		it = _recv_barriers.find(uuid);
+		it = _recv_barriers.try_emplace(uuid, n - 1, n).first;
 	} else {
 		it->second.remaining--;
 	}

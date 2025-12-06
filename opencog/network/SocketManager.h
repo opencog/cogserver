@@ -55,6 +55,7 @@ private:
 		uint8_t to_exit;      // Counts down as sockets exit (for cleanup)
 		bool complete;
 		std::condition_variable cv;
+		BarrierState(uint8_t r, uint8_t e) : remaining(r), to_exit(e), complete(false) {}
 	};
 	std::unordered_map<std::string, BarrierState> _recv_barriers;
 	std::mutex _recv_barrier_mtx;
