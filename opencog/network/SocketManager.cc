@@ -25,7 +25,7 @@ SocketManager::SocketManager()
 	: _max_open_sockets(0),
 	  _num_open_sockets(0),
 	  _num_open_stalls(0),
-	  _work_barrier_active(false),
+	  _global_barrier_active(false),
 	  _network_gone(false)
 {
 	// Set max open sockets to number of hardware CPUs
@@ -289,9 +289,9 @@ void SocketManager::network_gone()
 }
 
 // Wait for all shells to finish evaluating pending commands.
-// This provides a barrier/fence for synchronization between
-// fire-and-forget command streams sent on different connections.
-void SocketManager::work_barrier()
+// This provides a global barrier/fence for synchronization across
+// all clients and all connections.
+void SocketManager::global_barrier()
 {
 	// Find out which of these socekts is ourself.
 	ServerSocket* our_socket = nullptr;
@@ -318,8 +318,8 @@ void SocketManager::work_barrier()
 
 	// Set barrier active to block new work from being enqueued
 	{
-		std::lock_guard<std::mutex> lock(_work_barrier_mtx);
-		_work_barrier_active = true;
+		std::lock_guard<std::mutex> lock(_global_barrier_mtx);
+		_global_barrier_active = true;
 	}
 
 	// Loop until all shells have drained thier work queues.
@@ -360,9 +360,9 @@ void SocketManager::work_barrier()
 
 	// Release barrier only if we are the last one out.
 	{
-		std::lock_guard<std::mutex> lock(_work_barrier_mtx);
-		_work_barrier_active = false;
-		_work_barrier_cv.notify_all();
+		std::lock_guard<std::mutex> lock(_global_barrier_mtx);
+		_global_barrier_active = false;
+		_global_barrier_cv.notify_all();
 	}
 }
 
@@ -402,9 +402,9 @@ void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 /// Prevent shells from enqueueing new work.
 void SocketManager::block_on_bar()
 {
-	std::unique_lock<std::mutex> lock(_work_barrier_mtx);
-	while (_work_barrier_active)
+	std::unique_lock<std::mutex> lock(_global_barrier_mtx);
+	while (_global_barrier_active)
 	{
-		_work_barrier_cv.wait(lock);
+		_global_barrier_cv.wait(lock);
 	}
 }

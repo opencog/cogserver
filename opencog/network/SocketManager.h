@@ -44,10 +44,10 @@ private:
 	std::condition_variable _max_cv;
 	size_t _num_open_stalls;
 
-	// Barrier synchronization (for work_barrier)
-	std::mutex _work_barrier_mtx;
-	std::condition_variable _work_barrier_cv;
-	bool _work_barrier_active;
+	// Barrier synchronization (for global_barrier)
+	std::mutex _global_barrier_mtx;
+	std::condition_variable _global_barrier_cv;
+	bool _global_barrier_active;
 
 	// UUID-based barrier tracking (for recv_barrier)
 	struct BarrierState {
@@ -93,16 +93,16 @@ public:
 	bool kill(pid_t tid);
 
 	/**
-	 * Synchronization point. Barrier-fence. Force shells to drain their
-	 * pending-work queues. Shell sockets will not be able to enqueue
+	 * Global synchronization point. Barrier-fence. Force shells to drain
+	 * their pending-work queues. Shell sockets will not be able to enqueue
 	 * new work, until after all work queues have drained.
 	 *
-	 * This is a "global" sync point, synchronizing all shells. The
-	 * current implementation is simple: calling this will block until
-	 * all shells have drained. The block_on_bar() below prevents shells
-	 * from enqueueing new work until all of them have drained.
+	 * This is a "global" sync point, synchronizing all shells from all
+	 * clients. Calling this will block until all shells have drained.
+	 * The block_on_bar() below prevents shells from enqueueing new work
+	 * until all of them have drained.
 	 */
-	void work_barrier();
+	void global_barrier();
 
 	/**
 	 * UUID-based barrier for multi-socket clients. Each client sends

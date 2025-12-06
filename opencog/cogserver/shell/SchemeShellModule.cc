@@ -37,20 +37,30 @@
 
 using namespace opencog;
 
-DEFINE_SHELL_MODULE2(SchemeShellModule, void barrier(void));
+DEFINE_SHELL_MODULE2(SchemeShellModule,
+	void global_barrier(void);
+	void recv_barrier(int n, const std::string& uuid));
 DECLARE_MODULE(SchemeShellModule);
 
-void SchemeShellModule::barrier(void)
+void SchemeShellModule::global_barrier(void)
 {
-	_cogserver.getSocketManager()->work_barrier();
+	_cogserver.getSocketManager()->global_barrier();
+}
+
+void SchemeShellModule::recv_barrier(int n, const std::string& uuid)
+{
+	_cogserver.getSocketManager()->recv_barrier(n, uuid);
 }
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)
 {
 	SchemeEval::init_scheme();
 
-	// Register cog-barrier in the extension module (auto-loaded)
-	define_scheme_primitive("cog-barrier", &SchemeShellModule::barrier, this);
+	// Register cog-global-barrier in the extension module (auto-loaded)
+	define_scheme_primitive("cog-global-barrier", &SchemeShellModule::global_barrier, this);
+
+	// Register cog-barrier for UUID-based multi-socket synchronization
+	define_scheme_primitive("cog-barrier", &SchemeShellModule::recv_barrier, this);
 }
 
 void SchemeShellModule::init(void)
