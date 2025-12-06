@@ -92,7 +92,7 @@ SexprShellModule::shelloutRequest::execute(void)
 
 	SexprShell *sh = new SexprShell(_cogserver.getAtomSpace());
 
-	// Install cog-barrier handler
+	// Install cog-barrier handler for UUID-based multi-socket sync
 	// Message format: (cog-barrier N "uuid")
 	SexprEval* eval = dynamic_cast<SexprEval*>(sh->get_evaluator());
 	eval->install_handler("cog-barrier",
@@ -101,6 +101,13 @@ SexprShellModule::shelloutRequest::execute(void)
 			char uuid[32] = {0};
 			sscanf(args.c_str(), "%u \"%31[^\"]\"", &n, uuid);
 			con->get_socket_manager()->recv_barrier(n, uuid);
+			return "";
+		});
+
+	// Install cog-global-barrier handler for global sync across all clients
+	eval->install_handler("cog-global-barrier",
+		[con](const std::string&) -> std::string {
+			con->get_socket_manager()->global_barrier();
 			return "";
 		});
 
