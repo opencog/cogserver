@@ -368,7 +368,9 @@ void SocketManager::work_barrier()
 
 // UUID-based barrier for multi-socket clients.
 // Blocks until all N sockets with the same UUID have called this,
-// then drains work queues and returns.
+// then returns. No need to drain work queues because each socket
+// is on its eval thread, meaning all prior queued commands have
+// already been processed (the barrier command was dequeued last).
 void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 {
 	std::unique_lock<std::mutex> lock(_recv_barrier_mtx);
@@ -382,11 +384,7 @@ void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
 	}
 
 	if (it->second.remaining == 0 && !it->second.complete) {
-		// Last to arrive - drain all work queues
-		lock.unlock();
-		work_barrier();
-		lock.lock();
-		it = _recv_barriers.find(uuid);
+		// Last to arrive - all N sockets are here, all prior work done
 		it->second.complete = true;
 		it->second.cv.notify_all();
 	}

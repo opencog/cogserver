@@ -108,7 +108,8 @@ public:
 	 * UUID-based barrier for multi-socket clients. Each client sends
 	 * (cog-barrier N "uuid") on all N of its sockets. This method
 	 * blocks until all N arrivals for the given UUID are received,
-	 * then drains work queues and returns.
+	 * then returns. No work queue draining needed since callers are
+	 * on their eval threads (prior queued work already completed).
 	 */
 	void recv_barrier(uint8_t n, const std::string& uuid);
 };
