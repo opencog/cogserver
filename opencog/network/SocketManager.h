@@ -11,6 +11,8 @@
 #include <condition_variable>
 #include <mutex>
 #include <set>
+#include <string>
+#include <unordered_map>
 
 namespace opencog
 {
@@ -42,10 +44,20 @@ private:
 	std::condition_variable _max_cv;
 	size_t _num_open_stalls;
 
-	// Barrier synchronization
+	// Barrier synchronization (for work_barrier)
 	std::mutex _barrier_mtx;
 	std::condition_variable _barrier_cv;
 	bool _barrier_active;
+
+	// UUID-based barrier tracking (for recv_barrier)
+	struct BarrierState {
+		uint8_t remaining;    // Counts down as sockets arrive
+		uint8_t to_exit;      // Counts down as sockets exit (for cleanup)
+		bool complete;
+		std::condition_variable cv;
+	};
+	std::unordered_map<std::string, BarrierState> _barriers;
+	std::mutex _bar_uuid_mtx;
 
 	// Global flags
 	bool _network_gone;
@@ -80,7 +92,7 @@ public:
 	bool kill(pid_t tid);
 
 	/**
-	 * Synchronization point. Barrier-fence. Force shells to drain thier
+	 * Synchronization point. Barrier-fence. Force shells to drain their
 	 * pending-work queues. Shell sockets will not be able to enqueue
 	 * new work, until after all work queues have drained.
 	 *
@@ -89,7 +101,15 @@ public:
 	 * all shells have drained. The block_on_bar() below prevents shells
 	 * from enqueueing new work until all of them have drained.
 	 */
-	void barrier();
+	void work_barrier();
+
+	/**
+	 * UUID-based barrier for multi-socket clients. Each client sends
+	 * (cog-barrier N "uuid") on all N of its sockets. This method
+	 * blocks until all N arrivals for the given UUID are received,
+	 * then drains work queues and returns.
+	 */
+	void recv_barrier(uint8_t n, const std::string& uuid);
 };
 
 } // namespace

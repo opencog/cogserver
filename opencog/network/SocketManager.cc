@@ -291,7 +291,7 @@ void SocketManager::network_gone()
 // Wait for all shells to finish evaluating pending commands.
 // This provides a barrier/fence for synchronization between
 // fire-and-forget command streams sent on different connections.
-void SocketManager::barrier()
+void SocketManager::work_barrier()
 {
 	// Find out which of these socekts is ourself.
 	ServerSocket* our_socket = nullptr;
@@ -364,6 +364,42 @@ void SocketManager::barrier()
 		_barrier_active = false;
 		_barrier_cv.notify_all();
 	}
+}
+
+// UUID-based barrier for multi-socket clients.
+// Blocks until all N sockets with the same UUID have called this,
+// then drains work queues and returns.
+void SocketManager::recv_barrier(uint8_t n, const std::string& uuid)
+{
+	std::unique_lock<std::mutex> lock(_bar_uuid_mtx);
+
+	auto it = _barriers.find(uuid);
+	if (it == _barriers.end()) {
+		// First arrival: expect n-1 more
+		_barriers[uuid] = {uint8_t(n - 1), n, false, {}};
+		it = _barriers.find(uuid);
+	} else {
+		it->second.remaining--;
+	}
+
+	if (it->second.remaining == 0 && !it->second.complete) {
+		// Last to arrive - drain all work queues
+		lock.unlock();
+		work_barrier();
+		lock.lock();
+		it = _barriers.find(uuid);
+		it->second.complete = true;
+		it->second.cv.notify_all();
+	}
+
+	// Everyone waits until complete
+	while (!it->second.complete)
+		it->second.cv.wait(lock);
+
+	// Everyone exits; last one cleans up
+	it->second.to_exit--;
+	if (it->second.to_exit == 0)
+		_barriers.erase(it);
 }
 
 /// Prevent shells from enqueueing new work.

@@ -42,7 +42,7 @@ DECLARE_MODULE(SchemeShellModule);
 
 void SchemeShellModule::barrier(void)
 {
-	_cogserver.getSocketManager()->barrier();
+	_cogserver.getSocketManager()->work_barrier();
 }
 
 SchemeShellModule::SchemeShellModule(CogServer& cs) : Module(cs)

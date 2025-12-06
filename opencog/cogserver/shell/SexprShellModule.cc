@@ -93,10 +93,14 @@ SexprShellModule::shelloutRequest::execute(void)
 	SexprShell *sh = new SexprShell(_cogserver.getAtomSpace());
 
 	// Install cog-barrier handler
+	// Message format: (cog-barrier N "uuid")
 	SexprEval* eval = dynamic_cast<SexprEval*>(sh->get_evaluator());
 	eval->install_handler("cog-barrier",
-		[con](const std::string&) -> std::string {
-			con->get_socket_manager()->barrier();
+		[con](const std::string& args) -> std::string {
+			unsigned int n = 0;
+			char uuid[32] = {0};
+			sscanf(args.c_str(), "%u \"%31[^\"]\"", &n, uuid);
+			con->get_socket_manager()->recv_barrier(n, uuid);
 			return "";
 		});
 
