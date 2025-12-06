@@ -68,6 +68,12 @@ std::string ServerSocket::connection_stats(void)
 
 std::atomic_size_t ServerSocket::total_line_count(0);
 
+// As far as I can tell, asio is not actually thread-safe,
+// in particular, when closing and destroying sockets.  This strikes
+// me as incredibly stupid -- a first-class reason to not use asio.
+// But whatever.  Hack around this for now.
+static std::mutex _asio_crash;
+
 ServerSocket::ServerSocket(SocketManager* mgr) :
     _socket(nullptr),
     _socket_manager(mgr),
@@ -109,10 +115,13 @@ ServerSocket::~ServerSocket()
     // inside asio. Failing to delete is also obviously a memleak,
     // but for now, well accept a memleak in exchange for stability.
     // See notes in the body of the Exit() method below (circa line 322).
-    if (not _socket_manager->is_network_gone())
-        delete _socket;
-
-    _socket = nullptr;
+    // Do this under the same lock that Exit() uses.
+    {
+        std::lock_guard<std::mutex> lock(_asio_crash);
+        if (not _socket_manager->is_network_gone())
+            delete _socket;
+        _socket = nullptr;
+    }
 
     // Unregister from socket manager
     _socket_manager->rem_sock(this);
@@ -170,12 +179,6 @@ void ServerSocket::Send(const asio::const_buffer& buf)
         logger().warn("ServerSocket::Send(): %s on thread 0x%x\n",
              error.message().c_str(), pthread_self());
 }
-
-// As far as I can tell, asio is not actually thread-safe,
-// in particular, when closing and destroying sockets.  This strikes
-// me as incredibly stupid -- a first-class reason to not use asio.
-// But whatever.  Hack around this for now.
-static std::mutex _asio_crash;
 
 // This is called in a different thread than the thread that is running
 // the handle_connection() method. It's purpose in life is to terminate
