@@ -113,14 +113,14 @@ bool ModuleManager::loadAbsPath(const std::string& path,
 {
     std::string fi = get_filename(path);
     if (modules.find(fi) !=  modules.end()) {
-        logger().info("Module \"%s\" is already loaded.", fi.c_str());
+        logger().debug("Module \"%s\" is already loaded.", fi.c_str());
         return true;
     }
 
     // reset error
     dlerror();
 
-    logger().info("Loading module \"%s\"", path.c_str());
+    logger().debug("Loading module \"%s\"", path.c_str());
 #ifdef __APPLE__
     // Tell dyld to search runpath.
     std::string withRPath("@rpath/");
@@ -269,7 +269,7 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
     modules.erase(id);
 
     // Unload dynamically loadable library.
-    logger().info("Unloading module \"%s\"", filename.c_str());
+    logger().debug("Unloading module \"%s\"", filename.c_str());
 
     dlerror(); // Reset error state.
     if (dlclose(handle) != 0) {
