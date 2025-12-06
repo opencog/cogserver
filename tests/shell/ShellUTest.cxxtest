@@ -328,7 +328,7 @@ public:
 		// above got started; we don't want the barrier to finish before
 		// the above starts.
 		sleep(1);
-		cmd_exec("echo 'scm\n (cog-barrier)' | nc -q 0 localhost 17333");
+		cmd_exec("echo 'scm\n (cog-global-barrier)' | nc -q 0 localhost 17333");
 
 		// Sleep one second, so as to let the barrier at least get started,
 		// before we ask to print the AtomSpace. The barrier should block
