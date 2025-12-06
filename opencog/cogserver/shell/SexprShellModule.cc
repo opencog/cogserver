@@ -94,7 +94,7 @@ SexprShellModule::shelloutRequest::execute(void)
 
 	// Install cog-barrier handler
 	SexprEval* eval = dynamic_cast<SexprEval*>(sh->get_evaluator());
-	eval->install_handler("cog-barrier)",
+	eval->install_handler("cog-barrier",
 		[con](const std::string&) -> std::string {
 			con->get_socket_manager()->barrier();
 			return "";
