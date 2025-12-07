@@ -196,6 +196,12 @@ void CogServer::serverLoop()
         }
     }
 
+    // Reset queue cancellation immediately. Handler threads may
+    // still be running and pushing requests; they must not see a
+    // canceled queue. But also, we will need it in a non-cancelled
+    // state in order to drain what's in there.
+    requestQueue.cancel_reset();
+
     // Prevent the Network server from accepting any more connections,
     // and from queueing any more Requests.
     if (_mcpServer)
@@ -205,14 +211,11 @@ void CogServer::serverLoop()
     if (_consoleServer)
         _consoleServer->stop_listening();
 
-    // Reset queue cancellation to allow draining remaining requests.
-    requestQueue.cancel_reset();
-
     // Drain whatever is left in the queue.
     while (0 < getRequestQueueSize())
         processRequests();
 
-    // Join handler threads.
+    // Join handler threads. Do this after the drain to avoid deadlock.
     if (_mcpServer)
     {
         _mcpServer->join_threads();
