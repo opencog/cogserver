@@ -26,9 +26,9 @@ using namespace opencog;
 
 static std::string get_exe_dir()
 {
-    static const int PATH_MAX=1024;
-    static char buf[PATH_MAX];
-    int rslt = readlink("/proc/self/exe", buf, PATH_MAX);
+    static const int EXE_PATH_MAX = 1024;
+    static char buf[EXE_PATH_MAX];
+    int rslt = readlink("/proc/self/exe", buf, EXE_PATH_MAX);
     if (rslt < 0) return "";
 
     buf[rslt] = '\0';
