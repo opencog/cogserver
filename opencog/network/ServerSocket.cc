@@ -110,25 +110,22 @@ ServerSocket::~ServerSocket()
 
     Exit();
 
-    // An attempt to delete an asio socket, after being stopped with
-    // `asio::io_service::stop()` will result in a crash, deep
-    // inside asio. Failing to delete is also obviously a memleak,
-    // but for now, well accept a memleak in exchange for stability.
-    // See notes in the body of the Exit() method below (circa line 322).
-    // Do this under the same lock that Exit() uses.
-    {
-        std::lock_guard<std::mutex> lock(_asio_crash);
-        if (not _socket_manager->is_network_gone())
-            delete _socket;
-        _socket = nullptr;
-    }
-
     // Unregister from socket manager
     _socket_manager->rem_sock(this);
 
     // If anyone is waiting for a socket, let them know that
     // we've freed one up.
     _socket_manager->release_slot();
+
+    // An attempt to delete an asio socket, after being stopped with
+    // `asio::io_service::stop()` will result in a crash, deep
+    // inside asio. Failing to delete is also obviously a memleak,
+    // but for now, we'll accept a memleak in exchange for stability.
+    // See notes in the body of the Exit() method below (circa line 322).
+
+    if (not _socket_manager->is_network_gone())
+        delete _socket;
+    _socket = nullptr;
 }
 
 // ==================================================================
