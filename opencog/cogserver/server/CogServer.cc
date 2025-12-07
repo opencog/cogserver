@@ -197,13 +197,13 @@ void CogServer::serverLoop()
     }
 
     // Prevent the Network server from accepting any more connections,
-    // and from queueing any more Requests. I think. This might be racey.
+    // and from queueing any more Requests.
     if (_mcpServer)
-        _mcpServer->stop();
+        _mcpServer->stop_listening();
     if (_webServer)
-        _webServer->stop();
+        _webServer->stop_listening();
     if (_consoleServer)
-        _consoleServer->stop();
+        _consoleServer->stop_listening();
 
     // Reset queue cancellation to allow draining remaining requests.
     requestQueue.cancel_reset();
@@ -212,15 +212,25 @@ void CogServer::serverLoop()
     while (0 < getRequestQueueSize())
         processRequests();
 
-    // We need to clean up in the same thread where we are looping;
-    // doing this in other threads, e.g. the thread that calls stop()
-    // or the thread that calls disableNetworkServer() will lead to
-    // races.
-    if (_mcpServer) delete _mcpServer;
+    // Join handler threads.
+    if (_mcpServer)
+    {
+        _mcpServer->join_threads();
+        delete _mcpServer;
+    }
+    if (_webServer)
+    {
+        _webServer->join_threads();
+        delete _webServer;
+    }
+    if (_consoleServer)
+    {
+        _consoleServer->join_threads();
+        delete _consoleServer;
+    }
+
     _mcpServer = nullptr;
-    if (_webServer) delete _webServer;
     _webServer = nullptr;
-    if (_consoleServer) delete _consoleServer;
     _consoleServer = nullptr;
 
     logger().info("Stopped CogServer");

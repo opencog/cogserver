@@ -75,12 +75,13 @@ NetworkServer::~NetworkServer()
     logger().debug("[NetworkServer] enter destructor for %s at %d",
                    _name.c_str(), _port);
 
-    stop();
+    stop_listening();
+    join_threads();
 
     logger().debug("[NetworkServer] all threads joined, exit destructor");
 }
 
-void NetworkServer::stop()
+void NetworkServer::stop_listening()
 {
     if (not _running) return;
     _running = false;
@@ -97,7 +98,10 @@ void NetworkServer::stop()
     _listener_thread->join();
     delete _listener_thread;
     _listener_thread = nullptr;
+}
 
+void NetworkServer::join_threads()
+{
     // Join all connection handler threads to ensure complete shutdown.
     // This guarantees all TCP/IP packets have been processed and all
     // handler threads have finished before serverLoop() returns.

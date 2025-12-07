@@ -79,7 +79,8 @@ public:
 
     /** Start and stop the server */
     void run(ServerSocket* (*)(SocketManager*));
-    void stop();
+    void stop_listening();
+    void join_threads();
 
     /** Get the socket manager */
     SocketManager* get_socket_manager() { return _socket_manager; }
