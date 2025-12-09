@@ -2,7 +2,7 @@
 # cython: language_level=3
 
 from opencog.cogserver cimport cCogServer, cogserver, cython_server_atomspace, cAtomSpacePtr
-from opencog.atomspace cimport AtomSpace, AtomSpace_factoid, cValuePtr, cValue, cAtomSpace, cHandle, cAtom
+from opencog.atomspace cimport AtomSpace, AtomSpace_factoid, cValuePtr, cValue, cAtomSpace, cHandle, cAtom, as_cast
 from libcpp cimport bool as cbool
 from libcpp.memory cimport shared_ptr, static_pointer_cast
 import threading
@@ -21,8 +21,8 @@ def get_server_atomspace():
     if not _server_running:
         return None
     cdef cAtomSpacePtr casp = cython_server_atomspace()
-    # Cast AtomSpacePtr to Handle for AtomSpace_factoid
-    cdef cHandle h = static_pointer_cast[cAtom, cAtomSpace](casp)
+    # Use as_cast to convert AtomSpace* to Handle for AtomSpace_factoid
+    cdef cHandle h = as_cast(casp.get())
     asp = AtomSpace_factoid(h)
     return asp
 
