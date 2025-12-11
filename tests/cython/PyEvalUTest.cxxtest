@@ -3,7 +3,6 @@
 #include <thread>
 #include <chrono>
 
-#include <opencog/util/Config.h>
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Request.h>
@@ -31,9 +30,6 @@ public:
 
         // Initialize the cogserver with the test atomspace
         cogserver(atomspace);
-
-        // Load Python module if available
-        config().set("MODULES", "libpy-shell.so");
         cogserver().loadModules();
     }
 
