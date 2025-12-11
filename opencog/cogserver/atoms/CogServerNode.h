@@ -46,6 +46,8 @@ public:
 	CogServerNode(CogServerNode&) = delete;
 	CogServerNode& operator=(const CogServerNode&) = delete;
 
+	virtual void setValue(const Handle&, const ValuePtr&);
+
 	static Handle factory(const Handle&);
 };
 

@@ -32,4 +32,10 @@ CogServerNode::CogServerNode(const std::string&& s)
 {
 }
 
+void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
+{
+	// Call the base class implementation
+	Atom::setValue(key, value);
+}
+
 DEFINE_NODE_FACTORY(CogServerNode, COG_SERVER_NODE)
