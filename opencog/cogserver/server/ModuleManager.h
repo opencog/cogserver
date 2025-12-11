@@ -50,7 +50,6 @@ protected:
         std::string             dirpath;
         Module::LoadFunction*   loadFunction;
         Module::UnloadFunction* unloadFunction;
-        Module::ConfigFunction* configFunction;
         void*                   handle;
     } ModuleData;
 
@@ -86,12 +85,6 @@ public:
      *  module classes. See the documentation in the Module.h file for
      *  more details. */
     bool unloadModule(const std::string& id);
-
-    /** Configure a dynamic library/module. Passes the given
-     * configuration string to the module for processing. Returns
-     * false if configuration failed, else returns true.
-     */
-    bool configModule(const std::string& id, const std::string& cfg);
 
     /** Lists the modules that are currently loaded. */
     std::string listModules(void);

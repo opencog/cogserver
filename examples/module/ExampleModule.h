@@ -42,7 +42,6 @@ public:
     virtual ~ExampleModule();
     virtual void init();
     virtual const char* id();
-    virtual bool config(const char*) { return false; }
 };
 
 } // namespace opencog

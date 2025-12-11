@@ -77,6 +77,13 @@ command processor, and passes input data over to the overloaded
 generic `eval()` method, which is then free to interpret the input
 in any way desired.
 
+Future Plans
+------------
+There will be a `CogServerNode`, derived from `ObjectNode`, accepting
+object messages. Each of the loadable modules should also be some form
+of ObjectNode. This includes te shells. Also the Requests. Or, more
+properly, the requests should be mesages sent to the `CogServerNode`.
+
 TODO
 ----
 * Get rid of `config()` and `Config.h`. Use Atomese for everything.

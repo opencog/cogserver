@@ -53,12 +53,6 @@ SexprShellModule::~SexprShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
-// This is currently unused.
-bool SexprShellModule::config(const char* cfg)
-{
-	return true;
-}
-
 const RequestClassInfo&
 SexprShellModule::shelloutRequest::info(void)
 {

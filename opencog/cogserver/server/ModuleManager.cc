@@ -181,15 +181,6 @@ bool ModuleManager::loadAbsPath(const std::string& path,
         return false;
     }
 
-    Module::ConfigFunction* config_func =
-        (Module::ConfigFunction*) dlsym(dynLibrary, Module::config_function_name());
-    dlsymError = dlerror();
-    if (dlsymError) {
-        logger().error("Unable to find symbol \"%s\": %s",
-                       Module::config_function_name(), dlsymError);
-        return false;
-    }
-
     // Load and init module
     Module* module = (Module*) (*load_func)(cs);
 
@@ -203,8 +194,7 @@ bool ModuleManager::loadAbsPath(const std::string& path,
     std::string i = module_id;
     std::string f = get_filename(path);
     std::string p = get_filepath(path);
-    ModuleData mdata = {module, i, f, p, load_func, unload_func,
-                        config_func, dynLibrary};
+    ModuleData mdata = {module, i, f, p, load_func, unload_func, dynLibrary};
     modules[i] = mdata;
     modules[f] = mdata;
 
@@ -286,29 +276,13 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 
 // ====================================================================
 
-bool ModuleManager::configModule(const std::string& moduleId,
-                                 const std::string& cfg)
-{
-    ModuleData mdata = getModuleData(moduleId);
-
-    // If the module isn't found ...
-    if (nullptr == mdata.module) return false;
-
-    // Invoke the module's config function.
-    bool rc = (*mdata.configFunction)(mdata.module, cfg.c_str());
-
-    return rc;
-}
-
-// ====================================================================
-
 ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& moduleId)
 {
     std::string f = get_filename(moduleId);
     ModuleMap::const_iterator it = modules.find(f);
     if (it == modules.end()) {
         logger().info("[ModuleManager] module \"%s\" was not found.", f.c_str());
-        static ModuleData nulldata = {NULL, "", "", "", NULL, NULL, NULL, NULL};
+        static ModuleData nulldata = {NULL, "", "", "", NULL, NULL, NULL};
         return nulldata;
     }
     return it->second;

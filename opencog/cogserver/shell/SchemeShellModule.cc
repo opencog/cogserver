@@ -74,11 +74,6 @@ SchemeShellModule::~SchemeShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
-bool SchemeShellModule::config(const char*)
-{
-	return false;
-}
-
 const RequestClassInfo&
 SchemeShellModule::shelloutRequest::info(void)
 {

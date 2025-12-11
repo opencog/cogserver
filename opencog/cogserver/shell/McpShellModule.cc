@@ -50,11 +50,6 @@ McpShellModule::~McpShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
-bool McpShellModule::config(const char*)
-{
-	return false;
-}
-
 const RequestClassInfo&
 McpShellModule::shelloutRequest::info(void)
 {
