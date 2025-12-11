@@ -162,12 +162,6 @@ int main(int argc, char *argv[])
             if (not ('f' == val[0] or 'F' == val[0] or '0' == val[0]))
                 logger().set_print_to_stdout_flag(true);
         }
-        if (0 == opt.compare("SERVER_PORT"))
-            console_port = atoi(val.c_str());
-        if (0 == opt.compare("WEB_PORT"))
-            webserver_port = atoi(val.c_str());
-        if (0 == opt.compare("MCP_PORT"))
-            mcp_port = atoi(val.c_str());
     }
 
     // Start catching signals

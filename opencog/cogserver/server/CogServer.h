@@ -91,8 +91,7 @@ public:
     void set_max_open_sockets(int);
 
     /** Starts the network console server; this provides a command
-     *  line server socket on the port specified by the configuration
-     *  parameter SERVER_PORT */
+     *  line server socket on the specified port. */
     virtual void enableNetworkServer(int port=17001);
 
 	 /** Starts the webscokets server. */
