@@ -16,53 +16,6 @@ using namespace opencog;
 // ====================================================================
 
 const RequestClassInfo&
-ConfigModuleRequest::info(void)
-{
-    static const RequestClassInfo _cci(
-        "config",
-        "Config a loaded module",
-        "Usage: config <module> <config-string>\n\n"
-        "Config the indicated module. The module can be specified\n"
-        "either as the shared-lib filename, or as the module id.\n"
-        "Both of these are shown by the `list` command.\n\n"
-        "The configuration string is passed to those modules that\n"
-        "support configuration, and is interpreted in a way that is\n"
-        "specific to that module. Most modules do not need (or support)\n"
-        "configuration.\n\n"
-        "The `sexpr` module uses configuration strings to set up proxy\n"
-        "modes. In the write-through proxy mode, data sent to the\n"
-        "cogserver can be forwarded to other servers, or written to\n"
-        "local disk storage.\n"
-    );
-    return _cci;
-}
-
-bool ConfigModuleRequest::execute()
-{
-    logger().debug("[ConfigModuleRequest] execute");
-    std::ostringstream oss;
-    if (2 != _parameters.size()) {
-        oss << "invalid syntax: config <module> <config-string>" << std::endl;
-        send(oss.str());
-        return false;
-    }
-    std::string filename = _parameters.front();
-    _parameters.pop_front();
-    std::string cfg = _parameters.front();
-    if (_cogserver.configModule(filename, cfg)) {
-        oss << "done" << std::endl;
-        send(oss.str());
-        return true;
-    }
-    oss << "Unable to config module \"" << filename
-        << "\". Check the server logs for details." << std::endl;
-    send(oss.str());
-    return false;
-}
-
-// ====================================================================
-
-const RequestClassInfo&
 ListModulesRequest::info(void)
 {
     static const RequestClassInfo _cci(

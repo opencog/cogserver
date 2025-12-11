@@ -28,7 +28,6 @@ public:                                                               \
 
 namespace opencog
 {
-DEFINE_REQUEST(ConfigModuleRequest)
 DEFINE_REQUEST(ListModulesRequest)
 DEFINE_REQUEST(LoadModuleRequest)
 DEFINE_REQUEST(UnloadModuleRequest)

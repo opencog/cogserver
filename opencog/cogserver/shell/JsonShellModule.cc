@@ -50,11 +50,6 @@ JsonShellModule::~JsonShellModule()
 	_cogserver.unregisterRequest(shelloutRequest::info().id);
 }
 
-bool JsonShellModule::config(const char*)
-{
-	return false;
-}
-
 const RequestClassInfo&
 JsonShellModule::shelloutRequest::info(void)
 {

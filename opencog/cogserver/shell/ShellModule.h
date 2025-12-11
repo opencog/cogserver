@@ -39,7 +39,6 @@ class MODNAME : public Module {                                       \
         virtual ~MODNAME();                                           \
         static const char *id(void);                                  \
         virtual void init(void);                                      \
-        virtual bool config(const char *);                            \
 };                                                                    \
 }
 
