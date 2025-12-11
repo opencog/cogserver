@@ -124,6 +124,16 @@ int main(int argc, char *argv[])
                 std::string optionName = text.substr(0, equalPos);
                 std::string value = text.substr(equalPos + 1);
                 configPairs.push_back({optionName, value});
+
+                if (0 == optionName.compare("LOG_LEVEL"))
+                    logger().set_level(value);
+                if (0 == optionName.compare("LOG_FILE"))
+                    logger().set_filename(value);
+                if (0 == optionName.compare("LOG_TO_STDOUT"))
+                {
+                    if (not ('f' == value[0] or 'F' == value[0] or '0' == value[0]))
+                        logger().set_print_to_stdout_flag(true);
+                }
             }
         } else if (c == 'p') {
             console_port = atoi(optarg);
@@ -148,20 +158,7 @@ int main(int argc, char *argv[])
     // Copy command-line options to global cache.
     // This is ... deprecated, and should be removed. Later.
     for (const auto& optionPair : configPairs) {
-        const std::string& opt = optionPair.first;
-        const std::string& val = optionPair.second;
-        // std::cerr << opt << " = " << val << std::endl;
-        config().set(opt, val);
-
-        if (0 == opt.compare("LOG_LEVEL"))
-            logger().set_level(val);
-        if (0 == opt.compare("LOG_FILE"))
-            logger().set_filename(val);
-        if (0 == opt.compare("LOG_TO_STDOUT"))
-        {
-            if (not ('f' == val[0] or 'F' == val[0] or '0' == val[0]))
-                logger().set_print_to_stdout_flag(true);
-        }
+        config().set(optionPair.first, optionPair.second);
     }
 
     // Start catching signals
