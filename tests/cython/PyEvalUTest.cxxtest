@@ -3,8 +3,6 @@
 #include <thread>
 #include <chrono>
 
-#include <opencog/util/Config.h>
-#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/cython/PythonEval.h>
@@ -15,10 +13,6 @@ using namespace opencog;
 
 class PyEvalUTest :  public CxxTest::TestSuite
 {
-
-private:
-    AtomSpacePtr atomspace;
-
 public:
 
     PyEvalUTest()
@@ -26,14 +20,6 @@ public:
         logger().set_level(Logger::DEBUG);
         logger().set_print_to_stdout_flag(true);
 
-        // Create an atomspace for testing
-        atomspace = createAtomSpace();
-
-        // Initialize the cogserver with the test atomspace
-        cogserver(atomspace);
-
-        // Load Python module if available
-        config().set("MODULES", "libpy-shell.so");
         cogserver().loadModules();
     }
 
@@ -48,17 +34,6 @@ public:
     }
 
     void tearDown() {
-    }
-
-    void testCogServerInitialization()
-    {
-        // Test that the CogServer is properly initialized
-        TS_ASSERT_EQUALS(cogserver().getAtomSpace(), atomspace);
-
-        // Test that we can get the server's atomspace
-        AtomSpacePtr server_as = cogserver().getAtomSpace();
-        TS_ASSERT_DIFFERS(server_as, nullptr);
-        TS_ASSERT_EQUALS(server_as, atomspace);
     }
 
     void testCogServerCanCreatePyEvalRequest()

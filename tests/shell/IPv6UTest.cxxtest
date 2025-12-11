@@ -30,7 +30,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <opencog/util/Config.h>
 #include <opencog/cogserver/server/CogServer.h>
 
 using namespace opencog;

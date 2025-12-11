@@ -91,8 +91,7 @@ public:
     void set_max_open_sockets(int);
 
     /** Starts the network console server; this provides a command
-     *  line server socket on the port specified by the configuration
-     *  parameter SERVER_PORT */
+     *  line server socket on the specified port. */
     virtual void enableNetworkServer(int port=17001);
 
 	 /** Starts the webscokets server. */
@@ -121,10 +120,6 @@ public:
         return ModuleManager::loadModule(filename, *this);
     }
     void loadModules(void) { ModuleManager::loadModules(*this); }
-
-    /** Return the logger */
-    Logger &logger(void) { return opencog::logger(); }
-
 
     /** Print human-readable stats about the cogserver */
     std::string display_stats(int nlines = -1);

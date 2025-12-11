@@ -33,7 +33,6 @@
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/persist/json/JsonEval.h>
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 
 #include "opencog/cogserver/shell/JsonShell.h"
