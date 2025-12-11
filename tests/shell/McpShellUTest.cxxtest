@@ -28,7 +28,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <opencog/util/Config.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/shell/McpShell.h>
 #include <opencog/cogserver/mcp-eval/McpEval.h>

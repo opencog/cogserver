@@ -29,7 +29,6 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#include <opencog/util/Config.h>
 #include <opencog/cogserver/server/CogServer.h>
 
 using namespace opencog;
