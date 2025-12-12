@@ -48,6 +48,7 @@ public:
 	CogServerNode& operator=(const CogServerNode&) = delete;
 
 	virtual void setValue(const Handle&, const ValuePtr&);
+	virtual void setAtomSpace(AtomSpace*) override;
 	virtual HandleSeq getMessages() const;
 	virtual bool usesMessage(const Handle&) const;
 
@@ -56,7 +57,6 @@ public:
 	static Handle factory(const Handle&);
 
 private:
-	void initDefaultConfig();
 	void startServers();
 	int getPortValue(const char* key, int defaultPort);
 	std::string getStringValue(const char* key, const std::string& defaultVal);

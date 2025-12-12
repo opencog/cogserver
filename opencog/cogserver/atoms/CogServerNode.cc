@@ -50,36 +50,36 @@ static constexpr uint32_t dispatch_hash(const char* s)
 CogServerNode::CogServerNode(Type t, const std::string&& s)
 	: Node(t, std::move(s)), CogServer()
 {
-	initDefaultConfig();
-	loadModules();
+	CogServer::loadModules();
 }
 
 CogServerNode::CogServerNode(const std::string&& s)
 	: Node(COG_SERVER_NODE, std::move(s)), CogServer()
 {
-	initDefaultConfig();
-	loadModules();
+	CogServer::loadModules();
 }
 
-/// Default configuration
-void CogServerNode::initDefaultConfig()
+void CogServerNode::setAtomSpace(AtomSpace* as)
 {
+	Node::setAtomSpace(as);
+	if (nullptr == as) return;
+
 	// Port defaults
-	Atom::setValue(createNode(PREDICATE_NODE, "*-telnet-port-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-telnet-port-*"),
 	               createFloatValue(17001.0));
-	Atom::setValue(createNode(PREDICATE_NODE, "*-web-port-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-web-port-*"),
 	               createFloatValue(18080.0));
-	Atom::setValue(createNode(PREDICATE_NODE, "*-mcp-port-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-mcp-port-*"),
 	               createFloatValue(18888.0));
 
 	// Prompt defaults
-	Atom::setValue(createNode(PREDICATE_NODE, "*-ansi-prompt-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-ansi-prompt-*"),
 	               createStringValue("[0;32mopencog[1;32m> [0m"));
-	Atom::setValue(createNode(PREDICATE_NODE, "*-prompt-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-prompt-*"),
 	               createStringValue("opencog> "));
-	Atom::setValue(createNode(PREDICATE_NODE, "*-ansi-scm-prompt-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-ansi-scm-prompt-*"),
 	               createStringValue("[0;34mguile[1;34m> [0m"));
-	Atom::setValue(createNode(PREDICATE_NODE, "*-scm-prompt-*"),
+	Atom::setValue(as->add_node(PREDICATE_NODE, "*-scm-prompt-*"),
 	               createStringValue("guile> "));
 }
 
