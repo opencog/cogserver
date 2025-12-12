@@ -60,6 +60,7 @@ void opencog_cogserver_init(void);
 
 #include <opencog/util/Config.h>
 #include <opencog/guile/SchemePrimitive.h>
+#include <opencog/atoms/atom_types/atom_names.h>
 #include <opencog/atoms/value/FloatValue.h>
 #include <opencog/atoms/value/StringValue.h>
 #include <opencog/atoms/value/VoidValue.h>
@@ -131,25 +132,25 @@ std::string CogServerSCM::start_server(AtomSpace* as,
 
     // Set non-default port values
     if (telnet_port != 17001)
-        srvr->setValue(as->add_node(PREDICATE_NODE, "*-telnet-port-*"),
+        srvr->setValue(as->add_atom(Predicate("*-telnet-port-*")),
                        createFloatValue((double)telnet_port));
     if (websocket_port != 18080)
-        srvr->setValue(as->add_node(PREDICATE_NODE, "*-web-port-*"),
+        srvr->setValue(as->add_atom(Predicate("*-web-port-*")),
                        createFloatValue((double)websocket_port));
     if (mcp_port != 18888)
-        srvr->setValue(as->add_node(PREDICATE_NODE, "*-mcp-port-*"),
+        srvr->setValue(as->add_atom(Predicate("*-mcp-port-*")),
                        createFloatValue((double)mcp_port));
 
     // Set custom prompts
     if (!prompt.empty())
-        srvr->setValue(as->add_node(PREDICATE_NODE, "*-ansi-prompt-*"),
+        srvr->setValue(as->add_atom(Predicate("*-ansi-prompt-*")),
                        createStringValue(prompt));
     if (!scmprompt.empty())
-        srvr->setValue(as->add_node(PREDICATE_NODE, "*-ansi-scm-prompt-*"),
+        srvr->setValue(as->add_atom(Predicate("*-ansi-scm-prompt-*")),
                        createStringValue(scmprompt));
 
     // Start all servers
-    srvr->setValue(as->add_node(PREDICATE_NODE, "*-start-*"),
+    srvr->setValue(as->add_atom(Predicate("*-start-*")),
                    createVoidValue());
     rc = "Started CogServer";
     return rc;
@@ -162,7 +163,7 @@ std::string CogServerSCM::stop_server(void)
     if (nullptr == srvr) { rc = "CogServer not running"; return rc;}
 
     AtomSpacePtr asp = srvr->getAS();
-    srvr->setValue(asp->add_node(PREDICATE_NODE, "*-stop-*"),
+    srvr->setValue(asp->add_atom(Predicate("*-stop-*")),
                    createVoidValue());
     delete srvr;
     srvr = nullptr;
