@@ -60,7 +60,6 @@ static void usage(const char* progname)
         << "PROMPT = opencog> \n"
         << "ANSI_SCM_PROMPT = ^[[0;34mguile^[[1;34m> ^[[0m\n"
         << "SCM_PROMPT = guile> \n"
-        << "MODULES = libbuiltinreqs.so, ...\n"
         << std::endl;
 }
 
