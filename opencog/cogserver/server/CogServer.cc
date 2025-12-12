@@ -85,8 +85,8 @@ void CogServer::enableNetworkServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](SocketManager* mgr)->ServerSocket*
-            { return new ServerConsole(cogserver(), mgr); };
+    auto make_console = [this](SocketManager* mgr)->ServerSocket*
+            { return new ServerConsole(*this, mgr); };
     _consoleServer->run(make_console);
     _running = true;
     logger().info("Network server running on port %d", port);
@@ -110,8 +110,8 @@ void CogServer::enableWebServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](SocketManager* mgr)->ServerSocket* {
-        ServerSocket* ss = new WebServer(cogserver(), mgr);
+    auto make_console = [this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new WebServer(*this, mgr);
         ss->act_as_http_socket();
         return ss;
     };
@@ -142,8 +142,8 @@ void CogServer::enableMCPServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](SocketManager* mgr)->ServerSocket* {
-        ServerSocket* ss = new MCPServer(cogserver(), mgr);
+    auto make_console = [this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new MCPServer(*this, mgr);
         ss->act_as_mcp();
         return ss;
     };
