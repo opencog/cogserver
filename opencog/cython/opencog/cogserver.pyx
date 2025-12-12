@@ -1,17 +1,19 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from opencog.cogserver cimport cCogServer
+from opencog.cogserver cimport cCogServer, cCogServerNode
 from cython.operator cimport dereference as deref
+from libcpp.string cimport string
 import threading
 
 # Global server state
-cdef cCogServer* _server_instance = NULL
+cdef cCogServerNode* _server_instance = NULL
 _server_thread = None
 _server_running = False
 
 def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
-                    enable_console=True, enable_web=True, enable_mcp=True):
+                    enable_console=True, enable_web=True, enable_mcp=True,
+                    name="cogserver"):
     """Start the CogServer with the specified configuration.
 
     Args:
@@ -21,6 +23,7 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         enable_console (bool, optional): Enable telnet console server. Default: True
         enable_web (bool, optional): Enable web server. Default: True
         enable_mcp (bool, optional): Enable MCP server. Default: True
+        name (str, optional): Name for the CogServerNode. Default: "cogserver"
 
     Returns:
         bool: True if server started successfully, False otherwise.
@@ -35,13 +38,14 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         raise RuntimeError("CogServer is already running")
 
     # Validate ports
-    for port, name in [(console_port, "console"), (web_port, "web"), (mcp_port, "mcp")]:
+    for port, pname in [(console_port, "console"), (web_port, "web"), (mcp_port, "mcp")]:
         if not (1 <= port <= 65535):
-            raise ValueError(f"Invalid {name} port: {port}. Must be between 1 and 65535")
+            raise ValueError(f"Invalid {pname} port: {port}. Must be between 1 and 65535")
 
-    # Create new CogServer instance
-    _server_instance = new cCogServer()
-    cdef cCogServer* server_ptr = _server_instance
+    # Create new CogServerNode instance
+    cdef string cname = name.encode('utf-8')
+    _server_instance = new cCogServerNode(<string&&>cname)
+    cdef cCogServerNode* server_ptr = _server_instance
 
     server_ptr.loadModules()
 
@@ -97,7 +101,7 @@ def stop_cogserver():
     if not _server_running or _server_instance == NULL:
         return False
 
-    cdef cCogServer* server_ptr = _server_instance
+    cdef cCogServerNode* server_ptr = _server_instance
 
     # Stop the server
     server_ptr.stop()

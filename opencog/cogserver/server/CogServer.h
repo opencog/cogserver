@@ -52,7 +52,6 @@ class CogServer :
     public ModuleManager
 {
 protected:
-    AtomSpacePtr _atomSpace;
     SocketManager _socket_manager;
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
@@ -67,7 +66,7 @@ public:
     virtual ~CogServer(void);
 
     /** Returns the atomspace instance. */
-    AtomSpacePtr getAtomSpace() { return _atomSpace; }
+    virtual AtomSpacePtr getAtomSpace() { return nullptr; }
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.

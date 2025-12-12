@@ -27,7 +27,7 @@
 #define _OPENCOG_COGSERVER_SCM_H
 
 #include <thread>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 namespace opencog
 {
@@ -42,11 +42,9 @@ private:
     std::string start_server(AtomSpace*, int, int, int, const std::string&,
                              const std::string&);
     std::string stop_server(void);
-    Handle set_server_space(AtomSpace*);
-    Handle get_server_space(void);
 
-    CogServer* srvr = NULL;
-    std::thread * main_loop = NULL;
+    CogServerNode* srvr = nullptr;
+    std::thread * main_loop = nullptr;
 
 public:
     CogServerSCM();
@@ -132,7 +130,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     config().set("ANSI_PROMPT", prompt);
     config().set("ANSI_SCM_PROMPT", scmprompt);
 
-    srvr = new CogServer();
+    srvr = new CogServerNode("cogserver");
 
     // Load modules specified in config
     srvr->loadModules();
@@ -152,7 +150,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
         srvr = nullptr;
         std::rethrow_exception(std::current_exception());
     }
-    main_loop = new std::thread(&CogServer::serverLoop, srvr);
+    main_loop = new std::thread(&CogServerNode::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;
 }
@@ -161,7 +159,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
 std::string CogServerSCM::stop_server(void)
 {
     static std::string rc;
-    if (NULL == srvr) { rc = "CogServer not running"; return rc;}
+    if (nullptr == srvr) { rc = "CogServer not running"; return rc;}
 
     // This is probably not thread-safe...
     srvr->stop();
@@ -170,8 +168,8 @@ std::string CogServerSCM::stop_server(void)
     srvr->disableNetworkServer();
     delete main_loop;
     delete srvr;
-    main_loop = NULL;
-    srvr = NULL;
+    main_loop = nullptr;
+    srvr = nullptr;
 
     rc = "Stopped CogServer";
     return rc;

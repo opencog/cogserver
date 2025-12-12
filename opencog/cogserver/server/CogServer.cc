@@ -17,7 +17,6 @@
 #include <opencog/util/misc.h>
 #include <opencog/util/platform.h>
 
-#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/network/NetworkServer.h>
 
 #include <opencog/cogserver/server/ServerConsole.h>
@@ -37,7 +36,6 @@ CogServer::~CogServer()
 }
 
 CogServer::CogServer(void) :
-    _atomSpace(createAtomSpace()),
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),

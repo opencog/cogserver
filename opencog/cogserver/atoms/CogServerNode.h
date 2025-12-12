@@ -21,6 +21,7 @@
 #define _OPENCOG_COG_SERVER_NODE_H
 
 #include <opencog/atoms/base/Node.h>
+#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/types/atom_types.h>
 
@@ -34,7 +35,7 @@ namespace opencog
  * to this node to hold server configuration and state.
  */
 
-class CogServerNode : public Node, protected CogServer
+class CogServerNode : public Node, public CogServer
 {
 public:
 	// Please do NOT use this constructor!
@@ -49,6 +50,8 @@ public:
 	virtual void setValue(const Handle&, const ValuePtr&);
 	virtual HandleSeq getMessages() const;
 	virtual bool usesMessage(const Handle&) const;
+
+	AtomSpacePtr getAtomSpace() { return AtomSpaceCast(_atom_space); }
 
 	static Handle factory(const Handle&);
 };

@@ -1,4 +1,8 @@
 # CogServer extern declarations
+from libcpp.string cimport string
+from libcpp.memory cimport shared_ptr
+from opencog.atomspace cimport cAtomSpacePtr
+
 cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
     cdef cppclass cCogServer "opencog::CogServer":
         cCogServer()
@@ -12,3 +16,10 @@ cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
         void stop()
         bint running()
         void loadModules()
+
+cdef extern from "opencog/cogserver/atoms/CogServerNode.h" namespace "opencog":
+    cdef cppclass cCogServerNode "opencog::CogServerNode" (cCogServer):
+        cCogServerNode(string&&)
+        cAtomSpacePtr getAtomSpace()
+
+    ctypedef shared_ptr[cCogServerNode] cCogServerNodePtr "opencog::CogServerNodePtr"
