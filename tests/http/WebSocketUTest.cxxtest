@@ -167,9 +167,17 @@ public:
 		logger().set_level(Logger::DEBUG);
 		logger().set_timestamp_flag(true);
 		logger().set_print_to_stdout_flag(true);
+	}
 
+	~WebSocketUTest() {
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp() {
 		// Create and start cogserver
-		_cogserver = &cogserver();
+		_cogserver = new CogServer();
 		_cogserver->loadModules();
 		_cogserver->enableWebServer(18282);
 
@@ -180,7 +188,7 @@ public:
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	~WebSocketUTest() {
+	void tearDown() {
 		// Stop the server
 		_cogserver->stop();
 		_csthread->join();
@@ -189,6 +197,8 @@ public:
 
 		// Clean up
 		_cogserver->disableWebServer();
+		delete _cogserver;
+		_cogserver = nullptr;
 	}
 
 	// Test WebSocket handshake and JSON response
