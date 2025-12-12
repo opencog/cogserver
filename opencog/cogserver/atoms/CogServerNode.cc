@@ -19,6 +19,7 @@
 
 #include <unordered_set>
 
+#include <opencog/util/Logger.h>
 #include <opencog/atoms/base/ClassServer.h>
 #include <opencog/atoms/core/NumberNode.h>
 #include <opencog/atoms/value/FloatValue.h>
@@ -122,12 +123,23 @@ void CogServerNode::startServers()
 	int web_port = getPortValue("*-web-port-*", 18080);
 	int mcp_port = getPortValue("*-mcp-port-*", 18888);
 
-	if (0 < telnet_port)
-		enableNetworkServer(telnet_port);
-	if (0 < web_port)
-		enableWebServer(web_port);
-	if (0 < mcp_port)
-		enableMCPServer(mcp_port);
+
+	// This try-catch block is a historical appendage,
+	// it is here to try to protect us against ASIO insanity.
+	// I think this "never happens any more", but never say never.
+	try
+	{
+		if (0 < telnet_port)
+			enableNetworkServer(telnet_port);
+		if (0 < web_port)
+			enableWebServer(web_port);
+		if (0 < mcp_port)
+			enableMCPServer(mcp_port);
+	}
+	catch (const std::exception& ex)
+	{
+		logger().error("Failed to start server: %s", ex.what());
+	}
 }
 
 AtomSpacePtr CogServerNode::getAS()

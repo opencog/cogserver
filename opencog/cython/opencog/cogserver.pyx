@@ -71,13 +71,8 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         atomspace.set_value(_server_handle, key, FloatValue(float(effective_mcp)))
 
     # Start all servers
-    try:
-        key = atomspace.add_node(types.PredicateNode, "*-start-*")
-        atomspace.set_value(_server_handle, key, VoidValue())
-    except Exception as e:
-        _server_ptr.reset()
-        _server_handle = None
-        raise RuntimeError(f"Failed to start server: {e}")
+    key = atomspace.add_node(types.PredicateNode, "*-start-*")
+    atomspace.set_value(_server_handle, key, VoidValue())
 
     # Start server loop in a separate thread
     def server_loop():

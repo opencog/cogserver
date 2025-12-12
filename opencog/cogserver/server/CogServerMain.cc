@@ -192,16 +192,8 @@ int main(int argc, char *argv[])
                       createFloatValue((double)mcp_port));
 
     // Start all servers
-    try
-    {
-        csn->setValue(asp->add_node(PREDICATE_NODE, "*-start-*"),
-                      createVoidValue());
-    }
-    catch (const std::exception& ex)
-    {
-        fprintf(stderr, "Error exit: %s\n", ex.what());
-        exit(-1);
-    }
+    csn->setValue(asp->add_node(PREDICATE_NODE, "*-start-*"),
+                  createVoidValue());
     csn->serverLoop();
     exit(0);
 }

@@ -151,16 +151,8 @@ std::string CogServerSCM::start_server(AtomSpace* as,
                        createStringValue(scmprompt));
 
     // Start all servers
-    try
-    {
-        srvr->setValue(as->add_node(PREDICATE_NODE, "*-start-*"),
-                       createVoidValue());
-    }
-    catch (const std::exception& ex)
-    {
-        srvr = nullptr;
-        std::rethrow_exception(std::current_exception());
-    }
+    srvr->setValue(as->add_node(PREDICATE_NODE, "*-start-*"),
+                   createVoidValue());
     main_loop = new std::thread(&CogServerNode::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;
