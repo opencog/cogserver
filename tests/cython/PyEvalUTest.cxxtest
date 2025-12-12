@@ -119,8 +119,7 @@ public:
         logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    // Python shell indentation is broken, I don't know why.
-    void xxxtestPythonShellFunction()
+    void testPythonShellFunction()
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
@@ -131,10 +130,12 @@ public:
             "def square(n):\\n"
             "    return n * n\\n"
             "\\n"
-            "\\n"
             "print(square(7))\\n.\\n' | nc -q 2 localhost 17336");
 
+        fflush(stdout);
+        fflush(stderr);
         printf("Result = >>%s<<\n", result.c_str());
+        fflush(stdout);
         TS_ASSERT(result.find("49") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
