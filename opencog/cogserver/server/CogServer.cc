@@ -299,34 +299,3 @@ std::string CogServer::stats_legend(void)
 }
 
 // =============================================================
-// Singleton instance stuff.
-//
-// I don't really like singleton instances very much. There are some
-// interesting use cases where one might want to run multiple
-// cogservers. However, at this time, too much of the code (???)
-// assumes a singleton instance, so we leave this for now. XXX FIXME.
-
-// The guile module needs to be able to delete this singleton.
-// So put it where the guile module can find it.
-namespace opencog
-{
-    CogServer* serverInstance = nullptr;
-};
-
-CogServer& opencog::cogserver(void)
-{
-    if (nullptr == serverInstance)
-        serverInstance = new CogServer();
-
-    return *serverInstance;
-}
-
-CogServer& opencog::cogserver(AtomSpacePtr as)
-{
-    if (nullptr == serverInstance)
-        serverInstance = new CogServer(as);
-
-    return *serverInstance;
-}
-
-// =============================================================

@@ -125,10 +125,6 @@ public:
 
 }; // class
 
-// Singleton instance of the cogserver
-CogServer& cogserver(void);
-CogServer& cogserver(AtomSpacePtr);
-
 /** @}*/
 }  // namespace
 

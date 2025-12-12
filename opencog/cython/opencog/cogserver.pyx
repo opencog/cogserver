@@ -1,22 +1,20 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from opencog.cogserver cimport cCogServer, cogserver, cAtomSpacePtr
-from opencog.atomspace cimport AtomSpace, AtomSpace_factoid, cValuePtr, cValue, cAtomSpace, cHandle, cAtom, as_cast
-from libcpp cimport bool as cbool
-from libcpp.memory cimport shared_ptr, static_pointer_cast
+from opencog.cogserver cimport cCogServer
+from cython.operator cimport dereference as deref
 import threading
 
 # Global server state
+cdef cCogServer* _server_instance = NULL
 _server_thread = None
 _server_running = False
 
-def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port=18888,
+def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
                     enable_console=True, enable_web=True, enable_mcp=True):
     """Start the CogServer with the specified configuration.
 
     Args:
-        atomspace (AtomSpace, optional): The AtomSpace to use. If None, creates a new one.
         console_port (int, optional): Port for telnet console server. Default: 17001
         web_port (int, optional): Port for web server. Default: 18080
         mcp_port (int, optional): Port for MCP server. Default: 18888
@@ -31,7 +29,7 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
         RuntimeError: If server is already running.
         ValueError: If invalid ports are specified.
     """
-    global _server_thread, _server_running
+    global _server_instance, _server_thread, _server_running
 
     if _server_running:
         raise RuntimeError("CogServer is already running")
@@ -41,17 +39,9 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
         if not (1 <= port <= 65535):
             raise ValueError(f"Invalid {name} port: {port}. Must be between 1 and 65535")
 
-    cdef cCogServer* server_ptr
-    cdef cAtomSpacePtr atomspace_ptr
-
-    # Get or create AtomSpace
-    if atomspace is not None:
-        if not isinstance(atomspace, AtomSpace):
-            raise TypeError("atomspace must be an instance of AtomSpace")
-        atomspace_ptr = static_pointer_cast[cAtomSpace, cAtom](<cHandle&>(<AtomSpace>atomspace).shared_ptr)
-        server_ptr = &cogserver(atomspace_ptr)
-    else:
-        server_ptr = &cogserver()
+    # Create new CogServer instance
+    _server_instance = new cCogServer()
+    cdef cCogServer* server_ptr = _server_instance
 
     server_ptr.loadModules()
 
@@ -71,6 +61,8 @@ def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port
             server_ptr.disableWebServer()
         if enable_console:
             server_ptr.disableNetworkServer()
+        del _server_instance
+        _server_instance = NULL
         raise RuntimeError(f"Failed to start server: {e}")
 
     # Start server loop in a separate thread
@@ -100,13 +92,12 @@ def stop_cogserver():
     Returns:
         bool: True if server was stopped, False if server was not running.
     """
-    global _server_thread, _server_running
+    global _server_instance, _server_thread, _server_running
 
-    if not _server_running:
+    if not _server_running or _server_instance == NULL:
         return False
 
-    # Get the singleton server instance
-    cdef cCogServer* server_ptr = &cogserver()
+    cdef cCogServer* server_ptr = _server_instance
 
     # Stop the server
     server_ptr.stop()
@@ -123,6 +114,9 @@ def stop_cogserver():
             import warnings
             warnings.warn("CogServer thread did not stop cleanly")
 
+    # Clean up
+    del _server_instance
+    _server_instance = NULL
     _server_thread = None
     _server_running = False
 
@@ -135,9 +129,4 @@ def is_cogserver_running():
         bool: True if server is running, False otherwise.
     """
     global _server_running
-    if not _server_running:
-        return False
-    # This hangs. Probably shouldn't/
-    # cdef cCogServer* server_ptr = &cogserver()
-    # return server_ptr.running()
-    return True
+    return _server_running

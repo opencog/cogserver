@@ -125,7 +125,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
 {
     static std::string rc;
 
-    // Singleton instance. Maybe we should throw, here?
+    // Only one server at a time.
     if (srvr) { rc = "CogServer already running!"; return rc; }
 
     // Pass parameters non-locally.
@@ -133,7 +133,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     config().set("ANSI_SCM_PROMPT", scmprompt);
 
     AtomSpacePtr asp(AtomSpaceCast(as));
-    srvr = &cogserver(asp);
+    srvr = new CogServer(asp);
 
     // Load modules specified in config
     srvr->loadModules();
@@ -159,16 +159,9 @@ std::string CogServerSCM::start_server(AtomSpace* as,
 }
 
 
-namespace opencog
-{
-    // The singleton instance.
-    extern CogServer* serverInstance;
-};
-
 std::string CogServerSCM::stop_server(void)
 {
     static std::string rc;
-    // delete singleton instance
     if (NULL == srvr) { rc = "CogServer not running"; return rc;}
 
     // This is probably not thread-safe...
@@ -178,8 +171,8 @@ std::string CogServerSCM::stop_server(void)
     srvr->disableNetworkServer();
     delete main_loop;
     delete srvr;
+    main_loop = NULL;
     srvr = NULL;
-    serverInstance = nullptr;
 
     rc = "Stopped CogServer";
     return rc;
