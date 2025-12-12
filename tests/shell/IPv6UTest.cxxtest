@@ -46,8 +46,9 @@ public:
 
 	IPv6UTest()
 	{
-		logger().set_level(Logger::DEBUG);
-		//logger().set_print_to_stdout_flag(true);
+		// logger().set_level(Logger::DEBUG);
+		logger().set_level(Logger::INFO);
+		logger().set_print_to_stdout_flag(true);
 
 		asp = createAtomSpace();
 		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");

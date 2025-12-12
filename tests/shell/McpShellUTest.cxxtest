@@ -52,7 +52,8 @@ private:
 public:
     McpShellUTest()
     {
-        logger().set_level(Logger::DEBUG);
+        // logger().set_level(Logger::DEBUG);
+        logger().set_level(Logger::INFO);
 
         asp = createAtomSpace();
         Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
