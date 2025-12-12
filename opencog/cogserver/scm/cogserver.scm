@@ -13,9 +13,6 @@
 	(string-append opencog-ext-path-cogserver "libguile-cogserver")
 	"opencog_cogserver_init")
 
-(export get-cogserver-atomspace)
-(export set-cogserver-atomspace!)
-
 ; config path name is optional.
 (define* (start-cogserver #:key (port 17001)
                                 (web  18080)
@@ -70,35 +67,6 @@
 	(stop-server-and-clients!)
 	(c-stop-cogserver)
 )
-
-(set-procedure-property! get-cogserver-atomspace 'documentation
-"
- get-cogserver-atomspace
-
-   Return the default AtomSpace of the cogserver.
-
-   The default AtomSpace is the one that is used whenever a new shell
-   is opened on an existing or new network connection.
-
-   See also: set-cogserver-atomspace!
-")
-
-(set-procedure-property! set-cogserver-atomspace! 'documentation
-"
- set-cogserver-atomspace! ATOMSPACE
-
-   Change the default AtomSpace of the cogserver to ATOMSPACE.
-
-   The default AtomSpace is the one that is used whenever a new shell
-   is opened on an existing or new network connection. Changing this
-   will not affect existing open shells.  Existing shells can get the
-   new AtomSpace by saying `(cog-set-atomspace! (get-server-atomspace))`
-
-   This call is useful when a stack of AtomSpace frames is being used,
-   and there is a need for setting the active frame.
-
-   Returns the old AtomSpace.
-")
 
 (export start-cogserver)
 (export stop-cogserver)

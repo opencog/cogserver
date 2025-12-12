@@ -1,7 +1,7 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from opencog.cogserver cimport cCogServer, cogserver, cython_server_atomspace, cAtomSpacePtr
+from opencog.cogserver cimport cCogServer, cogserver, cAtomSpacePtr
 from opencog.atomspace cimport AtomSpace, AtomSpace_factoid, cValuePtr, cValue, cAtomSpace, cHandle, cAtom, as_cast
 from libcpp cimport bool as cbool
 from libcpp.memory cimport shared_ptr, static_pointer_cast
@@ -10,21 +10,6 @@ import threading
 # Global server state
 _server_thread = None
 _server_running = False
-
-def get_server_atomspace():
-    """Get the AtomSpace used by the running CogServer.
-
-    Returns:
-        AtomSpace: The server's current AtomSpace, or None if server not running.
-    """
-    global _server_running
-    if not _server_running:
-        return None
-    cdef cAtomSpacePtr casp = cython_server_atomspace()
-    # Use as_cast to convert AtomSpace* to Handle for AtomSpace_factoid
-    cdef cHandle h = as_cast(casp.get())
-    asp = AtomSpace_factoid(h)
-    return asp
 
 def start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port=18888,
                     enable_console=True, enable_web=True, enable_mcp=True):

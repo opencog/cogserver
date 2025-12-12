@@ -73,7 +73,6 @@ public:
 
     /** Returns the atomspace instance. */
     AtomSpacePtr getAtomSpace() { return _atomSpace; }
-    void setAtomSpace(const AtomSpacePtr& as) { _atomSpace = as; }
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
@@ -134,12 +133,6 @@ public:
 // Singleton instance of the cogserver
 CogServer& cogserver(void);
 CogServer& cogserver(AtomSpacePtr);
-
-// Only cython needs this.
-inline AtomSpacePtr cython_server_atomspace(void)
-{
-    return cogserver().getAtomSpace();
-}
 
 /** @}*/
 }  // namespace
