@@ -223,7 +223,7 @@ public:
 
 	void setUp()
 	{
-		csrv = &cogserver();
+		csrv = new CogServer();
 		csrv->loadModules();
 		csrv->enableNetworkServer(17333);
 		main_loop = new std::thread(&CogServer::serverLoop, csrv);
@@ -239,7 +239,8 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
-		csrv->getAtomSpace()->clear();
+		delete csrv;
+		csrv = nullptr;
 		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
 	}
 
