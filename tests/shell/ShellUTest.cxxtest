@@ -15,9 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * along with this program; if not, see http://www.gnu.org/licenses/
  */
 
 #include <thread>
@@ -223,7 +221,7 @@ public:
 
 	void setUp()
 	{
-		csrv = &cogserver();
+		csrv = new CogServer();
 		csrv->loadModules();
 		csrv->enableNetworkServer(17333);
 		main_loop = new std::thread(&CogServer::serverLoop, csrv);
@@ -239,7 +237,8 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
-		csrv->getAtomSpace()->clear();
+		delete csrv;
+		csrv = nullptr;
 		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
 	}
 

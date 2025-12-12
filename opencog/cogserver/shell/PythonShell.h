@@ -47,6 +47,7 @@ class PythonShell: public GenericShell
 {
 protected:
     AtomSpacePtr _shellspace;
+    std::string _pending_lines;  // Accumulate multi-line input
 public:
     PythonShell(const AtomSpacePtr&);
     virtual ~PythonShell();

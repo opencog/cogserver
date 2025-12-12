@@ -16,28 +16,28 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * along with this program; if not, see http://www.gnu.org/licenses/
  */
 
 #include <thread>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
-#include <opencog/atoms/atom_types/NameServer.h>
-#include <opencog/atoms/base/Atom.h>
-#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/persist/json/JsonEval.h>
-#include <opencog/util/Logger.h>
-
-#include "opencog/cogserver/shell/JsonShell.h"
 
 using namespace opencog;
+
+std::string json_cmd_exec(const char* cmd)
+{
+    char buf[1000];
+    std::string result;
+    std::shared_ptr<FILE> pope(popen(cmd, "r"), pclose);
+    if (!pope) throw std::runtime_error("popen() failed!");
+    while (!feof(pope.get())) {
+        if (fgets(buf, sizeof(buf), pope.get()) != NULL)
+            result += buf;
+    }
+    return result;
+}
 
 class JsonShellUTest : public CxxTest::TestSuite
 {
@@ -60,7 +60,7 @@ public:
 
     void setUp()
     {
-        csrv = &cogserver();
+        csrv = new CogServer();
         csrv->loadModules();
         csrv->enableNetworkServer(port);
         main_loop = new std::thread(&CogServer::serverLoop, csrv);
@@ -74,6 +74,8 @@ public:
         csrv->stop();
         main_loop->join();
         delete main_loop;
+        delete csrv;
+        csrv = nullptr;
     }
 
     void testJsonShellBasic()
@@ -92,44 +94,13 @@ public:
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Create a socket connection for interactive testing
-        int sock = socket(AF_INET, SOCK_STREAM, 0);
-        TS_ASSERT(0 < sock);
-
-        struct sockaddr_in server;
-        server.sin_addr.s_addr = inet_addr("127.0.0.1");
-        server.sin_family = AF_INET;
-        server.sin_port = htons(port);
-
-        int rc = connect(sock, (struct sockaddr *)&server, sizeof(server));
-        TS_ASSERT(0 == rc);
-
-        // Enter JSON shell
-        rc = send(sock, "json\n", strlen("json\n"), 0);
-        TS_ASSERT(5 == rc);
-
-        char initial_reply[1000];
-        rc = recv(sock, initial_reply, sizeof(initial_reply), 0);
-        TS_ASSERT(0 < rc);
-
-        // Test JSON query functionality with AtomSpace.version()
-        const char* json_query = "AtomSpace.version()\n";
-        rc = send(sock, json_query, strlen(json_query), 0);
-        TS_ASSERT(static_cast<size_t>(rc) == strlen(json_query));
-
-        // Need to give the server time to process
-        usleep(100000); // 100ms delay
-
-        char query_reply[2000];
-        memset(query_reply, 0, sizeof(query_reply));
-        rc = recv(sock, query_reply, sizeof(query_reply)-1, MSG_DONTWAIT);
-        TS_ASSERT(0 < rc);
+        // Test JSON query functionality with AtomSpace.version() using netcat
+        std::string result = json_cmd_exec(
+            "echo 'json\\nAtomSpace.version()\\n' | nc -q 1 localhost 17335");
 
         // The reply should contain a version number
-        std::string reply_str(query_reply, rc);
-        TS_ASSERT(reply_str.size() > 0);
-
-        close(sock);
+        TS_ASSERT(result.size() > 0);
+        TS_ASSERT(result.find(".") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
     }
@@ -138,20 +109,12 @@ public:
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Test JsonEval functionality directly
-        AtomSpacePtr as = cogserver().getAtomSpace();
-        JsonShell shell(as);
-        GenericEval* eval = shell.get_evaluator();
+        // Test JSON shell evaluation via netcat
+        std::string result = json_cmd_exec(
+            "echo 'json\\nAtomSpace.version()\\n' | nc -q 1 localhost 17335");
 
-        TS_ASSERT(eval != nullptr);
-
-        // Test evaluation with a valid JSON command
-        eval->eval_expr("AtomSpace.version()");
-        std::string result = eval->poll_result();
-
-        TS_ASSERT(!eval->eval_error());
         TS_ASSERT(result.size() > 0);
-        // The version should be a numeric string
+        // The version should be a numeric string with a dot
         TS_ASSERT(result.find(".") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -161,23 +124,16 @@ public:
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Add some atoms to test with
-        AtomSpacePtr as = cogserver().getAtomSpace();
-        Handle conch = as->add_node(CONCEPT_NODE, "test-concept-json");
-        TS_ASSERT(conch != Handle::UNDEFINED);
+        // First, add an atom using the Scheme shell
+        int rc = system("echo '(Concept \"test-concept-json\")' | nc -q 1 localhost 17335");
+        TS_ASSERT_EQUALS(rc, 0);
+        usleep(50000);
 
-        // Test JSON shell can access these atoms
-        JsonShell shell(as);
-        GenericEval* eval = shell.get_evaluator();
+        // Test JSON shell can access the atom
+        std::string result = json_cmd_exec(
+            "echo 'json\\nAtomSpace.haveNode(\"Concept\", \"test-concept-json\")\\n' | nc -q 1 localhost 17335");
 
-        // Use JSON command format to check for the atom
-        std::string json_request = "AtomSpace.haveNode(\"Concept\", \"test-concept-json\")";
-
-        eval->eval_expr(json_request);
-        std::string result = eval->poll_result();
-
-        TS_ASSERT(!eval->eval_error());
-        // Should return "true" (check if result contains true)
+        // Should return "true"
         TS_ASSERT(result.find("true") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -187,23 +143,23 @@ public:
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Add some atoms to test with
-        AtomSpacePtr as = cogserver().getAtomSpace();
-        as->add_node(CONCEPT_NODE, "json-test-1");
-        as->add_node(CONCEPT_NODE, "json-test-2");
-        as->add_node(NUMBER_NODE, "42");
+        // Add some atoms using the Scheme shell
+        int rc = system("echo '(Concept \"json-test-1\")' | nc -q 1 localhost 17335");
+        TS_ASSERT_EQUALS(rc, 0);
+        usleep(50000);
+        rc = system("echo '(Concept \"json-test-2\")' | nc -q 1 localhost 17335");
+        TS_ASSERT_EQUALS(rc, 0);
+        usleep(50000);
+        rc = system("echo '(Number 42)' | nc -q 1 localhost 17335");
+        TS_ASSERT_EQUALS(rc, 0);
+        usleep(50000);
 
-        JsonShell shell(as);
-        GenericEval* eval = shell.get_evaluator();
+        // Get all ConceptNodes via JSON shell
+        std::string result = json_cmd_exec(
+            "echo 'json\\nAtomSpace.getAtoms(\"ConceptNode\")\\n' | nc -q 1 localhost 17335");
 
-        // Get all ConceptNodes
-        eval->eval_expr("AtomSpace.getAtoms(\"ConceptNode\")");
-        std::string result = eval->poll_result();
-
-        TS_ASSERT(!eval->eval_error());
         TS_ASSERT(result.find("json-test-1") != std::string::npos);
         TS_ASSERT(result.find("json-test-2") != std::string::npos);
-        TS_ASSERT(result.find("test-concept-json") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
     }
@@ -212,21 +168,17 @@ public:
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        AtomSpacePtr as = cogserver().getAtomSpace();
-        JsonShell shell(as);
-        GenericEval* eval = shell.get_evaluator();
-
         // Create a new atom via JSON command
-        std::string cmd = "AtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})";
-        eval->eval_expr(cmd);
-        std::string result = eval->poll_result();
+        std::string result = json_cmd_exec(
+            "echo 'json\\nAtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})\\n' | nc -q 1 localhost 17335");
 
-        TS_ASSERT(!eval->eval_error());
         TS_ASSERT(result.find("true") != std::string::npos);
 
-        // Verify the atom was created
-        Handle h = as->get_node(CONCEPT_NODE, "json-created");
-        TS_ASSERT(h != Handle::UNDEFINED);
+        // Verify the atom was created by checking with haveNode
+        std::string verify = json_cmd_exec(
+            "echo 'json\\nAtomSpace.haveNode(\"Concept\", \"json-created\")\\n' | nc -q 1 localhost 17335");
+
+        TS_ASSERT(verify.find("true") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
     }

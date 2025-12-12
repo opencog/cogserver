@@ -35,7 +35,6 @@ The `opencog.cogserver` module provides:
 * `start_cogserver(atomspace=None, console_port=17001, web_port=18080, mcp_port=18888, enable_console=True, enable_web=False, enable_mcp=False)` - Start the CogServer
 * `stop_cogserver()` - Stop the running CogServer
 * `is_cogserver_running()` - Check if server is running
-* `get_server_atomspace()` - Get the AtomSpace used by the server
 
 ## Tutorial ##
 

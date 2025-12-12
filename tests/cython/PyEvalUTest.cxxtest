@@ -1,364 +1,220 @@
-#include <string>
-#include <cstdio>
+/*
+ * tests/cython/PyEvalUTest.cxxtest
+ *
+ * Copyright (C) 2016 OpenCog Foundation
+ * All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License v3 as
+ * published by the Free Software Foundation and including the exceptions
+ * at http://opencog.org/wiki/Licenses
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program; if not, see http://www.gnu.org/licenses/
+ */
+
 #include <thread>
-#include <chrono>
+#include <unistd.h>
 
 #include <opencog/cogserver/server/CogServer.h>
-#include <opencog/cogserver/server/Request.h>
-#include <opencog/cython/PythonEval.h>
-
-using std::string;
 
 using namespace opencog;
 
-class PyEvalUTest :  public CxxTest::TestSuite
+std::string py_cmd_exec(const char* cmd)
 {
-public:
+    char buf[4000];
+    std::string result;
+    std::shared_ptr<FILE> pope(popen(cmd, "r"), pclose);
+    if (!pope) throw std::runtime_error("popen() failed!");
+    while (!feof(pope.get())) {
+        if (fgets(buf, sizeof(buf), pope.get()) != NULL)
+            result += buf;
+    }
+    return result;
+}
 
+class PyEvalUTest : public CxxTest::TestSuite
+{
+private:
+    CogServer* csrv;
+    std::thread* main_loop;
+    int port = 17336;
+
+public:
     PyEvalUTest()
     {
-        logger().set_level(Logger::DEBUG);
+        logger().set_level(Logger::INFO);
         logger().set_print_to_stdout_flag(true);
 
-        cogserver().loadModules();
+        csrv = new CogServer();
+        csrv->loadModules();
+        csrv->enableNetworkServer(port);
+        main_loop = new std::thread(&CogServer::serverLoop, csrv);
     }
 
     ~PyEvalUTest()
     {
-        // Clean up
+        csrv->stop();
+        main_loop->join();
+        delete main_loop;
+        delete csrv;
+        csrv = nullptr;
+
         if (!CxxTest::TestTracker::tracker().suiteFailed())
             std::remove(logger().get_filename().c_str());
     }
 
-    void setUp() {
-    }
-
-    void tearDown() {
-    }
-
-    void testCogServerCanCreatePyEvalRequest()
+    void setUp()
     {
-        // Test that the CogServer can create py-eval requests
-        // This verifies the Python module was loaded into the CogServer
-        Request* pyEvalRequest = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(pyEvalRequest, (Request*) NULL);
-
-        if (pyEvalRequest != NULL) {
-            TS_TRACE("CogServer successfully loaded Python module");
-            delete pyEvalRequest;
-        }
     }
 
-    void testCogServerCanCreatePyShellRequest()
+    void tearDown()
     {
-        // Test that the CogServer can create py shell requests
-        Request* pyShellRequest = cogserver().createRequest("py");
-        TS_ASSERT_DIFFERS(pyShellRequest, (Request*) NULL);
-
-        if (pyShellRequest != NULL) {
-            TS_TRACE("CogServer can create Python shell requests");
-            delete pyShellRequest;
-        }
     }
 
-    void testCogServerProcessesPyEvalRequest()
+    void testPythonShellBasic()
     {
-        // Test that CogServer can process a py-eval request and actually execute Python
-        Request* req = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req, (Request*) NULL);
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Set a variable through CogServer
-        req->addParameter("test_cogserver_var = 123");
-        cogserver().pushRequest(req);
-        cogserver().runLoopStep();
+        // Test basic Python shell interaction
+        int rc = system("printf 'py\\n.\\n' | nc -q 1 localhost 17336");
+        TS_ASSERT_EQUALS(rc, 0);
 
-        // Now verify the variable was actually set by checking it
-        Request* req2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        req2->addParameter("assert test_cogserver_var == 123");
-        cogserver().pushRequest(req2);
-        cogserver().runLoopStep();
-
-        // If the assertion passed, the variable was correctly set
-        // If it failed, PythonEval would have thrown an error
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testCogServerHandlesMultiplePyEvalRequests()
+    void testPythonShellVariable()
     {
-        // Test that CogServer correctly executes multiple py-eval requests and maintains state
-        Request* req1 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req1, (Request*) NULL);
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // First request: set a variable
-        req1->addParameter("cogserver_test_x = 10");
-        cogserver().pushRequest(req1);
-        cogserver().runLoopStep();
+        // Set a variable and verify it
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "test_var = 42\\n"
+            "print(test_var)\\n"
+            ".\\n' | nc -q 3 localhost 17336");
 
-        // Second request: use the variable in a calculation
-        Request* req2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        req2->addParameter("cogserver_test_y = cogserver_test_x * 2");
-        cogserver().pushRequest(req2);
-        cogserver().runLoopStep();
+        TS_ASSERT(result.find("42") != std::string::npos);
 
-        // Third request: combine both variables
-        Request* req3 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req3, (Request*) NULL);
-        req3->addParameter("cogserver_test_z = cogserver_test_x + cogserver_test_y");
-        cogserver().pushRequest(req3);
-        cogserver().runLoopStep();
-
-        // Fourth request: verify all calculations were correct
-        Request* req4 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req4, (Request*) NULL);
-        req4->addParameter("assert cogserver_test_x == 10");
-        cogserver().pushRequest(req4);
-        cogserver().runLoopStep();
-
-        Request* req5 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req5, (Request*) NULL);
-        req5->addParameter("assert cogserver_test_y == 20");
-        cogserver().pushRequest(req5);
-        cogserver().runLoopStep();
-
-        Request* req6 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req6, (Request*) NULL);
-        req6->addParameter("assert cogserver_test_z == 30");
-        cogserver().pushRequest(req6);
-        cogserver().runLoopStep();
-
-        // All assertions passed - calculations were correct
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testCogServerPyEvalWithComplexExpression()
+    void testPythonShellCalculation()
     {
-        // Test that CogServer can handle complex Python expressions
-        Request* req = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req, (Request*) NULL);
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Add a complex Python expression with function definition
-        req->addParameter("def cogserver_test_func(n): return n * n");
-        cogserver().pushRequest(req);
-        cogserver().runLoopStep();
+        // Test calculation
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "print(10 + 20)\\n"
+            ".\\n' | nc -q 2 localhost 17336");
 
-        // Use the function in another request
-        Request* req2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        req2->addParameter("cogserver_result = cogserver_test_func(7)");
-        cogserver().pushRequest(req2);
-        cogserver().runLoopStep();
+        TS_ASSERT(result.find("30") != std::string::npos);
 
-        // Verify the function was executed
-        Request* req3 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req3, (Request*) NULL);
-        req3->addParameter("assert cogserver_result == 49");
-        cogserver().pushRequest(req3);
-        cogserver().runLoopStep();
-
-        // If assertion didn't fail, test passes
-        TS_ASSERT(true);
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testCogServerPyEvalWithImports()
+    void testPythonShellFunction()
     {
-        // Test that CogServer py-eval can handle module imports
-        Request* req = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req, (Request*) NULL);
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Import a standard library module through CogServer
-        req->addParameter("import math");
-        cogserver().pushRequest(req);
-        cogserver().runLoopStep();
+        // Test lambda function (single-line, avoids multi-line indentation issues)
+        // "square = lambda n: n * n\\n"
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "def square(n):\\n"
+            "    return n * n\\n"
+            "\\n"
+            "print(square(7))\\n.\\n' | nc -q 2 localhost 17336");
 
-        // Use the imported module
-        Request* req2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        req2->addParameter("cogserver_pi = math.pi");
-        cogserver().pushRequest(req2);
-        cogserver().runLoopStep();
+        fflush(stdout);
+        fflush(stderr);
+        printf("Result = >>%s<<\n", result.c_str());
+        fflush(stdout);
+        TS_ASSERT(result.find("49") != std::string::npos);
 
-        // Verify the import worked
-        Request* req3 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req3, (Request*) NULL);
-        req3->addParameter("assert cogserver_pi > 3.14 and cogserver_pi < 3.15");
-        cogserver().pushRequest(req3);
-        cogserver().runLoopStep();
-
-        // If import and usage worked, test passes
-        TS_ASSERT(true);
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testCogServerPyEvalAtomSpaceAccess()
+    void testPythonShellImport()
     {
-        // Test that Python code executed through CogServer can access the AtomSpace
-        // Note: Due to the way Python bindings work, the Python AtomSpace wrapper
-        // may not directly modify the C++ atomspace in the test environment.
-        // This test verifies that Python can at least access and work with an AtomSpace.
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        Request* req = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req, (Request*) NULL);
+        // Test module import
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "import math\\n"
+            "print(int(math.pi * 100))\\n"
+            ".\\n' | nc -q 2 localhost 17336");
 
-        // Import AtomSpace modules through CogServer
-        req->addParameter("from opencog.atomspace import AtomSpace, types");
-        cogserver().pushRequest(req);
-        cogserver().runLoopStep();
+        printf("Result = >>%s<<\n", result.c_str());
 
-        // Add atoms to the test atomspace
-        Request* req4 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req4, (Request*) NULL);
-        req4->addParameter("cogserver_node1 = test_as.add_node(types.ConceptNode, 'CogServerTestNode1')");
-        cogserver().pushRequest(req4);
-        cogserver().runLoopStep();
+        // pi * 100 = 314.159... -> 314
+        TS_ASSERT(result.find("314") != std::string::npos);
 
-        Request* req5 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req5, (Request*) NULL);
-        req5->addParameter("cogserver_node2 = test_as.add_node(types.ConceptNode, 'CogServerTestNode2')");
-        cogserver().pushRequest(req5);
-        cogserver().runLoopStep();
-
-        Request* req6 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req6, (Request*) NULL);
-        req6->addParameter("cogserver_link = test_as.add_link(types.ListLink, [cogserver_node1, cogserver_node2])");
-        cogserver().pushRequest(req6);
-        cogserver().runLoopStep();
-
-        // Verify Python operations succeeded
-        Request* req7 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req7, (Request*) NULL);
-        req7->addParameter("assert cogserver_node1 is not None");
-        cogserver().pushRequest(req7);
-        cogserver().runLoopStep();
-
-        Request* req8 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req8, (Request*) NULL);
-        req8->addParameter("assert cogserver_node2 is not None");
-        cogserver().pushRequest(req8);
-        cogserver().runLoopStep();
-
-        Request* req9 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req9, (Request*) NULL);
-        req9->addParameter("assert cogserver_link is not None");
-        cogserver().pushRequest(req9);
-        cogserver().runLoopStep();
-
-        // Check that we can query the atomspace
-        Request* req10 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req10, (Request*) NULL);
-        req10->addParameter("found_nodes = list(test_as.get_atoms_by_type(types.ConceptNode))");
-        cogserver().pushRequest(req10);
-        cogserver().runLoopStep();
-
-        Request* req11 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req11, (Request*) NULL);
-        req11->addParameter("assert len(found_nodes) == 2");
-        cogserver().pushRequest(req11);
-        cogserver().runLoopStep();
-
-        // Test passes if Python can work with atomspace, even if not directly
-        // modifying the C++ test atomspace
-        TS_ASSERT(true);
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testCogServerPyEvalErrorHandling()
+    void testPythonShellAtomSpace()
     {
-        // Test that CogServer properly handles Python errors
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // First set a variable to a known value
-        Request* setup = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(setup, (Request*) NULL);
-        setup->addParameter("error_test_var = 'original'");
-        cogserver().pushRequest(setup);
-        cogserver().runLoopStep();
+        // Test AtomSpace access from Python
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "from opencog.atomspace import AtomSpace, types\\n"
+            "a = AtomSpace()\\n"
+            "node = a.add_node(types.ConceptNode, \"test-py-node\")\\n"
+            "print(node.name)\\n.\\n' | nc -q 2 localhost 17336");
 
-        // Try to execute invalid Python syntax
-        Request* req = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req, (Request*) NULL);
-        req->addParameter("this is not valid python");
-        cogserver().pushRequest(req);
-        cogserver().runLoopStep();
+        TS_ASSERT(result.find("test-py-node") != std::string::npos);
 
-        // Verify the Python interpreter is still working after the error
-        Request* verify1 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(verify1, (Request*) NULL);
-        verify1->addParameter("assert error_test_var == 'original'");
-        cogserver().pushRequest(verify1);
-        cogserver().runLoopStep();
-
-        // Test runtime error (undefined variable)
-        Request* req2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        req2->addParameter("undefined_variable_12345");
-        cogserver().pushRequest(req2);
-        cogserver().runLoopStep();
-
-        // Again verify Python is still working
-        Request* verify2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(verify2, (Request*) NULL);
-        verify2->addParameter("error_test_var = 'modified'");
-        cogserver().pushRequest(verify2);
-        cogserver().runLoopStep();
-
-        Request* verify3 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(verify3, (Request*) NULL);
-        verify3->addParameter("assert error_test_var == 'modified'");
-        cogserver().pushRequest(verify3);
-        cogserver().runLoopStep();
-
-        // Errors were handled gracefully and Python continues to work
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testCogServerRequestQueueing()
+    void testPythonShellErrorRecovery()
     {
-        // Test that CogServer correctly processes queued requests in order
-        Request* req1 = cogserver().createRequest("py-eval");
-        Request* req2 = cogserver().createRequest("py-eval");
-        Request* req3 = cogserver().createRequest("py-eval");
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        TS_ASSERT_DIFFERS(req1, (Request*) NULL);
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        TS_ASSERT_DIFFERS(req3, (Request*) NULL);
+        // First cause an error, then verify Python still works
+        int rc = system(
+            "printf 'py\\n"
+            "this is not valid python\\n"
+            ".\\n' | nc -q 2 localhost 17336");
 
-        // Queue multiple requests that depend on each other
-        req1->addParameter("queue_test_a = 1");
-        req2->addParameter("queue_test_b = 2");
-        req3->addParameter("queue_test_c = queue_test_a + queue_test_b");
+        TS_ASSERT_EQUALS(rc, 0);
+        usleep(50000);
 
-        cogserver().pushRequest(req1);
-        cogserver().pushRequest(req2);
-        cogserver().pushRequest(req3);
+        // Now verify Python still works
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "print(\"recovered\")\\n"
+            ".\\n' | nc -q 2 localhost 17336");
 
-        // Process all queued requests
-        cogserver().runLoopStep();
-        cogserver().runLoopStep();
-        cogserver().runLoopStep();
+        TS_ASSERT(result.find("recovered") != std::string::npos);
 
-        // Verify all calculations were performed correctly
-        Request* verify = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(verify, (Request*) NULL);
-        verify->addParameter(
-            "assert queue_test_a == 1\n"
-            "assert queue_test_b == 2\n"
-            "assert queue_test_c == 3"
-        );
-        cogserver().pushRequest(verify);
-        cogserver().runLoopStep();
-
-        // All variables have correct values - requests were processed in order
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 
-    void testModuleLoadedInCogServer()
+    void testPythonShellMultipleCommands()
     {
-        // Test that the Python module is properly loaded in CogServer
-        // The module should have been loaded in the constructor
+        logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Try to create both py and py-eval requests
-        Request* pyReq = cogserver().createRequest("py");
-        Request* pyEvalReq = cogserver().createRequest("py-eval");
+        // Test multiple commands in sequence
+        std::string result = py_cmd_exec(
+            "printf 'py\\n"
+            "a = 10\\n"
+            "b = 20\\n"
+            "c = a + b\\n"
+            "print(c)\\n.\\n' | nc -q 2 localhost 17336");
 
-        // At least py-eval should be available if module loaded
-        TS_ASSERT_DIFFERS(pyEvalReq, (Request*) NULL);
+        TS_ASSERT(result.find("30") != std::string::npos);
 
-        if (pyReq) delete pyReq;
-        if (pyEvalReq) delete pyEvalReq;
+        logger().debug("END TEST: %s", __FUNCTION__);
     }
 };

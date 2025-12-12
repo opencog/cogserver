@@ -15,9 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * along with this program; if not, see http://www.gnu.org/licenses/
  */
 
 #include <thread>
@@ -89,9 +87,19 @@ public:
 	{
 		logger().set_level(Logger::DEBUG);
 		logger().set_print_to_stdout_flag(true);
+	}
 
+	~HttpUTest()
+	{
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp()
+	{
 		// Start the CogServer on a thread
-		_cogserver = &cogserver();
+		_cogserver = new CogServer();
 		_cogserver->loadModules();
 		_cogserver->enableWebServer(18181);  // HTTP port
 
@@ -102,7 +110,7 @@ public:
 		usleep(100000);
 	}
 
-	~HttpUTest()
+	void tearDown()
 	{
 		// Stop the server
 		_cogserver->stop();
@@ -112,16 +120,8 @@ public:
 
 		// Clean up
 		_cogserver->disableWebServer();
-	}
-
-	void setUp()
-	{
-		// Per-test setup - nothing needed
-	}
-
-	void tearDown()
-	{
-		// Per-test teardown - nothing needed
+		delete _cogserver;
+		_cogserver = nullptr;
 	}
 
 	// Test basic HTTP GET request to root
