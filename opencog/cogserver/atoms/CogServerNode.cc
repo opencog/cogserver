@@ -140,6 +140,22 @@ void CogServerNode::startServers()
 	{
 		logger().error("Failed to start server: %s", ex.what());
 	}
+
+	_main_loop = new std::thread(&CogServerNode::serverLoop, this);
+}
+
+void CogServerNode::stop()
+{
+	CogServer::stop();
+	if (_main_loop)
+	{
+		_main_loop->join();
+		delete _main_loop;
+		_main_loop = nullptr;
+	}
+	disableMCPServer();
+	disableWebServer();
+	disableNetworkServer();
 }
 
 AtomSpacePtr CogServerNode::getAS()

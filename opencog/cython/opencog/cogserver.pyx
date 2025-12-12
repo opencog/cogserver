@@ -7,12 +7,10 @@ from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValu
 from opencog.atomspace import types
 from cython.operator cimport dereference as deref
 from libcpp.string cimport string
-import threading
 
 # Global server state
 cdef cCogServerNodePtr _server_ptr
 _server_handle = None  # Keep Python reference to prevent GC
-_server_thread = None
 _server_running = False
 
 def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
@@ -36,7 +34,7 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         RuntimeError: If server is already running.
         ValueError: If invalid ports are specified.
     """
-    global _server_ptr, _server_handle, _server_thread, _server_running
+    global _server_ptr, _server_handle, _server_running
 
     if _server_running:
         raise RuntimeError("CogServer is already running")
@@ -70,29 +68,12 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         key = atomspace.add_node(types.PredicateNode, "*-mcp-port-*")
         atomspace.set_value(_server_handle, key, FloatValue(float(effective_mcp)))
 
-    # Start all servers
-    key = atomspace.add_node(types.PredicateNode, "*-start-*")
-    atomspace.set_value(_server_handle, key, VoidValue())
-
-    # Start server loop in a separate thread
-    def server_loop():
-        """Run the server's main loop."""
-        global _server_ptr
-        try:
-            with nogil:
-                deref(_server_ptr).serverLoop()
-        except Exception as e:
-            print(f"Server loop error: {e}")
-
-    _server_thread = threading.Thread(target=server_loop, daemon=True)
-    _server_thread.start()
+    # Start all servers (this also starts the server thread)
+    msg = atomspace.add_node(types.PredicateNode, "*-start-*")
+    atomspace.set_value(_server_handle, msg, VoidValue())
 
     # Mark as initialized
     _server_running = True
-
-    # Give the server a moment to start
-    import time
-    time.sleep(0.1)
 
     return True
 
@@ -102,30 +83,18 @@ def stop_cogserver():
     Returns:
         bool: True if server was stopped, False if server was not running.
     """
-    global _server_ptr, _server_handle, _server_thread, _server_running
+    global _server_ptr, _server_handle, _server_running
 
     if not _server_running or not _server_ptr:
         return False
 
     # Stop the server
-    deref(_server_ptr).stop()
+    atomspace = get_thread_atomspace()
+    msg = atomspace.add_node(types.PredicateNode, "*-stop-*")
+    atomspace.set_value(_server_handle, msg, VoidValue())
 
-    # Disable all services
-    deref(_server_ptr).disableMCPServer()
-    deref(_server_ptr).disableWebServer()
-    deref(_server_ptr).disableNetworkServer()
-
-    # Wait for the server thread to finish (with timeout)
-    if _server_thread and _server_thread.is_alive():
-        _server_thread.join(timeout=5.0)
-        if _server_thread.is_alive():
-            import warnings
-            warnings.warn("CogServer thread did not stop cleanly")
-
-    # Clean up
     _server_ptr.reset()
     _server_handle = None
-    _server_thread = None
     _server_running = False
 
     return True

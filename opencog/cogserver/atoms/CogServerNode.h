@@ -25,6 +25,8 @@
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/types/atom_types.h>
 
+#include <thread>
+
 namespace opencog
 {
 /** \addtogroup grp_atomspace
@@ -57,9 +59,12 @@ public:
 	static Handle factory(const Handle&);
 
 private:
-	void startServers();
 	int getPortValue(const char* key, int defaultPort);
 	std::string getStringValue(const char* key, const std::string& defaultVal);
+
+	void startServers();
+	void stop();
+	std::thread* _main_loop = nullptr;
 };
 
 NODE_PTR_DECL(CogServerNode)

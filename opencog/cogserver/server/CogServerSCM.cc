@@ -26,7 +26,6 @@
 #ifndef _OPENCOG_COGSERVER_SCM_H
 #define _OPENCOG_COGSERVER_SCM_H
 
-#include <thread>
 #include <opencog/cogserver/atoms/CogServerNode.h>
 
 namespace opencog
@@ -44,7 +43,6 @@ private:
     std::string stop_server(void);
 
     CogServerNode* srvr = nullptr;
-    std::thread * main_loop = nullptr;
 
 public:
     CogServerSCM();
@@ -153,7 +151,6 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     // Start all servers
     srvr->setValue(as->add_node(PREDICATE_NODE, "*-start-*"),
                    createVoidValue());
-    main_loop = new std::thread(&CogServerNode::serverLoop, srvr);
     rc = "Started CogServer";
     return rc;
 }
@@ -164,14 +161,10 @@ std::string CogServerSCM::stop_server(void)
     static std::string rc;
     if (nullptr == srvr) { rc = "CogServer not running"; return rc;}
 
-    // This is probably not thread-safe...
-    srvr->stop();
-    main_loop->join();
-
-    srvr->disableNetworkServer();
-    delete main_loop;
+    AtomSpacePtr asp = srvr->getAS();
+    srvr->setValue(asp->add_node(PREDICATE_NODE, "*-stop-*"),
+                   createVoidValue());
     delete srvr;
-    main_loop = nullptr;
     srvr = nullptr;
 
     rc = "Stopped CogServer";
