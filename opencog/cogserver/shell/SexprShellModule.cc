@@ -84,7 +84,7 @@ SexprShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	SexprShell *sh = new SexprShell(_cogserver.getAtomSpace());
+	SexprShell *sh = new SexprShell(_cogserver.getAS());
 
 	// Install cog-barrier handler for UUID-based multi-socket sync
 	// Message format: (cog-barrier N "uuid")

@@ -47,7 +47,7 @@ void MCPServer::OnConnection(void)
 
 	// If there's no shell, then set up an evaluator for ourself.
 	if (nullptr == _shell)
-		_eval = McpEval::get_evaluator(_cserver.getAtomSpace());
+		_eval = McpEval::get_evaluator(_cserver.getAS());
 }
 
 // Called for each newline-terminated line received.

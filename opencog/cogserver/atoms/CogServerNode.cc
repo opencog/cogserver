@@ -54,6 +54,11 @@ CogServerNode::CogServerNode(const std::string&& s)
 {
 }
 
+AtomSpacePtr CogServerNode::getAS()
+{
+	return AtomSpaceCast(_atom_space);
+}
+
 HandleSeq CogServerNode::getMessages() const
 {
 	static const HandleSeq msgs = []() {

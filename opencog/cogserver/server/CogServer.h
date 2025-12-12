@@ -66,7 +66,7 @@ public:
     virtual ~CogServer(void);
 
     /** Returns the atomspace instance. */
-    virtual AtomSpacePtr getAtomSpace() { return nullptr; }
+    virtual AtomSpacePtr getAS() { return nullptr; }
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
