@@ -23,6 +23,7 @@
 #include <opencog/atoms/atom_types/atom_names.h>
 #include <opencog/atoms/base/ClassServer.h>
 #include <opencog/atoms/core/NumberNode.h>
+#include <opencog/atoms/value/BoolValue.h>
 #include <opencog/atoms/value/FloatValue.h>
 #include <opencog/atoms/value/StringValue.h>
 #include "CogServerNode.h"
@@ -82,6 +83,10 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	               createStringValue("[0;34mguile[1;34m> [0m"));
 	Atom::setValue(as->add_atom(Predicate("*-scm-prompt-*")),
 	               createStringValue("guile> "));
+
+	// ANSI color enable/disable
+	Atom::setValue(as->add_atom(Predicate("*-ansi-enabled-*")),
+	               createBoolValue(true));
 }
 
 /// Retrieve a port number from a stored Value.
