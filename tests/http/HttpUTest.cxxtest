@@ -107,9 +107,6 @@ public:
 		                     createFloatValue(0.0));
 		_cogserver->setValue(_asp->add_atom(Predicate("*-start-*")),
 		                     createVoidValue());
-
-		// Wait a bit for the server to start up
-		usleep(100000);
 	}
 
 	~HttpUTest()

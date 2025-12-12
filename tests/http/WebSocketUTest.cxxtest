@@ -186,9 +186,6 @@ public:
 		                     createFloatValue(0.0));
 		_cogserver->setValue(_asp->add_atom(Predicate("*-start-*")),
 		                     createVoidValue());
-
-		// Give the server time to start
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	~WebSocketUTest() {
