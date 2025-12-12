@@ -59,14 +59,9 @@ protected:
     NetworkServer* _mcpServer;
     bool _running;
 
-    /** Protected; singleton instance! Bad things happen when there is
-     * more than one. Alas. */
+public:
     CogServer(void);
     CogServer(AtomSpacePtr);
-friend CogServer& cogserver(void);
-friend CogServer& cogserver(AtomSpacePtr);
-
-public:
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);
