@@ -76,11 +76,11 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 
 	// Prompt defaults
 	Atom::setValue(as->add_atom(Predicate("*-ansi-prompt-*")),
-	               createStringValue("[0;32mopencog[1;32m> [0m"));
+	               createStringValue("\033[0;32mopencog\033[1;32m> \033[0m"));
 	Atom::setValue(as->add_atom(Predicate("*-prompt-*")),
 	               createStringValue("opencog> "));
 	Atom::setValue(as->add_atom(Predicate("*-ansi-scm-prompt-*")),
-	               createStringValue("[0;34mguile[1;34m> [0m"));
+	               createStringValue("\033[0;34mguile\033[1;34m> \033[0m"));
 	Atom::setValue(as->add_atom(Predicate("*-scm-prompt-*")),
 	               createStringValue("guile> "));
 
