@@ -22,4 +22,3 @@ cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
     # Singleton functions
     cCogServer& cogserver()
     cCogServer& cogserver(cAtomSpacePtr)
-    cAtomSpacePtr cython_server_atomspace()
