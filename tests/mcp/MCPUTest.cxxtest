@@ -38,17 +38,7 @@ public:
 	{
 		logger().set_level(Logger::DEBUG);
 		//logger().set_print_to_stdout_flag(true);
-	}
 
-	~MCPUTest()
-	{
-		// erase the log file if no assertions failed
-		if (!CxxTest::TestTracker::tracker().suiteFailed())
-			std::remove(logger().get_filename().c_str());
-	}
-
-	void setUp()
-	{
 		asp = createAtomSpace();
 		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
 		csrv = CogServerNodeCast(hcsn);
@@ -60,13 +50,25 @@ public:
 		sleep(1);
 	}
 
-	void tearDown()
+	~MCPUTest()
 	{
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
 		csrv = nullptr;
 		asp = nullptr;
+
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp()
+	{
+	}
+
+	void tearDown()
+	{
 	}
 
 	// Try to run the example program. See if it works.

@@ -89,17 +89,7 @@ public:
 	{
 		logger().set_level(Logger::DEBUG);
 		logger().set_print_to_stdout_flag(true);
-	}
 
-	~HttpUTest()
-	{
-		// erase the log file if no assertions failed
-		if (!CxxTest::TestTracker::tracker().suiteFailed())
-			std::remove(logger().get_filename().c_str());
-	}
-
-	void setUp()
-	{
 		// Create the AtomSpace and CogServerNode
 		_asp = createAtomSpace();
 		Handle hcsn = _asp->add_node(COG_SERVER_NODE, "test-cogserver");
@@ -114,7 +104,7 @@ public:
 		usleep(100000);
 	}
 
-	void tearDown()
+	~HttpUTest()
 	{
 		// Stop the server
 		_cogserver->stop();
@@ -126,6 +116,18 @@ public:
 		_cogserver->disableWebServer();
 		_cogserver = nullptr;
 		_asp = nullptr;
+
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp()
+	{
+	}
+
+	void tearDown()
+	{
 	}
 
 	// Test basic HTTP GET request to root
