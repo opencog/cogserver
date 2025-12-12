@@ -58,7 +58,6 @@ void opencog_cogserver_init(void);
 
 // --------------------------------------------------------------
 
-#include <opencog/util/Config.h>
 #include <opencog/guile/SchemePrimitive.h>
 #include <opencog/atoms/atom_types/atom_names.h>
 #include <opencog/atoms/value/FloatValue.h>
