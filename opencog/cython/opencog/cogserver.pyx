@@ -55,8 +55,6 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
     cdef cHandle chandle = handle_cast(atom.shared_ptr)
     _server_ptr = CogServerNodeCast(chandle)
 
-    deref(_server_ptr).loadModules()
-
     # Enable requested services
     try:
         if enable_console:

@@ -132,9 +132,6 @@ std::string CogServerSCM::start_server(AtomSpace* as,
 
     srvr = new CogServerNode("cogserver");
 
-    // Load modules specified in config
-    srvr->loadModules();
-
     // Enable the network server and run the server's main loop
     try
     {

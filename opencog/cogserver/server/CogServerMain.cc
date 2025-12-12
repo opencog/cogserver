@@ -178,9 +178,6 @@ int main(int argc, char *argv[])
     Handle hcsn = asp->add_node(COG_SERVER_NODE, "cogserver");
     CogServerNodePtr csn = CogServerNodeCast(hcsn);
 
-    // Load modules specified in config
-    csn->loadModules();
-
     // Enable the network server and run the server's main loop.
     try
     {

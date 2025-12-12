@@ -94,7 +94,6 @@ public:
 		_asp = createAtomSpace();
 		Handle hcsn = _asp->add_node(COG_SERVER_NODE, "test-cogserver");
 		_cogserver = CogServerNodeCast(hcsn);
-		_cogserver->loadModules();
 		_cogserver->enableWebServer(18181);  // HTTP port
 
 		// Run the server on a separate thread

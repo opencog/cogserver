@@ -56,7 +56,6 @@ public:
         asp = createAtomSpace();
         Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
         csrv = CogServerNodeCast(hcsn);
-        csrv->loadModules();
         csrv->enableNetworkServer(port);
         main_loop = new std::thread(&CogServer::serverLoop, csrv.get());
     }

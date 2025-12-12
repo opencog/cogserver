@@ -47,11 +47,13 @@ static constexpr uint32_t dispatch_hash(const char* s)
 CogServerNode::CogServerNode(Type t, const std::string&& s)
 	: Node(t, std::move(s)), CogServer()
 {
+	loadModules();
 }
 
 CogServerNode::CogServerNode(const std::string&& s)
 	: Node(COG_SERVER_NODE, std::move(s)), CogServer()
 {
+	loadModules();
 }
 
 AtomSpacePtr CogServerNode::getAS()
