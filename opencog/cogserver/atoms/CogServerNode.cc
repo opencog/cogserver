@@ -20,6 +20,7 @@
 #include <unordered_set>
 
 #include <opencog/util/Logger.h>
+#include <opencog/atoms/atom_types/atom_names.h>
 #include <opencog/atoms/base/ClassServer.h>
 #include <opencog/atoms/core/NumberNode.h>
 #include <opencog/atoms/value/FloatValue.h>
@@ -65,21 +66,21 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	if (nullptr == as) return;
 
 	// Port defaults
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-telnet-port-*"),
+	Atom::setValue(as->add_atom(Predicate("*-telnet-port-*")),
 	               createFloatValue(17001.0));
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-web-port-*"),
+	Atom::setValue(as->add_atom(Predicate("*-web-port-*")),
 	               createFloatValue(18080.0));
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-mcp-port-*"),
+	Atom::setValue(as->add_atom(Predicate("*-mcp-port-*")),
 	               createFloatValue(18888.0));
 
 	// Prompt defaults
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-ansi-prompt-*"),
+	Atom::setValue(as->add_atom(Predicate("*-ansi-prompt-*")),
 	               createStringValue("[0;32mopencog[1;32m> [0m"));
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-prompt-*"),
+	Atom::setValue(as->add_atom(Predicate("*-prompt-*")),
 	               createStringValue("opencog> "));
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-ansi-scm-prompt-*"),
+	Atom::setValue(as->add_atom(Predicate("*-ansi-scm-prompt-*")),
 	               createStringValue("[0;34mguile[1;34m> [0m"));
-	Atom::setValue(as->add_node(PREDICATE_NODE, "*-scm-prompt-*"),
+	Atom::setValue(as->add_atom(Predicate("*-scm-prompt-*")),
 	               createStringValue("guile> "));
 }
 
@@ -87,7 +88,7 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 /// Accepts FloatValue or NumberNode.
 int CogServerNode::getPortValue(const char* key, int defaultPort)
 {
-	Handle hkey = createNode(PREDICATE_NODE, key);
+	Handle hkey = _atom_space->add_atom(Predicate(key));
 	ValuePtr vp = Atom::getValue(hkey);
 	if (nullptr == vp) return defaultPort;
 
@@ -103,7 +104,7 @@ int CogServerNode::getPortValue(const char* key, int defaultPort)
 std::string CogServerNode::getStringValue(const char* key,
                                           const std::string& defaultVal)
 {
-	Handle hkey = createNode(PREDICATE_NODE, key);
+	Handle hkey = _atom_space->add_atom(Predicate(key));
 	ValuePtr vp = Atom::getValue(hkey);
 	if (nullptr == vp) return defaultVal;
 
@@ -158,9 +159,9 @@ HandleSeq CogServerNode::getMessages() const
 {
 	static const HandleSeq msgs = []() {
 		HandleSeq m({
-			createNode(PREDICATE_NODE, "*-start-*"),
-			createNode(PREDICATE_NODE, "*-stop-*"),
-			createNode(PREDICATE_NODE, "*-run-*")
+			Predicate("*-start-*"),
+			Predicate("*-stop-*"),
+			Predicate("*-run-*")
 		});
 		// Mark each message predicate as a message, once at load time.
 		for (const Handle& h : m)

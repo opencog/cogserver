@@ -39,6 +39,7 @@
 #include <opencog/util/Logger.h>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
 #include <opencog/atoms/value/FloatValue.h>
 #include <opencog/atoms/value/VoidValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
@@ -179,17 +180,17 @@ int main(int argc, char *argv[])
 
     // Set non-default port values before starting
     if (console_port != 17001)
-        csn->setValue(asp->add_node(PREDICATE_NODE, "*-telnet-port-*"),
+        csn->setValue(asp->add_atom(Predicate("*-telnet-port-*")),
                       createFloatValue((double)console_port));
     if (webserver_port != 18080)
-        csn->setValue(asp->add_node(PREDICATE_NODE, "*-web-port-*"),
+        csn->setValue(asp->add_atom(Predicate("*-web-port-*")),
                       createFloatValue((double)webserver_port));
     if (mcp_port != 18888)
-        csn->setValue(asp->add_node(PREDICATE_NODE, "*-mcp-port-*"),
+        csn->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
                       createFloatValue((double)mcp_port));
 
     // Server will run forever... until exit command at the telnet port.
-    csn->setValue(asp->add_node(PREDICATE_NODE, "*-run-*"),
+    csn->setValue(asp->add_atom(Predicate("*-run-*")),
                   createVoidValue());
     exit(0);
 }
