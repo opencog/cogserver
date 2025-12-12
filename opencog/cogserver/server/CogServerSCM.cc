@@ -62,6 +62,9 @@ void opencog_cogserver_init(void);
 
 #include <opencog/util/Config.h>
 #include <opencog/guile/SchemePrimitive.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/StringValue.h>
+#include <opencog/atoms/value/VoidValue.h>
 
 /**
  * Implement a dynamically-loadable cogserver guile module.
@@ -126,21 +129,32 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     // Only one server at a time.
     if (srvr) { rc = "CogServer already running!"; return rc; }
 
-    // Pass parameters non-locally.
-    config().set("ANSI_PROMPT", prompt);
-    config().set("ANSI_SCM_PROMPT", scmprompt);
-
     srvr = new CogServerNode("cogserver");
 
-    // Enable the network server and run the server's main loop
+    // Set non-default port values
+    if (telnet_port != 17001)
+        srvr->setValue(as->add_node(PREDICATE_NODE, "*-telnet-port-*"),
+                       createFloatValue((double)telnet_port));
+    if (websocket_port != 18080)
+        srvr->setValue(as->add_node(PREDICATE_NODE, "*-web-port-*"),
+                       createFloatValue((double)websocket_port));
+    if (mcp_port != 18888)
+        srvr->setValue(as->add_node(PREDICATE_NODE, "*-mcp-port-*"),
+                       createFloatValue((double)mcp_port));
+
+    // Set custom prompts
+    if (!prompt.empty())
+        srvr->setValue(as->add_node(PREDICATE_NODE, "*-ansi-prompt-*"),
+                       createStringValue(prompt));
+    if (!scmprompt.empty())
+        srvr->setValue(as->add_node(PREDICATE_NODE, "*-ansi-scm-prompt-*"),
+                       createStringValue(scmprompt));
+
+    // Start all servers
     try
     {
-        if (0 < telnet_port)
-            srvr->enableNetworkServer(telnet_port);
-        if (0 < websocket_port)
-            srvr->enableWebServer(websocket_port);
-        if (0 < mcp_port)
-            srvr->enableMCPServer(mcp_port);
+        srvr->setValue(as->add_node(PREDICATE_NODE, "*-start-*"),
+                       createVoidValue());
     }
     catch (const std::exception& ex)
     {

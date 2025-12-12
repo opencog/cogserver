@@ -3,7 +3,7 @@
 
 from opencog.cogserver cimport cCogServer, cCogServerNode, cCogServerNodePtr, CogServerNodeCast
 from opencog.atomspace cimport cHandle, Atom, handle_cast
-from opencog.type_constructors import get_thread_atomspace
+from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValue
 from opencog.atomspace import types
 from cython.operator cimport dereference as deref
 from libcpp.string cimport string
@@ -55,22 +55,26 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
     cdef cHandle chandle = handle_cast(atom.shared_ptr)
     _server_ptr = CogServerNodeCast(chandle)
 
-    # Enable requested services
+    # Set non-default port values (0 disables a server)
+    effective_console = console_port if enable_console else 0
+    effective_web = web_port if enable_web else 0
+    effective_mcp = mcp_port if enable_mcp else 0
+
+    if effective_console != 17001:
+        key = atomspace.add_node(types.PredicateNode, "*-telnet-port-*")
+        atomspace.set_value(_server_handle, key, FloatValue(float(effective_console)))
+    if effective_web != 18080:
+        key = atomspace.add_node(types.PredicateNode, "*-web-port-*")
+        atomspace.set_value(_server_handle, key, FloatValue(float(effective_web)))
+    if effective_mcp != 18888:
+        key = atomspace.add_node(types.PredicateNode, "*-mcp-port-*")
+        atomspace.set_value(_server_handle, key, FloatValue(float(effective_mcp)))
+
+    # Start all servers
     try:
-        if enable_console:
-            deref(_server_ptr).enableNetworkServer(console_port)
-        if enable_web:
-            deref(_server_ptr).enableWebServer(web_port)
-        if enable_mcp:
-            deref(_server_ptr).enableMCPServer(mcp_port)
+        key = atomspace.add_node(types.PredicateNode, "*-start-*")
+        atomspace.set_value(_server_handle, key, VoidValue())
     except Exception as e:
-        # Clean up on failure
-        if enable_mcp:
-            deref(_server_ptr).disableMCPServer()
-        if enable_web:
-            deref(_server_ptr).disableWebServer()
-        if enable_console:
-            deref(_server_ptr).disableNetworkServer()
         _server_ptr.reset()
         _server_handle = None
         raise RuntimeError(f"Failed to start server: {e}")

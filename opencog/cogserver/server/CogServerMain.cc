@@ -39,6 +39,8 @@
 #include <opencog/util/Logger.h>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/version.h>
 
@@ -178,15 +180,22 @@ int main(int argc, char *argv[])
     Handle hcsn = asp->add_node(COG_SERVER_NODE, "cogserver");
     CogServerNodePtr csn = CogServerNodeCast(hcsn);
 
-    // Enable the network server and run the server's main loop.
+    // Set non-default port values before starting
+    if (console_port != 17001)
+        csn->setValue(asp->add_node(PREDICATE_NODE, "*-telnet-port-*"),
+                      createFloatValue((double)console_port));
+    if (webserver_port != 18080)
+        csn->setValue(asp->add_node(PREDICATE_NODE, "*-web-port-*"),
+                      createFloatValue((double)webserver_port));
+    if (mcp_port != 18888)
+        csn->setValue(asp->add_node(PREDICATE_NODE, "*-mcp-port-*"),
+                      createFloatValue((double)mcp_port));
+
+    // Start all servers
     try
     {
-        if (0 < console_port)
-            csn->enableNetworkServer(console_port);
-        if (0 < webserver_port)
-            csn->enableWebServer(webserver_port);
-        if (0 < mcp_port)
-            csn->enableMCPServer(mcp_port);
+        csn->setValue(asp->add_node(PREDICATE_NODE, "*-start-*"),
+                      createVoidValue());
     }
     catch (const std::exception& ex)
     {
