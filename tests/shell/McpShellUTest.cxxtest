@@ -58,8 +58,17 @@ public:
     McpShellUTest()
     {
         logger().set_level(Logger::DEBUG);
+    }
 
-        csrv = &cogserver();
+    ~McpShellUTest()
+    {
+        if (!CxxTest::TestTracker::tracker().suiteFailed())
+            std::remove(logger().get_filename().c_str());
+    }
+
+    void setUp()
+    {
+        csrv = new CogServer();
         csrv->loadModules();
         csrv->enableNetworkServer(17334);
         main_loop = new std::thread(&CogServer::serverLoop, csrv);
@@ -68,22 +77,13 @@ public:
         sleep(1);
     }
 
-    ~McpShellUTest()
+    void tearDown()
     {
         csrv->stop();
         main_loop->join();
         delete main_loop;
-
-        if (!CxxTest::TestTracker::tracker().suiteFailed())
-            std::remove(logger().get_filename().c_str());
-    }
-
-    void setUp()
-    {
-    }
-
-    void tearDown()
-    {
+        delete csrv;
+        csrv = nullptr;
     }
 
     void testMcpShellBasic()
