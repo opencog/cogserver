@@ -45,17 +45,6 @@ CogServer::CogServer(void) :
 {
 }
 
-CogServer::CogServer(AtomSpacePtr as) :
-    _atomSpace(as),
-    _consoleServer(nullptr),
-    _webServer(nullptr),
-    _mcpServer(nullptr),
-    _running(false)
-{
-    if (nullptr == as)
-        _atomSpace = createAtomSpace();
-}
-
 /// Allow at most `max_open_socks` concurrent connections.
 /// Setting this larger than 10 or 20 will usually lead to
 /// poor performance, and setting it larger than 140 will

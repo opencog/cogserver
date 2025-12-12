@@ -61,7 +61,7 @@ protected:
 
 public:
     CogServer(void);
-    CogServer(AtomSpacePtr);
+
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);

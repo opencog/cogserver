@@ -132,8 +132,7 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     config().set("ANSI_PROMPT", prompt);
     config().set("ANSI_SCM_PROMPT", scmprompt);
 
-    AtomSpacePtr asp(AtomSpaceCast(as));
-    srvr = new CogServer(asp);
+    srvr = new CogServer();
 
     // Load modules specified in config
     srvr->loadModules();
