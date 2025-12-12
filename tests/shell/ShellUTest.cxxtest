@@ -210,19 +210,10 @@ public:
 
 	ShellUTest()
 	{
-		logger().set_level(Logger::DEBUG);
+		// logger().set_level(Logger::DEBUG);
+		logger().set_level(Logger::INFO);
 		// logger().set_print_to_stdout_flag(true);
-	}
 
-	~ShellUTest()
-	{
-		// erase the log file if no assertions failed
-		if (!CxxTest::TestTracker::tracker().suiteFailed())
-			std::remove(logger().get_filename().c_str());
-	}
-
-	void setUp()
-	{
 		asp = createAtomSpace();
 		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
 		csrv = CogServerNodeCast(hcsn);
@@ -235,7 +226,7 @@ public:
 		csrv->getAtomSpace()->clear();
 	}
 
-	void tearDown()
+	~ShellUTest()
 	{
 		logger().debug("AFTER TEST stop cogserver: %s", __FUNCTION__);
 		csrv->stop();
@@ -244,6 +235,18 @@ public:
 		csrv = nullptr;
 		asp = nullptr;
 		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
+
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp()
+	{
+	}
+
+	void tearDown()
+	{
 	}
 
 	void testControlD()
