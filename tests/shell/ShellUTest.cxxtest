@@ -223,7 +223,6 @@ public:
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
-		csrv->getAtomSpace()->clear();
 	}
 
 	~ShellUTest()
