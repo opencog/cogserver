@@ -174,7 +174,7 @@ void NetworkServer::listen(void)
     }
 }
 
-void NetworkServer::run(ServerSocket* (*handler)(SocketManager*))
+void NetworkServer::run(std::function<ServerSocket*(SocketManager*)> handler)
 {
     if (_running) return;
     _running = true;

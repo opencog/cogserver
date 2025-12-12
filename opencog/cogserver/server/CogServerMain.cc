@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     signal(SIGTRAP, sighand);
     signal(SIGQUIT, sighand);
 
-    CogServer& cogserve = cogserver();
+    CogServer cogserve;
 
     // Load modules specified in config
     cogserve.loadModules();
