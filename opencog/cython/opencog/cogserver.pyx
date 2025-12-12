@@ -3,7 +3,7 @@
 
 from opencog.cogserver cimport cCogServer, cCogServerNode, cCogServerNodePtr, CogServerNodeCast
 from opencog.atomspace cimport cHandle, Atom, handle_cast
-from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValue
+from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValue, Predicate
 from opencog.atomspace import types
 from cython.operator cimport dereference as deref
 from libcpp.string cimport string
@@ -59,18 +59,17 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
     effective_mcp = mcp_port if enable_mcp else 0
 
     if effective_console != 17001:
-        key = atomspace.add_node(types.PredicateNode, "*-telnet-port-*")
+        key = Predicate("*-telnet-port-*")
         atomspace.set_value(_server_handle, key, FloatValue(float(effective_console)))
     if effective_web != 18080:
-        key = atomspace.add_node(types.PredicateNode, "*-web-port-*")
+        key = Predicate("*-web-port-*")
         atomspace.set_value(_server_handle, key, FloatValue(float(effective_web)))
     if effective_mcp != 18888:
-        key = atomspace.add_node(types.PredicateNode, "*-mcp-port-*")
+        key = Predicate("*-mcp-port-*")
         atomspace.set_value(_server_handle, key, FloatValue(float(effective_mcp)))
 
     # Start all servers (this also starts the server thread)
-    msg = atomspace.add_node(types.PredicateNode, "*-start-*")
-    atomspace.set_value(_server_handle, msg, VoidValue())
+    atomspace.set_value(_server_handle, Predicate("*-start-*"), VoidValue())
 
     # Mark as initialized
     _server_running = True
@@ -90,8 +89,7 @@ def stop_cogserver():
 
     # Stop the server
     atomspace = get_thread_atomspace()
-    msg = atomspace.add_node(types.PredicateNode, "*-stop-*")
-    atomspace.set_value(_server_handle, msg, VoidValue())
+    atomspace.set_value(_server_handle, Predicate("*-stop-*"), VoidValue())
 
     _server_ptr.reset()
     _server_handle = None
