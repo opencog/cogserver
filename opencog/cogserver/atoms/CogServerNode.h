@@ -63,7 +63,7 @@ private:
 	std::string getStringValue(const char* key, const std::string& defaultVal);
 
 	void startServers();
-	void stop();
+	void stopServers();
 	std::thread* _main_loop = nullptr;
 };
 

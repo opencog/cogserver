@@ -144,7 +144,7 @@ void CogServerNode::startServers()
 	_main_loop = new std::thread(&CogServerNode::serverLoop, this);
 }
 
-void CogServerNode::stop()
+void CogServerNode::stopServers()
 {
 	CogServer::stop();
 	if (_main_loop)
@@ -219,7 +219,7 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 			startServers();
 			return;
 		case p_stop:
-			stop();
+			stopServers();
 			return;
 		default:
 			break;
