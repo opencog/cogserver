@@ -54,6 +54,12 @@ public:
 	AtomSpacePtr getAS() override;
 
 	static Handle factory(const Handle&);
+
+private:
+	void initDefaultConfig();
+	void startServers();
+	int getPortValue(const char* key, int defaultPort);
+	std::string getStringValue(const char* key, const std::string& defaultVal);
 };
 
 NODE_PTR_DECL(CogServerNode)

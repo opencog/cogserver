@@ -21,6 +21,8 @@
 
 #include <opencog/atoms/base/ClassServer.h>
 #include <opencog/atoms/core/NumberNode.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/StringValue.h>
 #include "CogServerNode.h"
 
 using namespace opencog;
@@ -47,13 +49,85 @@ static constexpr uint32_t dispatch_hash(const char* s)
 CogServerNode::CogServerNode(Type t, const std::string&& s)
 	: Node(t, std::move(s)), CogServer()
 {
+	initDefaultConfig();
 	loadModules();
 }
 
 CogServerNode::CogServerNode(const std::string&& s)
 	: Node(COG_SERVER_NODE, std::move(s)), CogServer()
 {
+	initDefaultConfig();
 	loadModules();
+}
+
+/// Default configuration
+void CogServerNode::initDefaultConfig()
+{
+	// Port defaults
+	Atom::setValue(createNode(PREDICATE_NODE, "*-telnet-port-*"),
+	               createFloatValue(17001.0));
+	Atom::setValue(createNode(PREDICATE_NODE, "*-web-port-*"),
+	               createFloatValue(18080.0));
+	Atom::setValue(createNode(PREDICATE_NODE, "*-mcp-port-*"),
+	               createFloatValue(18888.0));
+
+	// Prompt defaults
+	Atom::setValue(createNode(PREDICATE_NODE, "*-ansi-prompt-*"),
+	               createStringValue("[0;32mopencog[1;32m> [0m"));
+	Atom::setValue(createNode(PREDICATE_NODE, "*-prompt-*"),
+	               createStringValue("opencog> "));
+	Atom::setValue(createNode(PREDICATE_NODE, "*-ansi-scm-prompt-*"),
+	               createStringValue("[0;34mguile[1;34m> [0m"));
+	Atom::setValue(createNode(PREDICATE_NODE, "*-scm-prompt-*"),
+	               createStringValue("guile> "));
+}
+
+/// Retrieve a port number from a stored Value.
+/// Accepts FloatValue or NumberNode.
+int CogServerNode::getPortValue(const char* key, int defaultPort)
+{
+	Handle hkey = createNode(PREDICATE_NODE, key);
+	ValuePtr vp = Atom::getValue(hkey);
+	if (nullptr == vp) return defaultPort;
+
+	if (vp->is_type(FLOAT_VALUE))
+		return FloatValueCast(vp)->value()[0];
+
+	if (vp->is_type(NUMBER_NODE))
+		return NumberNodeCast(vp)->get_value();
+
+	return defaultPort;
+}
+
+std::string CogServerNode::getStringValue(const char* key,
+                                          const std::string& defaultVal)
+{
+	Handle hkey = createNode(PREDICATE_NODE, key);
+	ValuePtr vp = Atom::getValue(hkey);
+	if (nullptr == vp) return defaultVal;
+
+	if (vp->is_type(STRING_VALUE))
+		return StringValueCast(vp)->value()[0];
+
+	if (vp->is_node())
+		return HandleCast(vp)->get_name();
+
+	return defaultVal;
+}
+
+/// Start the servers
+void CogServerNode::startServers()
+{
+	int telnet_port = getPortValue("*-telnet-port-*", 17001);
+	int web_port = getPortValue("*-web-port-*", 18080);
+	int mcp_port = getPortValue("*-mcp-port-*", 18888);
+
+	if (0 < telnet_port)
+		enableNetworkServer(telnet_port);
+	if (0 < web_port)
+		enableWebServer(web_port);
+	if (0 < mcp_port)
+		enableMCPServer(mcp_port);
 }
 
 AtomSpacePtr CogServerNode::getAS()
@@ -114,14 +188,8 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 	switch (dispatch_hash(pred.c_str()))
 	{
 		case p_start:
-		{
-			// The value should be a NumberNode holding the port number.
-			int port = 17001;
-			if (value and value->is_type(NUMBER_NODE))
-				port = NumberNodeCast(value)->get_value();
-			enableNetworkServer(port);
+			startServers();
 			return;
-		}
 		case p_stop:
 			stop();
 			return;
