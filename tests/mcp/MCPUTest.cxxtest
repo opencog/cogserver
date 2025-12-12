@@ -51,7 +51,7 @@ public:
 
 	void setUp()
 	{
-		csrv = &cogserver();
+		csrv = new CogServer();
 		csrv->loadModules();
 		csrv->enableMCPServer(17445);
 		main_loop = new std::thread(&CogServer::serverLoop, csrv);
@@ -66,6 +66,8 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
+		delete csrv;
+		csrv = nullptr;
 	}
 
 	// Try to run the example program. See if it works.
