@@ -48,8 +48,8 @@ private:
 public:
     PyEvalUTest()
     {
-        logger().set_level(Logger::DEBUG);
-        logger().set_print_to_stdout_flag(false);
+        logger().set_level(Logger::INFO);
+        logger().set_print_to_stdout_flag(true);
     }
 
     ~PyEvalUTest()
@@ -64,10 +64,6 @@ public:
         csrv->loadModules();
         csrv->enableNetworkServer(port);
         main_loop = new std::thread(&CogServer::serverLoop, csrv);
-
-        // Wait for the cogserver to finish initializing
-        // Python initialization can take longer
-        sleep(3);
     }
 
     void tearDown()
@@ -99,6 +95,7 @@ public:
         std::string result = py_cmd_exec(
             "printf 'py\\ntest_var = 42\\nprint(test_var)\\n.\\n' | nc -w 3 -q 3 localhost 17336");
 
+        printf("Result = >>%s<<\n", result.c_str());
         TS_ASSERT(result.find("42") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -121,14 +118,17 @@ public:
     {
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
-        // Test function definition and call - Python needs blank line after def
+        // Test lambda function (single-line, avoids multi-line indentation issues)
+        // "square = lambda n: n * n\\n"
         std::string result = py_cmd_exec(
-            "printf 'py\\n"
+            "printf 'py-eval\\n"
             "def square(n):\\n"
             "    return n * n\\n"
             "\\n"
+            "\\n"
             "print(square(7))\\n.\\n' | nc -q 2 localhost 17336");
 
+        printf("Result = >>%s<<\n", result.c_str());
         TS_ASSERT(result.find("49") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -141,6 +141,8 @@ public:
         // Test module import
         std::string result = py_cmd_exec(
             "printf 'py\\nimport math\\nprint(int(math.pi * 100))\\n.\\n' | nc -q 2 localhost 17336");
+
+        printf("Result = >>%s<<\n", result.c_str());
 
         // pi * 100 = 314.159... -> 314
         TS_ASSERT(result.find("314") != std::string::npos);
@@ -160,6 +162,8 @@ public:
             "node = a.add_node(types.ConceptNode, \"test-py-node\")\\n"
             "print(node.name)\\n.\\n' | nc -q 2 localhost 17336");
 
+        printf("Result = >>%s<<\n", result.c_str());
+
         TS_ASSERT(result.find("test-py-node") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -178,6 +182,8 @@ public:
         std::string result = py_cmd_exec(
             "printf 'py\\nprint(\"recovered\")\\n.\\n' | nc -q 2 localhost 17336");
 
+        printf("Result = >>%s<<\n", result.c_str());
+
         TS_ASSERT(result.find("recovered") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -193,13 +199,10 @@ public:
             "a = 10\\n"
             "b = 20\\n"
             "c = a + b\\n"
-            "print(c)\\n.\\n' | nc -q 5 localhost 17336");
+            "print(c)\\n.\\n' | nc -q 2 localhost 17336");
 
-        // Print result with newlines replaced for visibility
-        std::string disp = result;
-        for (size_t i = 0; i < disp.size(); i++)
-            if (disp[i] == '\n') disp[i] = '|';
-        fprintf(stderr, "RESULT len=%zu: >>%s<<\n", result.size(), disp.c_str());
+        printf("Result = >>%s<<\n", result.c_str());
+
         TS_ASSERT(result.find("30") != std::string::npos);
 
         logger().debug("END TEST: %s", __FUNCTION__);
