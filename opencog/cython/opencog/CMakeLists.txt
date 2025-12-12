@@ -33,6 +33,7 @@ ADD_LIBRARY(cogserver_cython SHARED
 
 TARGET_LINK_LIBRARIES(cogserver_cython
 	server
+	servernode
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}
 	${Python3_LIBRARIES}

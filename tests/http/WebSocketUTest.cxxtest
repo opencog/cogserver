@@ -18,7 +18,7 @@
 #include <iomanip>
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/util/Logger.h>
 
 using namespace opencog;
@@ -26,7 +26,8 @@ using namespace opencog;
 class WebSocketUTest : public CxxTest::TestSuite
 {
 private:
-	CogServer* _cogserver;
+	AtomSpacePtr _asp;
+	CogServerNodePtr _cogserver;
 	std::thread* _csthread;
 
 	// Simple base64 encoding for WebSocket handshake
@@ -176,8 +177,10 @@ public:
 	}
 
 	void setUp() {
-		// Create and start cogserver
-		_cogserver = new CogServer();
+		// Create the AtomSpace and CogServerNode
+		_asp = createAtomSpace();
+		Handle hcsn = _asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		_cogserver = CogServerNodeCast(hcsn);
 		_cogserver->loadModules();
 		_cogserver->enableWebServer(18282);
 
@@ -197,8 +200,8 @@ public:
 
 		// Clean up
 		_cogserver->disableWebServer();
-		delete _cogserver;
 		_cogserver = nullptr;
+		_asp = nullptr;
 	}
 
 	// Test WebSocket handshake and JSON response

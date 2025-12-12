@@ -21,7 +21,8 @@
 #include <thread>
 #include <unistd.h>
 
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
 
@@ -41,7 +42,8 @@ std::string py_cmd_exec(const char* cmd)
 class PyEvalUTest : public CxxTest::TestSuite
 {
 private:
-    CogServer* csrv;
+    AtomSpacePtr asp;
+    CogServerNodePtr csrv;
     std::thread* main_loop;
     int port = 17336;
 
@@ -51,10 +53,12 @@ public:
         logger().set_level(Logger::INFO);
         logger().set_print_to_stdout_flag(true);
 
-        csrv = new CogServer();
+        asp = createAtomSpace();
+        Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
+        csrv = CogServerNodeCast(hcsn);
         csrv->loadModules();
         csrv->enableNetworkServer(port);
-        main_loop = new std::thread(&CogServer::serverLoop, csrv);
+        main_loop = new std::thread(&CogServer::serverLoop, csrv.get());
     }
 
     ~PyEvalUTest()
@@ -62,8 +66,8 @@ public:
         csrv->stop();
         main_loop->join();
         delete main_loop;
-        delete csrv;
         csrv = nullptr;
+        asp = nullptr;
 
         if (!CxxTest::TestTracker::tracker().suiteFailed())
             std::remove(logger().get_filename().c_str());

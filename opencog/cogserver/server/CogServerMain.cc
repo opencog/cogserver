@@ -38,7 +38,8 @@
 #include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/version.h>
 
 using namespace opencog;
@@ -170,26 +171,31 @@ int main(int argc, char *argv[])
     signal(SIGTRAP, sighand);
     signal(SIGQUIT, sighand);
 
-    CogServer cogserve;
+    // Create the AtomSpace that holds everything
+    AtomSpacePtr asp = createAtomSpace();
+
+    // Create the CogServerNode and place it in the AtomSpace
+    Handle hcsn = asp->add_node(COG_SERVER_NODE, "cogserver");
+    CogServerNodePtr csn = CogServerNodeCast(hcsn);
 
     // Load modules specified in config
-    cogserve.loadModules();
+    csn->loadModules();
 
     // Enable the network server and run the server's main loop.
     try
     {
         if (0 < console_port)
-            cogserve.enableNetworkServer(console_port);
+            csn->enableNetworkServer(console_port);
         if (0 < webserver_port)
-            cogserve.enableWebServer(webserver_port);
+            csn->enableWebServer(webserver_port);
         if (0 < mcp_port)
-            cogserve.enableMCPServer(mcp_port);
+            csn->enableMCPServer(mcp_port);
     }
     catch (const std::exception& ex)
     {
         fprintf(stderr, "Error exit: %s\n", ex.what());
         exit(-1);
     }
-    cogserve.serverLoop();
+    csn->serverLoop();
     exit(0);
 }

@@ -51,6 +51,8 @@ ADD_EXECUTABLE(cogserver
 
 TARGET_LINK_LIBRARIES(cogserver
 	server
+	servernode
+	cogserver-types
 )
 
 IF (WIN32)

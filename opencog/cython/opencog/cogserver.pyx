@@ -1,13 +1,17 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from opencog.cogserver cimport cCogServer, cCogServerNode
+from opencog.cogserver cimport cCogServer, cCogServerNode, cCogServerNodePtr, CogServerNodeCast
+from opencog.atomspace cimport cHandle, Atom, handle_cast
+from opencog.type_constructors import get_thread_atomspace
+from opencog.atomspace import types
 from cython.operator cimport dereference as deref
 from libcpp.string cimport string
 import threading
 
 # Global server state
-cdef cCogServerNode* _server_instance = NULL
+cdef cCogServerNodePtr _server_ptr
+_server_handle = None  # Keep Python reference to prevent GC
 _server_thread = None
 _server_running = False
 
@@ -32,7 +36,7 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         RuntimeError: If server is already running.
         ValueError: If invalid ports are specified.
     """
-    global _server_instance, _server_thread, _server_running
+    global _server_ptr, _server_handle, _server_thread, _server_running
 
     if _server_running:
         raise RuntimeError("CogServer is already running")
@@ -42,39 +46,44 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         if not (1 <= port <= 65535):
             raise ValueError(f"Invalid {pname} port: {port}. Must be between 1 and 65535")
 
-    # Create new CogServerNode instance
-    cdef string cname = name.encode('utf-8')
-    _server_instance = new cCogServerNode(<string&&>cname)
-    cdef cCogServerNode* server_ptr = _server_instance
+    # Get the thread atomspace and add the CogServerNode to it
+    atomspace = get_thread_atomspace()
+    _server_handle = atomspace.add_node(types.CogServerNode, name)
 
-    server_ptr.loadModules()
+    # Get the C++ CogServerNode pointer from the Python Atom
+    cdef Atom atom = <Atom>_server_handle
+    cdef cHandle chandle = handle_cast(atom.shared_ptr)
+    _server_ptr = CogServerNodeCast(chandle)
+
+    deref(_server_ptr).loadModules()
 
     # Enable requested services
     try:
         if enable_console:
-            server_ptr.enableNetworkServer(console_port)
+            deref(_server_ptr).enableNetworkServer(console_port)
         if enable_web:
-            server_ptr.enableWebServer(web_port)
+            deref(_server_ptr).enableWebServer(web_port)
         if enable_mcp:
-            server_ptr.enableMCPServer(mcp_port)
+            deref(_server_ptr).enableMCPServer(mcp_port)
     except Exception as e:
         # Clean up on failure
         if enable_mcp:
-            server_ptr.disableMCPServer()
+            deref(_server_ptr).disableMCPServer()
         if enable_web:
-            server_ptr.disableWebServer()
+            deref(_server_ptr).disableWebServer()
         if enable_console:
-            server_ptr.disableNetworkServer()
-        del _server_instance
-        _server_instance = NULL
+            deref(_server_ptr).disableNetworkServer()
+        _server_ptr.reset()
+        _server_handle = None
         raise RuntimeError(f"Failed to start server: {e}")
 
     # Start server loop in a separate thread
     def server_loop():
         """Run the server's main loop."""
+        global _server_ptr
         try:
             with nogil:
-                server_ptr.serverLoop()
+                deref(_server_ptr).serverLoop()
         except Exception as e:
             print(f"Server loop error: {e}")
 
@@ -96,20 +105,18 @@ def stop_cogserver():
     Returns:
         bool: True if server was stopped, False if server was not running.
     """
-    global _server_instance, _server_thread, _server_running
+    global _server_ptr, _server_handle, _server_thread, _server_running
 
-    if not _server_running or _server_instance == NULL:
+    if not _server_running or not _server_ptr:
         return False
 
-    cdef cCogServerNode* server_ptr = _server_instance
-
     # Stop the server
-    server_ptr.stop()
+    deref(_server_ptr).stop()
 
     # Disable all services
-    server_ptr.disableMCPServer()
-    server_ptr.disableWebServer()
-    server_ptr.disableNetworkServer()
+    deref(_server_ptr).disableMCPServer()
+    deref(_server_ptr).disableWebServer()
+    deref(_server_ptr).disableNetworkServer()
 
     # Wait for the server thread to finish (with timeout)
     if _server_thread and _server_thread.is_alive():
@@ -119,8 +126,8 @@ def stop_cogserver():
             warnings.warn("CogServer thread did not stop cleanly")
 
     # Clean up
-    del _server_instance
-    _server_instance = NULL
+    _server_ptr.reset()
+    _server_handle = None
     _server_thread = None
     _server_running = False
 

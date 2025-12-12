@@ -21,7 +21,7 @@
 #include <thread>
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
 
@@ -29,8 +29,8 @@ class MCPUTest :  public CxxTest::TestSuite
 {
 private:
 	std::thread* main_loop;
-	CogServer* csrv;
-	AtomSpacePtr as;
+	AtomSpacePtr asp;
+	CogServerNodePtr csrv;
 
 public:
 
@@ -49,14 +49,15 @@ public:
 
 	void setUp()
 	{
-		csrv = new CogServer();
+		asp = createAtomSpace();
+		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		csrv = CogServerNodeCast(hcsn);
 		csrv->loadModules();
 		csrv->enableMCPServer(17445);
-		main_loop = new std::thread(&CogServer::serverLoop, csrv);
+		main_loop = new std::thread(&CogServer::serverLoop, csrv.get());
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
-		as = csrv->getAtomSpace();
 	}
 
 	void tearDown()
@@ -64,8 +65,8 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
-		delete csrv;
 		csrv = nullptr;
+		asp = nullptr;
 	}
 
 	// Try to run the example program. See if it works.

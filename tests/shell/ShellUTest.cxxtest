@@ -25,7 +25,8 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
 
@@ -201,7 +202,8 @@ void tik_tik_tik(int tid, int reps)
 class ShellUTest :  public CxxTest::TestSuite
 {
 private:
-	CogServer* csrv;
+	AtomSpacePtr asp;
+	CogServerNodePtr csrv;
 	std::thread* main_loop;
 
 public:
@@ -221,10 +223,12 @@ public:
 
 	void setUp()
 	{
-		csrv = new CogServer();
+		asp = createAtomSpace();
+		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		csrv = CogServerNodeCast(hcsn);
 		csrv->loadModules();
 		csrv->enableNetworkServer(17333);
-		main_loop = new std::thread(&CogServer::serverLoop, csrv);
+		main_loop = new std::thread(&CogServer::serverLoop, csrv.get());
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
@@ -237,8 +241,8 @@ public:
 		csrv->stop();
 		main_loop->join();
 		delete main_loop;
-		delete csrv;
 		csrv = nullptr;
+		asp = nullptr;
 		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
 	}
 
