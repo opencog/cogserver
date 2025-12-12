@@ -173,10 +173,7 @@ int main(int argc, char *argv[])
     signal(SIGTRAP, sighand);
     signal(SIGQUIT, sighand);
 
-    // Create the AtomSpace that holds everything
     AtomSpacePtr asp = createAtomSpace();
-
-    // Create the CogServerNode and place it in the AtomSpace
     Handle hcsn = asp->add_node(COG_SERVER_NODE, "cogserver");
     CogServerNodePtr csn = CogServerNodeCast(hcsn);
 
@@ -191,9 +188,8 @@ int main(int argc, char *argv[])
         csn->setValue(asp->add_node(PREDICATE_NODE, "*-mcp-port-*"),
                       createFloatValue((double)mcp_port));
 
-    // Start all servers
-    csn->setValue(asp->add_node(PREDICATE_NODE, "*-start-*"),
+    // Server will run forever... until exit command at the telnet port.
+    csn->setValue(asp->add_node(PREDICATE_NODE, "*-run-*"),
                   createVoidValue());
-    csn->serverLoop();
     exit(0);
 }

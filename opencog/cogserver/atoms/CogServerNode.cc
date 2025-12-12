@@ -116,13 +116,12 @@ std::string CogServerNode::getStringValue(const char* key,
 	return defaultVal;
 }
 
-/// Start the servers
+/// Enable the network servers
 void CogServerNode::startServers()
 {
 	int telnet_port = getPortValue("*-telnet-port-*", 17001);
 	int web_port = getPortValue("*-web-port-*", 18080);
 	int mcp_port = getPortValue("*-mcp-port-*", 18888);
-
 
 	// This try-catch block is a historical appendage,
 	// it is here to try to protect us against ASIO insanity.
@@ -140,19 +139,11 @@ void CogServerNode::startServers()
 	{
 		logger().error("Failed to start server: %s", ex.what());
 	}
-
-	_main_loop = new std::thread(&CogServerNode::serverLoop, this);
 }
 
+/// Disable the network servers
 void CogServerNode::stopServers()
 {
-	CogServer::stop();
-	if (_main_loop)
-	{
-		_main_loop->join();
-		delete _main_loop;
-		_main_loop = nullptr;
-	}
 	disableMCPServer();
 	disableWebServer();
 	disableNetworkServer();
@@ -168,7 +159,8 @@ HandleSeq CogServerNode::getMessages() const
 	static const HandleSeq msgs = []() {
 		HandleSeq m({
 			createNode(PREDICATE_NODE, "*-start-*"),
-			createNode(PREDICATE_NODE, "*-stop-*")
+			createNode(PREDICATE_NODE, "*-stop-*"),
+			createNode(PREDICATE_NODE, "*-run-*")
 		});
 		// Mark each message predicate as a message, once at load time.
 		for (const Handle& h : m)
@@ -187,7 +179,8 @@ bool CogServerNode::usesMessage(const Handle& key) const
 {
 	static const std::unordered_set<uint32_t> msgset({
 		dispatch_hash("*-start-*"),
-		dispatch_hash("*-stop-*")
+		dispatch_hash("*-stop-*"),
+		dispatch_hash("*-run-*")
 	});
 
 	if (PREDICATE_NODE != key->get_type()) return false;
@@ -211,16 +204,33 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 	// branching, instead of string compare.
 	static constexpr uint32_t p_start = dispatch_hash("*-start-*");
 	static constexpr uint32_t p_stop = dispatch_hash("*-stop-*");
+	static constexpr uint32_t p_run = dispatch_hash("*-run-*");
 
 	const std::string& pred = key->get_name();
 	switch (dispatch_hash(pred.c_str()))
 	{
 		case p_start:
 			startServers();
+			_main_loop = new std::thread(&CogServerNode::serverLoop, this);
 			return;
+
 		case p_stop:
+			CogServer::stop();
+			if (_main_loop)
+			{
+				_main_loop->join();
+				delete _main_loop;
+				_main_loop = nullptr;
+			}
 			stopServers();
 			return;
+
+		case p_run:
+			startServers();
+			serverLoop();
+			stopServers();
+			return;
+
 		default:
 			break;
 	}
