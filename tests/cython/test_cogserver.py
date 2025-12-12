@@ -18,8 +18,7 @@ try:
     from opencog.cogserver import (
         start_cogserver,
         stop_cogserver,
-        is_cogserver_running,
-        get_server_atomspace
+        is_cogserver_running
     )
 except ImportError as e:
     print(f"Error importing modules: {e}")
@@ -58,11 +57,6 @@ class TestCogServer(unittest.TestCase):
         self.assertTrue(is_cogserver_running(),
                        "Server should be running after start")
 
-        # Get the server's atomspace
-        server_as = get_server_atomspace()
-        self.assertIsNotNone(server_as,
-                           "Should be able to get server atomspace")
-
         # Stop the server
         result = stop_cogserver()
         self.assertTrue(result, "stop_cogserver should return True")
@@ -83,10 +77,6 @@ class TestCogServer(unittest.TestCase):
 
         # Verify server is running
         self.assertTrue(is_cogserver_running(), "Server should be running")
-
-        # Get server atomspace
-        server_as = get_server_atomspace()
-        self.assertIsNotNone(server_as, "Should get server atomspace")
 
         # Stop the server
         stop_cogserver()
@@ -154,16 +144,6 @@ class TestCogServer(unittest.TestCase):
         self.assertFalse(result,
                         "stop_cogserver should return False when not running")
 
-    def test_get_atomspace_when_not_running(self):
-        """Test getting atomspace when server not running."""
-        # Ensure server is not running
-        self.assertFalse(is_cogserver_running(),
-                        "Server should not be running")
-
-        # Try to get atomspace - should return None
-        server_as = get_server_atomspace()
-        self.assertIsNone(server_as,
-                         "Should return None when server not running")
 
     def test_multiple_start_stop_cycles(self):
         """Test multiple start/stop cycles."""

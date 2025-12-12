@@ -203,20 +203,6 @@ public:
         cogserver().pushRequest(req);
         cogserver().runLoopStep();
 
-        // Get the server's atomspace
-        Request* req2 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req2, (Request*) NULL);
-        req2->addParameter("from opencog.cogserver import get_server_atomspace");
-        cogserver().pushRequest(req2);
-        cogserver().runLoopStep();
-
-        // Get the atomspace reference and create a test atomspace
-        Request* req3 = cogserver().createRequest("py-eval");
-        TS_ASSERT_DIFFERS(req3, (Request*) NULL);
-        req3->addParameter("server_as = get_server_atomspace(); test_as = AtomSpace() if server_as is None else server_as");
-        cogserver().pushRequest(req3);
-        cogserver().runLoopStep();
-
         // Add atoms to the test atomspace
         Request* req4 = cogserver().createRequest("py-eval");
         TS_ASSERT_DIFFERS(req4, (Request*) NULL);
