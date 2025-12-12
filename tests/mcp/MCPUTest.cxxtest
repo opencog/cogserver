@@ -21,6 +21,9 @@
 #include <thread>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
@@ -28,7 +31,6 @@ using namespace opencog;
 class MCPUTest :  public CxxTest::TestSuite
 {
 private:
-	std::thread* main_loop;
 	AtomSpacePtr asp;
 	CogServerNodePtr csrv;
 
@@ -42,8 +44,16 @@ public:
 		asp = createAtomSpace();
 		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
 		csrv = CogServerNodeCast(hcsn);
-		csrv->enableMCPServer(17445);
-		main_loop = new std::thread(&CogServer::serverLoop, csrv.get());
+
+		// Set ports and start the server (MCP only)
+		csrv->setValue(asp->add_atom(Predicate("*-telnet-port-*")),
+		               createFloatValue(0.0));
+		csrv->setValue(asp->add_atom(Predicate("*-web-port-*")),
+		               createFloatValue(0.0));
+		csrv->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
+		               createFloatValue(17445.0));
+		csrv->setValue(asp->add_atom(Predicate("*-start-*")),
+		               createVoidValue());
 
 		// Wait for the cogserver to finish initializing.
 		sleep(1);
@@ -51,9 +61,8 @@ public:
 
 	~MCPUTest()
 	{
-		csrv->stop();
-		main_loop->join();
-		delete main_loop;
+		csrv->setValue(asp->add_atom(Predicate("*-stop-*")),
+		               createVoidValue());
 		csrv = nullptr;
 		asp = nullptr;
 

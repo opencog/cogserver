@@ -23,6 +23,9 @@
 #include <unistd.h>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
@@ -45,7 +48,6 @@ class JsonShellUTest : public CxxTest::TestSuite
 private:
     AtomSpacePtr asp;
     CogServerNodePtr csrv;
-    std::thread* main_loop;
     int port = 17335;  // Different port from McpShellUTest
 
 public:
@@ -56,8 +58,16 @@ public:
         asp = createAtomSpace();
         Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
         csrv = CogServerNodeCast(hcsn);
-        csrv->enableNetworkServer(port);
-        main_loop = new std::thread(&CogServer::serverLoop, csrv.get());
+
+        // Set ports and start the server
+        csrv->setValue(asp->add_atom(Predicate("*-telnet-port-*")),
+                       createFloatValue((double)port));
+        csrv->setValue(asp->add_atom(Predicate("*-web-port-*")),
+                       createFloatValue(0.0));
+        csrv->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
+                       createFloatValue(0.0));
+        csrv->setValue(asp->add_atom(Predicate("*-start-*")),
+                       createVoidValue());
 
         // Wait for the cogserver to finish initializing
         sleep(1);
@@ -65,9 +75,8 @@ public:
 
     ~JsonShellUTest()
     {
-        csrv->stop();
-        main_loop->join();
-        delete main_loop;
+        csrv->setValue(asp->add_atom(Predicate("*-stop-*")),
+                       createVoidValue());
         csrv = nullptr;
         asp = nullptr;
 

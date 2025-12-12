@@ -18,6 +18,9 @@
 #include <iomanip>
 
 #include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/util/Logger.h>
 
@@ -28,7 +31,6 @@ class WebSocketUTest : public CxxTest::TestSuite
 private:
 	AtomSpacePtr _asp;
 	CogServerNodePtr _cogserver;
-	std::thread* _csthread;
 
 	// Simple base64 encoding for WebSocket handshake
 	std::string base64_encode(const std::string& input) {
@@ -173,10 +175,16 @@ public:
 		_asp = createAtomSpace();
 		Handle hcsn = _asp->add_node(COG_SERVER_NODE, "test-cogserver");
 		_cogserver = CogServerNodeCast(hcsn);
-		_cogserver->enableWebServer(18282);
 
-		// Run the server on a separate thread
-		_csthread = new std::thread([&]() { _cogserver->serverLoop(); });
+		// Set ports and start the server (web only)
+		_cogserver->setValue(_asp->add_atom(Predicate("*-telnet-port-*")),
+		                     createFloatValue(0.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-web-port-*")),
+		                     createFloatValue(18282.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-mcp-port-*")),
+		                     createFloatValue(0.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-start-*")),
+		                     createVoidValue());
 
 		// Give the server time to start
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -184,13 +192,8 @@ public:
 
 	~WebSocketUTest() {
 		// Stop the server
-		_cogserver->stop();
-		_csthread->join();
-		delete _csthread;
-		_csthread = nullptr;
-
-		// Clean up
-		_cogserver->disableWebServer();
+		_cogserver->setValue(_asp->add_atom(Predicate("*-stop-*")),
+		                     createVoidValue());
 		_cogserver = nullptr;
 		_asp = nullptr;
 
