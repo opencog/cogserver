@@ -216,6 +216,7 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 			return;
 
 		case p_stop:
+			if (not CogServer::running()) return;
 			CogServer::stop();
 			if (_main_loop)
 			{
