@@ -8,6 +8,14 @@
 (use-modules (opencog cs-config))
 (use-modules (opencog logger))
 
+; Load the C library that calls the classserver to load the types.
+(load-extension
+	(string-append opencog-ext-path-cogserver-types "libcogserver-types")
+	"cogserver_types_init")
+
+; Load the cogserver types scheme bindings (e.g. CogServerNode)
+(load-from-path "opencog/cogserver/types/cogserver_types.scm")
+
 ; Path to libguile-cogserver.so is set up in the cs-config module.
 (load-extension
 	(string-append opencog-ext-path-cogserver "libguile-cogserver")

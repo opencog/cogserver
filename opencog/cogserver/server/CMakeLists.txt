@@ -35,6 +35,8 @@ IF (HAVE_GUILE)
 
 	TARGET_LINK_LIBRARIES(guile-cogserver
 		server
+		servernode
+		cogserver-types
 		${GUILE_LIBRARIES}
 	)
 
