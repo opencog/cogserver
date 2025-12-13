@@ -19,6 +19,8 @@
 
 #include <opencog/network/NetworkServer.h>
 
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/cogserver/server/WebServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
@@ -26,6 +28,20 @@
 #include "CogServer.h"
 
 using namespace opencog;
+
+// Helper to extract port value from a CogServerNode
+static int get_port(const Handle& hcsn, const char* key, int defaultPort)
+{
+    AtomSpace* asp = hcsn->getAtomSpace();
+    Handle hkey = asp->add_atom(createNode(PREDICATE_NODE, key));
+    ValuePtr vp = hcsn->getValue(hkey);
+    if (nullptr == vp) return defaultPort;
+
+    if (vp->is_type(FLOAT_VALUE))
+        return FloatValueCast(vp)->value()[0];
+
+    return defaultPort;
+}
 
 CogServer::~CogServer()
 {
@@ -56,9 +72,12 @@ void CogServer::set_max_open_sockets(int max_open_socks)
 }
 
 /// Open the given port number for network service.
-void CogServer::enableNetworkServer(int port)
+void CogServer::enableNetworkServer(const Handle& hcsn)
 {
     if (_consoleServer) return;
+    int port = get_port(hcsn, "*-telnet-port-*", 17001);
+    if (0 >= port) return;
+
     try
     {
         _consoleServer = new NetworkServer(port, "Telnet Server", &_socket_manager);
@@ -72,18 +91,21 @@ void CogServer::enableNetworkServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [this](SocketManager* mgr)->ServerSocket*
-            { return new ServerConsole(*this, mgr); };
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket*
+            { return new ServerConsole(hcsn, *this, mgr); };
     _consoleServer->run(make_console);
     _running = true;
     logger().info("Network server running on port %d", port);
 }
 
 /// Open the given port number for web service.
-void CogServer::enableWebServer(int port)
+void CogServer::enableWebServer(const Handle& hcsn)
 {
 #ifdef HAVE_OPENSSL
     if (_webServer) return;
+    int port = get_port(hcsn, "*-web-port-*", 18080);
+    if (0 >= port) return;
+
     try
     {
         _webServer = new NetworkServer(port, "WebSocket Server", &_socket_manager);
@@ -97,8 +119,8 @@ void CogServer::enableWebServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [this](SocketManager* mgr)->ServerSocket* {
-        ServerSocket* ss = new WebServer(*this, mgr);
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new WebServer(hcsn, *this, mgr);
         ss->act_as_http_socket();
         return ss;
     };
@@ -112,10 +134,13 @@ void CogServer::enableWebServer(int port)
 }
 
 /// Open the given port number for MCP service.
-void CogServer::enableMCPServer(int port)
+void CogServer::enableMCPServer(const Handle& hcsn)
 {
 #if HAVE_MCP
     if (_mcpServer) return;
+    int port = get_port(hcsn, "*-mcp-port-*", 18888);
+    if (0 >= port) return;
+
     try
     {
         _mcpServer = new NetworkServer(port, "Model Context Protocol Server", &_socket_manager);
@@ -129,8 +154,8 @@ void CogServer::enableMCPServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [this](SocketManager* mgr)->ServerSocket* {
-        ServerSocket* ss = new MCPServer(*this, mgr);
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new MCPServer(hcsn, mgr);
         ss->act_as_mcp();
         return ss;
     };
@@ -140,7 +165,7 @@ void CogServer::enableMCPServer(int port)
 #else
     printf("CogServer compiled without MCP Support.\n");
     logger().info("CogServer compiled without MCP Support.");
-#endif // HAVE_SSL
+#endif // HAVE_MCP
 }
 
 void CogServer::disableNetworkServer()

@@ -125,21 +125,15 @@ std::string CogServerNode::getStringValue(const char* key,
 /// Enable the network servers
 void CogServerNode::startServers()
 {
-	int telnet_port = getPortValue("*-telnet-port-*", 17001);
-	int web_port = getPortValue("*-web-port-*", 18080);
-	int mcp_port = getPortValue("*-mcp-port-*", 18888);
-
 	// This try-catch block is a historical appendage,
 	// it is here to try to protect us against ASIO insanity.
 	// I think this "never happens any more", but never say never.
 	try
 	{
-		if (0 < telnet_port)
-			enableNetworkServer(telnet_port);
-		if (0 < web_port)
-			enableWebServer(web_port);
-		if (0 < mcp_port)
-			enableMCPServer(mcp_port);
+		Handle h(get_handle());
+		enableNetworkServer(h);
+		enableWebServer(h);
+		enableMCPServer(h);
 	}
 	catch (const std::exception& ex)
 	{

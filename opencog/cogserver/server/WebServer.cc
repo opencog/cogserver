@@ -22,7 +22,7 @@
 
 using namespace opencog;
 
-WebServer::WebServer(CogServer& cs, SocketManager* mgr) :
+WebServer::WebServer(const Handle&, CogServer& cs, SocketManager* mgr) :
 	ConsoleSocket(mgr),
 	_cserver(cs),
 	_request(nullptr)

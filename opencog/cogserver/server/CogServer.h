@@ -15,6 +15,7 @@
 #include <opencog/atomspace/AtomSpace.h>
 
 #include <opencog/cogserver/server/Module.h>
+
 #include <opencog/cogserver/server/ModuleManager.h>
 #include <opencog/network/NetworkServer.h>
 #include <opencog/cogserver/server/RequestManager.h>
@@ -85,13 +86,13 @@ public:
 
     /** Starts the network console server; this provides a command
      *  line server socket on the specified port. */
-    virtual void enableNetworkServer(int port=17001);
+    virtual void enableNetworkServer(const Handle&);
 
-	 /** Starts the webscokets server. */
-    virtual void enableWebServer(int port=18080);
+	 /** Starts the websockets server. */
+    virtual void enableWebServer(const Handle&);
 
 	 /** Starts the MCP Model Context Protocol server. */
-    virtual void enableMCPServer(int port=18888);
+    virtual void enableMCPServer(const Handle&);
 
     /** Stops the network server and closes all the open server sockets. */
     virtual void disableNetworkServer(void);

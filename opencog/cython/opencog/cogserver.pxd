@@ -6,9 +6,9 @@ from opencog.atomspace cimport cAtomSpacePtr, cHandle, cAtom
 cdef extern from "opencog/cogserver/server/CogServer.h" namespace "opencog":
     cdef cppclass cCogServer "opencog::CogServer":
         cCogServer()
-        void enableNetworkServer(int port)
-        void enableWebServer(int port)
-        void enableMCPServer(int port)
+        void enableNetworkServer(const cHandle&)
+        void enableWebServer(const cHandle&)
+        void enableMCPServer(const cHandle&)
         void disableNetworkServer()
         void disableWebServer()
         void disableMCPServer()
