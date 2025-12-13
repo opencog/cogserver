@@ -21,27 +21,49 @@
 #include <thread>
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
 
 class MCPUTest :  public CxxTest::TestSuite
 {
 private:
-	std::thread* main_loop;
-	CogServer* csrv;
-	AtomSpacePtr as;
+	AtomSpacePtr asp;
+	CogServerNodePtr csrv;
 
 public:
 
 	MCPUTest()
 	{
-		logger().set_level(Logger::DEBUG);
-		//logger().set_print_to_stdout_flag(true);
+		// logger().set_level(Logger::DEBUG);
+		logger().set_level(Logger::INFO);
+		logger().set_print_to_stdout_flag(true);
+
+		asp = createAtomSpace();
+		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		csrv = CogServerNodeCast(hcsn);
+
+		// Set ports and start the server (MCP only)
+		csrv->setValue(asp->add_atom(Predicate("*-telnet-port-*")),
+		               createFloatValue(0.0));
+		csrv->setValue(asp->add_atom(Predicate("*-web-port-*")),
+		               createFloatValue(0.0));
+		csrv->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
+		               createFloatValue(17445.0));
+		csrv->setValue(asp->add_atom(Predicate("*-start-*")),
+		               createVoidValue());
 	}
 
 	~MCPUTest()
 	{
+		csrv->setValue(asp->add_atom(Predicate("*-stop-*")),
+		               createVoidValue());
+		csrv = nullptr;
+		asp = nullptr;
+
 		// erase the log file if no assertions failed
 		if (!CxxTest::TestTracker::tracker().suiteFailed())
 			std::remove(logger().get_filename().c_str());
@@ -49,23 +71,10 @@ public:
 
 	void setUp()
 	{
-		csrv = new CogServer();
-		csrv->loadModules();
-		csrv->enableMCPServer(17445);
-		main_loop = new std::thread(&CogServer::serverLoop, csrv);
-
-		// Wait for the cogserver to finish initializing.
-		sleep(1);
-		as = csrv->getAtomSpace();
 	}
 
 	void tearDown()
 	{
-		csrv->stop();
-		main_loop->join();
-		delete main_loop;
-		delete csrv;
-		csrv = nullptr;
 	}
 
 	// Try to run the example program. See if it works.

@@ -10,9 +10,14 @@
 
 #include <string>
 
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
+#include <opencog/util/oc_assert.h>
+
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/cogserver/types/atom_types.h>
+#include <opencog/atoms/value/BoolValue.h>
+#include <opencog/atoms/value/StringValue.h>
 
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/ServerConsole.h>
@@ -26,15 +31,35 @@ ServerConsole::ServerConsole(CogServer& cs, SocketManager* mgr) :
 	ConsoleSocket(mgr),
 	_cserver(cs)
 {
-    if (nullptr == &config()) {
-        _prompt = "[0;32mopencog[1;32m> [0m";
-    } else {
-        // Prompt with ANSI color codes, if possible.
-        if (config().get_bool("ANSI_ENABLED", true))
-            _prompt = config().get("ANSI_PROMPT", "[0;32mopencog[1;32m> [0m");
-        else
-            _prompt = config().get("PROMPT", "opencog> ");
-    }
+	// Get the CogServerNode to retrieve prompt settings.
+	AtomSpacePtr asp = cs.getAS();
+	Handle h = asp->get_node(COG_SERVER_NODE, "cogserver");
+	if (nullptr == h)
+		h = asp->get_node(COG_SERVER_NODE, "test-cogserver");
+
+	// XXX HACK: If CogServerNode not found (e.g. after clear()),
+	// use default prompt. Remove this hack after porting tests.
+	// OC_ASSERT(h != nullptr, "Internal error: CogServerNode not found!");
+	if (nullptr == h)
+	{
+		_prompt = "\033[0;32mopencog\033[1;32m> \033[0m";
+		return;
+	}
+
+	// Check if ANSI colors are enabled
+	bool ansi_enabled = true;
+	ValuePtr vp = h->getValue(asp->add_atom(Predicate("*-ansi-enabled-*")));
+	if (vp and vp->is_type(BOOL_VALUE))
+		ansi_enabled = BoolValueCast(vp)->value()[0];
+
+	// Get the appropriate prompt
+	if (ansi_enabled)
+		vp = h->getValue(asp->add_atom(Predicate("*-ansi-prompt-*")));
+	else
+		vp = h->getValue(asp->add_atom(Predicate("*-prompt-*")));
+
+	if (vp and vp->is_type(STRING_VALUE))
+		_prompt = StringValueCast(vp)->value()[0];
 }
 
 ServerConsole::~ServerConsole()

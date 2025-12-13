@@ -1,0 +1,8 @@
+//
+// Script for automatic "cogserver atom type" generation. This defines
+// the CogServerNode, an ObjectNode that wraps a Cogserver.
+//
+// The ObjectNode is the base class for CogServerNode, because the
+// Cogserver is statefuil (it is running, or not, listening to this
+// or that port, providing this or that service.
+COG_SERVER_NODE <- OBJECT_NODE

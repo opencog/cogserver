@@ -10,6 +10,8 @@ link_directories(
 set(COGSERVER_LIBRARIES
 	network
 	server
+	servernode
+	cogserver-types
 )
 
 set(COGSERVER_DATA_DIR "@CMAKE_INSTALL_PREFIX@/share/opencog")

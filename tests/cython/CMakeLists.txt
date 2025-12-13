@@ -6,6 +6,8 @@ ADD_CXXTEST(PyEvalUTest)
 
 TARGET_LINK_LIBRARIES(PyEvalUTest
 	py-shell
+	servernode
+	cogserver-types
 	${COGSERVER_LIBRARIES}
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}

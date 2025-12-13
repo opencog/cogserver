@@ -11,6 +11,8 @@ LINK_DIRECTORIES(
 
 LINK_LIBRARIES(
 	server
+	servernode
+	cogserver-types
 	${ATOMSPACE_LIBRARIES}
 )
 

@@ -65,22 +65,6 @@ class TestCogServer(unittest.TestCase):
         self.assertFalse(is_cogserver_running(),
                         "Server should not be running after stop")
 
-    def test_custom_atomspace(self):
-        """Test server with custom AtomSpace."""
-        # Create a custom atomspace
-        custom_as = AtomSpace()
-
-        # Start server with custom atomspace on different port
-        result = start_cogserver(atomspace=custom_as, console_port=17551,
-                                enable_web=False, enable_mcp=False)
-        self.assertTrue(result, "Server should start with custom atomspace")
-
-        # Verify server is running
-        self.assertTrue(is_cogserver_running(), "Server should be running")
-
-        # Stop the server
-        stop_cogserver()
-
     def test_custom_ports(self):
         """Test server with custom port configuration."""
         # Start server with custom ports

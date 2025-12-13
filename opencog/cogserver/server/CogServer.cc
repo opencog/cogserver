@@ -17,7 +17,6 @@
 #include <opencog/util/misc.h>
 #include <opencog/util/platform.h>
 
-#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/network/NetworkServer.h>
 
 #include <opencog/cogserver/server/ServerConsole.h>
@@ -37,23 +36,11 @@ CogServer::~CogServer()
 }
 
 CogServer::CogServer(void) :
-    _atomSpace(createAtomSpace()),
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
     _running(false)
 {
-}
-
-CogServer::CogServer(AtomSpacePtr as) :
-    _atomSpace(as),
-    _consoleServer(nullptr),
-    _webServer(nullptr),
-    _mcpServer(nullptr),
-    _running(false)
-{
-    if (nullptr == as)
-        _atomSpace = createAtomSpace();
 }
 
 /// Allow at most `max_open_socks` concurrent connections.
@@ -296,37 +283,6 @@ std::string CogServer::stats_legend(void)
        "  E -- `T` if the shell evaluator is running, else `F`.\n"
        "  PENDG -- number of bytes of output not yet sent.\n"
        "\n";
-}
-
-// =============================================================
-// Singleton instance stuff.
-//
-// I don't really like singleton instances very much. There are some
-// interesting use cases where one might want to run multiple
-// cogservers. However, at this time, too much of the code (???)
-// assumes a singleton instance, so we leave this for now. XXX FIXME.
-
-// The guile module needs to be able to delete this singleton.
-// So put it where the guile module can find it.
-namespace opencog
-{
-    CogServer* serverInstance = nullptr;
-};
-
-CogServer& opencog::cogserver(void)
-{
-    if (nullptr == serverInstance)
-        serverInstance = new CogServer();
-
-    return *serverInstance;
-}
-
-CogServer& opencog::cogserver(AtomSpacePtr as)
-{
-    if (nullptr == serverInstance)
-        serverInstance = new CogServer(as);
-
-    return *serverInstance;
 }
 
 // =============================================================

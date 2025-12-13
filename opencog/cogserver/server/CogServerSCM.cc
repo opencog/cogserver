@@ -26,8 +26,7 @@
 #ifndef _OPENCOG_COGSERVER_SCM_H
 #define _OPENCOG_COGSERVER_SCM_H
 
-#include <thread>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 namespace opencog
 {
@@ -42,11 +41,8 @@ private:
     std::string start_server(AtomSpace*, int, int, int, const std::string&,
                              const std::string&);
     std::string stop_server(void);
-    Handle set_server_space(AtomSpace*);
-    Handle get_server_space(void);
 
-    CogServer* srvr = NULL;
-    std::thread * main_loop = NULL;
+    CogServerNode* srvr = nullptr;
 
 public:
     CogServerSCM();
@@ -62,8 +58,11 @@ void opencog_cogserver_init(void);
 
 // --------------------------------------------------------------
 
-#include <opencog/util/Config.h>
 #include <opencog/guile/SchemePrimitive.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/StringValue.h>
+#include <opencog/atoms/value/VoidValue.h>
 
 /**
  * Implement a dynamically-loadable cogserver guile module.
@@ -125,61 +124,48 @@ std::string CogServerSCM::start_server(AtomSpace* as,
 {
     static std::string rc;
 
-    // Singleton instance. Maybe we should throw, here?
+    // Only one server at a time.
     if (srvr) { rc = "CogServer already running!"; return rc; }
 
-    // Pass parameters non-locally.
-    config().set("ANSI_PROMPT", prompt);
-    config().set("ANSI_SCM_PROMPT", scmprompt);
+    srvr = new CogServerNode("cogserver");
 
-    AtomSpacePtr asp(AtomSpaceCast(as));
-    srvr = &cogserver(asp);
+    // Set non-default port values
+    if (telnet_port != 17001)
+        srvr->setValue(as->add_atom(Predicate("*-telnet-port-*")),
+                       createFloatValue((double)telnet_port));
+    if (websocket_port != 18080)
+        srvr->setValue(as->add_atom(Predicate("*-web-port-*")),
+                       createFloatValue((double)websocket_port));
+    if (mcp_port != 18888)
+        srvr->setValue(as->add_atom(Predicate("*-mcp-port-*")),
+                       createFloatValue((double)mcp_port));
 
-    // Load modules specified in config
-    srvr->loadModules();
+    // Set custom prompts
+    if (!prompt.empty())
+        srvr->setValue(as->add_atom(Predicate("*-ansi-prompt-*")),
+                       createStringValue(prompt));
+    if (!scmprompt.empty())
+        srvr->setValue(as->add_atom(Predicate("*-ansi-scm-prompt-*")),
+                       createStringValue(scmprompt));
 
-    // Enable the network server and run the server's main loop
-    try
-    {
-        if (0 < telnet_port)
-            srvr->enableNetworkServer(telnet_port);
-        if (0 < websocket_port)
-            srvr->enableWebServer(websocket_port);
-        if (0 < mcp_port)
-            srvr->enableMCPServer(mcp_port);
-    }
-    catch (const std::exception& ex)
-    {
-        srvr = nullptr;
-        std::rethrow_exception(std::current_exception());
-    }
-    main_loop = new std::thread(&CogServer::serverLoop, srvr);
+    // Start all servers
+    srvr->setValue(as->add_atom(Predicate("*-start-*")),
+                   createVoidValue());
     rc = "Started CogServer";
     return rc;
 }
 
 
-namespace opencog
-{
-    // The singleton instance.
-    extern CogServer* serverInstance;
-};
-
 std::string CogServerSCM::stop_server(void)
 {
     static std::string rc;
-    // delete singleton instance
-    if (NULL == srvr) { rc = "CogServer not running"; return rc;}
+    if (nullptr == srvr) { rc = "CogServer not running"; return rc;}
 
-    // This is probably not thread-safe...
-    srvr->stop();
-    main_loop->join();
-
-    srvr->disableNetworkServer();
-    delete main_loop;
+    AtomSpacePtr asp = srvr->getAS();
+    srvr->setValue(asp->add_atom(Predicate("*-stop-*")),
+                   createVoidValue());
     delete srvr;
-    srvr = NULL;
-    serverInstance = nullptr;
+    srvr = nullptr;
 
     rc = "Stopped CogServer";
     return rc;

@@ -103,7 +103,7 @@ SchemeShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	SchemeShell *sh = new SchemeShell(_cogserver.getAtomSpace());
+	SchemeShell *sh = new SchemeShell(_cogserver.getAS());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

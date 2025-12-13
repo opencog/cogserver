@@ -67,7 +67,7 @@ std::string PythonShellModule::shellout(Request *req, std::list<std::string> arg
     ConsoleSocket *con = req->get_console();
     OC_ASSERT(con, "Invalid Request object");
 
-    PythonShell *sh = new PythonShell(_cogserver.getAtomSpace());
+    PythonShell *sh = new PythonShell(_cogserver.getAS());
     sh->set_socket(con);
 
     bool hush = false;
@@ -98,7 +98,7 @@ std::string PythonShellModule::do_eval(Request *req, std::list<std::string> args
         expr += arg + " ";
     }
 
-    PythonEval* pyev = PythonEval::get_python_evaluator(_cogserver.getAtomSpace());
+    PythonEval* pyev = PythonEval::get_python_evaluator(_cogserver.getAS());
     pyev->begin_eval();
 
     out = "";

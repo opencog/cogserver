@@ -27,15 +27,19 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
 
 class HttpUTest : public CxxTest::TestSuite
 {
 private:
-	CogServer* _cogserver;
-	std::thread* _csthread;
+	AtomSpacePtr _asp;
+	CogServerNodePtr _cogserver;
 
 	// Simple TCP client connection
 	int connect_to_server(int port)
@@ -85,12 +89,34 @@ private:
 public:
 	HttpUTest()
 	{
-		logger().set_level(Logger::DEBUG);
+		// logger().set_level(Logger::DEBUG);
+		logger().set_level(Logger::INFO);
 		logger().set_print_to_stdout_flag(true);
+
+		// Create the AtomSpace and CogServerNode
+		_asp = createAtomSpace();
+		Handle hcsn = _asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		_cogserver = CogServerNodeCast(hcsn);
+
+		// Set ports and start the server (web only)
+		_cogserver->setValue(_asp->add_atom(Predicate("*-telnet-port-*")),
+		                     createFloatValue(0.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-web-port-*")),
+		                     createFloatValue(18181.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-mcp-port-*")),
+		                     createFloatValue(0.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-start-*")),
+		                     createVoidValue());
 	}
 
 	~HttpUTest()
 	{
+		// Stop the server
+		_cogserver->setValue(_asp->add_atom(Predicate("*-stop-*")),
+		                     createVoidValue());
+		_cogserver = nullptr;
+		_asp = nullptr;
+
 		// erase the log file if no assertions failed
 		if (!CxxTest::TestTracker::tracker().suiteFailed())
 			std::remove(logger().get_filename().c_str());
@@ -98,30 +124,10 @@ public:
 
 	void setUp()
 	{
-		// Start the CogServer on a thread
-		_cogserver = new CogServer();
-		_cogserver->loadModules();
-		_cogserver->enableWebServer(18181);  // HTTP port
-
-		// Run the server on a separate thread
-		_csthread = new std::thread([&]() { _cogserver->serverLoop(); });
-
-		// Wait a bit for the server to start up
-		usleep(100000);
 	}
 
 	void tearDown()
 	{
-		// Stop the server
-		_cogserver->stop();
-		_csthread->join();
-		delete _csthread;
-		_csthread = nullptr;
-
-		// Clean up
-		_cogserver->disableWebServer();
-		delete _cogserver;
-		_cogserver = nullptr;
 	}
 
 	// Test basic HTTP GET request to root

@@ -52,7 +52,6 @@ class CogServer :
     public ModuleManager
 {
 protected:
-    AtomSpacePtr _atomSpace;
     SocketManager _socket_manager;
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
@@ -61,13 +60,13 @@ protected:
 
 public:
     CogServer(void);
-    CogServer(AtomSpacePtr);
+
     /** CogServer's destructor. Disables the network server and
      * unloads all modules. */
     virtual ~CogServer(void);
 
     /** Returns the atomspace instance. */
-    AtomSpacePtr getAtomSpace() { return _atomSpace; }
+    virtual AtomSpacePtr getAS() { return nullptr; }
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
@@ -125,9 +124,8 @@ public:
 
 }; // class
 
-// Singleton instance of the cogserver
+// Temp hack -- Singleton instance of the cogserver; this is going away,
 CogServer& cogserver(void);
-CogServer& cogserver(AtomSpacePtr);
 
 /** @}*/
 }  // namespace
