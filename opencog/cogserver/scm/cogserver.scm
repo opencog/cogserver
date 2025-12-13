@@ -14,7 +14,8 @@
 	"cogserver_types_init")
 
 ; Load the cogserver types scheme bindings (e.g. CogServerNode)
-(load-from-path "opencog/cogserver/types/cogserver_types.scm")
+; Use include-from-path so that define-public exports from this module.
+(include-from-path "opencog/cogserver/types/cogserver_types.scm")
 
 ; Path to libguile-cogserver.so is set up in the cs-config module.
 (load-extension
