@@ -16,11 +16,6 @@
 ; Use include-from-path so that define-public exports from this module.
 (include-from-path "opencog/cogserver/types/cogserver_types.scm")
 
-; Path to libguile-cogserver.so is set up in the cs-config module.
-(load-extension
-  (string-append opencog-ext-path-cogserver "libguile-cogserver")
-  "opencog_cogserver_init")
-
 ; config path name is optional.
 (define* (start-cogserver #:key (port 17001)
                                 (web  18080)

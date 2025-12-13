@@ -24,28 +24,6 @@ IF(HAVE_MCP)
 ENDIF(HAVE_MCP)
 
 # ------------------------------------------------------------
-# This defines the guile scheme loadable module
-
-IF (HAVE_GUILE)
-	INCLUDE_DIRECTORIES (${GUILE_INCLUDE_DIRS})
-
-	ADD_LIBRARY (guile-cogserver SHARED
-		CogServerSCM.cc
-	)
-
-	TARGET_LINK_LIBRARIES(guile-cogserver
-		server
-		servernode
-		cogserver-types
-		${GUILE_LIBRARIES}
-	)
-
-	INSTALL (TARGETS guile-cogserver DESTINATION "lib${LIB_DIR_SUFFIX}/opencog")
-
-	ADD_GUILE_EXTENSION(SCM_CONFIG guile-cogserver "opencog-ext-path-cogserver")
-ENDIF (HAVE_GUILE)
-
-# ------------------------------------------------------------
 
 ADD_EXECUTABLE(cogserver
 	CogServerMain.cc
