@@ -29,18 +29,19 @@
 
 using namespace opencog;
 
-// Helper to extract port value from a CogServerNode
-static int get_port(const Handle& hcsn, const char* key, int defaultPort)
+// Helper to extract port value from a CogServerNode.
+// Returns zero if key not found or value not understood.
+static int get_port(const Handle& hcsn, const char* key)
 {
     AtomSpace* asp = hcsn->getAtomSpace();
     Handle hkey = asp->add_atom(createNode(PREDICATE_NODE, key));
     ValuePtr vp = hcsn->getValue(hkey);
-    if (nullptr == vp) return defaultPort;
+    if (nullptr == vp) return 0;
 
     if (vp->is_type(FLOAT_VALUE))
         return FloatValueCast(vp)->value()[0];
 
-    return defaultPort;
+    return 0;
 }
 
 CogServer::~CogServer()
@@ -75,7 +76,7 @@ void CogServer::set_max_open_sockets(int max_open_socks)
 void CogServer::enableNetworkServer(const Handle& hcsn)
 {
     if (_consoleServer) return;
-    int port = get_port(hcsn, "*-telnet-port-*", 17001);
+    int port = get_port(hcsn, "*-telnet-port-*");
     if (0 >= port) return;
 
     try
@@ -103,7 +104,7 @@ void CogServer::enableWebServer(const Handle& hcsn)
 {
 #ifdef HAVE_OPENSSL
     if (_webServer) return;
-    int port = get_port(hcsn, "*-web-port-*", 18080);
+    int port = get_port(hcsn, "*-web-port-*");
     if (0 >= port) return;
 
     try
@@ -138,7 +139,7 @@ void CogServer::enableMCPServer(const Handle& hcsn)
 {
 #if HAVE_MCP
     if (_mcpServer) return;
-    int port = get_port(hcsn, "*-mcp-port-*", 18888);
+    int port = get_port(hcsn, "*-mcp-port-*");
     if (0 >= port) return;
 
     try
