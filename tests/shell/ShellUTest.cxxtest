@@ -53,7 +53,7 @@ void gargleblast(int tid, int reps)
 	{
 		int j = i + 10 + (tid+10)*1000;
 		char buf[1000];
-		sprintf(buf, "echo '(Evaluation (Predicate \"visible face\") (List (Number %d)))\n' | nc -q 1 localhost 17333", j);
+		sprintf(buf, "echo '(Evaluation (Predicate \"visible face\") (List (Number %d)))\n' | nc -q 0 localhost 17333", j);
 
 		std::string reso = cmd_exec(buf);
 
@@ -94,7 +94,7 @@ void gargleblast(int tid, int reps)
 
 		if (20 <= i)
 		{
-			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
+			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 0 localhost 17333", j-20);
 			std::string delo = cmd_exec(buf);
 
 			// The new half-open detection code sends blanks.
@@ -254,6 +254,7 @@ public:
 
 	void testControlD()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 		int rc = system("echo '(Concept \"42\")\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: first call failed\n");
@@ -275,11 +276,13 @@ public:
 		if (rc != 0) printf("Error: fourth call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
+		printf("TEST testControlD: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
 	void testControlC()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
 		time_t start = time(0);
@@ -316,6 +319,7 @@ public:
 		logger().debug("Second elapsed: %ld", end-start);
 		usleep(50000);
 
+		printf("TEST testControlC: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
@@ -325,6 +329,7 @@ public:
 	// still run to completion, however.
 	void testDrain()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 		cmd_exec(
 			"echo 'scm\n (sleep 3) (Concept \"A\")\n"
@@ -359,11 +364,13 @@ public:
 		TS_ASSERT(ply.npos != ply.find("(Concept \"B\")"));
 		TS_ASSERT(ply.npos != ply.find("(Concept \"C\")"));
 
+		printf("TEST testDrain: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
 	void testMessaging()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 #define NT 20
 		std::thread* pangalactic[NT];
@@ -377,6 +384,7 @@ public:
 			pangalactic[j]->join();
 			delete pangalactic[j];
 		}
+		printf("TEST testMessaging: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
@@ -385,6 +393,7 @@ public:
 	// indefinitely.
 	void testMultiStream()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 		std::string ply = cmd_exec("echo 'scm\n"
 			// "(add-to-load-path \"/usr/local/share/opencog/scm\")\n"
@@ -413,6 +422,7 @@ public:
 			delete max_normal[j];
 		}
 
+		printf("TEST testMultiStream: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 };
