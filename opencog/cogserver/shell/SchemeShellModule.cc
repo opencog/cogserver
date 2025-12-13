@@ -44,19 +44,18 @@ DECLARE_MODULE(SchemeShellModule);
 
 void SchemeShellModule::global_barrier(void)
 {
-	CogServer* cs = CogServerNodeCast(_shell_hcsn).get();
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
 	cs->getSocketManager()->global_barrier();
 }
 
 void SchemeShellModule::recv_barrier(int n, const std::string& uuid)
 {
-	CogServer* cs = CogServerNodeCast(_shell_hcsn).get();
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
 	cs->getSocketManager()->recv_barrier(n, uuid);
 }
 
 SchemeShellModule::SchemeShellModule(const Handle& hcsn) : Module(hcsn)
 {
-	_shell_hcsn = hcsn;
 	SchemeEval::init_scheme();
 
 	// Register cog-global-barrier in the extension module (auto-loaded)
@@ -68,14 +67,14 @@ SchemeShellModule::SchemeShellModule(const Handle& hcsn) : Module(hcsn)
 
 void SchemeShellModule::init(void)
 {
-	CogServer* cs = CogServerNodeCast(_shell_hcsn).get();
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
 	cs->registerRequest(shelloutRequest::info().id,
 	                           &shelloutFactory);
 }
 
 SchemeShellModule::~SchemeShellModule()
 {
-	CogServer* cs = CogServerNodeCast(_shell_hcsn).get();
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
 	cs->unregisterRequest(shelloutRequest::info().id);
 }
 
@@ -108,7 +107,7 @@ SchemeShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	SchemeShell *sh = new SchemeShell(_shell_hcsn);
+	SchemeShell *sh = new SchemeShell(_cogserver.getHandle());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

@@ -37,18 +37,17 @@ DECLARE_MODULE(JsonShellModule);
 
 JsonShellModule::JsonShellModule(const Handle& hcsn) : Module(hcsn)
 {
-	_shell_hcsn = hcsn;
 }
 
 void JsonShellModule::init(void)
 {
-	CogServerNodeCast(_shell_hcsn)->registerRequest(shelloutRequest::info().id,
+	CogServerNodeCast(_hcsn)->registerRequest(shelloutRequest::info().id,
 	                           &shelloutFactory);
 }
 
 JsonShellModule::~JsonShellModule()
 {
-	CogServerNodeCast(_shell_hcsn)->unregisterRequest(shelloutRequest::info().id);
+	CogServerNodeCast(_hcsn)->unregisterRequest(shelloutRequest::info().id);
 }
 
 const RequestClassInfo&
@@ -80,7 +79,7 @@ JsonShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	JsonShell *sh = new JsonShell(_shell_hcsn);
+	JsonShell *sh = new JsonShell(_cogserver.getHandle());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

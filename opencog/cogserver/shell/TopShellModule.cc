@@ -37,18 +37,17 @@ DECLARE_MODULE(TopShellModule);
 
 TopShellModule::TopShellModule(const Handle& hcsn) : Module(hcsn)
 {
-	_shell_hcsn = hcsn;
 }
 
 void TopShellModule::init(void)
 {
-	CogServer* cs = CogServerNodeCast(_shell_hcsn).get();
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
 	cs->registerRequest(shelloutRequest::info().id, &shelloutFactory);
 }
 
 TopShellModule::~TopShellModule()
 {
-	CogServer* cs = CogServerNodeCast(_shell_hcsn).get();
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
 	cs->unregisterRequest(shelloutRequest::info().id);
 }
 
@@ -75,7 +74,7 @@ TopShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	TopShell *sh = new TopShell(*CogServerNodeCast(_shell_hcsn));
+	TopShell *sh = new TopShell(*CogServerNodeCast(_cogserver.getHandle()));
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

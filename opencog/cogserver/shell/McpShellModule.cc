@@ -37,18 +37,17 @@ DECLARE_MODULE(McpShellModule);
 
 McpShellModule::McpShellModule(const Handle& hcsn) : Module(hcsn)
 {
-	_shell_hcsn = hcsn;
 }
 
 void McpShellModule::init(void)
 {
-	CogServerNodeCast(_shell_hcsn)->registerRequest(shelloutRequest::info().id,
+	CogServerNodeCast(_hcsn)->registerRequest(shelloutRequest::info().id,
 	                           &shelloutFactory);
 }
 
 McpShellModule::~McpShellModule()
 {
-	CogServerNodeCast(_shell_hcsn)->unregisterRequest(shelloutRequest::info().id);
+	CogServerNodeCast(_hcsn)->unregisterRequest(shelloutRequest::info().id);
 }
 
 const RequestClassInfo&
@@ -80,7 +79,7 @@ McpShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	McpShell *sh = new McpShell(_shell_hcsn);
+	McpShell *sh = new McpShell(_cogserver.getHandle());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())
