@@ -34,7 +34,7 @@ namespace opencog
 class ServerConsole : public ConsoleSocket
 {
 private:
-    static std::string _prompt;
+    std::string _prompt;
 
 protected:
     CogServer& _cserver;

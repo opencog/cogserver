@@ -24,8 +24,6 @@
 
 using namespace opencog;
 
-std::string ServerConsole::_prompt;
-
 ServerConsole::ServerConsole(const Handle& hcsn, CogServer& cs, SocketManager* mgr) :
 	ConsoleSocket(mgr),
 	_cserver(cs)
