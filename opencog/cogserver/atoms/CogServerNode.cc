@@ -247,3 +247,19 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 }
 
 DEFINE_NODE_FACTORY(CogServerNode, COG_SERVER_NODE)
+
+//--- XXX REMOVE ME temp hackery until atomspace-cog unit tests ported.
+CogServer& opencog::cogserver(void)
+{
+	static AtomSpacePtr asp;
+	static CogServerNodePtr csn;
+	if (nullptr == asp)
+	{
+		asp = createAtomSpace();
+		asp->set_name("cogserver-singlton");
+		Handle h = asp->add_atom(HandleCast(createCogServerNode("cogserver")));
+		csn = CogServerNodeCast(h);
+	}
+
+	return *csn;
+}
