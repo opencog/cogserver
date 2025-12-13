@@ -9,7 +9,7 @@
 #include <sstream>
 #include <string>
 
-#include <opencog/cogserver/modules/commands/ModuleManagement.h>
+#include <opencog/cogserver/modules/ModuleManagement.h>
 
 using namespace opencog;
 

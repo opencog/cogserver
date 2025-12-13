@@ -9,8 +9,8 @@
 #ifndef _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 #define _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 
-#include <opencog/cogserver/modules/commands/ShutdownRequest.h>
-#include <opencog/cogserver/modules/commands/ModuleManagement.h>
+#include <opencog/cogserver/modules/ShutdownRequest.h>
+#include <opencog/cogserver/modules/ModuleManagement.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
