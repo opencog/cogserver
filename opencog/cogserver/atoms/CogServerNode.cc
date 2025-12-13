@@ -52,13 +52,11 @@ static constexpr uint32_t dispatch_hash(const char* s)
 CogServerNode::CogServerNode(Type t, const std::string&& s)
 	: Node(t, std::move(s)), CogServer()
 {
-	CogServer::loadModules();
 }
 
 CogServerNode::CogServerNode(const std::string&& s)
 	: Node(COG_SERVER_NODE, std::move(s)), CogServer()
 {
-	CogServer::loadModules();
 }
 
 void CogServerNode::setAtomSpace(AtomSpace* as)
@@ -87,6 +85,8 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	// ANSI color enable/disable
 	Atom::setValue(as->add_atom(Predicate("*-ansi-enabled-*")),
 	               createBoolValue(true));
+
+	CogServer::loadModules();
 }
 
 /// Retrieve a port number from a stored Value.
