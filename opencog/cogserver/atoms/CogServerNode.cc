@@ -64,11 +64,6 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	Node::setAtomSpace(as);
 	if (nullptr == as) return;
 
-	// XXX HACK: Keep shadow copy that never becomes null.
-	// This is needed because unit tests call clear() which nulls
-	// Atom::_atom_space, but getAS() must always return valid ptr.
-	_shadow_as = AtomSpaceCast(as);
-
 	// Port defaults
 	Atom::setValue(as->add_atom(Predicate("*-telnet-port-*")),
 	               createFloatValue(17001.0));
@@ -162,7 +157,7 @@ void CogServerNode::stopServers()
 
 AtomSpacePtr CogServerNode::getAS()
 {
-	return _shadow_as;
+	return AtomSpaceCast(_atom_space);
 }
 
 HandleSeq CogServerNode::getMessages() const
@@ -252,19 +247,3 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 }
 
 DEFINE_NODE_FACTORY(CogServerNode, COG_SERVER_NODE)
-
-//--- XXX REMOVE ME temp hackery until atomspace-cog unit tests ported.
-CogServer& opencog::cogserver(void)
-{
-	static AtomSpacePtr asp;
-	static CogServerNodePtr csn;
-	if (nullptr == asp)
-	{
-		asp = createAtomSpace();
-		asp->set_name("cogserver-singlton");
-		Handle h = asp->add_atom(HandleCast(createCogServerNode("cogserver")));
-		csn = CogServerNodeCast(h);
-	}
-
-	return *csn;
-}
