@@ -36,8 +36,8 @@
 
 using namespace opencog;
 
-PythonShell::PythonShell(const AtomSpacePtr& asp) :
-    _shellspace(asp)
+PythonShell::PythonShell(const Handle& hcsn) :
+    _shellspace(AtomSpaceCast(hcsn->getAtomSpace()))
 {
     normal_prompt = "py> ";
     pending_prompt = "... ";

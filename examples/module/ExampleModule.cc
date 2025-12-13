@@ -33,7 +33,7 @@ using namespace opencog;
 // load/unload functions for the Module interface
 DECLARE_MODULE(ExampleModule)
 
-ExampleModule::ExampleModule(CogServer& cs) : Module(cs)
+ExampleModule::ExampleModule(const Handle& hcsn) : Module(hcsn)
 {
     logger().info("[ExampleModule] constructor");
 }

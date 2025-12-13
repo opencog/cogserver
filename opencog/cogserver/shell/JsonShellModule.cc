@@ -22,7 +22,7 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -35,19 +35,20 @@ using namespace opencog;
 DEFINE_SHELL_MODULE(JsonShellModule);
 DECLARE_MODULE(JsonShellModule);
 
-JsonShellModule::JsonShellModule(CogServer& cs) : Module(cs)
+JsonShellModule::JsonShellModule(const Handle& hcsn) : Module(hcsn)
 {
+	_shell_hcsn = hcsn;
 }
 
 void JsonShellModule::init(void)
 {
-	_cogserver.registerRequest(shelloutRequest::info().id,
+	CogServerNodeCast(_shell_hcsn)->registerRequest(shelloutRequest::info().id,
 	                           &shelloutFactory);
 }
 
 JsonShellModule::~JsonShellModule()
 {
-	_cogserver.unregisterRequest(shelloutRequest::info().id);
+	CogServerNodeCast(_shell_hcsn)->unregisterRequest(shelloutRequest::info().id);
 }
 
 const RequestClassInfo&
@@ -79,7 +80,7 @@ JsonShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	JsonShell *sh = new JsonShell(_cogserver.getAS());
+	JsonShell *sh = new JsonShell(_shell_hcsn);
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

@@ -36,28 +36,22 @@ using namespace opencog;
 
 std::string SchemeShell::_prompt;
 
-SchemeShell::SchemeShell(const AtomSpacePtr& asp) :
-	_shellspace(asp)
+SchemeShell::SchemeShell(const Handle& hcsn) :
+	_shellspace(AtomSpaceCast(hcsn->getAtomSpace()))
 {
 	_prompt = "\033[0;34mguile\033[1;34m> \033[0m";
 
-	// Get the CogServerNode to retrieve prompt settings.
-	Handle h = asp->get_node(COG_SERVER_NODE, "cogserver");
-	if (nullptr == h)
-		h = asp->get_node(COG_SERVER_NODE, "test-cogserver");
-	OC_ASSERT(h != nullptr, "Internal error: CogServerNode not found!");
-
 	// Check if ANSI colors are enabled
 	bool ansi_enabled = true;
-	ValuePtr vp = h->getValue(asp->add_atom(Predicate("*-ansi-enabled-*")));
+	ValuePtr vp = hcsn->getValue(_shellspace->add_atom(Predicate("*-ansi-enabled-*")));
 	if (vp and vp->is_type(BOOL_VALUE))
 		ansi_enabled = BoolValueCast(vp)->value()[0];
 
 	// Get the appropriate prompt
 	if (ansi_enabled)
-		vp = h->getValue(asp->add_atom(Predicate("*-ansi-scm-prompt-*")));
+		vp = hcsn->getValue(_shellspace->add_atom(Predicate("*-ansi-scm-prompt-*")));
 	else
-		vp = h->getValue(asp->add_atom(Predicate("*-scm-prompt-*")));
+		vp = hcsn->getValue(_shellspace->add_atom(Predicate("*-scm-prompt-*")));
 
 	if (vp and vp->is_type(STRING_VALUE))
 		_prompt = StringValueCast(vp)->value()[0];

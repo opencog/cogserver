@@ -23,6 +23,7 @@
 #ifndef _OPENCOG_MCP_SHELL_H
 #define _OPENCOG_MCP_SHELL_H
 
+#include <opencog/atoms/base/Handle.h>
 #include <opencog/network/GenericShell.h>
 #include <opencog/atomspace/AtomSpace.h>
 
@@ -36,7 +37,7 @@ class McpShell : public GenericShell
 	protected:
 		AtomSpacePtr _shellspace;
 	public:
-		McpShell(const AtomSpacePtr&);
+		McpShell(const Handle&);
 		virtual ~McpShell();
 		virtual GenericEval* get_evaluator(void);
 };

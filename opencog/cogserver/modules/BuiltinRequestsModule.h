@@ -9,9 +9,10 @@
 #ifndef _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 #define _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 
+#include <opencog/atoms/base/Handle.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/modules/ShutdownRequest.h>
 #include <opencog/cogserver/modules/ModuleManagement.h>
-#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
 
@@ -91,7 +92,7 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "stats", do_stats,
 
 public:
     static const char* id();
-    BuiltinRequestsModule(CogServer&);
+    BuiltinRequestsModule(const Handle&);
     virtual ~BuiltinRequestsModule();
     virtual void init();
 

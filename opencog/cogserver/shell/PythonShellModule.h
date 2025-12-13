@@ -35,9 +35,10 @@
 #ifndef PYTHONSHELLMODULE_H
 #define PYTHONSHELLMODULE_H
 
+#include <opencog/atoms/base/Handle.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/shell/PythonShell.h>
 #include <opencog/cogserver/server/Request.h>
-#include <opencog/cogserver/server/CogServer.h>
 
 namespace opencog
 {
@@ -66,7 +67,7 @@ private:
         false, false)
 
 public:
-    PythonShellModule(CogServer&);
+    PythonShellModule(const Handle&);
     ~PythonShellModule();
 
     static const char *id(void);

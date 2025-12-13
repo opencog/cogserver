@@ -85,7 +85,7 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	Atom::setValue(as->add_atom(Predicate("*-ansi-enabled-*")),
 	               createBoolValue(true));
 
-	CogServer::loadModules();
+	CogServer::loadModules(get_handle());
 }
 
 /// Enable the network servers

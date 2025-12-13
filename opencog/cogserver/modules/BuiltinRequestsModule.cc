@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 #include <opencog/util/oc_assert.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/network/ConsoleSocket.h>
 
 #include "BuiltinRequestsModule.h"
@@ -63,12 +63,13 @@ static inline void ansi_white(std::string &s) { ansi_code(s,WHITE); }
 
 DECLARE_MODULE(BuiltinRequestsModule)
 
-BuiltinRequestsModule::BuiltinRequestsModule(CogServer& cs) : Module(cs)
+BuiltinRequestsModule::BuiltinRequestsModule(const Handle& hcsn) : Module(hcsn)
 {
-    _cogserver.registerRequest(ShutdownRequest::info().id,     &shutdownFactory);
-    _cogserver.registerRequest(ListModulesRequest::info().id,  &listmodulesFactory);
-    _cogserver.registerRequest(LoadModuleRequest::info().id,   &loadmoduleFactory);
-    _cogserver.registerRequest(UnloadModuleRequest::info().id, &unloadmoduleFactory);
+    CogServer* cs = CogServerNodeCast(hcsn).get();
+    cs->registerRequest(ShutdownRequest::info().id,     &shutdownFactory);
+    cs->registerRequest(ListModulesRequest::info().id,  &listmodulesFactory);
+    cs->registerRequest(LoadModuleRequest::info().id,   &loadmoduleFactory);
+    cs->registerRequest(UnloadModuleRequest::info().id, &unloadmoduleFactory);
 
     do_help_register();
     do_h_register();
@@ -98,10 +99,11 @@ BuiltinRequestsModule::~BuiltinRequestsModule()
 
     do_stats_unregister();
 
-    _cogserver.unregisterRequest(ShutdownRequest::info().id);
-    _cogserver.unregisterRequest(ListModulesRequest::info().id);
-    _cogserver.unregisterRequest(LoadModuleRequest::info().id);
-    _cogserver.unregisterRequest(UnloadModuleRequest::info().id);
+    CogServer* cs = CogServerNodeCast(_hcsn).get();
+    cs->unregisterRequest(ShutdownRequest::info().id);
+    cs->unregisterRequest(ListModulesRequest::info().id);
+    cs->unregisterRequest(LoadModuleRequest::info().id);
+    cs->unregisterRequest(UnloadModuleRequest::info().id);
 }
 
 void BuiltinRequestsModule::init()
@@ -155,8 +157,9 @@ std::string BuiltinRequestsModule::do_help(Request *req, std::list<std::string> 
 {
     std::ostringstream oss;
 
+    CogServer* cs = CogServerNodeCast(_hcsn).get();
     if (args.empty()) {
-        std::list<const char*> commands = _cogserver.requestIds();
+        std::list<const char*> commands = cs->requestIds();
 
         size_t maxl = 0;
         std::list<const char*>::const_iterator it;
@@ -168,7 +171,7 @@ std::string BuiltinRequestsModule::do_help(Request *req, std::list<std::string> 
         oss << "Available commands:" << std::endl;
         for (it = commands.begin(); it != commands.end(); ++it) {
             // Skip hidden commands
-            if (_cogserver.requestInfo(*it).hidden) continue;
+            if (cs->requestInfo(*it).hidden) continue;
             std::string cmdname(*it);
             std::string ansi_cmdname;
             ansi_green(ansi_cmdname); ansi_bright(ansi_cmdname);
@@ -180,10 +183,10 @@ std::string BuiltinRequestsModule::do_help(Request *req, std::list<std::string> 
             size_t cmd_length = strlen(cmdname.c_str());
             size_t ansi_code_length = strlen(ansi_cmdname.c_str()) - cmd_length;
             oss << "  " << std::setw(maxl+ansi_code_length+2) << std::left << ansi_cmdname
-                << _cogserver.requestInfo(*it).description << std::endl;
+                << cs->requestInfo(*it).description << std::endl;
         }
     } else if (args.size() == 1) {
-        const RequestClassInfo& cci = _cogserver.requestInfo(args.front());
+        const RequestClassInfo& cci = cs->requestInfo(args.front());
         if (cci.help != "")
             oss << cci.help << std::endl;
     } else {
@@ -202,7 +205,7 @@ std::string BuiltinRequestsModule::do_h(Request *req, std::list<std::string> arg
 // Print general info about server.
 std::string BuiltinRequestsModule::do_stats(Request *req, std::list<std::string> args)
 {
-    return _cogserver.display_stats();
+    return CogServerNodeCast(_hcsn)->display_stats();
 }
 
 // ====================================================================

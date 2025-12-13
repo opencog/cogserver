@@ -69,6 +69,9 @@ public:
     /** Returns the atomspace instance. */
     virtual AtomSpacePtr getAS() { return nullptr; }
 
+    /** Returns the CogServerNode handle. */
+    virtual Handle getHandle() { return Handle::UNDEFINED; }
+
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
      */
@@ -110,10 +113,10 @@ public:
     }
 
     /**** Module API ****/
-    bool loadModule(const std::string& filename) {
-        return ModuleManager::loadModule(filename, *this);
+    bool loadModule(const std::string& filename, const Handle& hcsn) {
+        return ModuleManager::loadModule(filename, hcsn);
     }
-    void loadModules(void) { ModuleManager::loadModules(*this); }
+    void loadModules(const Handle& hcsn) { ModuleManager::loadModules(hcsn); }
 
     /** Print human-readable stats about the cogserver */
     std::string display_stats(int nlines = -1);

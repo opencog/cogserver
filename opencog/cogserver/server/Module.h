@@ -15,6 +15,8 @@
 #ifndef _OPENCOG_MODULE_H
 #define _OPENCOG_MODULE_H
 
+#include <opencog/atoms/base/Handle.h>
+
 namespace opencog
 {
 /** \addtogroup grp_server
@@ -31,8 +33,8 @@ namespace opencog
     extern "C" const char* opencog_module_id(void) {                  \
        return #MODNAME;                                               \
     }                                                                 \
-    extern "C" Module * opencog_module_load(CogServer& cogserver) {   \
-       return new MODNAME(cogserver);                                 \
+    extern "C" Module * opencog_module_load(const Handle& hcsn) {     \
+       return new MODNAME(hcsn);                                      \
     }                                                                 \
     extern "C" void opencog_module_unload(Module* m) {                \
        delete m;                                                      \
@@ -88,8 +90,6 @@ namespace opencog
  * initialization has finished and the meta-data properly set.
  */
 
-class CogServer;
-
 class Module
 {
 public:
@@ -110,21 +110,15 @@ public:
     }
 
     typedef const char* IdFunction    (void);
-    typedef Module*     LoadFunction  (CogServer&);
+    typedef Module*     LoadFunction  (const Handle&);
     typedef void        UnloadFunction(Module*);
 
-    Module(CogServer& cs) : _cogserver(cs) {}
+    Module(const Handle& hcsn) : _hcsn(hcsn) {}
     virtual ~Module() {}
     virtual void init() = 0;
 
-protected: 
-    // Keep a copy of the server we were created with. This is needed
-    // to avoid a race condition when the cogserver destructor is
-    // called  -- when in the destructor, the server() global function
-    // will return NULL, and thus any module that needs the server will
-    // not be able to get at it.  This solves that problem.  Besides,
-    // using globals is a bad idea, in general.
-    CogServer& _cogserver;
+protected:
+    Handle _hcsn;
 
 }; // class
 

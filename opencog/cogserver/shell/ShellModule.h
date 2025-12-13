@@ -23,6 +23,7 @@ namespace opencog {                                                   \
                                                                       \
 class MODNAME : public Module {                                       \
     private:                                                          \
+        static Handle _shell_hcsn;                                    \
         class shelloutRequest : public Request                        \
         {                                                             \
             public:                                                   \
@@ -35,11 +36,12 @@ class MODNAME : public Module {                                       \
         Factory<shelloutRequest, Request> shelloutFactory;            \
         EXTRA;                                                        \
     public:                                                           \
-        MODNAME(CogServer&);                                          \
+        MODNAME(const Handle&);                                       \
         virtual ~MODNAME();                                           \
         static const char *id(void);                                  \
         virtual void init(void);                                      \
 };                                                                    \
+Handle MODNAME::_shell_hcsn;                                          \
 }
 
 #define DEFINE_SHELL_MODULE(MODNAME) DEFINE_SHELL_MODULE2(MODNAME,)

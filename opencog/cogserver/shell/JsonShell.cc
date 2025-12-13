@@ -26,8 +26,8 @@
 
 using namespace opencog;
 
-JsonShell::JsonShell(const AtomSpacePtr& asp) :
-	_shellspace(asp)
+JsonShell::JsonShell(const Handle& hcsn) :
+	_shellspace(AtomSpaceCast(hcsn->getAtomSpace()))
 {
 	normal_prompt = "json> ";
 	abort_prompt = "json> ";

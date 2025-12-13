@@ -61,7 +61,7 @@ bool LoadModuleRequest::execute()
     }
     std::string& filename = _parameters.front();
 
-    if (_cogserver.loadModule(filename)) {
+    if (_cogserver.loadModule(filename, _cogserver.getHandle())) {
         oss << "done" << std::endl;
         send(oss.str());
         return true;

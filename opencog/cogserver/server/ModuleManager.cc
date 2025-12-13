@@ -109,7 +109,7 @@ static std::string get_filepath(const std::string& fullpath)
 }
 
 bool ModuleManager::loadAbsPath(const std::string& path,
-                               CogServer& cs)
+                               const Handle& hcsn)
 {
     std::string fi = get_filename(path);
     if (modules.find(fi) !=  modules.end()) {
@@ -182,7 +182,7 @@ bool ModuleManager::loadAbsPath(const std::string& path,
     }
 
     // Load and init module
-    Module* module = (Module*) (*load_func)(cs);
+    Module* module = (Module*) (*load_func)(hcsn);
 
     // Store two entries in the module map:
     //    1: filename => <struct module data>
@@ -295,12 +295,11 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 
 // ====================================================================
 
-bool ModuleManager::loadModule(const std::string& path,
-                               CogServer& cs)
+bool ModuleManager::loadModule(const std::string& path, const Handle& hcsn)
 {
     if (0 == path.size()) return false;
     if ('/' == path[0])
-        return loadAbsPath(path, cs);
+        return loadAbsPath(path, hcsn);
 
     // Loop over the different possible module paths.
     bool rc = false;
@@ -308,14 +307,14 @@ bool ModuleManager::loadModule(const std::string& path,
         std::filesystem::path modulePath(module_path);
         modulePath /= path;
         if (std::filesystem::exists(modulePath)) {
-            rc = loadModule(modulePath.string(), cs);
+            rc = loadModule(modulePath.string(), hcsn);
             if (rc) break;
         }
     }
     return rc;
 }
 
-void ModuleManager::loadModules(CogServer& cs)
+void ModuleManager::loadModules(const Handle& hcsn)
 {
     // Search the build dirs first, then the install dirs.
     std::string modlist =
@@ -331,7 +330,7 @@ void ModuleManager::loadModules(CogServer& cs)
     tokenize(modlist, std::back_inserter(modules), ", ");
     bool load_failure = false;
     for (const std::string& module : modules) {
-        bool rc = loadModule(module, cs);
+        bool rc = loadModule(module, hcsn);
         if (not rc)
         {
             logger().warn("Failed to load module %s", module.c_str());

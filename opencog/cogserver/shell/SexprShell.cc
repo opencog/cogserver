@@ -26,8 +26,8 @@
 
 using namespace opencog;
 
-SexprShell::SexprShell(const AtomSpacePtr& asp) :
-	_shellspace(asp)
+SexprShell::SexprShell(const Handle& hcsn) :
+	_shellspace(AtomSpaceCast(hcsn->getAtomSpace()))
 {
 	normal_prompt = "";
 	abort_prompt = "";

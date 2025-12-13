@@ -26,6 +26,7 @@
 #ifndef _OPENCOG_EXAMPLE_MODULE_H
 #define _OPENCOG_EXAMPLE_MODULE_H
 
+#include <opencog/atoms/base/Handle.h>
 #include <opencog/cogserver/server/Module.h>
 
 namespace opencog
@@ -38,7 +39,7 @@ private:
 
 public:
 
-    ExampleModule(CogServer&);
+    ExampleModule(const Handle&);
     virtual ~ExampleModule();
     virtual void init();
     virtual const char* id();
