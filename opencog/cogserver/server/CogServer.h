@@ -124,9 +124,6 @@ public:
 
 }; // class
 
-// Temp hack -- Singleton instance of the cogserver; this is going away,
-CogServer& cogserver(void);
-
 /** @}*/
 }  // namespace
 
