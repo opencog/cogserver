@@ -59,8 +59,6 @@ public:
 	static Handle factory(const Handle&);
 
 private:
-	std::string getStringValue(const char* key, const std::string& defaultVal);
-
 	void startServers();
 	void stopServers();
 	std::thread* _main_loop = nullptr;

@@ -47,6 +47,8 @@ ServerConsole::ServerConsole(const Handle& hcsn, CogServer& cs, SocketManager* m
 
 	if (vp and vp->is_type(STRING_VALUE))
 		_prompt = StringValueCast(vp)->value()[0];
+	else if (vp and vp->is_node())
+		_prompt = HandleCast(vp)->get_name();
 }
 
 ServerConsole::~ServerConsole()

@@ -88,22 +88,6 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	CogServer::loadModules();
 }
 
-std::string CogServerNode::getStringValue(const char* key,
-                                          const std::string& defaultVal)
-{
-	Handle hkey = _atom_space->add_atom(Predicate(key));
-	ValuePtr vp = Atom::getValue(hkey);
-	if (nullptr == vp) return defaultVal;
-
-	if (vp->is_type(STRING_VALUE))
-		return StringValueCast(vp)->value()[0];
-
-	if (vp->is_node())
-		return HandleCast(vp)->get_name();
-
-	return defaultVal;
-}
-
 /// Enable the network servers
 void CogServerNode::startServers()
 {
