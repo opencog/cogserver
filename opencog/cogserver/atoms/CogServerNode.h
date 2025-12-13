@@ -37,7 +37,7 @@ namespace opencog
  * to this node to hold server configuration and state.
  */
 
-class CogServerNode : public Node, public CogServer
+class CogServerNode : public Node, protected CogServer
 {
 public:
 	// Please do NOT use this constructor!
