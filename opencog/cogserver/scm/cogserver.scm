@@ -6,7 +6,6 @@
 
 (use-modules (opencog))
 (use-modules (opencog cs-config))
-(use-modules (opencog logger))
 
 ; Load the C library that calls the classserver to load the types.
 (load-extension
@@ -19,14 +18,13 @@
 
 ; Path to libguile-cogserver.so is set up in the cs-config module.
 (load-extension
-	(string-append opencog-ext-path-cogserver "libguile-cogserver")
-	"opencog_cogserver_init")
+  (string-append opencog-ext-path-cogserver "libguile-cogserver")
+  "opencog_cogserver_init")
 
 ; config path name is optional.
 (define* (start-cogserver #:key (port 17001)
                                 (web  18080)
                                 (mcp  18888)
-                                (logfile   "/tmp/cogserver.log")
                                 (prompt    "[0;32mopencog[1;32m> [0m")
                                 (scmprompt "[0;34mguile[1;34m> [0m"))
 "
@@ -41,10 +39,9 @@
   start-cogserver #:scmprompt \"\\x1b[0;34mguile\\x1b[1;34m> \\x1b[0m\"
 
   Start the cogserver, optionally specifying a telnet port, websocket
-  port, logfile, telnet prompt and telnet scheme prompt (or any
-  combination of these). If any are missing, default values will be
-  used. The defaults are as shown.  Additional logging options can
-  be found in the (opencog logger) module.
+  port, telnet prompt and telnet scheme prompt (or any combination of
+  these). If any are missing, default values will be used. The defaults
+  are as shown.
 
   If any of the ports ares set to zero, then the corresponding server
   will not be started.  At least one must be non-zero.
@@ -54,9 +51,16 @@
 
   To stop the cogserver, just say stop-cogserver.
 "
-	(cog-logger-set-filename! logfile)
 	(if (string? port) (set! port (string->number port)))
-	(c-start-cogserver (cog-atomspace) port web mcp prompt scmprompt)
+
+	(define csn (CogServerNode "cogserver"))
+	(cog-set-value! csn (Predicate "*-telnet-port-*") (FloatValue port))
+	(cog-set-value! csn (Predicate "*-web-port-*") (FloatValue web))
+	(cog-set-value! csn (Predicate "*-mcp-port-*") (FloatValue mcp))
+	(cog-set-value! csn (Predicate "*-ansi-enabled-*") (BoolValue #t))
+	(cog-set-value! csn (Predicate "*-ansi-prompt-*") (StringValue prompt))
+	(cog-set-value! csn (Predicate "*-ansi-scm-prompt-*") (StringValue scmprompt))
+	(cog-set-value! csn (Predicate "*-start-*") (VoidValue))
 )
 
 ; To stop the repl server..
@@ -72,9 +76,10 @@
   See also: start-cogserver
 "
 	; The start-cogserver also starts a repl shell on port 18001
-	; so we stop that, here ...
-	(stop-server-and-clients!)
-	(c-stop-cogserver)
+	; so we stop that, here ... XXX what?? where ?
+	;   (stop-server-and-clients!)  ???
+	(define csn (CogServerNode "cogserver"))
+	(cog-set-value! csn (Predicate "*-stop-*") (VoidValue))
 )
 
 (export start-cogserver)
