@@ -34,10 +34,14 @@ ServerConsole::ServerConsole(const Handle& hcsn, CogServer& cs, SocketManager* m
 	// Check if ANSI colors are enabled
 	bool ansi_enabled = true;
 	ValuePtr vp = hcsn->getValue(asp->add_atom(Predicate("*-ansi-enabled-*")));
-	if (vp and vp->is_type(BOOL_VALUE))
-		ansi_enabled = BoolValueCast(vp)->value()[0];
+
+	// If *-ansi-enabled-* is mising entirely, assume this is a hush
+	// connection, and sent no prompt at all. This save a bit of time
+	// decoding teh assorted prompt strings..
+	if (nullptr == vp or not vp->is_type(BOOL_VALUE)) return;
 
 	// Get the appropriate prompt
+	ansi_enabled = BoolValueCast(vp)->value()[0];
 	if (ansi_enabled)
 		vp = hcsn->getValue(asp->add_atom(Predicate("*-ansi-prompt-*")));
 	else
