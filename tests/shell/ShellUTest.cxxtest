@@ -158,7 +158,7 @@ void tik_tik_tik(int tid, int reps)
 		std::string reply;
 		while (1) {
 			char rep[1000];
-			rc = recv(sock, rep, sizeof(rep), MSG_DONTWAIT);
+			rc = recv(sock, rep, sizeof(rep), 0);
 			int norr = errno;
 			if (rc < 0 and EAGAIN != norr and EWOULDBLOCK != norr)
 			{
@@ -183,8 +183,7 @@ void tik_tik_tik(int tid, int reps)
 			// Look for zef side.
 			if (reply.npos != reply.find("-finished")) break;
 			count ++;
-			if (10 < count) break;
-			sleep(1);
+			if (100 < count) break;
 		}
 
 		char exp[200];
