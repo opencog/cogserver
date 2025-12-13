@@ -39,7 +39,7 @@ std::string SchemeShell::_prompt;
 SchemeShell::SchemeShell(const AtomSpacePtr& asp) :
 	_shellspace(asp)
 {
-	_prompt = "[0;34mguile[1;34m> [0m";
+	_prompt = "\033[0;34mguile\033[1;34m> \033[0m";
 
 	// Get the CogServerNode to retrieve prompt settings.
 	Handle h = asp->get_node(COG_SERVER_NODE, "cogserver");
