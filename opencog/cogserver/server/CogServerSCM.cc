@@ -42,7 +42,7 @@ private:
                              const std::string&);
     std::string stop_server(void);
 
-    CogServerNode* srvr = nullptr;
+    CogServerNodePtr srvr = nullptr;
 
 public:
     CogServerSCM();
@@ -127,7 +127,8 @@ std::string CogServerSCM::start_server(AtomSpace* as,
     // Only one server at a time.
     if (srvr) { rc = "CogServer already running!"; return rc; }
 
-    srvr = new CogServerNode("cogserver");
+    Handle h(as->add_node(COG_SERVER_NODE, "cogserver"));
+    srvr = CogServerNodeCast(h);
 
     // Set non-default port values
     if (telnet_port != 17001)
@@ -164,7 +165,6 @@ std::string CogServerSCM::stop_server(void)
     AtomSpacePtr asp = srvr->getAS();
     srvr->setValue(asp->add_atom(Predicate("*-stop-*")),
                    createVoidValue());
-    delete srvr;
     srvr = nullptr;
 
     rc = "Stopped CogServer";
