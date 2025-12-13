@@ -65,6 +65,13 @@ private:
 	void startServers();
 	void stopServers();
 	std::thread* _main_loop = nullptr;
+
+	// XXX HACK: Shadow copy of _atom_space that never becomes null.
+	// This is needed because unit tests call clear() which sets
+	// Atom::_atom_space to nullptr, but getAS() must always return
+	// a valid AtomSpacePtr for the cogserver to function.
+	// Remove this hack after porting atomspace-cog unit tests.
+	AtomSpacePtr _shadow_as;
 };
 
 NODE_PTR_DECL(CogServerNode)

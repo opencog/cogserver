@@ -36,7 +36,15 @@ ServerConsole::ServerConsole(CogServer& cs, SocketManager* mgr) :
 	Handle h = asp->get_node(COG_SERVER_NODE, "cogserver");
 	if (nullptr == h)
 		h = asp->get_node(COG_SERVER_NODE, "test-cogserver");
-	OC_ASSERT(h != nullptr, "Internal error: CogServerNode not found!");
+
+	// XXX HACK: If CogServerNode not found (e.g. after clear()),
+	// use default prompt. Remove this hack after porting tests.
+	// OC_ASSERT(h != nullptr, "Internal error: CogServerNode not found!");
+	if (nullptr == h)
+	{
+		_prompt = "\033[0;32mopencog\033[1;32m> \033[0m";
+		return;
+	}
 
 	// Check if ANSI colors are enabled
 	bool ansi_enabled = true;
