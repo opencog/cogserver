@@ -38,10 +38,6 @@ private:
     static void init_in_module(void*);
     void init(void);
 
-    std::string start_server(AtomSpace*, int, int, int, const std::string&,
-                             const std::string&);
-    std::string stop_server(void);
-
     CogServerNodePtr srvr = nullptr;
 
 public:
@@ -59,20 +55,6 @@ void opencog_cogserver_init(void);
 // --------------------------------------------------------------
 
 #include <opencog/guile/SchemePrimitive.h>
-#include <opencog/atoms/atom_types/atom_names.h>
-#include <opencog/atoms/value/FloatValue.h>
-#include <opencog/atoms/value/StringValue.h>
-#include <opencog/atoms/value/VoidValue.h>
-
-/**
- * Implement a dynamically-loadable cogserver guile module.
- *
- * An interesting idea for the future is to convert this to
- * an instance of ObjectNode, so that the configurable parameters
- * could be set with Atomese-- i.e. with SetValue or cog-set-value!
- * by sending messages such as (Predicate "*-web-port-number-"")
- * and similar.
- */
 
 using namespace opencog;
 
@@ -102,8 +84,6 @@ void CogServerSCM::init_in_module(void* data)
  */
 void CogServerSCM::init()
 {
-    define_scheme_primitive("c-start-cogserver", &CogServerSCM::start_server, this, "cogserver");
-    define_scheme_primitive("c-stop-cogserver", &CogServerSCM::stop_server, this, "cogserver");
 }
 
 extern "C" {
@@ -114,59 +94,3 @@ void opencog_cogserver_init(void)
 };
 
 // --------------------------------------------------------------
-
-std::string CogServerSCM::start_server(AtomSpace* as,
-                                       int telnet_port,
-                                       int websocket_port,
-                                       int mcp_port,
-                                       const std::string& prompt,
-                                       const std::string& scmprompt)
-{
-    static std::string rc;
-
-    // Only one server at a time.
-    if (srvr) { rc = "CogServer already running!"; return rc; }
-
-    Handle h(as->add_node(COG_SERVER_NODE, "cogserver"));
-    srvr = CogServerNodeCast(h);
-
-    // Set non-default port values
-    if (telnet_port != 17001)
-        srvr->setValue(as->add_atom(Predicate("*-telnet-port-*")),
-                       createFloatValue((double)telnet_port));
-    if (websocket_port != 18080)
-        srvr->setValue(as->add_atom(Predicate("*-web-port-*")),
-                       createFloatValue((double)websocket_port));
-    if (mcp_port != 18888)
-        srvr->setValue(as->add_atom(Predicate("*-mcp-port-*")),
-                       createFloatValue((double)mcp_port));
-
-    // Set custom prompts
-    if (!prompt.empty())
-        srvr->setValue(as->add_atom(Predicate("*-ansi-prompt-*")),
-                       createStringValue(prompt));
-    if (!scmprompt.empty())
-        srvr->setValue(as->add_atom(Predicate("*-ansi-scm-prompt-*")),
-                       createStringValue(scmprompt));
-
-    // Start all servers
-    srvr->setValue(as->add_atom(Predicate("*-start-*")),
-                   createVoidValue());
-    rc = "Started CogServer";
-    return rc;
-}
-
-
-std::string CogServerSCM::stop_server(void)
-{
-    static std::string rc;
-    if (nullptr == srvr) { rc = "CogServer not running"; return rc;}
-
-    AtomSpacePtr asp = srvr->getAS();
-    srvr->setValue(asp->add_atom(Predicate("*-stop-*")),
-                   createVoidValue());
-    srvr = nullptr;
-
-    rc = "Stopped CogServer";
-    return rc;
-}
