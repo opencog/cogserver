@@ -19,6 +19,7 @@
 
 #include <opencog/network/NetworkServer.h>
 
+#include <opencog/atoms/core/NumberNode.h>
 #include <opencog/atoms/value/FloatValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/ServerConsole.h>
@@ -30,6 +31,7 @@
 using namespace opencog;
 
 // Helper to extract port value from a CogServerNode.
+// Accepts FloatValue or NumberNode.
 // Returns zero if key not found or value not understood.
 static int get_port(const Handle& hcsn, const char* key)
 {
@@ -40,6 +42,9 @@ static int get_port(const Handle& hcsn, const char* key)
 
     if (vp->is_type(FLOAT_VALUE))
         return FloatValueCast(vp)->value()[0];
+
+    if (vp->is_type(NUMBER_NODE))
+        return NumberNodeCast(vp)->get_value();
 
     return 0;
 }

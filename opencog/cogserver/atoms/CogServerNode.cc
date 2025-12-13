@@ -22,7 +22,6 @@
 #include <opencog/util/Logger.h>
 #include <opencog/atoms/atom_types/atom_names.h>
 #include <opencog/atoms/base/ClassServer.h>
-#include <opencog/atoms/core/NumberNode.h>
 #include <opencog/atoms/value/BoolValue.h>
 #include <opencog/atoms/value/FloatValue.h>
 #include <opencog/atoms/value/StringValue.h>
@@ -87,23 +86,6 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	               createBoolValue(true));
 
 	CogServer::loadModules();
-}
-
-/// Retrieve a port number from a stored Value.
-/// Accepts FloatValue or NumberNode.
-int CogServerNode::getPortValue(const char* key, int defaultPort)
-{
-	Handle hkey = _atom_space->add_atom(Predicate(key));
-	ValuePtr vp = Atom::getValue(hkey);
-	if (nullptr == vp) return defaultPort;
-
-	if (vp->is_type(FLOAT_VALUE))
-		return FloatValueCast(vp)->value()[0];
-
-	if (vp->is_type(NUMBER_NODE))
-		return NumberNodeCast(vp)->get_value();
-
-	return defaultPort;
 }
 
 std::string CogServerNode::getStringValue(const char* key,

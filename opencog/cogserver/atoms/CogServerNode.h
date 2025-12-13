@@ -59,7 +59,6 @@ public:
 	static Handle factory(const Handle&);
 
 private:
-	int getPortValue(const char* key, int defaultPort);
 	std::string getStringValue(const char* key, const std::string& defaultVal);
 
 	void startServers();
