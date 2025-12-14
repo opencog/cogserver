@@ -28,7 +28,7 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         name (str, optional): Name for the CogServerNode. Default: "cogserver"
 
     Returns:
-        bool: True if server started successfully, False otherwise.
+        CogServerNode: The CogServerNode atom that was created.
 
     Raises:
         RuntimeError: If server is already running.
@@ -69,7 +69,7 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
     # Mark as initialized
     _server_running = True
 
-    return True
+    return _server_handle
 
 def stop_cogserver():
     """Stop the running CogServer.
