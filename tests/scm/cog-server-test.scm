@@ -110,9 +110,6 @@
 ;; Start the cogserver
 (cog-set-value! single-csn (Predicate "*-start-*") (VoidValue))
 
-(test-assert "single-start"
-   (cog-atom? single-csn))
-
 ;; Test *-is-running?-* after start
 (test-assert "single-running-after-start"
    (cogserver-running? single-csn))
@@ -143,24 +140,13 @@
 (define s1-telnet 17201) (define s1-web 18281)
 (define s2-telnet 17202) (define s2-web 18282)
 (define s3-telnet 17203) (define s3-web 18283)
-(define csn1 #f)
-(define csn2 #f)
-(define csn3 #f)
+(define csn1 (start-named-cogserver "cogserver-A" s1-telnet s1-web))
+(define csn2 (start-named-cogserver "cogserver-B" s2-telnet s2-web))
+(define csn3 (start-named-cogserver "cogserver-C" s3-telnet s3-web))
 
-(test-assert "three-start-A"
-   (begin
-      (set! csn1 (start-named-cogserver "cogserver-A" s1-telnet s1-web))
-      (cog-atom? csn1)))
-
-(test-assert "three-start-B"
-   (begin
-      (set! csn2 (start-named-cogserver "cogserver-B" s2-telnet s2-web))
-      (cog-atom? csn2)))
-
-(test-assert "three-start-C"
-   (begin
-      (set! csn3 (start-named-cogserver "cogserver-C" s3-telnet s3-web))
-      (cog-atom? csn3)))
+(test-assert "three-start-A" (cog-atom? csn1))
+(test-assert "three-start-B" (cog-atom? csn2))
+(test-assert "three-start-C" (cog-atom? csn3))
 
 ;; Test connectivity to all six ports
 (test-assert "three-A-telnet-reachable"
@@ -182,12 +168,9 @@
    (can-connect-to-port? s3-web))
 
 ;; Stop all cogservers
-(test-assert "three-stop-all"
-   (begin
-      (stop-named-cogserver csn1)
-      (stop-named-cogserver csn2)
-      (stop-named-cogserver csn3)
-      #t))
+(stop-named-cogserver csn1)
+(stop-named-cogserver csn2)
+(stop-named-cogserver csn3)
 
 ;; Verify all ports are closed
 (test-assert "three-A-telnet-closed"
