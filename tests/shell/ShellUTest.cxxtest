@@ -53,7 +53,7 @@ void gargleblast(int tid, int reps)
 	{
 		int j = i + 10 + (tid+10)*1000;
 		char buf[1000];
-		sprintf(buf, "echo '(Evaluation (Predicate \"visible face\") (List (Number %d)))\n' | nc -q 0 localhost 17333", j);
+		sprintf(buf, "echo '(Evaluation (Predicate \"visible face\") (List (Number %d)))\n' | nc -q 1 localhost 17333", j);
 
 		std::string reso = cmd_exec(buf);
 
@@ -94,7 +94,7 @@ void gargleblast(int tid, int reps)
 
 		if (20 <= i)
 		{
-			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 0 localhost 17333", j-20);
+			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
 			std::string delo = cmd_exec(buf);
 
 			// The new half-open detection code sends blanks.
