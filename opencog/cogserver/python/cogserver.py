@@ -32,8 +32,7 @@ _server_handle = None
 _server_running = False
 
 def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
-                    enable_console=True, enable_web=True, enable_mcp=True,
-                    name="cogserver"):
+                    enable_console=True, enable_web=True, enable_mcp=True):
     """Start the CogServer with the specified configuration.
 
     Args:
@@ -43,7 +42,6 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         enable_console (bool, optional): Enable telnet console server. Default: True
         enable_web (bool, optional): Enable web server. Default: True
         enable_mcp (bool, optional): Enable MCP server. Default: True
-        name (str, optional): Name for the CogServerNode. Default: "cogserver"
 
     Returns:
         CogServerNode: The CogServerNode atom that was created.
@@ -62,14 +60,17 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         if not (1 <= port <= 65535):
             raise ValueError(f"Invalid {pname} port: {port}. Must be between 1 and 65535")
 
-    # Get the thread atomspace and add the CogServerNode to it
-    atomspace = get_thread_atomspace()
-    _server_handle = atomspace.add_node(types.CogServerNode, name)
-
-    # Set non-default port values (0 disables a server)
+    # Compute effective port values (0 disables a server)
     effective_console = console_port if enable_console else 0
     effective_web = web_port if enable_web else 0
     effective_mcp = mcp_port if enable_mcp else 0
+
+    # Construct name from port configuration
+    name = f"cogserver://{effective_console}:{effective_web}:{effective_mcp}"
+
+    # Get the thread atomspace and add the CogServerNode to it
+    atomspace = get_thread_atomspace()
+    _server_handle = atomspace.add_node(types.CogServerNode, name)
 
     if effective_console != 17001:
         key = Predicate("*-telnet-port-*")
