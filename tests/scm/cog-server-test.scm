@@ -185,6 +185,67 @@
    (not (can-connect-to-port? s3-web)))
 
 ;; -------------------------------------------------------
+;; ===== Three cogservers using (start-cogserver) =====
+;; Test that three servers can run simultaneously and respond correctly.
+
+(define tri-1-telnet 17301) (define tri-1-web 18381)
+(define tri-2-telnet 17302) (define tri-2-web 18382)
+(define tri-3-telnet 17303) (define tri-3-web 18383)
+
+(define tri-csn-1 (start-cogserver #:port tri-1-telnet #:web tri-1-web #:mcp 0))
+(define tri-csn-2 (start-cogserver #:port tri-2-telnet #:web tri-2-web #:mcp 0))
+(define tri-csn-3 (start-cogserver #:port tri-3-telnet #:web tri-3-web #:mcp 0))
+
+(test-assert "tri-start-1" (cog-atom? tri-csn-1))
+(test-assert "tri-start-2" (cog-atom? tri-csn-2))
+(test-assert "tri-start-3" (cog-atom? tri-csn-3))
+
+;; Verify all three have unique names
+(test-assert "tri-unique-names"
+   (let ((n1 (cog-name tri-csn-1))
+         (n2 (cog-name tri-csn-2))
+         (n3 (cog-name tri-csn-3)))
+      (and (not (string=? n1 n2))
+           (not (string=? n2 n3))
+           (not (string=? n1 n3)))))
+
+;; Test telnet: send scheme expression to each and verify result
+(test-assert "tri-1-scheme"
+   (string-contains (send-recv tri-1-telnet "scm\n(+ 1 1)\n.\n") "2"))
+
+(test-assert "tri-2-scheme"
+   (string-contains (send-recv tri-2-telnet "scm\n(+ 2 2)\n.\n") "4"))
+
+(test-assert "tri-3-scheme"
+   (string-contains (send-recv tri-3-telnet "scm\n(+ 3 3)\n.\n") "6"))
+
+;; Test HTTP: send GET /stats to each and verify 200 OK
+(test-assert "tri-1-http"
+   (string-contains
+      (send-recv tri-1-web "GET /stats HTTP/1.1\r\nHost: localhost\r\n\r\n")
+      "200 OK"))
+
+(test-assert "tri-2-http"
+   (string-contains
+      (send-recv tri-2-web "GET /stats HTTP/1.1\r\nHost: localhost\r\n\r\n")
+      "200 OK"))
+
+(test-assert "tri-3-http"
+   (string-contains
+      (send-recv tri-3-web "GET /stats HTTP/1.1\r\nHost: localhost\r\n\r\n")
+      "200 OK"))
+
+;; Stop all three using stop-cogserver with explicit argument
+(stop-cogserver tri-csn-1)
+(stop-cogserver tri-csn-2)
+(stop-cogserver tri-csn-3)
+
+;; Verify all ports are closed
+(test-assert "tri-1-closed" (not (can-connect-to-port? tri-1-telnet)))
+(test-assert "tri-2-closed" (not (can-connect-to-port? tri-2-telnet)))
+(test-assert "tri-3-closed" (not (can-connect-to-port? tri-3-telnet)))
+
+;; -------------------------------------------------------
 (test-end tname)
 
 (opencog-test-end)
