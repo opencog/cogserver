@@ -54,12 +54,18 @@ class CogServer :
     public RequestManager,
     public ModuleManager
 {
-protected:
+private:
     SocketManager _socket_manager;
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
     std::atomic<bool> _running;
+
+protected:
+    // The following methods "could be" public (historically, they were)
+    // but are now marked protected due to widespread abuse. Control is
+    // centralized in CogServerNode, and it provides the master authority
+    // for starting and stopping things.
 
     /// Atomically set running to true. Returns true if it was
     /// already running (i.e. already set by someone else).
@@ -67,41 +73,39 @@ protected:
 
     /** Starts the network console server; this provides a command
      *  line server socket on the specified port. */
-    virtual void enableNetworkServer(const Handle&);
+    void enableNetworkServer(const Handle&);
 
     /** Starts the websockets server. */
-    virtual void enableWebServer(const Handle&);
+    void enableWebServer(const Handle&);
 
     /** Starts the MCP Model Context Protocol server. */
-    virtual void enableMCPServer(const Handle&);
+    void enableMCPServer(const Handle&);
 
     /** Stops the network server and closes all the open server sockets. */
-    virtual void disableNetworkServer(void);
-    virtual void disableWebServer(void);
-    virtual void disableMCPServer(void);
-
-public:
-    CogServer(void);
-
-    /** CogServer's destructor. Disables the network server and
-     * unloads all modules. */
-    virtual ~CogServer(void);
-
-    /** Returns the CogServerNode handle. */
-    virtual Handle getHandle() { return Handle::UNDEFINED; }
+    void disableNetworkServer(void);
+    void disableWebServer(void);
+    void disableMCPServer(void);
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
      */
-    virtual void serverLoop(void);
+    void serverLoop(void);
 
-    /** Runs a single server loop step. Quasi-private method, made
-     *  public to be used in unit tests and for debug purposes only. */
-    virtual void runLoopStep(void);
+    /** Runs a single server loop step. */
+    void runLoopStep(void);
 
-    /** Terminates the main loop. The loop will be exited
-     *  after the current interaction is finished. */
-    virtual void stop(void);
+public:
+    CogServer(void);
+    virtual ~CogServer(void);
+
+    /** Terminates the main loop. Waits for all in-progress work
+     * to complete, will also schedule all pending requests and
+     * run them, before returning. After returning, everything
+     * guaranteed tp be done. */
+    void stop(void);
+
+    /** Returns the CogServerNode handle. */
+    virtual Handle getHandle() { return Handle::UNDEFINED; }
 
     void set_max_open_sockets(int);
 

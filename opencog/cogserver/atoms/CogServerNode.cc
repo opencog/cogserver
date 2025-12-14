@@ -176,7 +176,7 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 	{
 		case p_start:
 			if (not startServers()) return;
-			_main_loop = new std::thread(&CogServer::serverLoop, static_cast<CogServer*>(this));
+			_main_loop = new std::thread([this]() { serverLoop(); });
 			return;
 
 		case p_stop:

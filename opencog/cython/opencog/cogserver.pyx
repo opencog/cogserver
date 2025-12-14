@@ -1,7 +1,7 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from opencog.cogserver cimport cCogServer, cCogServerNode, cCogServerNodePtr, CogServerNodeCast
+from opencog.cogserver cimport cCogServerNode, cCogServerNodePtr, CogServerNodeCast
 from opencog.atomspace cimport cHandle, Atom, handle_cast
 from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValue, Predicate
 from opencog.atomspace import types
