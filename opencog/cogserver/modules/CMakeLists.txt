@@ -6,6 +6,7 @@ ADD_LIBRARY (builtinreqs MODULE
 )
 
 TARGET_LINK_LIBRARIES(builtinreqs
+	servernode
 	server
 )
 
