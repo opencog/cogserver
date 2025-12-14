@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/modules/commands/ModuleManagement.cc
+ * opencog/cogserver/modules/ModuleManagement.cc
  *
  * Copyright (C) 2008 by OpenCog Foundation
  * Copyright (C) 2022 Linas Vepstas

@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/modules/commands/BuiltinRequestsModule.cc
+ * opencog/cogserver/modules/BuiltinRequestsModule.cc
  *
  * Copyright (C) 2008,2010 by OpenCog Foundation
  * Written by Gustavo Gama <gama@vettalabs.com>

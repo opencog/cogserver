@@ -43,9 +43,6 @@ ModuleManager::ModuleManager(void)
     std::string exe = get_exe_dir();
     if (0 == exe.compare(0, sizeof(PROJECT_BINARY_DIR)-1, PROJECT_BINARY_DIR))
     {
-
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
         module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
     }
