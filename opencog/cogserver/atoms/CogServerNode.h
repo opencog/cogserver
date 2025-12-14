@@ -54,7 +54,6 @@ public:
 	virtual HandleSeq getMessages() const;
 	virtual bool usesMessage(const Handle&) const;
 
-	AtomSpacePtr getAS() override;
 	Handle getHandle() override { return get_handle(); }
 
 	static Handle factory(const Handle&);

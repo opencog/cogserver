@@ -115,11 +115,6 @@ void CogServerNode::stopServers()
 	disableNetworkServer();
 }
 
-AtomSpacePtr CogServerNode::getAS()
-{
-	return AtomSpaceCast(_atom_space);
-}
-
 HandleSeq CogServerNode::getMessages() const
 {
 	static const HandleSeq msgs = []() {

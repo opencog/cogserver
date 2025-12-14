@@ -66,9 +66,6 @@ public:
      * unloads all modules. */
     virtual ~CogServer(void);
 
-    /** Returns the atomspace instance. */
-    virtual AtomSpacePtr getAS() { return nullptr; }
-
     /** Returns the CogServerNode handle. */
     virtual Handle getHandle() { return Handle::UNDEFINED; }
 
