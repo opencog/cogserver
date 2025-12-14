@@ -6,18 +6,13 @@
 (use-modules (opencog))
 (use-modules (opencog test-runner))
 (use-modules (opencog cogserver))
+(use-modules (ice-9 rdelim))
 
 (opencog-test-runner)
 (define tname "cog-server-test")
 (test-begin tname)
 
-(test-assert "CogServerNode-type-exists"
-   (defined? 'CogServerNode))
-
-(test-assert "CogServerNode-create"
-   (let ((csn (CogServerNode "test-server")))
-      (cog-atom? csn)))
-
+;; -------------------------------------------------------
 ;; Helper function to test if a port can be connected to
 (define (can-connect-to-port? port)
    (catch #t
@@ -29,7 +24,56 @@
       (lambda (key . args)
          #f)))
 
-;; Helper to start a cogserver with given name and ports
+;; Helper to send data and receive response from a port
+(define (send-recv port data)
+   (let ((sock (socket AF_INET SOCK_STREAM 0)))
+      (connect sock AF_INET INADDR_LOOPBACK port)
+      (display data sock)
+      (force-output sock)
+      (let loop ((result ""))
+         (let ((line (read-line sock)))
+            (if (eof-object? line)
+               (begin (close-port sock) result)
+               (loop (string-append result line "\n")))))))
+
+;; -------------------------------------------------------
+;; ===== Test the exported start-cogserver and stop-cogserver functions =====
+(define exported-telnet 17401)
+(define exported-web 18481)
+
+(define exported-csn (start-cogserver #:port exported-telnet #:web exported-web #:mcp 0))
+
+(test-assert "start-cogserver"
+   (cog-atom? exported-csn))
+
+;; Test telnet port: send "help" and expect at least 250 bytes
+(test-assert "telnet-help"
+   (let ((response (send-recv exported-telnet "help\n.\n")))
+      (>= (string-length response) 250)))
+
+;; Test telnet port: send scheme expression and verify result
+(test-assert "telnet-scheme-eval"
+   (let ((response (send-recv exported-telnet "scm\n(+ 2 2)\n.\n")))
+      (string-contains response "4")))
+
+;; Test web port: send HTTP GET and expect 200 OK with at least 500 bytes
+(test-assert "web-stats"
+   (let ((response (send-recv exported-web "GET /stats HTTP/1.1\r\nHost: localhost\r\n\r\n")))
+      (and (string-contains response "200 OK")
+           (>= (string-length response) 500))))
+
+;; Stop the cogserver
+(stop-cogserver)
+
+;; Verify ports are closed after stop
+(test-assert "telnet-closed-after-stop"
+   (not (can-connect-to-port? exported-telnet)))
+
+(test-assert "web-closed-after-stop"
+   (not (can-connect-to-port? exported-web)))
+
+;; -------------------------------------------------------
+;; Custom helper to start a cogserver with given name and ports
 (define (start-named-cogserver name telnet-port web-port)
    (define csn (CogServerNode name))
    (cog-set-value! csn (Predicate "*-telnet-port-*") (FloatValue telnet-port))
@@ -42,7 +86,7 @@
 (define (stop-named-cogserver csn)
    (cog-set-value! csn (Predicate "*-stop-*") (VoidValue)))
 
-;; ===== Test 1: Single cogserver =====
+;; ===== Single cogserver =====
 (define single-telnet-port 17101)
 (define single-web-port 18181)
 (define single-csn #f)
@@ -69,7 +113,7 @@
 (test-assert "single-web-closed"
    (not (can-connect-to-port? single-web-port)))
 
-;; ===== Test 2: Three cogservers simultaneously =====
+;; ===== Three cogservers simultaneously =====
 (define s1-telnet 17201) (define s1-web 18281)
 (define s2-telnet 17202) (define s2-web 18282)
 (define s3-telnet 17203) (define s3-web 18283)
@@ -138,6 +182,7 @@
 (test-assert "three-C-web-closed"
    (not (can-connect-to-port? s3-web)))
 
+;; -------------------------------------------------------
 (test-end tname)
 
 (opencog-test-end)
