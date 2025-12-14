@@ -11,8 +11,8 @@
  * explore writing guile (scheme) or python modules instead.
  */
 
+#include <cstdlib>
 #include <dlfcn.h>
-#include <unistd.h>
 
 #include <filesystem>
 
@@ -24,28 +24,24 @@
 
 using namespace opencog;
 
-static std::string get_exe_dir()
-{
-    static const int EXE_PATH_MAX = 1024;
-    static char buf[EXE_PATH_MAX];
-    int rslt = readlink("/proc/self/exe", buf, EXE_PATH_MAX);
-    if (rslt < 0) return "";
-
-    buf[rslt] = '\0';
-    std::string exeName(buf);
-    return exeName.substr(0, exeName.rfind("/")+1);
-}
-
 ModuleManager::ModuleManager(void)
 {
-    // Give priority search order to the build directories.
-    // Do NOT search these, if working from installed path!
-    std::string exe = get_exe_dir();
-    if (0 == exe.compare(0, sizeof(PROJECT_BINARY_DIR)-1, PROJECT_BINARY_DIR))
+    // Check for COGSERVER_MODULE_PATH environment variable.
+    // This is a colon-separated list of directories to search for modules.
+    // These paths are searched first, before the install prefix.
+    const char* env_path = std::getenv("COGSERVER_MODULE_PATH");
+    if (env_path)
     {
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+        std::vector<std::string> paths;
+        tokenize(env_path, std::back_inserter(paths), ":");
+        for (const std::string& p : paths)
+        {
+            if (not p.empty())
+                module_paths.push_back(p);
+        }
     }
+
+    // Finally, search the install prefix.
     module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
 }
 
