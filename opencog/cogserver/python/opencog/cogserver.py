@@ -12,6 +12,9 @@ import os
 # Load the servernode library to register CogServerNode type
 # This must happen before we can use types.CogServerNode
 _lib_paths = [
+    # Build directory (for testing without install)
+    os.path.join(os.path.dirname(__file__), "../../../../build/opencog/cogserver/atoms/libservernode.so"),
+    # Installed locations
     "/usr/local/lib/opencog/libservernode.so",
     "/usr/lib/opencog/libservernode.so",
 ]

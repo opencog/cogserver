@@ -2,7 +2,7 @@
 # Install pure Python cogserver module
 #
 INSTALL(FILES
-    __init__.py
-    cogserver.py
+    opencog/__init__.py
+    opencog/cogserver.py
     DESTINATION "${PYTHON_DEST}"
 )

@@ -10,8 +10,8 @@ import time
 import sys
 import os
 
-# Add the build directory to Python path if needed
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../build/opencog/cython'))
+# Add the source directory to Python path for the pure Python cogserver module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../opencog/cogserver/python'))
 
 try:
     from opencog.atomspace import AtomSpace
