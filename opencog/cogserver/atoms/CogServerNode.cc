@@ -125,7 +125,8 @@ HandleSeq CogServerNode::getMessages() const
 		HandleSeq m({
 			Predicate("*-start-*"),
 			Predicate("*-stop-*"),
-			Predicate("*-run-*")
+			Predicate("*-run-*"),
+			Predicate("*-is-running?-*")
 		});
 		// Mark each message predicate as a message, once at load time.
 		for (const Handle& h : m)
@@ -145,7 +146,8 @@ bool CogServerNode::usesMessage(const Handle& key) const
 	static const std::unordered_set<uint32_t> msgset({
 		dispatch_hash("*-start-*"),
 		dispatch_hash("*-stop-*"),
-		dispatch_hash("*-run-*")
+		dispatch_hash("*-run-*"),
+		dispatch_hash("*-is-running?-*")
 	});
 
 	if (PREDICATE_NODE != key->get_type()) return false;
