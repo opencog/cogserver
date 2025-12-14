@@ -215,4 +215,9 @@ TODO
 * What about authentication and encryption for the raw telnet/netcat
   interfaces?
 
+* Convert the three network servers to ObjectNodes.
+* Convert the various shells to ObjectNodes.
+* Convert the Requests into messages (So, `(Predicate "list-modules")`,
+  etc.) for the main command shell only.
+
 ----

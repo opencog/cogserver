@@ -1,7 +1,9 @@
-CogServer Python Interface
---------------------------
+CogServerNode Python Interface
+------------------------------
 
-The CogServer can be started from Python using the following code:
+The Python interface provides a very thin convenience wrapper around
+the CogServerNode. Users are encouraged to use the CogServerNode
+directly, instead of using this wrapper.
 
 ```python
 from opencog.atomspace import AtomSpace
