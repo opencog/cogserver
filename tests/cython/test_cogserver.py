@@ -15,10 +15,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../build/opencog/
 
 try:
     from opencog.atomspace import AtomSpace
+    from opencog.type_constructors import get_thread_atomspace, Predicate
     from opencog.cogserver import (
         start_cogserver,
         stop_cogserver,
-        is_cogserver_running
     )
 except ImportError as e:
     print(f"Error importing modules: {e}")
@@ -26,35 +26,52 @@ except ImportError as e:
     sys.exit(1)
 
 
+# Global to track the current server node for cleanup
+_current_server = None
+
+
+def is_server_running(server_node):
+    """Check if a CogServerNode is running by querying its value."""
+    if server_node is None:
+        return False
+    val = server_node.get_value(Predicate("*-is-running?-*"))
+    if val is None:
+        return False
+    # val is a BoolValue; check if it's true
+    return val.to_list()[0] == 1
+
+
 class TestCogServer(unittest.TestCase):
     """Test cases for CogServer Python bindings."""
 
     def setUp(self):
         """Ensure server is stopped before each test."""
-        if is_cogserver_running():
+        global _current_server
+        if _current_server is not None and is_server_running(_current_server):
             stop_cogserver()
+            _current_server = None
         # Small delay to ensure clean state
         time.sleep(0.1)
 
     def tearDown(self):
         """Ensure server is stopped after each test."""
-        if is_cogserver_running():
+        global _current_server
+        if _current_server is not None and is_server_running(_current_server):
             stop_cogserver()
+            _current_server = None
         # Small delay to ensure clean shutdown
         time.sleep(0.1)
 
     def test_basic_start_stop(self):
         """Test basic server start/stop functionality."""
-        # Check server is not running initially
-        self.assertFalse(is_cogserver_running(),
-                        "Server should not be running initially")
+        global _current_server
 
         # Start server with custom port to avoid conflicts
-        result = start_cogserver(console_port=17550, enable_web=False, enable_mcp=False)
-        self.assertTrue(result, "start_cogserver should return True")
+        _current_server = start_cogserver(console_port=17550, enable_web=False, enable_mcp=False)
+        self.assertIsNotNone(_current_server, "start_cogserver should return CogServerNode")
 
         # Check server is running
-        self.assertTrue(is_cogserver_running(),
+        self.assertTrue(is_server_running(_current_server),
                        "Server should be running after start")
 
         # Stop the server
@@ -62,13 +79,15 @@ class TestCogServer(unittest.TestCase):
         self.assertTrue(result, "stop_cogserver should return True")
 
         # Check server is stopped
-        self.assertFalse(is_cogserver_running(),
+        self.assertFalse(is_server_running(_current_server),
                         "Server should not be running after stop")
 
     def test_custom_ports(self):
         """Test server with custom port configuration."""
+        global _current_server
+
         # Start server with custom ports
-        result = start_cogserver(
+        _current_server = start_cogserver(
             console_port=17552,
             web_port=18581,
             mcp_port=18889,
@@ -76,24 +95,26 @@ class TestCogServer(unittest.TestCase):
             enable_web=False,  # Disable web to avoid SSL issues in tests
             enable_mcp=False
         )
-        self.assertTrue(result, "Server should start with custom ports")
+        self.assertIsNotNone(_current_server, "Server should start with custom ports")
 
         # Check server is running
-        self.assertTrue(is_cogserver_running(), "Server should be running")
+        self.assertTrue(is_server_running(_current_server), "Server should be running")
 
         # Let it run briefly
         time.sleep(0.5)
 
         # Stop the server
         stop_cogserver()
-        self.assertFalse(is_cogserver_running(),
+        self.assertFalse(is_server_running(_current_server),
                         "Server should be stopped")
 
     def test_double_start_error(self):
         """Test that starting server twice raises error."""
+        global _current_server
+
         # Start server
-        start_cogserver(console_port=17553, enable_web=False, enable_mcp=False)
-        self.assertTrue(is_cogserver_running(), "Server should be running")
+        _current_server = start_cogserver(console_port=17553, enable_web=False, enable_mcp=False)
+        self.assertTrue(is_server_running(_current_server), "Server should be running")
 
         # Try to start again - should raise RuntimeError
         with self.assertRaises(RuntimeError) as context:
@@ -113,16 +134,8 @@ class TestCogServer(unittest.TestCase):
         self.assertIn("Invalid", str(context.exception))
         self.assertIn("port", str(context.exception))
 
-        # Ensure server is not running
-        self.assertFalse(is_cogserver_running(),
-                        "Server should not be running after error")
-
     def test_stop_when_not_running(self):
         """Test stopping server when not running."""
-        # Ensure server is not running
-        self.assertFalse(is_cogserver_running(),
-                        "Server should not be running")
-
         # Try to stop - should return False
         result = stop_cogserver()
         self.assertFalse(result,
@@ -131,18 +144,20 @@ class TestCogServer(unittest.TestCase):
 
     def test_multiple_start_stop_cycles(self):
         """Test multiple start/stop cycles."""
+        global _current_server
+
         for i in range(3):
             # Start server
-            result = start_cogserver(console_port=17560 + i,
+            _current_server = start_cogserver(console_port=17560 + i,
                                     enable_web=False, enable_mcp=False)
-            self.assertTrue(result, f"Server should start on cycle {i}")
-            self.assertTrue(is_cogserver_running(),
+            self.assertIsNotNone(_current_server, f"Server should start on cycle {i}")
+            self.assertTrue(is_server_running(_current_server),
                           f"Server should be running on cycle {i}")
 
             # Stop server
             result = stop_cogserver()
             self.assertTrue(result, f"Server should stop on cycle {i}")
-            self.assertFalse(is_cogserver_running(),
+            self.assertFalse(is_server_running(_current_server),
                            f"Server should be stopped on cycle {i}")
 
             # Small delay between cycles

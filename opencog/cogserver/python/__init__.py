@@ -6,12 +6,10 @@ try:
     from .cogserver import (
         start_cogserver,
         stop_cogserver,
-        is_cogserver_running,
     )
     __all__ = [
         'start_cogserver',
         'stop_cogserver',
-        'is_cogserver_running',
     ]
 except ImportError:
     # Module not fully installed yet
