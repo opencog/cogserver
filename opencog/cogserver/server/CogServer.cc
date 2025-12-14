@@ -100,7 +100,6 @@ void CogServer::enableNetworkServer(const Handle& hcsn)
     auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket*
             { return new ServerConsole(hcsn, *this, mgr); };
     _consoleServer->run(make_console);
-    _running = true;
     logger().info("Network server running on port %d", port);
 }
 
@@ -131,7 +130,6 @@ void CogServer::enableWebServer(const Handle& hcsn)
         return ss;
     };
     _webServer->run(make_console);
-    _running = true;
     logger().info("Web server running on port %d", port);
 #else
     printf("CogServer compiled without WebSockets.\n");
@@ -166,7 +164,6 @@ void CogServer::enableMCPServer(const Handle& hcsn)
         return ss;
     };
     _mcpServer->run(make_console);
-    _running = true;
     logger().info("MCP server running on port %d", port);
 #else
     printf("CogServer compiled without MCP Support.\n");

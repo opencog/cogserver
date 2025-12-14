@@ -59,7 +59,7 @@ public:
 	static Handle factory(const Handle&);
 
 private:
-	void startServers();
+	bool startServers();
 	void stopServers();
 	std::thread* _main_loop = nullptr;
 };

@@ -88,9 +88,12 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	CogServer::loadModules(get_handle());
 }
 
-/// Enable the network servers
-void CogServerNode::startServers()
+/// Enable the network servers.
+/// Returns true if the servers were started, false if already running.
+bool CogServerNode::startServers()
 {
+	if (CogServer::set_running()) return false;
+
 	// This try-catch block is a historical appendage,
 	// it is here to try to protect us against ASIO insanity.
 	// I think this "never happens any more", but never say never.
@@ -105,6 +108,7 @@ void CogServerNode::startServers()
 	{
 		logger().error("Failed to start server: %s", ex.what());
 	}
+	return true;
 }
 
 /// Disable the network servers
@@ -171,7 +175,7 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 	switch (dispatch_hash(pred.c_str()))
 	{
 		case p_start:
-			startServers();
+			if (not startServers()) return;
 			_main_loop = new std::thread(&CogServer::serverLoop, static_cast<CogServer*>(this));
 			return;
 

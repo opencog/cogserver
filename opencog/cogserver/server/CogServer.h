@@ -12,6 +12,8 @@
 #ifndef _OPENCOG_COGSERVER_H
 #define _OPENCOG_COGSERVER_H
 
+#include <atomic>
+
 #include <opencog/atomspace/AtomSpace.h>
 
 #include <opencog/cogserver/server/Module.h>
@@ -57,7 +59,26 @@ protected:
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
-    bool _running;
+    std::atomic<bool> _running;
+
+    /// Atomically set running to true. Returns true if it was
+    /// already running (i.e. already set by someone else).
+    bool set_running(void) { return _running.exchange(true); }
+
+    /** Starts the network console server; this provides a command
+     *  line server socket on the specified port. */
+    virtual void enableNetworkServer(const Handle&);
+
+    /** Starts the websockets server. */
+    virtual void enableWebServer(const Handle&);
+
+    /** Starts the MCP Model Context Protocol server. */
+    virtual void enableMCPServer(const Handle&);
+
+    /** Stops the network server and closes all the open server sockets. */
+    virtual void disableNetworkServer(void);
+    virtual void disableWebServer(void);
+    virtual void disableMCPServer(void);
 
 public:
     CogServer(void);
@@ -83,21 +104,6 @@ public:
     virtual void stop(void);
 
     void set_max_open_sockets(int);
-
-    /** Starts the network console server; this provides a command
-     *  line server socket on the specified port. */
-    virtual void enableNetworkServer(const Handle&);
-
-	 /** Starts the websockets server. */
-    virtual void enableWebServer(const Handle&);
-
-	 /** Starts the MCP Model Context Protocol server. */
-    virtual void enableMCPServer(const Handle&);
-
-    /** Stops the network server and closes all the open server sockets. */
-    virtual void disableNetworkServer(void);
-    virtual void disableWebServer(void);
-    virtual void disableMCPServer(void);
 
     bool running(void) { return _running; }
 
