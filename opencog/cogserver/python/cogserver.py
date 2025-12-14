@@ -1,16 +1,16 @@
-# distutils: language = c++
-# cython: language_level=3
+#
+# cogserver.py
+#
+# Pure Python wrapper for starting/stopping the CogServer.
+# This module provides a convenient Python API for controlling
+# the CogServer network server.
+#
 
-from opencog.cogserver cimport cCogServerNode, cCogServerNodePtr, CogServerNodeCast
-from opencog.atomspace cimport cHandle, Atom, handle_cast
 from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValue, Predicate
 from opencog.atomspace import types
-from cython.operator cimport dereference as deref
-from libcpp.string cimport string
 
 # Global server state
-cdef cCogServerNodePtr _server_ptr
-_server_handle = None  # Keep Python reference to prevent GC
+_server_handle = None
 _server_running = False
 
 def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
@@ -34,7 +34,7 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
         RuntimeError: If server is already running.
         ValueError: If invalid ports are specified.
     """
-    global _server_ptr, _server_handle, _server_running
+    global _server_handle, _server_running
 
     if _server_running:
         raise RuntimeError("CogServer is already running")
@@ -47,11 +47,6 @@ def start_cogserver(console_port=17001, web_port=18080, mcp_port=18888,
     # Get the thread atomspace and add the CogServerNode to it
     atomspace = get_thread_atomspace()
     _server_handle = atomspace.add_node(types.CogServerNode, name)
-
-    # Get the C++ CogServerNode pointer from the Python Atom
-    cdef Atom atom = <Atom>_server_handle
-    cdef cHandle chandle = handle_cast(atom.shared_ptr)
-    _server_ptr = CogServerNodeCast(chandle)
 
     # Set non-default port values (0 disables a server)
     effective_console = console_port if enable_console else 0
@@ -82,16 +77,15 @@ def stop_cogserver():
     Returns:
         bool: True if server was stopped, False if server was not running.
     """
-    global _server_ptr, _server_handle, _server_running
+    global _server_handle, _server_running
 
-    if not _server_running or not _server_ptr:
+    if not _server_running or _server_handle is None:
         return False
 
     # Stop the server
     atomspace = get_thread_atomspace()
     atomspace.set_value(_server_handle, Predicate("*-stop-*"), VoidValue())
 
-    _server_ptr.reset()
     _server_handle = None
     _server_running = False
 

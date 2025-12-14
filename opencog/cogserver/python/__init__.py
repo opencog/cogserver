@@ -7,14 +7,12 @@ try:
         start_cogserver,
         stop_cogserver,
         is_cogserver_running,
-        get_server_atomspace
     )
     __all__ = [
         'start_cogserver',
         'stop_cogserver',
         'is_cogserver_running',
-        'get_server_atomspace'
     ]
 except ImportError:
-    # Module not built yet
+    # Module not fully installed yet
     pass
