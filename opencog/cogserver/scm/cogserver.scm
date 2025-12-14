@@ -7,16 +7,12 @@
 (use-modules (opencog))
 (use-modules (opencog cs-config))
 
-; Load the C library that calls the classserver to load the types.
 (load-extension
-	(string-append opencog-ext-path-cogserver-types "libcogserver-types")
-	"cogserver_types_init")
+	(string-append opencog-ext-path-servernode "libservernode")
+	"opencog_servernode_init")
 
-; Load the cogserver types scheme bindings (e.g. CogServerNode)
-; Use include-from-path so that define-public exports from this module.
 (include-from-path "opencog/cogserver/types/cogserver_types.scm")
 
-; config path name is optional.
 (define* (start-cogserver #:key (port 17001)
                                 (web  18080)
                                 (mcp  18888)

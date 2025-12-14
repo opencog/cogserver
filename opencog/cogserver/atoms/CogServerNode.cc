@@ -207,3 +207,7 @@ void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 }
 
 DEFINE_NODE_FACTORY(CogServerNode, COG_SERVER_NODE)
+
+// Init function for guile load-extension. The factory registration
+// happens via static constructors in DEFINE_NODE_FACTORY above.
+extern "C" void opencog_servernode_init(void) {}

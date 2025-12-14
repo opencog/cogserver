@@ -40,5 +40,3 @@ ADD_GUILE_MODULE (FILES
 	MODULE_DESTINATION "${GUILE_SITE_DIR}/opencog/cogserver/types"
 	DEPENDS cogserver_atom_types
 )
-
-ADD_GUILE_EXTENSION(SCM_CONFIG cogserver-types "opencog-ext-path-cogserver-types")
