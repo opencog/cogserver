@@ -15,7 +15,7 @@ IF(CMAKE_VERSION VERSION_GREATER 3.31)
 	CMAKE_POLICY(SET CMP0177 NEW)
 ENDIF(CMAKE_VERSION VERSION_GREATER 3.31)
 
-PROJECT(cogserver)
+PROJECT(cogserver VERSION 3.4.0)
 
 # ----------------------------------------------------------
 # User-modifiable options. Feel free to change these!
@@ -236,9 +236,6 @@ STRING(TIMESTAMP UTC_DATE %Y%m%d UTC)
 # that it is owned by the builder thus avoiding 'Permission denied' error when
 # packaging.
 FILE(WRITE "${PROJECT_BINARY_DIR}/install_manifest.txt")
-## It doesn't have a header-file declaring the version similar to cogutil and
-## atomspace.
-SET(SEMANTIC_VERSION 3.3.0)
 
 # Generate version header file
 CONFIGURE_FILE(
@@ -254,7 +251,7 @@ SET(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/packages")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The OpenCog Network Server")
 SET(CPACK_PACKAGE_NAME "cogserver-dev")
 SET(CPACK_PACKAGE_VENDOR "opencog.org")
-SET(CPACK_PACKAGE_VERSION "${SEMANTIC_VERSION}-${UTC_DATE}")
+SET(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}-${UTC_DATE}")
 SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 SET(CPACK_PACKAGE_FILE_NAME
 	"${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${PACKAGE_ARCHITECTURE}")
