@@ -1,6 +1,6 @@
 ;
 ; Opencog cogserver module
-; This is a convenience wrapper around the CogSewrverNode
+; This is a convenience wrapper around the CogServerNode
 ;
 
 (define-module (opencog cogserver))
@@ -41,10 +41,13 @@
   uses the ESC char, which is written as \\x1b in guile.
 
   To stop the cogserver, just say stop-cogserver.
+
+  Returns the CogServerNode that was created.
 "
 	(if (string? port) (set! port (string->number port)))
 
-	(define csn (CogServerNode "cogserver"))
+	(define name (format #f "cogserver://~a:~a:~a" port web mcp))
+	(define csn (CogServerNode name))
 	(cog-set-value! csn (Predicate "*-telnet-port-*") (FloatValue port))
 	(cog-set-value! csn (Predicate "*-web-port-*") (FloatValue web))
 	(cog-set-value! csn (Predicate "*-mcp-port-*") (FloatValue mcp))
@@ -52,18 +55,30 @@
 	(cog-set-value! csn (Predicate "*-ansi-prompt-*") (StringValue prompt))
 	(cog-set-value! csn (Predicate "*-ansi-scm-prompt-*") (StringValue scmprompt))
 	(cog-set-value! csn (Predicate "*-start-*") (VoidValue))
+	csn
 )
 
-; Similar to above
-(define (stop-cogserver)
+(define* (stop-cogserver #:optional csn)
 "
   stop-cogserver
+  stop-cogserver CSN
 
-  Stop the cogserver.
+  Stop the cogserver. If a CogServerNode is provided, stop that specific
+  server. If no argument is given, find all running CogServerNodes. If
+  there is exactly one, stop it. If there are multiple, throw an error.
 
   See also: start-cogserver
 "
-	(define csn (CogServerNode "cogserver"))
+	(if (not csn)
+		(let ((servers (cog-get-atoms 'CogServerNode)))
+			(cond
+				((null? servers)
+					(throw 'cogserver-error "No CogServerNode found"))
+				((= 1 (length servers))
+					(set! csn (car servers)))
+				(else
+					(throw 'cogserver-error
+						"Multiple CogServerNodes found; specify which one to stop")))))
 	(cog-set-value! csn (Predicate "*-stop-*") (VoidValue))
 )
 
