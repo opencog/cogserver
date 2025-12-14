@@ -235,6 +235,44 @@
       (send-recv tri-3-web "GET /stats HTTP/1.1\r\nHost: localhost\r\n\r\n")
       "200 OK"))
 
+;; Test shared AtomSpace: create atom in server 1, find it in servers 2 and 3
+(test-assert "tri-shared-create"
+   (string-contains
+      (send-recv tri-1-telnet "scm\n(Concept \"foobar\")\n.\n")
+      "(Concept \"foobar\")"))
+
+(test-assert "tri-shared-find-2"
+   (string-contains
+      (send-recv tri-2-telnet "scm\n(cog-node 'Concept \"foobar\")\n.\n")
+      "(Concept \"foobar\")"))
+
+(test-assert "tri-shared-find-3"
+   (string-contains
+      (send-recv tri-3-telnet "scm\n(cog-node 'Concept \"foobar\")\n.\n")
+      "(Concept \"foobar\")"))
+
+;; Verify "foobar" is also visible here in the main scheme
+(test-assert "tri-shared-find-home"
+   (cog-atom? (cog-node 'Concept "foobar")))
+
+;; Create atom here at home, verify all three servers can find it
+(Concept "wham bam")
+
+(test-assert "tri-home-find-1"
+   (string-contains
+      (send-recv tri-1-telnet "scm\n(cog-node 'Concept \"wham bam\")\n.\n")
+      "(Concept \"wham bam\")"))
+
+(test-assert "tri-home-find-2"
+   (string-contains
+      (send-recv tri-2-telnet "scm\n(cog-node 'Concept \"wham bam\")\n.\n")
+      "(Concept \"wham bam\")"))
+
+(test-assert "tri-home-find-3"
+   (string-contains
+      (send-recv tri-3-telnet "scm\n(cog-node 'Concept \"wham bam\")\n.\n")
+      "(Concept \"wham bam\")"))
+
 ;; Stop all three using stop-cogserver with explicit argument
 (stop-cogserver tri-csn-1)
 (stop-cogserver tri-csn-2)
