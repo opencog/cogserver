@@ -40,8 +40,7 @@
       ;; Start the cogserver with test ports
       (start-cogserver #:port test-telnet-port
                        #:web test-web-port
-                       #:mcp 0
-                       #:logfile "/tmp/cog-server-test.log")
+                       #:mcp 0)
 
       ;; Test connectivity
       (let ((telnet-ok (can-connect-to-port? test-telnet-port))
