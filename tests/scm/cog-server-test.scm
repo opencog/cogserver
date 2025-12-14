@@ -30,6 +30,8 @@
       (connect sock AF_INET INADDR_LOOPBACK port)
       (display data sock)
       (force-output sock)
+      ;; Shutdown write side to signal we're done sending
+      (shutdown sock 1)
       (let loop ((result ""))
          (let ((line (read-line sock)))
             (if (eof-object? line)
