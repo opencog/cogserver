@@ -46,7 +46,7 @@ class TestCogServer(unittest.TestCase):
         """Ensure server is stopped before each test."""
         global _current_server
         if _current_server is not None and is_server_running(_current_server):
-            stop_cogserver()
+            stop_cogserver(_current_server)
             _current_server = None
         # Small delay to ensure clean state
         time.sleep(0.1)
@@ -55,7 +55,7 @@ class TestCogServer(unittest.TestCase):
         """Ensure server is stopped after each test."""
         global _current_server
         if _current_server is not None and is_server_running(_current_server):
-            stop_cogserver()
+            stop_cogserver(_current_server)
             _current_server = None
         # Small delay to ensure clean shutdown
         time.sleep(0.1)
@@ -73,8 +73,7 @@ class TestCogServer(unittest.TestCase):
                        "Server should be running after start")
 
         # Stop the server
-        result = stop_cogserver()
-        self.assertTrue(result, "stop_cogserver should return True")
+        stop_cogserver(_current_server)
 
         # Check server is stopped
         self.assertFalse(is_server_running(_current_server),
@@ -102,26 +101,9 @@ class TestCogServer(unittest.TestCase):
         time.sleep(0.5)
 
         # Stop the server
-        stop_cogserver()
+        stop_cogserver(_current_server)
         self.assertFalse(is_server_running(_current_server),
                         "Server should be stopped")
-
-    def test_double_start_error(self):
-        """Test that starting server twice raises error."""
-        global _current_server
-
-        # Start server
-        _current_server = start_cogserver(console_port=17553, enable_web=False, enable_mcp=False)
-        self.assertTrue(is_server_running(_current_server), "Server should be running")
-
-        # Try to start again - should raise RuntimeError
-        with self.assertRaises(RuntimeError) as context:
-            start_cogserver()
-
-        self.assertIn("already running", str(context.exception))
-
-        # Clean up
-        stop_cogserver()
 
     def test_invalid_port_error(self):
         """Test that invalid port raises error."""
@@ -131,14 +113,6 @@ class TestCogServer(unittest.TestCase):
 
         self.assertIn("Invalid", str(context.exception))
         self.assertIn("port", str(context.exception))
-
-    def test_stop_when_not_running(self):
-        """Test stopping server when not running."""
-        # Try to stop - should return False
-        result = stop_cogserver()
-        self.assertFalse(result,
-                        "stop_cogserver should return False when not running")
-
 
     def test_multiple_start_stop_cycles(self):
         """Test multiple start/stop cycles."""
@@ -153,8 +127,7 @@ class TestCogServer(unittest.TestCase):
                           f"Server should be running on cycle {i}")
 
             # Stop server
-            result = stop_cogserver()
-            self.assertTrue(result, f"Server should stop on cycle {i}")
+            stop_cogserver(_current_server)
             self.assertFalse(is_server_running(_current_server),
                            f"Server should be stopped on cycle {i}")
 
