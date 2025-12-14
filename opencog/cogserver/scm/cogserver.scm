@@ -1,5 +1,6 @@
 ;
 ; Opencog cogserver module
+; This is a convenience wrapper around the CogSewrverNode
 ;
 
 (define-module (opencog cogserver))
@@ -23,7 +24,6 @@
   start-cogserver #:port 17001
   start-cogserver #:web 18080
   start-cogserver #:mcp 18888
-  start-cogserver #:logfile \"/tmp/cogserver.log\"
   start-cogserver #:prompt \"[0;32mopencog[1;32m> [0m\"
   start-cogserver #:prompt \"\\x1b[0;32mopencog\\x1b[1;32m> \\x1b[0m\"
   start-cogserver #:scmprompt \"[0;34mguile[1;34m> [0m\"
@@ -54,9 +54,6 @@
 	(cog-set-value! csn (Predicate "*-start-*") (VoidValue))
 )
 
-; To stop the repl server..
-(use-modules (system repl server))
-
 ; Similar to above
 (define (stop-cogserver)
 "
@@ -66,9 +63,6 @@
 
   See also: start-cogserver
 "
-	; The start-cogserver also starts a repl shell on port 18001
-	; so we stop that, here ... XXX what?? where ?
-	;   (stop-server-and-clients!)  ???
 	(define csn (CogServerNode "cogserver"))
 	(cog-set-value! csn (Predicate "*-stop-*") (VoidValue))
 )
