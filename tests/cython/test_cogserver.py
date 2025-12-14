@@ -35,8 +35,6 @@ def is_server_running(server_node):
     if server_node is None:
         return False
     val = server_node.get_value(Predicate("*-is-running?-*"))
-    if val is None:
-        return False
     # val is a BoolValue; check if it's true
     return val.to_list()[0] == 1
 
