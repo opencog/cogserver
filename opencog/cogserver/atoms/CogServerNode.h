@@ -50,6 +50,7 @@ public:
 	CogServerNode& operator=(const CogServerNode&) = delete;
 
 	virtual void setValue(const Handle&, const ValuePtr&);
+	virtual ValuePtr getValue(const Handle&) const;
 	virtual void setAtomSpace(AtomSpace*) override;
 	virtual HandleSeq getMessages() const;
 	virtual bool usesMessage(const Handle&) const;

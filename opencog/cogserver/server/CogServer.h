@@ -109,7 +109,7 @@ public:
 
     void set_max_open_sockets(int);
 
-    bool running(void) { return _running; }
+    bool running(void) const { return _running; }
 
     /** Get the web server port */
     short getWebServerPort() const { return _webServer ? _webServer->getPort() : 0; }

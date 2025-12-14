@@ -156,6 +156,21 @@ bool CogServerNode::usesMessage(const Handle& key) const
 	return false;
 }
 
+ValuePtr CogServerNode::getValue(const Handle& key) const
+{
+	// Handle the *-is-running?-* query
+	if (PREDICATE_NODE == key->get_type())
+	{
+		static constexpr uint32_t p_is_running = dispatch_hash("*-is-running?-*");
+		const std::string& pred = key->get_name();
+		if (dispatch_hash(pred.c_str()) == p_is_running)
+			return createBoolValue(CogServer::running());
+	}
+
+	// Pass through to base class for all other keys
+	return Atom::getValue(key);
+}
+
 void CogServerNode::setValue(const Handle& key, const ValuePtr& value)
 {
 	// If not a PredicateNode, just store the value.

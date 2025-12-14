@@ -88,15 +88,34 @@
 (define (stop-named-cogserver csn)
    (cog-set-value! csn (Predicate "*-stop-*") (VoidValue)))
 
+;; Helper to check if a cogserver is running
+(define (cogserver-running? csn)
+   (define val (cog-value csn (Predicate "*-is-running?-*")))
+   (and val (car (cog-value->list val))))
+
 ;; ===== Single cogserver =====
 (define single-telnet-port 17101)
 (define single-web-port 18181)
-(define single-csn #f)
+
+;; Create the CogServerNode but don't start it yet
+(define single-csn (CogServerNode "cogserver-single"))
+(cog-set-value! single-csn (Predicate "*-telnet-port-*") (FloatValue single-telnet-port))
+(cog-set-value! single-csn (Predicate "*-web-port-*") (FloatValue single-web-port))
+(cog-set-value! single-csn (Predicate "*-mcp-port-*") (FloatValue 0))
+
+;; Test *-is-running?-* before start
+(test-assert "single-not-running-before-start"
+   (not (cogserver-running? single-csn)))
+
+;; Start the cogserver
+(cog-set-value! single-csn (Predicate "*-start-*") (VoidValue))
 
 (test-assert "single-start"
-   (begin
-      (set! single-csn (start-named-cogserver "cogserver-single" single-telnet-port single-web-port))
-      (cog-atom? single-csn)))
+   (cog-atom? single-csn))
+
+;; Test *-is-running?-* after start
+(test-assert "single-running-after-start"
+   (cogserver-running? single-csn))
 
 (test-assert "single-telnet-reachable"
    (can-connect-to-port? single-telnet-port))
@@ -104,10 +123,15 @@
 (test-assert "single-web-reachable"
    (can-connect-to-port? single-web-port))
 
+;; Stop the cogserver
+(stop-named-cogserver single-csn)
+
 (test-assert "single-stop"
-   (begin
-      (stop-named-cogserver single-csn)
-      #t))
+   (not (can-connect-to-port? single-telnet-port)))
+
+;; Test *-is-running?-* after stop
+(test-assert "single-not-running-after-stop"
+   (not (cogserver-running? single-csn)))
 
 (test-assert "single-telnet-closed"
    (not (can-connect-to-port? single-telnet-port)))
