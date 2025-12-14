@@ -91,7 +91,7 @@
 ;; Helper to check if a cogserver is running
 (define (cogserver-running? csn)
    (define val (cog-value csn (Predicate "*-is-running?-*")))
-   (and val (car (cog-value->list val))))
+   (and val (cog-value-ref val 0)))
 
 ;; ===== Single cogserver =====
 (define single-telnet-port 17101)
