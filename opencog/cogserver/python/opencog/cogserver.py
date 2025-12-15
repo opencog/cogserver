@@ -6,27 +6,6 @@
 # the CogServer network server.
 #
 
-import ctypes
-import os
-
-# Load the servernode library to register CogServerNode type
-# This must happen before we can use types.CogServerNode
-_lib_paths = [
-    # Build directory (for testing without install)
-    os.path.join(os.path.dirname(__file__), "../../../../build/opencog/cogserver/atoms/libservernode.so"),
-    # Installed locations
-    "/usr/local/lib/opencog/libservernode.so",
-    "/usr/lib/opencog/libservernode.so",
-]
-_servernode_lib = None
-for _path in _lib_paths:
-    if os.path.exists(_path):
-        _servernode_lib = ctypes.CDLL(_path, mode=ctypes.RTLD_GLOBAL)
-        break
-
-if _servernode_lib is None:
-    raise ImportError("Could not find libservernode.so - is cogserver installed?")
-
 from opencog.type_constructors import get_thread_atomspace, FloatValue, VoidValue, Predicate
 from opencog.atomspace import types
 

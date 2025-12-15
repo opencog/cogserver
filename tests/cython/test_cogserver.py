@@ -9,9 +9,24 @@ import unittest
 import time
 import sys
 import os
+import ctypes
 
 # Add the source directory to Python path for the pure Python cogserver module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../opencog/cogserver/python'))
+
+# Load the servernode library to register CogServerNode type.
+# Uses COGSERVER_MODULE_PATH set by CMake for build directory testing.
+def _load_servernode_lib():
+    lib_name = "libservernode.so"
+    module_path = os.environ.get("COGSERVER_MODULE_PATH", "")
+    for directory in module_path.split(":"):
+        if directory:
+            path = os.path.join(directory, lib_name)
+            if os.path.exists(path):
+                return ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+    raise ImportError(f"Could not find {lib_name} - set COGSERVER_MODULE_PATH")
+
+_servernode_lib = _load_servernode_lib()
 
 try:
     from opencog.atomspace import AtomSpace

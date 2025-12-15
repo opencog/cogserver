@@ -15,7 +15,7 @@ TARGET_LINK_LIBRARIES(PyEvalUTest
 
 # Set COGSERVER_MODULE_PATH so modules can be found in the build directory
 SET(COGSERVER_TEST_MODULE_PATH
-	"COGSERVER_MODULE_PATH=${PROJECT_BINARY_DIR}/opencog/cogserver/modules:${PROJECT_BINARY_DIR}/opencog/cogserver/shell")
+	"COGSERVER_MODULE_PATH=${PROJECT_BINARY_DIR}/opencog/cogserver/atoms:${PROJECT_BINARY_DIR}/opencog/cogserver/modules:${PROJECT_BINARY_DIR}/opencog/cogserver/shell")
 SET_PROPERTY(TEST PyEvalUTest APPEND PROPERTY ENVIRONMENT ${COGSERVER_TEST_MODULE_PATH})
 
 # --------------------------
@@ -27,14 +27,9 @@ ADD_TEST(NAME CogServerPythonTest
 
 SET_PROPERTY(TEST CogServerPythonTest
 	PROPERTY ENVIRONMENT
-	"PYTHONPATH=${CMAKE_BINARY_DIR}/opencog/cython:${PYTHON_ROOT}:$ENV{PYTHONPATH}"
-	"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/opencog/cogserver/server:${CMAKE_BINARY_DIR}/opencog/cython/opencog:$ENV{LD_LIBRARY_PATH}"
+	"PYTHONPATH=${PROJECT_SOURCE_DIR}/opencog/cogserver/python:${PYTHON_ROOT}:$ENV{PYTHONPATH}"
+	"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/opencog/cogserver/server:$ENV{LD_LIBRARY_PATH}"
 	${COGSERVER_TEST_MODULE_PATH}
-)
-
-# Mark test to run after the cogserver_cython target is built
-SET_PROPERTY(TEST CogServerPythonTest
-	PROPERTY DEPENDS cogserver_cython
 )
 
 # --------------------------
