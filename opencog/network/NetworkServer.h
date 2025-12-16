@@ -49,7 +49,7 @@ protected:
     std::string _name;
     short _port;
     std::atomic_bool _running;
-    asio::io_service _io_service;
+    asio::io_context _io_service;
     asio::ip::tcp::acceptor _acceptor;
     std::thread* _listener_thread;
 
