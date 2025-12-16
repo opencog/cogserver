@@ -18,3 +18,8 @@ set(COGSERVER_DATA_DIR "@CMAKE_INSTALL_PREFIX@/share/opencog")
 set(COGSERVER_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/include/")
 set(COGSERVER_VERSION "@PROJECT_VERSION@")
 set(COGSERVER_FOUND 1)
+
+MESSAGE(STATUS "CogServer version ${COGSERVER_VERSION} found.")
+
+# Automatically add cogservers cmake modules to the module path
+list(APPEND CMAKE_MODULE_PATH "${COGUTIL_DATA_DIR}/cmake")
