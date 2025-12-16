@@ -150,24 +150,18 @@ INCLUDE(OpenCogCython)
 # ==========================================================
 # Decide what to build, based on the packages found.
 
-IF(HAVE_ATOMSPACE AND HAVE_COGUTIL)
-	SET(HAVE_SERVER 1)
-ENDIF(HAVE_ATOMSPACE AND HAVE_COGUTIL)
+ADD_SUBDIRECTORY(cmake)
+ADD_SUBDIRECTORY(opencog)
+# ADD_SUBDIRECTORY(examples EXCLUDE_FROM_ALL)
+ADD_SUBDIRECTORY(examples)
 
-IF(HAVE_SERVER)
-	ADD_SUBDIRECTORY(cmake)
-	ADD_SUBDIRECTORY(opencog)
-	# ADD_SUBDIRECTORY(examples EXCLUDE_FROM_ALL)
-	ADD_SUBDIRECTORY(examples)
+ADD_CUSTOM_TARGET(examples
+	COMMAND $(MAKE)
+	WORKING_DIRECTORY examples
+	COMMENT "Building examples"
+)
 
-	ADD_CUSTOM_TARGET(examples
-		COMMAND $(MAKE)
-		WORKING_DIRECTORY examples
-		COMMENT "Building examples"
-	)
-ENDIF(HAVE_SERVER)
-
-IF (CXXTEST_FOUND AND HAVE_SERVER)
+IF (CXXTEST_FOUND)
 	ENABLE_TESTING()
 	ADD_CUSTOM_TARGET(tests)
 	ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
@@ -196,7 +190,7 @@ IF (CXXTEST_FOUND AND HAVE_SERVER)
 			COMMENT "Running tests..."
 		)
 	ENDIF (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-ENDIF (CXXTEST_FOUND AND HAVE_SERVER)
+ENDIF (CXXTEST_FOUND)
 
 ADD_CUSTOM_TARGET(cscope
 	COMMAND find opencog examples tests -name '*.cc' -o -name '*.h' -o -name '*.cxxtest' -o -name '*.scm' > ${CMAKE_SOURCE_DIR}/cscope.files
@@ -263,7 +257,6 @@ FIND_PACKAGE(Doxygen)
 # ===================================================================
 # Show a summary of what we found, what we will do.
 
-SUMMARY_ADD("CogServer"    "CogServer network server" HAVE_SERVER)
 SUMMARY_ADD("WebSockets"   "WebSockets network server" HAVE_OPENSSL)
 SUMMARY_ADD("MCP"          "Model Context Protocol network server" HAVE_MCP)
 SUMMARY_ADD("Cython"       "Cython (python) bindings" HAVE_CYTHON)
