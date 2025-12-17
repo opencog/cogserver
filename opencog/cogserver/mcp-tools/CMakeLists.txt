@@ -5,12 +5,15 @@ ADD_LIBRARY (mcp-tools SHARED
 )
 
 TARGET_LINK_LIBRARIES(mcp-tools
-	json
-	sexpr
-	atomspace
-	execution
-	atombase
-	${COGUTIL_LIBRARY}
+	PUBLIC
+		json
+		sexpr
+		atomspace
+		execution
+		atombase
+		${COGUTIL_LIBRARY}
+	PRIVATE
+		${JSONCPP_LIBRARIES}
 )
 
 INSTALL (TARGETS mcp-tools EXPORT CogServerTargets
