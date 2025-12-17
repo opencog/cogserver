@@ -81,7 +81,8 @@ void gargleblast(int tid, int reps)
 
 // #define CUR_MSG_SZ 235  // Size without blank spaces.
 // #define CUR_MSG_SZ 264  // Size without synchronous idle.
-#define CUR_MSG_SZ 248     // Size without 'Node", 'Link' suffixes.
+// #define CUR_MSG_SZ 248  // Size without 'Node", 'Link' suffixes.
+#define CUR_MSG_SZ 223     // Size without extra colorized `guile>`
 		// size_t msgsz = reso.size();
 		size_t msgsz = nch;
 		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, msgsz);
@@ -104,8 +105,9 @@ void gargleblast(int tid, int reps)
 				// if (' ' != delo[i]) nch++;
 				if (0x16 != delo[i]) nch++;
 
-#define CUR_DEL_SZ 178    // Size without synchronous idle
-// #define CUR_DEL_SZ 160       // Size without blank spaces
+// #define CUR_DEL_SZ 160    // Size without blank spaces
+// #define CUR_DEL_SZ 178    // Size without synchronous idle
+#define CUR_DEL_SZ 153       // Size without extra colorized `guile>`
 			// size_t msgsz = delo.size();
 			size_t msgsz = nch;
 			TS_ASSERT_LESS_THAN_EQUALS(CUR_DEL_SZ, msgsz);
