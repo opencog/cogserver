@@ -186,10 +186,11 @@ public:
         usleep(50000);
 
         // Now use MCP shell to query for the atom
+        // -q3 because the guix test environment is slow as molasses.
         std::string result = mcp_cmd_exec(
             "echo 'mcp\\n{\"jsonrpc\": \"2.0\", \"method\": \"tools/call\", "
             "\"params\": {\"name\": \"getAtoms\", \"arguments\": {\"type\": \"ConceptNode\"}}, "
-            "\"id\": 1}\\n' | nc -q 1 localhost 17334");
+            "\"id\": 1}\\n' | nc -q 3 localhost 17334");
 
         TS_ASSERT(result.size() > 0);
         TS_ASSERT(result.find("mcp-test-concept") != std::string::npos);

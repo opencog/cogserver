@@ -166,8 +166,9 @@ public:
         usleep(50000);
 
         // Get all ConceptNodes via JSON shell
+        // -q3 because the guix test environment is slow as molasses
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.getAtoms(\"ConceptNode\")\\n' | nc -q 1 localhost 17335");
+            "echo 'json\\nAtomSpace.getAtoms(\"ConceptNode\")\\n' | nc -q 3 localhost 17335");
 
         TS_ASSERT(result.find("json-test-1") != std::string::npos);
         TS_ASSERT(result.find("json-test-2") != std::string::npos);
@@ -180,14 +181,15 @@ public:
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
         // Create a new atom via JSON command
+        // -q3 because the guix test environment is slow as molasses
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})\\n' | nc -q 1 localhost 17335");
+            "echo 'json\\nAtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})\\n' | nc -q 3 localhost 17335");
 
         TS_ASSERT(result.find("true") != std::string::npos);
 
         // Verify the atom was created by checking with haveNode
         std::string verify = json_cmd_exec(
-            "echo 'json\\nAtomSpace.haveNode(\"Concept\", \"json-created\")\\n' | nc -q 1 localhost 17335");
+            "echo 'json\\nAtomSpace.haveNode(\"Concept\", \"json-created\")\\n' | nc -q 3 localhost 17335");
 
         TS_ASSERT(verify.find("true") != std::string::npos);
 
