@@ -94,7 +94,7 @@ public:
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
         // Test basic JSON shell interaction
-        std::string cmd = "echo 'json\n.\n' | nc -q 1 localhost " + std::to_string(port);
+        std::string cmd = "printf 'json\\n.\\n' | nc -q 1 localhost " + std::to_string(port);
         int rc = system(cmd.c_str());
         TS_ASSERT_EQUALS(rc, 0);
 
@@ -107,7 +107,7 @@ public:
 
         // Test JSON query functionality with AtomSpace.version() using netcat
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.version()\\n' | nc -q 1 localhost 17335");
+            "printf 'json\\nAtomSpace.version()\\n' | nc -q 1 localhost 17335");
 
         // The reply should contain a version number
         TS_ASSERT(result.size() > 0);
@@ -122,7 +122,7 @@ public:
 
         // Test JSON shell evaluation via netcat
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.version()\\n' | nc -q 1 localhost 17335");
+            "printf 'json\\nAtomSpace.version()\\n' | nc -q 1 localhost 17335");
 
         TS_ASSERT(result.size() > 0);
         // The version should be a numeric string with a dot
@@ -136,13 +136,13 @@ public:
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
         // First, add an atom using the Scheme shell
-        int rc = system("echo '(Concept \"test-concept-json\")' | nc -q 1 localhost 17335");
+        int rc = system("printf '(Concept \"test-concept-json\")\\n' | nc -q 1 localhost 17335");
         TS_ASSERT_EQUALS(rc, 0);
         usleep(50000);
 
         // Test JSON shell can access the atom
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.haveNode(\"Concept\", \"test-concept-json\")\\n' | nc -q 1 localhost 17335");
+            "printf 'json\\nAtomSpace.haveNode(\"Concept\", \"test-concept-json\")\\n' | nc -q 1 localhost 17335");
 
         printf("Do we have the node? result=>>>%s<<<\n", result.c_str());
         // Should return "true"
@@ -156,20 +156,20 @@ public:
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
         // Add some atoms using the Scheme shell
-        int rc = system("echo '(Concept \"json-test-1\")' | nc -q 1 localhost 17335");
+        int rc = system("printf '(Concept \"json-test-1\")\\n' | nc -q 1 localhost 17335");
         TS_ASSERT_EQUALS(rc, 0);
         usleep(50000);
-        rc = system("echo '(Concept \"json-test-2\")' | nc -q 1 localhost 17335");
+        rc = system("printf '(Concept \"json-test-2\")\\n' | nc -q 1 localhost 17335");
         TS_ASSERT_EQUALS(rc, 0);
         usleep(50000);
-        rc = system("echo '(Number 42)' | nc -q 1 localhost 17335");
+        rc = system("printf '(Number 42)\\n' | nc -q 1 localhost 17335");
         TS_ASSERT_EQUALS(rc, 0);
         usleep(50000);
 
         // Get all ConceptNodes via JSON shell
         // -q3 because the guix test environment is slow as molasses
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.getAtoms(\"ConceptNode\")\\n' | nc -q 3 localhost 17335");
+            "printf 'json\\nAtomSpace.getAtoms(\"ConceptNode\")\\n' | nc -q 3 localhost 17335");
 
         printf("Did we get the Concepts? result=>>>%s<<<\n", result.c_str());
         TS_ASSERT(result.find("json-test-1") != std::string::npos);
@@ -185,14 +185,14 @@ public:
         // Create a new atom via JSON command
         // -q3 because the guix test environment is slow as molasses
         std::string result = json_cmd_exec(
-            "echo 'json\\nAtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})\\n' | nc -q 3 localhost 17335");
+            "printf 'json\\nAtomSpace.makeAtom({\"type\": \"Concept\", \"name\": \"json-created\"})\\n' | nc -q 3 localhost 17335");
 
         printf("Did we make the Concept? result=>>>%s<<<\n", result.c_str());
         TS_ASSERT(result.find("true") != std::string::npos);
 
         // Verify the atom was created by checking with haveNode
         std::string verify = json_cmd_exec(
-            "echo 'json\\nAtomSpace.haveNode(\"Concept\", \"json-created\")\\n' | nc -q 3 localhost 17335");
+            "printf 'json\\nAtomSpace.haveNode(\"Concept\", \"json-created\")\\n' | nc -q 3 localhost 17335");
 
         printf("Did verification work? verify=>>>%s<<<\n", result.c_str());
         TS_ASSERT(verify.find("true") != std::string::npos);

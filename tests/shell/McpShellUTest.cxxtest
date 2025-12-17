@@ -94,7 +94,7 @@ public:
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
         // Test basic MCP shell connection
-        int rc = system("echo 'mcp\n.\n' | nc -q 1 localhost 17334");
+        int rc = system("printf 'mcp\\n.\\n' | nc -q 1 localhost 17334");
         TS_ASSERT_EQUALS(rc, 0);
 
         logger().debug("END TEST: %s", __FUNCTION__);
@@ -106,7 +106,7 @@ public:
 
         // Test MCP shell in server mode
         std::string reply = mcp_cmd_exec(
-            "echo 'mcp server localhost 8081\n.\n' | nc -q 1 localhost 17334");
+            "printf 'mcp server localhost 8081\\n.\\n' | nc -q 1 localhost 17334");
 
         TS_ASSERT(reply.size() > 0);
         TS_ASSERT(reply.find("MCP shell") != std::string::npos);
@@ -120,7 +120,7 @@ public:
 
         // Test MCP shell in client mode
         std::string reply = mcp_cmd_exec(
-            "echo 'mcp client\n.\n' | nc -q 1 localhost 17334");
+            "printf 'mcp client\\n.\\n' | nc -q 1 localhost 17334");
 
         TS_ASSERT(reply.size() > 0);
         TS_ASSERT(reply.find("MCP shell") != std::string::npos);
@@ -134,7 +134,7 @@ public:
 
         // Test MCP shell with hush mode
         std::string reply = mcp_cmd_exec(
-            "echo 'mcp hush\n' | nc -q 1 localhost 17334");
+            "printf 'mcp hush\\n' | nc -q 1 localhost 17334");
 
         // Hush mode should return minimal output
         TS_ASSERT(reply.size() < 100);
@@ -148,7 +148,7 @@ public:
 
         // Test MCP ping via the shell using netcat
         std::string result = mcp_cmd_exec(
-            "echo 'mcp\\n{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}\\n' | nc -q 1 localhost 17334");
+            "printf 'mcp\\n{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}\\n' | nc -q 1 localhost 17334");
 
         TS_ASSERT(result.size() > 0);
         // Verify it's a valid JSON-RPC response
@@ -164,7 +164,7 @@ public:
 
         // Test tools/list via the MCP shell using netcat
         std::string reply_str = mcp_cmd_exec(
-            "echo 'mcp\\n{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":1}\\n' | nc -q 1 localhost 17334");
+            "printf 'mcp\\n{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":1}\\n' | nc -q 1 localhost 17334");
 
         // Verify the reply contains a valid JSON-RPC response
         TS_ASSERT(reply_str.find("{") != std::string::npos);
@@ -181,14 +181,14 @@ public:
         logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
         // First, add an atom using the Scheme shell
-        int rc = system("echo '(Concept \"mcp-test-concept\")' | nc -q 1 localhost 17334");
+        int rc = system("printf '(Concept \"mcp-test-concept\")\\n' | nc -q 1 localhost 17334");
         TS_ASSERT_EQUALS(rc, 0);
         usleep(50000);
 
         // Now use MCP shell to query for the atom
         // -q3 because the guix test environment is slow as molasses.
         std::string result = mcp_cmd_exec(
-            "echo 'mcp\\n{\"jsonrpc\": \"2.0\", \"method\": \"tools/call\", "
+            "printf 'mcp\\n{\"jsonrpc\": \"2.0\", \"method\": \"tools/call\", "
             "\"params\": {\"name\": \"getAtoms\", \"arguments\": {\"type\": \"ConceptNode\"}}, "
             "\"id\": 1}\\n' | nc -q 3 localhost 17334");
 

@@ -53,7 +53,7 @@ void gargleblast(int tid, int reps)
 	{
 		int j = i + 10 + (tid+10)*1000;
 		char buf[1000];
-		sprintf(buf, "echo '(Evaluation (Predicate \"visible face\") (List (Number %d)))\n' | nc -q 1 localhost 17333", j);
+		sprintf(buf, "printf '(Evaluation (Predicate \"visible face\") (List (Number %d)))\\n' | nc -q 1 localhost 17333", j);
 
 		std::string reso = cmd_exec(buf);
 
@@ -94,7 +94,7 @@ void gargleblast(int tid, int reps)
 
 		if (20 <= i)
 		{
-			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
+			sprintf(buf, "printf '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\\n' | nc -q 1 localhost 17333", j-20);
 			std::string delo = cmd_exec(buf);
 
 			// The new half-open detection code sends blanks.
@@ -256,23 +256,23 @@ public:
 	{
 		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
-		int rc = system("echo '(Concept \"42\")\n' | nc -q 0 localhost 17333");
+		int rc = system("printf '(Concept \"42\")\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: first call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
 
 		// The hexadecimal \x4 is ctrl-D.
-		rc = system("echo 'scm\n(+ 2 2)\n\x4\n' | nc -q 0 localhost 17333");
+		rc = system("printf 'scm\\n(+ 2 2)\\n\x4\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: second call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
 
-		rc = system("echo 'scm\n(Concept \"42\")\n' | nc -q 0 localhost 17333");
+		rc = system("printf 'scm\\n(Concept \"42\")\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: third call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
 
-		rc = system("echo '(+ 2 2)\n.\n' | nc -q 0 localhost 17333");
+		rc = system("printf '(+ 2 2)\\n.\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: fourth call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
@@ -290,7 +290,7 @@ public:
 		// The hexadecimal \x16 is ctrl-C.
 		// The interrupt should kill the sleep immediately.
 		// Elapsed time should be well under a second.
-		int rc = system("echo '(sleep 42)\n\x16' | nc -q 0 localhost 17333");
+		int rc = system("printf '(sleep 42)\\n\x16' | nc -q 0 localhost 17333");
 		if (rc != 0) logger().warn("Error: first call failed");
 		TS_ASSERT_EQUALS(rc, 0);
 
@@ -300,7 +300,7 @@ public:
 
 		start = time(0);
 		// The hexadecimal \x18 is ctrl-X aka "cancel"
-		rc = system("echo '(sleep 43)\n\x18' | nc -q 0 localhost 17333");
+		rc = system("printf '(sleep 43)\\n\x18' | nc -q 0 localhost 17333");
 		if (rc != 0) logger().warn("Error: first call failed");
 		TS_ASSERT_EQUALS(rc, 0);
 
@@ -310,7 +310,7 @@ public:
 
 		start = time(0);
 		// The hexadecimal \x1b is ctrl-[ aka "escape"
-		rc = system("echo '(sleep 44)\n\x1b' | nc -q 0 localhost 17333");
+		rc = system("printf '(sleep 44)\\n\x1b' | nc -q 0 localhost 17333");
 		if (rc != 0) logger().warn("Error: second call failed");
 		TS_ASSERT_EQUALS(rc, 0);
 
@@ -332,16 +332,16 @@ public:
 		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 		cmd_exec(
-			"echo 'scm\n (sleep 3) (Concept \"A\")\n"
-			"(sleep 3)\n (Concept \"B\")\n"
-			"(sleep 3)\n (Concept \"C\")\n' | nc -q 0 localhost 17333");
+			"printf 'scm\\n (sleep 3) (Concept \"A\")\\n"
+			"(sleep 3)\\n (Concept \"B\")\\n"
+			"(sleep 3)\\n (Concept \"C\")\\n' | nc -q 0 localhost 17333");
 
 		// The barrier call here will force above to finish before the
 		// atomspace print below. We sleep one second, to make sure the
 		// above got started; we don't want the barrier to finish before
 		// the above starts.
 		sleep(1);
-		cmd_exec("echo 'scm\n (cog-global-barrier)' | nc -q 0 localhost 17333");
+		cmd_exec("printf 'scm\\n (cog-global-barrier)' | nc -q 0 localhost 17333");
 
 		// Sleep one second, so as to let the barrier at least get started,
 		// before we ask to print the AtomSpace. The barrier should block
@@ -350,7 +350,7 @@ public:
 		// Use `nc -q 15` because it will take a while to respond.
 		sleep(1);
 		std::string ply = cmd_exec(
-			"echo 'scm\n (cog-prt-atomspace)' | nc -q 15 localhost 17333");
+			"printf 'scm\\n (cog-prt-atomspace)' | nc -q 15 localhost 17333");
 
 		// Expect between 189 and 205 bytes; it seems a trailing
 		// prompt string is sometimes not received. I don't know
@@ -395,17 +395,17 @@ public:
 	{
 		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
-		std::string ply = cmd_exec("echo 'scm\n"
-			// "(add-to-load-path \"/usr/local/share/opencog/scm\")\n"
+		std::string ply = cmd_exec("printf 'scm\\n"
+			// "(add-to-load-path \"/usr/local/share/opencog/scm\")\\n"
 			// "(use-modules (opencog) (opencog logger))"
 			"(define (function-1 ticket) "
 			// "    (cog-logger-info \"CALLED function-1 ~s\" ticket)"
-			"    (string-append \"return-1-\" ticket \"-finished\"))\n"
+			"    (string-append \"return-1-\" ticket \"-finished\"))\\n"
 			"(define (function-2 ticket) "
 			// "    (cog-logger-info \"CALLED function-2 ~s\" ticket)"
-			"    (string-append \"return-2-\" ticket \"-finished\"))\n"
-			"(display \"Finished creating definitions\n\")"
-			"\n.\n' | nc -q 2 localhost 17333");
+			"    (string-append \"return-2-\" ticket \"-finished\"))\\n"
+			"(display \"Finished creating definitions\\n\")"
+			"\\n.\\n' | nc -q 2 localhost 17333");
 
 		// The -q2 on `nc` should be enough for the above to finish up.
 		TS_ASSERT (0 < ply.size());
