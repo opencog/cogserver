@@ -25,11 +25,7 @@
 #include <ctime>
 #include <algorithm>
 #include <fstream>
-
-#if HAVE_MCP
 #include <json/json.h>
-#include <sstream>
-#endif // HAVE_MCP
 
 #include <opencog/util/Logger.h>
 #include <opencog/cogserver/mcp-tools/McpPlugin.h>
@@ -45,6 +41,13 @@ McpEval::McpEval(const AtomSpacePtr& asp)
 {
 	_started = false;
 	_done = false;
+}
+
+// Helper function to convert Json::Value to compact string
+static std::string json_to_string(const Json::Value& value) {
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "";
+    return Json::writeString(builder, value);
 }
 
 // Helper function to publish a resource file as MCP resource response
@@ -87,7 +90,6 @@ void McpEval::eval_expr(const std::string &expr)
 	if (0 == expr.size()) return;
 	if (0 == expr.compare("\n")) return;
 
-#if HAVE_MCP
 	logger().debug("[McpEval] received %s", expr.c_str());
 	try
 	{
@@ -395,10 +397,6 @@ void McpEval::eval_expr(const std::string &expr)
 		_result = json_to_string(error_response) + "\n";
 		_done = true;
 	}
-#else
-	_result = "MCP support not compiled in\n";
-	_done = true;
-#endif //HAVE_MCP
 }
 
 std::string McpEval::poll_result()
@@ -435,7 +433,6 @@ void McpEval::interrupt(void)
  */
 void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
 {
-#if HAVE_MCP
 	if (!plugin) return;
 
 	_plugins.push_back(plugin);
@@ -453,7 +450,6 @@ void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
 			_tool_to_plugin[tool_name] = plugin;
 		}
 	}
-#endif // HAVE_MCP
 }
 
 /**
@@ -461,7 +457,6 @@ void McpEval::register_plugin(std::shared_ptr<McpPlugin> plugin)
  */
 void McpEval::unregister_plugin(std::shared_ptr<McpPlugin> plugin)
 {
-#if HAVE_MCP
 	if (!plugin) return;
 
 	// Remove from plugins list
@@ -479,7 +474,6 @@ void McpEval::unregister_plugin(std::shared_ptr<McpPlugin> plugin)
 			++it;
 		}
 	}
-#endif // HAVE_MCP
 }
 
 /* ============================================================== */

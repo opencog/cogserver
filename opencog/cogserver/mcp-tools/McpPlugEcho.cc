@@ -22,19 +22,21 @@
 
 #include <chrono>
 #include <ctime>
-
-#if HAVE_MCP
 #include <json/json.h>
-#include <sstream>
-#endif
 
 #include "McpPlugEcho.h"
 
 using namespace opencog;
 
+// Helper function to convert Json::Value to compact string
+static std::string json_to_string(const Json::Value& value) {
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "";
+    return Json::writeString(builder, value);
+}
+
 std::string McpPlugEcho::get_tool_descriptions() const
 {
-#if HAVE_MCP
     Json::Value tools(Json::arrayValue);
 
     // Echo tool description
@@ -56,15 +58,11 @@ std::string McpPlugEcho::get_tool_descriptions() const
     tools.append(time_tool);
 
     return json_to_string(tools);
-#else
-    return "[]";
-#endif
 }
 
 std::string McpPlugEcho::invoke_tool(const std::string& tool_name,
                                      const std::string& arguments) const
 {
-#if HAVE_MCP
     Json::Value response;
 
     try {
@@ -102,7 +100,4 @@ std::string McpPlugEcho::invoke_tool(const std::string& tool_name,
     }
 
     return json_to_string(response);
-#else
-    return "{\"error\":{\"code\":-32601,\"message\":\"MCP not compiled\"}}";
-#endif
 }
