@@ -79,14 +79,14 @@ INSTALL (TARGETS
 	scheme-shell
 	sexpr-shell
 	top-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 
 IF (HAVE_CYTHON)
 	INSTALL (TARGETS py-shell
-		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 ENDIF (HAVE_CYTHON)
 
 IF (HAVE_MCP)
 	INSTALL (TARGETS mcp-shell
-		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 ENDIF (HAVE_MCP)

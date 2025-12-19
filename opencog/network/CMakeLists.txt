@@ -17,7 +17,7 @@ TARGET_LINK_LIBRARIES(network
 # lib directory that lets other packages FIND_PACKAGE(CogServer)
 INSTALL (TARGETS network
 	EXPORT CogServerTargets
-	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog"
 )
 
 # ------------------------------------------------------------

@@ -44,7 +44,7 @@ INSTALL (TARGETS cogserver RUNTIME DESTINATION "bin")
 # XXX What does this do? What is the point of this?
 INSTALL (TARGETS server
 	EXPORT CogServerTargets
-	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog"
 )
 
 INSTALL (FILES

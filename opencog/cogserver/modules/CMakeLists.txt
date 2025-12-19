@@ -11,6 +11,6 @@ TARGET_LINK_LIBRARIES(builtinreqs
 )
 
 INSTALL (TARGETS builtinreqs
-	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 
 # ------------------------------------------------------------

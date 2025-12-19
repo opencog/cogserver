@@ -12,7 +12,7 @@ TARGET_LINK_LIBRARIES(w-thru-proxy
 )
 
 INSTALL (TARGETS w-thru-proxy
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 
 # --------------------------------------
 
@@ -29,7 +29,7 @@ TARGET_LINK_LIBRARIES(r-thru-proxy
 )
 
 INSTALL (TARGETS r-thru-proxy
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 
 # --------------------------------------
 

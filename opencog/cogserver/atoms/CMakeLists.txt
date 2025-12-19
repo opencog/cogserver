@@ -13,7 +13,7 @@ ADD_GUILE_EXTENSION(SCM_CONFIG servernode "opencog-ext-path-servernode")
 
 INSTALL (TARGETS servernode
 	EXPORT CogServerTargets
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog"
 )
 
 INSTALL (FILES
