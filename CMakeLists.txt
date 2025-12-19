@@ -112,21 +112,6 @@ ENDIF (JSONCPP_FOUND)
 include(OpenCogFindGuile)
 include(OpenCogFindPython)
 
-# ----------------------------------------------------------
-# Optional, currently needed only to hush up DRD in util/Logger.cc
-FIND_PACKAGE(VALGRIND)
-IF (VALGRIND_FOUND)
-	MESSAGE(STATUS "VALGRIND was found.")
-	IF (VALGRIND_INCLUDE_DIR)
-		MESSAGE(STATUS "VALGRIND devel headers found.")
-		ADD_DEFINITIONS(-DHAVE_VALGRIND)
-	ELSE (VALGRIND_INCLUDE_DIR)
-		MESSAGE(STATUS "VALGRIND devel headers NOT FOUND: needed for thread debugging.")
-	ENDIF (VALGRIND_INCLUDE_DIR)
-ELSE (VALGRIND_FOUND)
-	MESSAGE(STATUS "VALGRIND missing: needed for thread debugging.")
-ENDIF (VALGRIND_FOUND)
-
 # ===================================================================
 # Include configuration.
 
