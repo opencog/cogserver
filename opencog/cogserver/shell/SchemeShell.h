@@ -27,6 +27,7 @@
 
 #include <string>
 
+#include <opencog/atoms/base/Handle.h>
 #include <opencog/network/GenericShell.h>
 #include <opencog/atomspace/AtomSpace.h>
 
@@ -42,7 +43,7 @@ class SchemeShell : public GenericShell
 		static std::string _prompt;
 
 	public:
-		SchemeShell(const AtomSpacePtr&);
+		SchemeShell(const Handle&);
 		virtual ~SchemeShell();
 		virtual GenericEval* get_evaluator(void);
 };

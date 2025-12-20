@@ -10,9 +10,13 @@
 
 #include <string>
 
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 #include <opencog/util/misc.h>
+#include <opencog/util/oc_assert.h>
+
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/BoolValue.h>
+#include <opencog/atoms/value/StringValue.h>
 
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/ServerConsole.h>
@@ -20,21 +24,33 @@
 
 using namespace opencog;
 
-std::string ServerConsole::_prompt;
-
-ServerConsole::ServerConsole(CogServer& cs, SocketManager* mgr) :
+ServerConsole::ServerConsole(const Handle& hcsn, CogServer& cs, SocketManager* mgr) :
 	ConsoleSocket(mgr),
 	_cserver(cs)
 {
-    if (nullptr == &config()) {
-        _prompt = "[0;32mopencog[1;32m> [0m";
-    } else {
-        // Prompt with ANSI color codes, if possible.
-        if (config().get_bool("ANSI_ENABLED", true))
-            _prompt = config().get("ANSI_PROMPT", "[0;32mopencog[1;32m> [0m");
-        else
-            _prompt = config().get("PROMPT", "opencog> ");
-    }
+	// Get AtomSpace from CogServerNode
+	AtomSpace* asp = hcsn->getAtomSpace();
+
+	// Check if ANSI colors are enabled
+	bool ansi_enabled = true;
+	ValuePtr vp = hcsn->getValue(asp->add_atom(Predicate("*-ansi-enabled-*")));
+
+	// If *-ansi-enabled-* is mising entirely, assume this is a hush
+	// connection, and sent no prompt at all. This save a bit of time
+	// decoding teh assorted prompt strings..
+	if (nullptr == vp or not vp->is_type(BOOL_VALUE)) return;
+
+	// Get the appropriate prompt
+	ansi_enabled = BoolValueCast(vp)->value()[0];
+	if (ansi_enabled)
+		vp = hcsn->getValue(asp->add_atom(Predicate("*-ansi-prompt-*")));
+	else
+		vp = hcsn->getValue(asp->add_atom(Predicate("*-prompt-*")));
+
+	if (vp and vp->is_type(STRING_VALUE))
+		_prompt = StringValueCast(vp)->value()[0];
+	else if (vp and vp->is_node())
+		_prompt = HandleCast(vp)->get_name();
 }
 
 ServerConsole::~ServerConsole()

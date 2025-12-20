@@ -23,7 +23,7 @@
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
 
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -38,25 +38,19 @@ using namespace opencog;
 DEFINE_SHELL_MODULE(SexprShellModule);
 DECLARE_MODULE(SexprShellModule);
 
-SexprShellModule::SexprShellModule(CogServer& cs) : Module(cs)
+SexprShellModule::SexprShellModule(const Handle& hcsn) : Module(hcsn)
 {
 }
 
 void SexprShellModule::init(void)
 {
-	_cogserver.registerRequest(shelloutRequest::info().id,
+	CogServerNodeCast(_hcsn)->registerRequest(shelloutRequest::info().id,
 	                           &shelloutFactory);
 }
 
 SexprShellModule::~SexprShellModule()
 {
-	_cogserver.unregisterRequest(shelloutRequest::info().id);
-}
-
-// This is currently unused.
-bool SexprShellModule::config(const char* cfg)
-{
-	return true;
+	CogServerNodeCast(_hcsn)->unregisterRequest(shelloutRequest::info().id);
 }
 
 const RequestClassInfo&
@@ -90,7 +84,7 @@ SexprShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	SexprShell *sh = new SexprShell(_cogserver.getAtomSpace());
+	SexprShell *sh = new SexprShell(_cogserver.getHandle());
 
 	// Install cog-barrier handler for UUID-based multi-socket sync
 	// Message format: (cog-barrier N "uuid")

@@ -24,26 +24,6 @@ IF(HAVE_MCP)
 ENDIF(HAVE_MCP)
 
 # ------------------------------------------------------------
-# This defines the guile scheme loadable module
-
-IF (HAVE_GUILE)
-	INCLUDE_DIRECTORIES (${GUILE_INCLUDE_DIRS})
-
-	ADD_LIBRARY (guile-cogserver SHARED
-		CogServerSCM.cc
-	)
-
-	TARGET_LINK_LIBRARIES(guile-cogserver
-		server
-		${GUILE_LIBRARIES}
-	)
-
-	INSTALL (TARGETS guile-cogserver DESTINATION "lib${LIB_DIR_SUFFIX}/opencog")
-
-	ADD_GUILE_EXTENSION(SCM_CONFIG guile-cogserver "opencog-ext-path-cogserver")
-ENDIF (HAVE_GUILE)
-
-# ------------------------------------------------------------
 
 ADD_EXECUTABLE(cogserver
 	CogServerMain.cc
@@ -51,6 +31,8 @@ ADD_EXECUTABLE(cogserver
 
 TARGET_LINK_LIBRARIES(cogserver
 	server
+	servernode
+	cogserver-types
 )
 
 IF (WIN32)
@@ -62,7 +44,7 @@ INSTALL (TARGETS cogserver RUNTIME DESTINATION "bin")
 # XXX What does this do? What is the point of this?
 INSTALL (TARGETS server
 	EXPORT CogServerTargets
-	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog"
 )
 
 INSTALL (FILES

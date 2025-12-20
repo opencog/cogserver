@@ -36,8 +36,8 @@
 
 using namespace opencog;
 
-PythonShell::PythonShell(const AtomSpacePtr& asp) :
-    _shellspace(asp)
+PythonShell::PythonShell(const Handle& hcsn) :
+    _shellspace(AtomSpaceCast(hcsn->getAtomSpace()))
 {
     normal_prompt = "py> ";
     pending_prompt = "... ";
@@ -60,12 +60,48 @@ void PythonShell::eval(const std::string &expr)
 {
     bool selfie = self_destruct;
     self_destruct = false;
-    GenericShell::eval(expr);
+
+    // Accumulate multi-line Python constructs (def, class, if, etc.)
+    // These end with ':' and need a blank line to terminate.
+    if (not _pending_lines.empty())
+    {
+        _pending_lines += expr + "\n";
+
+        // Blank line terminates multi-line construct in Python
+        if (expr.empty())
+        {
+            GenericShell::eval(_pending_lines);
+            _pending_lines.clear();
+        }
+    }
+    else
+    {
+        // Check if this line starts a multi-line construct
+        // (ends with ':' after stripping whitespace and comments)
+        std::string trimmed = expr;
+        size_t comment = trimmed.find('#');
+        if (comment != std::string::npos)
+            trimmed = trimmed.substr(0, comment);
+        while (not trimmed.empty() and
+               (trimmed.back() == ' ' or trimmed.back() == '\t'))
+            trimmed.pop_back();
+
+        if (not trimmed.empty() and trimmed.back() == ':')
+            _pending_lines = expr + "\n";
+        else
+            GenericShell::eval(expr);
+    }
+
     if (selfie) {
         // Eval an empty string as a end-of-file marker. This is needed
         // to flush pending input in the python shell, as otherwise,
         // there is no way to know that no more python input will
         // arrive!
+        if (not _pending_lines.empty())
+        {
+            GenericShell::eval(_pending_lines);
+            _pending_lines.clear();
+        }
         GenericShell::eval("");
         self_destruct = true;
     }

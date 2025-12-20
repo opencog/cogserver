@@ -50,7 +50,6 @@ protected:
         std::string             dirpath;
         Module::LoadFunction*   loadFunction;
         Module::UnloadFunction* unloadFunction;
-        Module::ConfigFunction* configFunction;
         void*                   handle;
     } ModuleData;
 
@@ -66,7 +65,7 @@ protected:
     std::vector<std::string> module_paths;
 
     /** filepath must be an absolute path, i.e. start with a slash. */
-    bool loadAbsPath(const std::string& filepath, CogServer&);
+    bool loadAbsPath(const std::string& filepath, const Handle&);
 public:
 
     /** ModuleManager's constructor. */
@@ -79,19 +78,13 @@ public:
      *  library (.so or .dylib or .dll). On Linux/Unix, the filename may
      *  be absolute or relative to the server's RPATH path (which
      *  typically, should be "INSTALL_PREFIX/lib/opencog") */
-    bool loadModule(const std::string& filename, CogServer&);
+    bool loadModule(const std::string& filename, const Handle&);
 
     /** Unloads a dynamic library/module. Takes the module's id, as
      *  defined in the Module base class and overridden by the derived
      *  module classes. See the documentation in the Module.h file for
      *  more details. */
     bool unloadModule(const std::string& id);
-
-    /** Configure a dynamic library/module. Passes the given
-     * configuration string to the module for processing. Returns
-     * false if configuration failed, else returns true.
-     */
-    bool configModule(const std::string& id, const std::string& cfg);
 
     /** Lists the modules that are currently loaded. */
     std::string listModules(void);
@@ -100,7 +93,7 @@ public:
     Module* getModule(const std::string& id);
 
     /** Load all default modules. */
-    void loadModules(CogServer&);
+    void loadModules(const Handle&);
 
 }; // class
 

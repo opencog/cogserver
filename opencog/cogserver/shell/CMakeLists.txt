@@ -3,6 +3,13 @@ INCLUDE_DIRECTORIES(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
+LINK_LIBRARIES(
+	network
+	server
+	servernode
+	${ATOMSPACE_LIBRARY}
+	${COGUTIL_LIBRARY})
+
 IF (HAVE_CYTHON)
 	INCLUDE_DIRECTORIES(
 		${Python3_INCLUDE_DIRS}
@@ -14,13 +21,9 @@ IF (HAVE_CYTHON)
 	)
 
 	TARGET_LINK_LIBRARIES(py-shell
-		network
-		server # Python shell uses the cogserver atomspace
 		PythonEval
 		${ATOMSPACE_PythonEval_LIBRARY}
 		${ATOMSPACE_smob_LIBRARY}
-		${ATOMSPACE_LIBRARY}
-		${COGUTIL_LIBRARY}
 		${Python3_LIBRARIES}
 	)
 ENDIF (HAVE_CYTHON)
@@ -31,11 +34,7 @@ ADD_LIBRARY (scheme-shell SHARED
 )
 
 TARGET_LINK_LIBRARIES(scheme-shell
-	network
-	server # Guile shell uses the cogserver atomspace.
 	${ATOMSPACE_smob_LIBRARY}
-	${ATOMSPACE_LIBRARY}
-	${COGUTIL_LIBRARY}
 )
 
 ADD_LIBRARY (sexpr-shell SHARED
@@ -44,11 +43,7 @@ ADD_LIBRARY (sexpr-shell SHARED
 )
 
 TARGET_LINK_LIBRARIES(sexpr-shell
-	network
-	server
 	${ATOMSPACE_STORAGE_LIBRARIES}
-	${ATOMSPACE_LIBRARY}
-	${COGUTIL_LIBRARY}
 )
 
 ADD_LIBRARY (json-shell SHARED
@@ -57,24 +52,13 @@ ADD_LIBRARY (json-shell SHARED
 )
 
 TARGET_LINK_LIBRARIES(json-shell
-	network
-	server
 	${ATOMSPACE_STORAGE_LIBRARIES}
-	${ATOMSPACE_LIBRARY}
-	${COGUTIL_LIBRARY}
 )
 
 ADD_LIBRARY (top-shell SHARED
 	TopEval.cc
 	TopShell.cc
 	TopShellModule.cc
-)
-
-TARGET_LINK_LIBRARIES(top-shell
-	network
-	server
-	${ATOMSPACE_LIBRARY}
-	${COGUTIL_LIBRARY}
 )
 
 IF (HAVE_MCP)
@@ -85,10 +69,6 @@ IF (HAVE_MCP)
 
 	TARGET_LINK_LIBRARIES(mcp-shell
 		mcp-eval
-		network
-		server
-		${ATOMSPACE_LIBRARY}
-		${COGUTIL_LIBRARY}
 	)
 ENDIF (HAVE_MCP)
 
@@ -99,14 +79,14 @@ INSTALL (TARGETS
 	scheme-shell
 	sexpr-shell
 	top-shell
-	LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 
 IF (HAVE_CYTHON)
 	INSTALL (TARGETS py-shell
-		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 ENDIF (HAVE_CYTHON)
 
 IF (HAVE_MCP)
 	INSTALL (TARGETS mcp-shell
-		LIBRARY DESTINATION "lib${LIB_DIR_SUFFIX}/opencog/modules")
+		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
 ENDIF (HAVE_MCP)

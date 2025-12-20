@@ -159,11 +159,11 @@ class ConsoleSocket;
                                                                       \
     /* Declare routines to register and unregister the factories */   \
     void do_cmd##_register(void) {                                    \
-        _cogserver.registerRequest(do_cmd##Request::info().id,        \
+        CogServerNodeCast(_hcsn)->registerRequest(do_cmd##Request::info().id, \
                                     & do_cmd##Factory);               \
     }                                                                 \
     void do_cmd##_unregister(void) {                                  \
-        _cogserver.unregisterRequest(do_cmd##Request::info().id);     \
+        CogServerNodeCast(_hcsn)->unregisterRequest(do_cmd##Request::info().id); \
     }
 
 

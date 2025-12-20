@@ -1,26 +1,22 @@
 ;
 ; Opencog cogserver module
+; This is a convenience wrapper around the CogServerNode
 ;
 
 (define-module (opencog cogserver))
 
 (use-modules (opencog))
 (use-modules (opencog cs-config))
-(use-modules (opencog logger))
 
-; Path to libguile-cogserver.so is set up in the cs-config module.
 (load-extension
-	(string-append opencog-ext-path-cogserver "libguile-cogserver")
-	"opencog_cogserver_init")
+	(string-append opencog-ext-path-servernode "libservernode")
+	"opencog_servernode_init")
 
-(export get-cogserver-atomspace)
-(export set-cogserver-atomspace!)
+(include-from-path "opencog/cogserver/types/cogserver_types.scm")
 
-; config path name is optional.
 (define* (start-cogserver #:key (port 17001)
                                 (web  18080)
                                 (mcp  18888)
-                                (logfile   "/tmp/cogserver.log")
                                 (prompt    "[0;32mopencog[1;32m> [0m")
                                 (scmprompt "[0;34mguile[1;34m> [0m"))
 "
@@ -28,17 +24,15 @@
   start-cogserver #:port 17001
   start-cogserver #:web 18080
   start-cogserver #:mcp 18888
-  start-cogserver #:logfile \"/tmp/cogserver.log\"
   start-cogserver #:prompt \"[0;32mopencog[1;32m> [0m\"
   start-cogserver #:prompt \"\\x1b[0;32mopencog\\x1b[1;32m> \\x1b[0m\"
   start-cogserver #:scmprompt \"[0;34mguile[1;34m> [0m\"
   start-cogserver #:scmprompt \"\\x1b[0;34mguile\\x1b[1;34m> \\x1b[0m\"
 
   Start the cogserver, optionally specifying a telnet port, websocket
-  port, logfile, telnet prompt and telnet scheme prompt (or any
-  combination of these). If any are missing, default values will be
-  used. The defaults are as shown.  Additional logging options can
-  be found in the (opencog logger) module.
+  port, telnet prompt and telnet scheme prompt (or any combination of
+  these). If any are missing, default values will be used. The defaults
+  are as shown.
 
   If any of the ports ares set to zero, then the corresponding server
   will not be started.  At least one must be non-zero.
@@ -47,58 +41,46 @@
   uses the ESC char, which is written as \\x1b in guile.
 
   To stop the cogserver, just say stop-cogserver.
+
+  Returns the CogServerNode that was created.
 "
-	(cog-logger-set-filename! logfile)
 	(if (string? port) (set! port (string->number port)))
-	(c-start-cogserver (cog-atomspace) port web mcp prompt scmprompt)
+
+	(define name (format #f "cogserver://~a:~a:~a" port web mcp))
+	(define csn (CogServerNode name))
+	(cog-set-value! csn (Predicate "*-telnet-port-*") (FloatValue port))
+	(cog-set-value! csn (Predicate "*-web-port-*") (FloatValue web))
+	(cog-set-value! csn (Predicate "*-mcp-port-*") (FloatValue mcp))
+	(cog-set-value! csn (Predicate "*-ansi-enabled-*") (BoolValue #t))
+	(cog-set-value! csn (Predicate "*-ansi-prompt-*") (StringValue prompt))
+	(cog-set-value! csn (Predicate "*-ansi-scm-prompt-*") (StringValue scmprompt))
+	(cog-set-value! csn (Predicate "*-start-*") (VoidValue))
+	csn
 )
 
-; To stop the repl server..
-(use-modules (system repl server))
-
-; Similar to above
-(define (stop-cogserver)
+(define* (stop-cogserver #:optional csn)
 "
   stop-cogserver
+  stop-cogserver CSN
 
-  Stop the cogserver.
+  Stop the cogserver. If a CogServerNode is provided, stop that specific
+  server. If no argument is given, find all running CogServerNodes. If
+  there is exactly one, stop it. If there are multiple, throw an error.
 
   See also: start-cogserver
 "
-	; The start-cogserver also starts a repl shell on port 18001
-	; so we stop that, here ...
-	(stop-server-and-clients!)
-	(c-stop-cogserver)
+	(if (not csn)
+		(let ((servers (cog-get-atoms 'CogServerNode)))
+			(cond
+				((null? servers)
+					(throw 'cogserver-error "No CogServerNode found"))
+				((= 1 (length servers))
+					(set! csn (car servers)))
+				(else
+					(throw 'cogserver-error
+						"Multiple CogServerNodes found; specify which one to stop")))))
+	(cog-set-value! csn (Predicate "*-stop-*") (VoidValue))
 )
-
-(set-procedure-property! get-cogserver-atomspace 'documentation
-"
- get-cogserver-atomspace
-
-   Return the default AtomSpace of the cogserver.
-
-   The default AtomSpace is the one that is used whenever a new shell
-   is opened on an existing or new network connection.
-
-   See also: set-cogserver-atomspace!
-")
-
-(set-procedure-property! set-cogserver-atomspace! 'documentation
-"
- set-cogserver-atomspace! ATOMSPACE
-
-   Change the default AtomSpace of the cogserver to ATOMSPACE.
-
-   The default AtomSpace is the one that is used whenever a new shell
-   is opened on an existing or new network connection. Changing this
-   will not affect existing open shells.  Existing shells can get the
-   new AtomSpace by saying `(cog-set-atomspace! (get-server-atomspace))`
-
-   This call is useful when a stack of AtomSpace frames is being used,
-   and there is a need for setting the active frame.
-
-   Returns the old AtomSpace.
-")
 
 (export start-cogserver)
 (export stop-cogserver)

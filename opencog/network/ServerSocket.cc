@@ -95,9 +95,6 @@ ServerSocket::ServerSocket(SocketManager* mgr) :
     _status = BLOCK;
     _line_count = 0;
 
-    // Register with socket manager
-    _socket_manager->add_sock(this);
-
     // Block here, if there are too many concurrently-open sockets.
     _socket_manager->wait_available_slot();
     _status = START;
@@ -237,6 +234,8 @@ void ServerSocket::set_connection(asio::ip::tcp::socket* sock)
 {
     if (_socket) delete _socket;
     _socket = sock;
+
+    _socket_manager->add_sock(this);
 }
 
 // ==================================================================

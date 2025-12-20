@@ -17,9 +17,11 @@
 #include <opencog/util/misc.h>
 #include <opencog/util/platform.h>
 
-#include <opencog/atomspace/AtomSpace.h>
 #include <opencog/network/NetworkServer.h>
 
+#include <opencog/atoms/core/NumberNode.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/cogserver/server/WebServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
@@ -27,6 +29,25 @@
 #include "CogServer.h"
 
 using namespace opencog;
+
+// Helper to extract port value from a CogServerNode.
+// Accepts FloatValue or NumberNode.
+// Returns zero if key not found or value not understood.
+static int get_port(const Handle& hcsn, const char* key)
+{
+    AtomSpace* asp = hcsn->getAtomSpace();
+    Handle hkey = asp->add_atom(createNode(PREDICATE_NODE, key));
+    ValuePtr vp = hcsn->getValue(hkey);
+    if (nullptr == vp) return 0;
+
+    if (vp->is_type(FLOAT_VALUE))
+        return FloatValueCast(vp)->value()[0];
+
+    if (vp->is_type(NUMBER_NODE))
+        return NumberNodeCast(vp)->get_value();
+
+    return 0;
+}
 
 CogServer::~CogServer()
 {
@@ -37,23 +58,11 @@ CogServer::~CogServer()
 }
 
 CogServer::CogServer(void) :
-    _atomSpace(createAtomSpace()),
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
     _running(false)
 {
-}
-
-CogServer::CogServer(AtomSpacePtr as) :
-    _atomSpace(as),
-    _consoleServer(nullptr),
-    _webServer(nullptr),
-    _mcpServer(nullptr),
-    _running(false)
-{
-    if (nullptr == as)
-        _atomSpace = createAtomSpace();
 }
 
 /// Allow at most `max_open_socks` concurrent connections.
@@ -69,9 +78,12 @@ void CogServer::set_max_open_sockets(int max_open_socks)
 }
 
 /// Open the given port number for network service.
-void CogServer::enableNetworkServer(int port)
+void CogServer::enableNetworkServer(const Handle& hcsn)
 {
     if (_consoleServer) return;
+    int port = get_port(hcsn, "*-telnet-port-*");
+    if (0 >= port) return;
+
     try
     {
         _consoleServer = new NetworkServer(port, "Telnet Server", &_socket_manager);
@@ -85,18 +97,20 @@ void CogServer::enableNetworkServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](SocketManager* mgr)->ServerSocket*
-            { return new ServerConsole(cogserver(), mgr); };
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket*
+            { return new ServerConsole(hcsn, *this, mgr); };
     _consoleServer->run(make_console);
-    _running = true;
     logger().info("Network server running on port %d", port);
 }
 
 /// Open the given port number for web service.
-void CogServer::enableWebServer(int port)
+void CogServer::enableWebServer(const Handle& hcsn)
 {
 #ifdef HAVE_OPENSSL
     if (_webServer) return;
+    int port = get_port(hcsn, "*-web-port-*");
+    if (0 >= port) return;
+
     try
     {
         _webServer = new NetworkServer(port, "WebSocket Server", &_socket_manager);
@@ -110,13 +124,12 @@ void CogServer::enableWebServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](SocketManager* mgr)->ServerSocket* {
-        ServerSocket* ss = new WebServer(cogserver(), mgr);
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new WebServer(hcsn, *this, mgr);
         ss->act_as_http_socket();
         return ss;
     };
     _webServer->run(make_console);
-    _running = true;
     logger().info("Web server running on port %d", port);
 #else
     printf("CogServer compiled without WebSockets.\n");
@@ -125,10 +138,13 @@ void CogServer::enableWebServer(int port)
 }
 
 /// Open the given port number for MCP service.
-void CogServer::enableMCPServer(int port)
+void CogServer::enableMCPServer(const Handle& hcsn)
 {
 #if HAVE_MCP
     if (_mcpServer) return;
+    int port = get_port(hcsn, "*-mcp-port-*");
+    if (0 >= port) return;
+
     try
     {
         _mcpServer = new NetworkServer(port, "Model Context Protocol Server", &_socket_manager);
@@ -142,18 +158,17 @@ void CogServer::enableMCPServer(int port)
         std::rethrow_exception(std::current_exception());
     }
 
-    auto make_console = [](SocketManager* mgr)->ServerSocket* {
-        ServerSocket* ss = new MCPServer(cogserver(), mgr);
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new MCPServer(hcsn, mgr);
         ss->act_as_mcp();
         return ss;
     };
     _mcpServer->run(make_console);
-    _running = true;
     logger().info("MCP server running on port %d", port);
 #else
     printf("CogServer compiled without MCP Support.\n");
     logger().info("CogServer compiled without MCP Support.");
-#endif // HAVE_SSL
+#endif // HAVE_MCP
 }
 
 void CogServer::disableNetworkServer()
@@ -296,37 +311,6 @@ std::string CogServer::stats_legend(void)
        "  E -- `T` if the shell evaluator is running, else `F`.\n"
        "  PENDG -- number of bytes of output not yet sent.\n"
        "\n";
-}
-
-// =============================================================
-// Singleton instance stuff.
-//
-// I don't really like singleton instances very much. There are some
-// interesting use cases where one might want to run multiple
-// cogservers. However, at this time, too much of the code (???)
-// assumes a singleton instance, so we leave this for now. XXX FIXME.
-
-// The guile module needs to be able to delete this singleton.
-// So put it where the guile module can find it.
-namespace opencog
-{
-    CogServer* serverInstance = nullptr;
-};
-
-CogServer& opencog::cogserver(void)
-{
-    if (nullptr == serverInstance)
-        serverInstance = new CogServer();
-
-    return *serverInstance;
-}
-
-CogServer& opencog::cogserver(AtomSpacePtr as)
-{
-    if (nullptr == serverInstance)
-        serverInstance = new CogServer(as);
-
-    return *serverInstance;
 }
 
 // =============================================================

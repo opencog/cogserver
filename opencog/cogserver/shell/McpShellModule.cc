@@ -22,7 +22,7 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -35,24 +35,19 @@ using namespace opencog;
 DEFINE_SHELL_MODULE(McpShellModule);
 DECLARE_MODULE(McpShellModule);
 
-McpShellModule::McpShellModule(CogServer& cs) : Module(cs)
+McpShellModule::McpShellModule(const Handle& hcsn) : Module(hcsn)
 {
 }
 
 void McpShellModule::init(void)
 {
-	_cogserver.registerRequest(shelloutRequest::info().id,
+	CogServerNodeCast(_hcsn)->registerRequest(shelloutRequest::info().id,
 	                           &shelloutFactory);
 }
 
 McpShellModule::~McpShellModule()
 {
-	_cogserver.unregisterRequest(shelloutRequest::info().id);
-}
-
-bool McpShellModule::config(const char*)
-{
-	return false;
+	CogServerNodeCast(_hcsn)->unregisterRequest(shelloutRequest::info().id);
 }
 
 const RequestClassInfo&
@@ -84,7 +79,7 @@ McpShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	McpShell *sh = new McpShell(_cogserver.getAtomSpace());
+	McpShell *sh = new McpShell(_cogserver.getHandle());
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

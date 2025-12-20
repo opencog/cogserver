@@ -25,8 +25,8 @@
 
 using namespace opencog;
 
-McpShell::McpShell(const AtomSpacePtr& asp) :
-	_shellspace(asp)
+McpShell::McpShell(const Handle& hcsn) :
+	_shellspace(AtomSpaceCast(hcsn->getAtomSpace()))
 {
 	normal_prompt = "mcp> ";
 	abort_prompt = "mcp> ";

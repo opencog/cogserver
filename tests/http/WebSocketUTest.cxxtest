@@ -18,7 +18,10 @@
 #include <iomanip>
 
 #include <opencog/atomspace/AtomSpace.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/util/Logger.h>
 
 using namespace opencog;
@@ -26,8 +29,8 @@ using namespace opencog;
 class WebSocketUTest : public CxxTest::TestSuite
 {
 private:
-	CogServer* _cogserver;
-	std::thread* _csthread;
+	AtomSpacePtr _asp;
+	CogServerNodePtr _cogserver;
 
 	// Simple base64 encoding for WebSocket handshake
 	std::string base64_encode(const std::string& input) {
@@ -164,31 +167,43 @@ private:
 
 public:
 	WebSocketUTest() {
-		logger().set_level(Logger::DEBUG);
+		// logger().set_level(Logger::DEBUG);
+		logger().set_level(Logger::INFO);
 		logger().set_timestamp_flag(true);
 		logger().set_print_to_stdout_flag(true);
 
-		// Create and start cogserver
-		_cogserver = &cogserver();
-		_cogserver->loadModules();
-		_cogserver->enableWebServer(18282);
+		// Create the AtomSpace and CogServerNode
+		_asp = createAtomSpace();
+		Handle hcsn = _asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		_cogserver = CogServerNodeCast(hcsn);
 
-		// Run the server on a separate thread
-		_csthread = new std::thread([&]() { _cogserver->serverLoop(); });
-
-		// Give the server time to start
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		// Set ports and start the server (web only)
+		_cogserver->setValue(_asp->add_atom(Predicate("*-telnet-port-*")),
+		                     createFloatValue(0.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-web-port-*")),
+		                     createFloatValue(18282.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-mcp-port-*")),
+		                     createFloatValue(0.0));
+		_cogserver->setValue(_asp->add_atom(Predicate("*-start-*")),
+		                     createVoidValue());
 	}
 
 	~WebSocketUTest() {
 		// Stop the server
-		_cogserver->stop();
-		_csthread->join();
-		delete _csthread;
-		_csthread = nullptr;
+		_cogserver->setValue(_asp->add_atom(Predicate("*-stop-*")),
+		                     createVoidValue());
+		_cogserver = nullptr;
+		_asp = nullptr;
 
-		// Clean up
-		_cogserver->disableWebServer();
+		// erase the log file if no assertions failed
+		if (!CxxTest::TestTracker::tracker().suiteFailed())
+			std::remove(logger().get_filename().c_str());
+	}
+
+	void setUp() {
+	}
+
+	void tearDown() {
 	}
 
 	// Test WebSocket handshake and JSON response

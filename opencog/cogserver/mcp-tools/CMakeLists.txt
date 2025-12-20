@@ -5,16 +5,19 @@ ADD_LIBRARY (mcp-tools SHARED
 )
 
 TARGET_LINK_LIBRARIES(mcp-tools
-	json
-	sexpr
-	atomspace
-	execution
-	atombase
-	${COGUTIL_LIBRARY}
+	PUBLIC
+		json
+		sexpr
+		atomspace
+		execution
+		atombase
+		${COGUTIL_LIBRARY}
+	PRIVATE
+		${JSONCPP_LIBRARIES}
 )
 
 INSTALL (TARGETS mcp-tools EXPORT CogServerTargets
-	DESTINATION "lib${LIB_DIR_SUFFIX}/opencog"
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog"
 )
 
 INSTALL (FILES

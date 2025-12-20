@@ -15,9 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with this program; if not, write to:
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * along with this program; if not, see http://www.gnu.org/licenses/
  */
 
 #include <thread>
@@ -27,8 +25,11 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#include <opencog/util/Config.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 
 using namespace opencog;
 
@@ -52,7 +53,7 @@ void gargleblast(int tid, int reps)
 	{
 		int j = i + 10 + (tid+10)*1000;
 		char buf[1000];
-		sprintf(buf, "echo '(Evaluation (Predicate \"visible face\") (List (Number %d)))\n' | nc -q 1 localhost 17333", j);
+		sprintf(buf, "printf '(Evaluation (Predicate \"visible face\") (List (Number %d)))\\n' | nc -q 1 localhost 17333", j);
 
 		std::string reso = cmd_exec(buf);
 
@@ -80,7 +81,8 @@ void gargleblast(int tid, int reps)
 
 // #define CUR_MSG_SZ 235  // Size without blank spaces.
 // #define CUR_MSG_SZ 264  // Size without synchronous idle.
-#define CUR_MSG_SZ 248     // Size without 'Node", 'Link' suffixes.
+// #define CUR_MSG_SZ 248  // Size without 'Node", 'Link' suffixes.
+#define CUR_MSG_SZ 223     // Size without extra colorized `guile>`
 		// size_t msgsz = reso.size();
 		size_t msgsz = nch;
 		TS_ASSERT_LESS_THAN_EQUALS(CUR_MSG_SZ, msgsz);
@@ -93,7 +95,7 @@ void gargleblast(int tid, int reps)
 
 		if (20 <= i)
 		{
-			sprintf(buf, "echo '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\n' | nc -q 1 localhost 17333", j-20);
+			sprintf(buf, "printf '(cog-extract! (Evaluation (Predicate \"visible face\") (List (Number %d))))\\n' | nc -q 1 localhost 17333", j-20);
 			std::string delo = cmd_exec(buf);
 
 			// The new half-open detection code sends blanks.
@@ -103,8 +105,9 @@ void gargleblast(int tid, int reps)
 				// if (' ' != delo[i]) nch++;
 				if (0x16 != delo[i]) nch++;
 
-#define CUR_DEL_SZ 178    // Size without synchronous idle
-// #define CUR_DEL_SZ 160       // Size without blank spaces
+// #define CUR_DEL_SZ 160    // Size without blank spaces
+// #define CUR_DEL_SZ 178    // Size without synchronous idle
+#define CUR_DEL_SZ 153       // Size without extra colorized `guile>`
 			// size_t msgsz = delo.size();
 			size_t msgsz = nch;
 			TS_ASSERT_LESS_THAN_EQUALS(CUR_DEL_SZ, msgsz);
@@ -157,7 +160,7 @@ void tik_tik_tik(int tid, int reps)
 		std::string reply;
 		while (1) {
 			char rep[1000];
-			rc = recv(sock, rep, sizeof(rep), MSG_DONTWAIT);
+			rc = recv(sock, rep, sizeof(rep), 0);
 			int norr = errno;
 			if (rc < 0 and EAGAIN != norr and EWOULDBLOCK != norr)
 			{
@@ -182,8 +185,7 @@ void tik_tik_tik(int tid, int reps)
 			// Look for zef side.
 			if (reply.npos != reply.find("-finished")) break;
 			count ++;
-			if (10 < count) break;
-			sleep(1);
+			if (100 < count) break;
 		}
 
 		char exp[200];
@@ -204,19 +206,41 @@ void tik_tik_tik(int tid, int reps)
 class ShellUTest :  public CxxTest::TestSuite
 {
 private:
-	CogServer* csrv;
-	std::thread* main_loop;
+	AtomSpacePtr asp;
+	CogServerNodePtr csrv;
 
 public:
 
 	ShellUTest()
 	{
-		logger().set_level(Logger::DEBUG);
+		// logger().set_level(Logger::DEBUG);
+		logger().set_level(Logger::INFO);
 		// logger().set_print_to_stdout_flag(true);
+
+		asp = createAtomSpace();
+		Handle hcsn = asp->add_node(COG_SERVER_NODE, "test-cogserver");
+		csrv = CogServerNodeCast(hcsn);
+
+		// Set ports and start the server
+		csrv->setValue(asp->add_atom(Predicate("*-telnet-port-*")),
+		               createFloatValue(17333.0));
+		csrv->setValue(asp->add_atom(Predicate("*-web-port-*")),
+		               createFloatValue(0.0));
+		csrv->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
+		               createFloatValue(0.0));
+		csrv->setValue(asp->add_atom(Predicate("*-start-*")),
+		               createVoidValue());
 	}
 
 	~ShellUTest()
 	{
+		logger().debug("AFTER TEST stop cogserver: %s", __FUNCTION__);
+		csrv->setValue(asp->add_atom(Predicate("*-stop-*")),
+		               createVoidValue());
+		csrv = nullptr;
+		asp = nullptr;
+		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
+
 		// erase the log file if no assertions failed
 		if (!CxxTest::TestTracker::tracker().suiteFailed())
 			std::remove(logger().get_filename().c_str());
@@ -224,54 +248,43 @@ public:
 
 	void setUp()
 	{
-		csrv = &cogserver();
-		csrv->loadModules();
-		csrv->enableNetworkServer(17333);
-		main_loop = new std::thread(&CogServer::serverLoop, csrv);
-
-		// Wait for the cogserver to finish initializing.
-		sleep(1);
-		csrv->getAtomSpace()->clear();
 	}
 
 	void tearDown()
 	{
-		logger().debug("AFTER TEST stop cogserver: %s", __FUNCTION__);
-		csrv->stop();
-		main_loop->join();
-		delete main_loop;
-		csrv->getAtomSpace()->clear();
-		logger().debug("AFTER TEST DONE stopping cogserver: %s", __FUNCTION__);
 	}
 
 	void testControlD()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
-		int rc = system("echo '(Concept \"42\")\n' | nc -q 0 localhost 17333");
+		int rc = system("printf '(Concept \"42\")\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: first call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
 
 		// The hexadecimal \x4 is ctrl-D.
-		rc = system("echo 'scm\n(+ 2 2)\n\x4\n' | nc -q 0 localhost 17333");
+		rc = system("printf 'scm\\n(+ 2 2)\\n\x4\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: second call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
 
-		rc = system("echo 'scm\n(Concept \"42\")\n' | nc -q 0 localhost 17333");
+		rc = system("printf 'scm\\n(Concept \"42\")\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: third call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
 
-		rc = system("echo '(+ 2 2)\n.\n' | nc -q 0 localhost 17333");
+		rc = system("printf '(+ 2 2)\\n.\\n' | nc -q 0 localhost 17333");
 		if (rc != 0) printf("Error: fourth call failed\n");
 		TS_ASSERT_EQUALS(rc, 0);
 		usleep(50000);
+		printf("TEST testControlD: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
 	void testControlC()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 
 		time_t start = time(0);
@@ -279,7 +292,7 @@ public:
 		// The hexadecimal \x16 is ctrl-C.
 		// The interrupt should kill the sleep immediately.
 		// Elapsed time should be well under a second.
-		int rc = system("echo '(sleep 42)\n\x16' | nc -q 0 localhost 17333");
+		int rc = system("printf '(sleep 42)\\n\x16' | nc -q 0 localhost 17333");
 		if (rc != 0) logger().warn("Error: first call failed");
 		TS_ASSERT_EQUALS(rc, 0);
 
@@ -289,7 +302,7 @@ public:
 
 		start = time(0);
 		// The hexadecimal \x18 is ctrl-X aka "cancel"
-		rc = system("echo '(sleep 43)\n\x18' | nc -q 0 localhost 17333");
+		rc = system("printf '(sleep 43)\\n\x18' | nc -q 0 localhost 17333");
 		if (rc != 0) logger().warn("Error: first call failed");
 		TS_ASSERT_EQUALS(rc, 0);
 
@@ -299,7 +312,7 @@ public:
 
 		start = time(0);
 		// The hexadecimal \x1b is ctrl-[ aka "escape"
-		rc = system("echo '(sleep 44)\n\x1b' | nc -q 0 localhost 17333");
+		rc = system("printf '(sleep 44)\\n\x1b' | nc -q 0 localhost 17333");
 		if (rc != 0) logger().warn("Error: second call failed");
 		TS_ASSERT_EQUALS(rc, 0);
 
@@ -308,6 +321,7 @@ public:
 		logger().debug("Second elapsed: %ld", end-start);
 		usleep(50000);
 
+		printf("TEST testControlC: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
@@ -317,18 +331,19 @@ public:
 	// still run to completion, however.
 	void testDrain()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 		cmd_exec(
-			"echo 'scm\n (sleep 3) (Concept \"A\")\n"
-			"(sleep 3)\n (Concept \"B\")\n"
-			"(sleep 3)\n (Concept \"C\")\n' | nc -q 0 localhost 17333");
+			"printf 'scm\\n (sleep 3) (Concept \"A\")\\n"
+			"(sleep 3)\\n (Concept \"B\")\\n"
+			"(sleep 3)\\n (Concept \"C\")\\n' | nc -q 0 localhost 17333");
 
 		// The barrier call here will force above to finish before the
 		// atomspace print below. We sleep one second, to make sure the
 		// above got started; we don't want the barrier to finish before
 		// the above starts.
 		sleep(1);
-		cmd_exec("echo 'scm\n (cog-global-barrier)' | nc -q 0 localhost 17333");
+		cmd_exec("printf 'scm\\n (cog-global-barrier)' | nc -q 0 localhost 17333");
 
 		// Sleep one second, so as to let the barrier at least get started,
 		// before we ask to print the AtomSpace. The barrier should block
@@ -337,7 +352,7 @@ public:
 		// Use `nc -q 15` because it will take a while to respond.
 		sleep(1);
 		std::string ply = cmd_exec(
-			"echo 'scm\n (cog-prt-atomspace)' | nc -q 15 localhost 17333");
+			"printf 'scm\\n (cog-prt-atomspace)' | nc -q 15 localhost 17333");
 
 		// Expect between 189 and 205 bytes; it seems a trailing
 		// prompt string is sometimes not received. I don't know
@@ -351,11 +366,13 @@ public:
 		TS_ASSERT(ply.npos != ply.find("(Concept \"B\")"));
 		TS_ASSERT(ply.npos != ply.find("(Concept \"C\")"));
 
+		printf("TEST testDrain: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
 	void testMessaging()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
 #define NT 20
 		std::thread* pangalactic[NT];
@@ -369,6 +386,7 @@ public:
 			pangalactic[j]->join();
 			delete pangalactic[j];
 		}
+		printf("TEST testMessaging: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 
@@ -377,34 +395,38 @@ public:
 	// indefinitely.
 	void testMultiStream()
 	{
+		time_t t0 = time(0);
 		logger().debug("BEGIN TEST: %s", __FUNCTION__);
-		std::string ply = cmd_exec("echo 'scm\n"
-			// "(add-to-load-path \"/usr/local/share/opencog/scm\")\n"
+		std::string ply = cmd_exec("printf 'scm\\n"
+			// "(add-to-load-path \"/usr/local/share/opencog/scm\")\\n"
 			// "(use-modules (opencog) (opencog logger))"
 			"(define (function-1 ticket) "
 			// "    (cog-logger-info \"CALLED function-1 ~s\" ticket)"
-			"    (string-append \"return-1-\" ticket \"-finished\"))\n"
+			"    (string-append \"return-1-\" ticket \"-finished\"))\\n"
 			"(define (function-2 ticket) "
 			// "    (cog-logger-info \"CALLED function-2 ~s\" ticket)"
-			"    (string-append \"return-2-\" ticket \"-finished\"))\n"
-			"(display \"Finished creating definitions\n\")"
-			"\n.\n' | nc -q 2 localhost 17333");
+			"    (string-append \"return-2-\" ticket \"-finished\"))\\n"
+			"(display \"Finished creating definitions\\n\")"
+			"\\n.\\n' | nc -q 2 localhost 17333");
 
 		// The -q2 on `nc` should be enough for the above to finish up.
 		TS_ASSERT (0 < ply.size());
 
-		std::thread* max_normal[NT];
+#define NTMS 130
+#define NREPS 3000
+		std::thread* max_normal[NTMS];
 		int j;
-		for (j=0; j<NT; j++)
+		for (j=0; j<NTMS; j++)
 		{
-			max_normal[j] = new std::thread(&tik_tik_tik, j, 60);
+			max_normal[j] = new std::thread(&tik_tik_tik, j, NREPS);
 		}
-		for (j=0; j<NT; j++)
+		for (j=0; j<NTMS; j++)
 		{
 			max_normal[j]->join();
 			delete max_normal[j];
 		}
 
+		printf("TEST testMultiStream: %ld seconds\n", time(0) - t0);
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
 };

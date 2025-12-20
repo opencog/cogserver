@@ -35,10 +35,13 @@
 #include <thread>
 #include <vector>
 
-#include <opencog/util/Config.h>
 #include <opencog/util/Logger.h>
 
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_names.h>
+#include <opencog/atoms/value/FloatValue.h>
+#include <opencog/atoms/value/VoidValue.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/version.h>
 
 using namespace opencog;
@@ -60,7 +63,6 @@ static void usage(const char* progname)
         << "PROMPT = opencog> \n"
         << "ANSI_SCM_PROMPT = ^[[0;34mguile^[[1;34m> ^[[0m\n"
         << "SCM_PROMPT = guile> \n"
-        << "MODULES = libbuiltinreqs.so, ...\n"
         << std::endl;
 }
 
@@ -92,12 +94,12 @@ int main(int argc, char *argv[])
        setlocale(LC_CTYPE, "en_US.UTF-8");
     }
 
-    int console_port = 17001;
-    int webserver_port = 18080;
-    int mcp_port = 18888;
+    // Create the CogServer
+    AtomSpacePtr asp = createAtomSpace();
+    Handle hcsn = asp->add_node(COG_SERVER_NODE, "cogserver");
+    CogServerNodePtr csn = CogServerNodeCast(hcsn);
 
     static const char *optString = "p:w:m:D:hv";
-    std::vector<std::pair<std::string, std::string>> configPairs;
     std::string progname = argv[0];
 
     // parse command line
@@ -118,19 +120,30 @@ int main(int argc, char *argv[])
                 // No '=' found, option has no value
                 std::cerr << "No value given for option "
                           << text << std::endl;
-                configPairs.push_back({text, ""});
             } else {
                 // Split at '=' position
                 std::string optionName = text.substr(0, equalPos);
                 std::string value = text.substr(equalPos + 1);
-                configPairs.push_back({optionName, value});
+
+                if (0 == optionName.compare("LOG_LEVEL"))
+                    logger().set_level(value);
+                if (0 == optionName.compare("LOG_FILE"))
+                    logger().set_filename(value);
+                if (0 == optionName.compare("LOG_TO_STDOUT"))
+                {
+                    if (not ('f' == value[0] or 'F' == value[0] or '0' == value[0]))
+                        logger().set_print_to_stdout_flag(true);
+                }
             }
         } else if (c == 'p') {
-            console_port = atoi(optarg);
+            csn->setValue(asp->add_atom(Predicate("*-telnet-port-*")),
+                          createFloatValue(atof(optarg)));
         } else if (c == 'w') {
-            webserver_port = atoi(optarg);
+            csn->setValue(asp->add_atom(Predicate("*-web-port-*")),
+                          createFloatValue(atof(optarg)));
         } else if (c == 'm') {
-            mcp_port = atoi(optarg);
+            csn->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
+                          createFloatValue(atof(optarg)));
         } else if (c == 'v') {
             std::cout << "CogServer version " << COGSERVER_VERSION_STRING << std::endl;
             exit(0);
@@ -145,31 +158,6 @@ int main(int argc, char *argv[])
 
     }
 
-    // Copy command-line options to global cache.
-    // This is ... deprecated, and should be removed. Later.
-    for (const auto& optionPair : configPairs) {
-        const std::string& opt = optionPair.first;
-        const std::string& val = optionPair.second;
-        // std::cerr << opt << " = " << val << std::endl;
-        config().set(opt, val);
-
-        if (0 == opt.compare("LOG_LEVEL"))
-            logger().set_level(val);
-        if (0 == opt.compare("LOG_FILE"))
-            logger().set_filename(val);
-        if (0 == opt.compare("LOG_TO_STDOUT"))
-        {
-            if (not ('f' == val[0] or 'F' == val[0] or '0' == val[0]))
-                logger().set_print_to_stdout_flag(true);
-        }
-        if (0 == opt.compare("SERVER_PORT"))
-            console_port = atoi(val.c_str());
-        if (0 == opt.compare("WEB_PORT"))
-            webserver_port = atoi(val.c_str());
-        if (0 == opt.compare("MCP_PORT"))
-            mcp_port = atoi(val.c_str());
-    }
-
     // Start catching signals
     signal(SIGSEGV, sighand);
     signal(SIGBUS, sighand);
@@ -179,26 +167,8 @@ int main(int argc, char *argv[])
     signal(SIGTRAP, sighand);
     signal(SIGQUIT, sighand);
 
-    CogServer& cogserve = cogserver();
-
-    // Load modules specified in config
-    cogserve.loadModules();
-
-    // Enable the network server and run the server's main loop.
-    try
-    {
-        if (0 < console_port)
-            cogserve.enableNetworkServer(console_port);
-        if (0 < webserver_port)
-            cogserve.enableWebServer(webserver_port);
-        if (0 < mcp_port)
-            cogserve.enableMCPServer(mcp_port);
-    }
-    catch (const std::exception& ex)
-    {
-        fprintf(stderr, "Error exit: %s\n", ex.what());
-        exit(-1);
-    }
-    cogserve.serverLoop();
+    // Server will run forever... until exit command at the telnet port.
+    csn->setValue(asp->add_atom(Predicate("*-run-*")),
+                  createVoidValue());
     exit(0);
 }

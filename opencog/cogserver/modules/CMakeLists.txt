@@ -1,6 +1,16 @@
 
-ADD_SUBDIRECTORY(commands)
+ADD_LIBRARY (builtinreqs MODULE
+	BuiltinRequestsModule.cc
+	ModuleManagement.cc
+	ShutdownRequest.cc
+)
 
-IF (HAVE_CYTHON)
-	ADD_SUBDIRECTORY(python)
-ENDIF (HAVE_CYTHON)
+TARGET_LINK_LIBRARIES(builtinreqs
+	servernode
+	server
+)
+
+INSTALL (TARGETS builtinreqs
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/opencog/modules")
+
+# ------------------------------------------------------------

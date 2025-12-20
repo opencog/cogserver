@@ -23,6 +23,7 @@
 #ifndef _OPENCOG_JSON_SHELL_H
 #define _OPENCOG_JSON_SHELL_H
 
+#include <opencog/atoms/base/Handle.h>
 #include <opencog/network/GenericShell.h>
 #include <opencog/atomspace/AtomSpace.h>
 
@@ -36,7 +37,7 @@ class JsonShell : public GenericShell
 	protected:
 		AtomSpacePtr _shellspace;
 	public:
-		JsonShell(const AtomSpacePtr&);
+		JsonShell(const Handle&);
 		virtual ~JsonShell();
 		virtual GenericEval* get_evaluator(void);
 };

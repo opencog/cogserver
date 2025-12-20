@@ -14,15 +14,14 @@
 #include <opencog/util/exceptions.h>
 #include <opencog/util/Logger.h>
 
-#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
 #include <opencog/cogserver/mcp-eval/McpEval.h>
 
 using namespace opencog;
 
-MCPServer::MCPServer(CogServer& cs, SocketManager* mgr) :
+MCPServer::MCPServer(const Handle& hcsn, SocketManager* mgr) :
 	ConsoleSocket(mgr),
-	_cserver(cs)
+	_hcsn(hcsn)
 {
 	_eval = nullptr;
 }
@@ -47,7 +46,7 @@ void MCPServer::OnConnection(void)
 
 	// If there's no shell, then set up an evaluator for ourself.
 	if (nullptr == _shell)
-		_eval = McpEval::get_evaluator(_cserver.getAtomSpace());
+		_eval = McpEval::get_evaluator(AtomSpaceCast(_hcsn->getAtomSpace()));
 }
 
 // Called for each newline-terminated line received.

@@ -34,6 +34,7 @@
 #ifndef PYTHONSHELL_H
 #define PYTHONSHELL_H
 
+#include <opencog/atoms/base/Handle.h>
 #include <opencog/network/GenericShell.h>
 #include <opencog/atomspace/AtomSpace.h>
 
@@ -47,8 +48,9 @@ class PythonShell: public GenericShell
 {
 protected:
     AtomSpacePtr _shellspace;
+    std::string _pending_lines;  // Accumulate multi-line input
 public:
-    PythonShell(const AtomSpacePtr&);
+    PythonShell(const Handle&);
     virtual ~PythonShell();
     virtual GenericEval* get_evaluator(void);
     virtual void eval(const std::string &);

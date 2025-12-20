@@ -22,7 +22,7 @@
 
 #include <opencog/util/Logger.h>
 #include <opencog/util/oc_assert.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
 #include <opencog/cogserver/server/Module.h>
 #include <opencog/cogserver/server/Request.h>
 #include <opencog/network/ConsoleSocket.h>
@@ -35,24 +35,20 @@ using namespace opencog;
 DEFINE_SHELL_MODULE(TopShellModule);
 DECLARE_MODULE(TopShellModule);
 
-TopShellModule::TopShellModule(CogServer& cs) : Module(cs)
+TopShellModule::TopShellModule(const Handle& hcsn) : Module(hcsn)
 {
 }
 
 void TopShellModule::init(void)
 {
-	_cogserver.registerRequest(shelloutRequest::info().id,
-	                           &shelloutFactory);
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
+	cs->registerRequest(shelloutRequest::info().id, &shelloutFactory);
 }
 
 TopShellModule::~TopShellModule()
 {
-	_cogserver.unregisterRequest(shelloutRequest::info().id);
-}
-
-bool TopShellModule::config(const char*)
-{
-	return false;
+	CogServer* cs = CogServerNodeCast(_hcsn).get();
+	cs->unregisterRequest(shelloutRequest::info().id);
 }
 
 const RequestClassInfo&
@@ -78,7 +74,7 @@ TopShellModule::shelloutRequest::execute(void)
 	ConsoleSocket *con = this->get_console();
 	OC_ASSERT(con, "Invalid Request object");
 
-	TopShell *sh = new TopShell(_cogserver);
+	TopShell *sh = new TopShell(*CogServerNodeCast(_cogserver.getHandle()));
 	sh->set_socket(con);
 
 	if (!_parameters.empty())

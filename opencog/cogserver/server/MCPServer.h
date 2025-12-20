@@ -11,7 +11,6 @@
 #include <string>
 
 #include <opencog/network/ConsoleSocket.h>
-#include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/mcp-eval/McpEval.h>
 
 namespace opencog
@@ -26,7 +25,7 @@ namespace opencog
 class MCPServer : public ConsoleSocket
 {
 private:
-	CogServer& _cserver;
+	Handle _hcsn;
 	McpEval* _eval;
 
 protected:
@@ -34,7 +33,7 @@ protected:
 	virtual void OnLine (const std::string&);
 
 public:
-    MCPServer(CogServer&, SocketManager*);
+    MCPServer(const Handle&, SocketManager*);
     ~MCPServer();
 
 }; // class

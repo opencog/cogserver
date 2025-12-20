@@ -11,8 +11,8 @@
  * explore writing guile (scheme) or python modules instead.
  */
 
+#include <cstdlib>
 #include <dlfcn.h>
-#include <unistd.h>
 
 #include <filesystem>
 
@@ -24,31 +24,24 @@
 
 using namespace opencog;
 
-static std::string get_exe_dir()
-{
-    static const int EXE_PATH_MAX = 1024;
-    static char buf[EXE_PATH_MAX];
-    int rslt = readlink("/proc/self/exe", buf, EXE_PATH_MAX);
-    if (rslt < 0) return "";
-
-    buf[rslt] = '\0';
-    std::string exeName(buf);
-    return exeName.substr(0, exeName.rfind("/")+1);
-}
-
 ModuleManager::ModuleManager(void)
 {
-    // Give priority search order to the build directories.
-    // Do NOT search these, if working from installed path!
-    std::string exe = get_exe_dir();
-    if (0 == exe.compare(0, sizeof(PROJECT_BINARY_DIR)-1, PROJECT_BINARY_DIR))
+    // Check for COGSERVER_MODULE_PATH environment variable.
+    // This is a colon-separated list of directories to search for modules.
+    // These paths are searched first, before the install prefix.
+    const char* env_path = std::getenv("COGSERVER_MODULE_PATH");
+    if (env_path)
     {
-
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/commands");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/python");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/modules/");
-        module_paths.push_back(PROJECT_BINARY_DIR "/opencog/cogserver/shell/");
+        std::vector<std::string> paths;
+        tokenize(env_path, std::back_inserter(paths), ":");
+        for (const std::string& p : paths)
+        {
+            if (not p.empty())
+                module_paths.push_back(p);
+        }
     }
+
+    // Finally, search the install prefix.
     module_paths.push_back(PROJECT_INSTALL_PREFIX "/lib/opencog/modules/");
 }
 
@@ -109,7 +102,7 @@ static std::string get_filepath(const std::string& fullpath)
 }
 
 bool ModuleManager::loadAbsPath(const std::string& path,
-                               CogServer& cs)
+                               const Handle& hcsn)
 {
     std::string fi = get_filename(path);
     if (modules.find(fi) !=  modules.end()) {
@@ -181,17 +174,8 @@ bool ModuleManager::loadAbsPath(const std::string& path,
         return false;
     }
 
-    Module::ConfigFunction* config_func =
-        (Module::ConfigFunction*) dlsym(dynLibrary, Module::config_function_name());
-    dlsymError = dlerror();
-    if (dlsymError) {
-        logger().error("Unable to find symbol \"%s\": %s",
-                       Module::config_function_name(), dlsymError);
-        return false;
-    }
-
     // Load and init module
-    Module* module = (Module*) (*load_func)(cs);
+    Module* module = (Module*) (*load_func)(hcsn);
 
     // Store two entries in the module map:
     //    1: filename => <struct module data>
@@ -203,8 +187,7 @@ bool ModuleManager::loadAbsPath(const std::string& path,
     std::string i = module_id;
     std::string f = get_filename(path);
     std::string p = get_filepath(path);
-    ModuleData mdata = {module, i, f, p, load_func, unload_func,
-                        config_func, dynLibrary};
+    ModuleData mdata = {module, i, f, p, load_func, unload_func, dynLibrary};
     modules[i] = mdata;
     modules[f] = mdata;
 
@@ -286,29 +269,13 @@ bool ModuleManager::unloadModule(const std::string& moduleId)
 
 // ====================================================================
 
-bool ModuleManager::configModule(const std::string& moduleId,
-                                 const std::string& cfg)
-{
-    ModuleData mdata = getModuleData(moduleId);
-
-    // If the module isn't found ...
-    if (nullptr == mdata.module) return false;
-
-    // Invoke the module's config function.
-    bool rc = (*mdata.configFunction)(mdata.module, cfg.c_str());
-
-    return rc;
-}
-
-// ====================================================================
-
 ModuleManager::ModuleData ModuleManager::getModuleData(const std::string& moduleId)
 {
     std::string f = get_filename(moduleId);
     ModuleMap::const_iterator it = modules.find(f);
     if (it == modules.end()) {
         logger().info("[ModuleManager] module \"%s\" was not found.", f.c_str());
-        static ModuleData nulldata = {NULL, "", "", "", NULL, NULL, NULL, NULL};
+        static ModuleData nulldata = {NULL, "", "", "", NULL, NULL, NULL};
         return nulldata;
     }
     return it->second;
@@ -321,12 +288,11 @@ Module* ModuleManager::getModule(const std::string& moduleId)
 
 // ====================================================================
 
-bool ModuleManager::loadModule(const std::string& path,
-                               CogServer& cs)
+bool ModuleManager::loadModule(const std::string& path, const Handle& hcsn)
 {
     if (0 == path.size()) return false;
     if ('/' == path[0])
-        return loadAbsPath(path, cs);
+        return loadAbsPath(path, hcsn);
 
     // Loop over the different possible module paths.
     bool rc = false;
@@ -334,14 +300,14 @@ bool ModuleManager::loadModule(const std::string& path,
         std::filesystem::path modulePath(module_path);
         modulePath /= path;
         if (std::filesystem::exists(modulePath)) {
-            rc = loadModule(modulePath.string(), cs);
+            rc = loadModule(modulePath.string(), hcsn);
             if (rc) break;
         }
     }
     return rc;
 }
 
-void ModuleManager::loadModules(CogServer& cs)
+void ModuleManager::loadModules(const Handle& hcsn)
 {
     // Search the build dirs first, then the install dirs.
     std::string modlist =
@@ -357,7 +323,7 @@ void ModuleManager::loadModules(CogServer& cs)
     tokenize(modlist, std::back_inserter(modules), ", ");
     bool load_failure = false;
     for (const std::string& module : modules) {
-        bool rc = loadModule(module, cs);
+        bool rc = loadModule(module, hcsn);
         if (not rc)
         {
             logger().warn("Failed to load module %s", module.c_str());

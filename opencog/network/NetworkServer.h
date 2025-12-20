@@ -10,6 +10,7 @@
 #define _OPENCOG_SIMPLE_NETWORK_SERVER_H
 
 #include <atomic>
+#include <functional>
 #include <list>
 #include <mutex>
 #include <queue>
@@ -48,7 +49,7 @@ protected:
     std::string _name;
     short _port;
     std::atomic_bool _running;
-    asio::io_service _io_service;
+    asio::io_context _io_service;
     asio::ip::tcp::acceptor _acceptor;
     std::thread* _listener_thread;
 
@@ -61,7 +62,7 @@ protected:
 
     /** The network server's main listener thread.  */
     void listen();
-    ServerSocket* (*_getServer)(SocketManager*);
+    std::function<ServerSocket*(SocketManager*)> _getServer;
 
     /** monitoring stats */
     time_t _start_time;
@@ -78,7 +79,7 @@ public:
     ~NetworkServer();
 
     /** Start and stop the server */
-    void run(ServerSocket* (*)(SocketManager*));
+    void run(std::function<ServerSocket*(SocketManager*)>);
     void stop_listening();
     void join_threads();
 

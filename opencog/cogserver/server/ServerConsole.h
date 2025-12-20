@@ -34,7 +34,7 @@ namespace opencog
 class ServerConsole : public ConsoleSocket
 {
 private:
-    static std::string _prompt;
+    std::string _prompt;
 
 protected:
     CogServer& _cserver;
@@ -67,7 +67,7 @@ public:
      * Ctor. Defines the socket's mime-type as 'text/plain' and then
      * configures the Socket to use line protocol.
      */
-    ServerConsole(CogServer&, SocketManager*);
+    ServerConsole(const Handle&, CogServer&, SocketManager*);
     ~ServerConsole();
 
     /**

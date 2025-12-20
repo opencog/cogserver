@@ -12,9 +12,12 @@
 #ifndef _OPENCOG_COGSERVER_H
 #define _OPENCOG_COGSERVER_H
 
+#include <atomic>
+
 #include <opencog/atomspace/AtomSpace.h>
 
 #include <opencog/cogserver/server/Module.h>
+
 #include <opencog/cogserver/server/ModuleManager.h>
 #include <opencog/network/NetworkServer.h>
 #include <opencog/cogserver/server/RequestManager.h>
@@ -51,62 +54,62 @@ class CogServer :
     public RequestManager,
     public ModuleManager
 {
-protected:
-    AtomSpacePtr _atomSpace;
+private:
     SocketManager _socket_manager;
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
-    bool _running;
+    std::atomic<bool> _running;
 
-    /** Protected; singleton instance! Bad things happen when there is
-     * more than one. Alas. */
-    CogServer(void);
-    CogServer(AtomSpacePtr);
-friend CogServer& cogserver(void);
-friend CogServer& cogserver(AtomSpacePtr);
+protected:
+    // The following methods "could be" public (historically, they were)
+    // but are now marked protected due to widespread abuse. Control is
+    // centralized in CogServerNode, and it provides the master authority
+    // for starting and stopping things.
 
-public:
-    /** CogServer's destructor. Disables the network server and
-     * unloads all modules. */
-    virtual ~CogServer(void);
+    /// Atomically set running to true. Returns true if it was
+    /// already running (i.e. already set by someone else).
+    bool set_running(void) { return _running.exchange(true); }
 
-    /** Returns the atomspace instance. */
-    AtomSpacePtr getAtomSpace() { return _atomSpace; }
-    void setAtomSpace(const AtomSpacePtr& as) { _atomSpace = as; }
+    /** Starts the network console server; this provides a command
+     *  line server socket on the specified port. */
+    void enableNetworkServer(const Handle&);
+
+    /** Starts the websockets server. */
+    void enableWebServer(const Handle&);
+
+    /** Starts the MCP Model Context Protocol server. */
+    void enableMCPServer(const Handle&);
+
+    /** Stops the network server and closes all the open server sockets. */
+    void disableNetworkServer(void);
+    void disableWebServer(void);
+    void disableMCPServer(void);
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.
      */
-    virtual void serverLoop(void);
+    void serverLoop(void);
 
-    /** Runs a single server loop step. Quasi-private method, made
-     *  public to be used in unit tests and for debug purposes only. */
-    virtual void runLoopStep(void);
+    /** Runs a single server loop step. */
+    void runLoopStep(void);
 
-    /** Terminates the main loop. The loop will be exited
-     *  after the current interaction is finished. */
-    virtual void stop(void);
+public:
+    CogServer(void);
+    virtual ~CogServer(void);
+
+    /** Terminates the main loop. Waits for all in-progress work
+     * to complete, will also schedule all pending requests and
+     * run them, before returning. After returning, everything
+     * guaranteed tp be done. */
+    void stop(void);
+
+    /** Returns the CogServerNode handle. */
+    virtual Handle getHandle() { return Handle::UNDEFINED; }
 
     void set_max_open_sockets(int);
 
-    /** Starts the network console server; this provides a command
-     *  line server socket on the port specified by the configuration
-     *  parameter SERVER_PORT */
-    virtual void enableNetworkServer(int port=17001);
-
-	 /** Starts the webscokets server. */
-    virtual void enableWebServer(int port=18080);
-
-	 /** Starts the MCP Model Context Protocol server. */
-    virtual void enableMCPServer(int port=18888);
-
-    /** Stops the network server and closes all the open server sockets. */
-    virtual void disableNetworkServer(void);
-    virtual void disableWebServer(void);
-    virtual void disableMCPServer(void);
-
-    bool running(void) { return _running; }
+    bool running(void) const { return _running; }
 
     /** Get the web server port */
     short getWebServerPort() const { return _webServer ? _webServer->getPort() : 0; }
@@ -117,14 +120,10 @@ public:
     }
 
     /**** Module API ****/
-    bool loadModule(const std::string& filename) {
-        return ModuleManager::loadModule(filename, *this);
+    bool loadModule(const std::string& filename, const Handle& hcsn) {
+        return ModuleManager::loadModule(filename, hcsn);
     }
-    void loadModules(void) { ModuleManager::loadModules(*this); }
-
-    /** Return the logger */
-    Logger &logger(void) { return opencog::logger(); }
-
+    void loadModules(const Handle& hcsn) { ModuleManager::loadModules(hcsn); }
 
     /** Print human-readable stats about the cogserver */
     std::string display_stats(int nlines = -1);
@@ -135,16 +134,6 @@ public:
     SocketManager* getSocketManager() { return &_socket_manager; }
 
 }; // class
-
-// Singleton instance of the cogserver
-CogServer& cogserver(void);
-CogServer& cogserver(AtomSpacePtr);
-
-// Only cython needs this.
-inline AtomSpacePtr cython_server_atomspace(void)
-{
-    return cogserver().getAtomSpace();
-}
 
 /** @}*/
 }  // namespace

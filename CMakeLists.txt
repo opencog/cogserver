@@ -15,7 +15,7 @@ IF(CMAKE_VERSION VERSION_GREATER 3.31)
 	CMAKE_POLICY(SET CMP0177 NEW)
 ENDIF(CMAKE_VERSION VERSION_GREATER 3.31)
 
-PROJECT(cogserver)
+PROJECT(cogserver VERSION 3.4.0)
 
 # ----------------------------------------------------------
 # User-modifiable options. Feel free to change these!
@@ -51,21 +51,11 @@ ADD_DEFINITIONS(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 # Listed in alphabetical order, more or less.
 # CogUtil must come first, because it supplies various FindXXX macros.
 
-# Add the 'lib' dir to cmake's module search path
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/lib/")
-
 # Cogutil
-FIND_PACKAGE(CogUtil 2.0.1 CONFIG REQUIRED)
-IF (COGUTIL_FOUND)
-	MESSAGE(STATUS "CogUtil found.")
-	ADD_DEFINITIONS(-DHAVE_COGUTIL)
-	SET(HAVE_COGUTIL 1)
-ELSE (COGUTIL_FOUND)
+FIND_PACKAGE(CogUtil 2.2.1 CONFIG REQUIRED)
+IF (NOT COGUTIL_FOUND)
 	MESSAGE(FATAL_ERROR "CogUtil missing: it is needed!")
-ENDIF (COGUTIL_FOUND)
-
-# add the 'cmake' directory from cogutil to search path
-list(APPEND CMAKE_MODULE_PATH  ${COGUTIL_DATA_DIR}/cmake)
+ENDIF ()
 
 include(${COGUTIL_DATA_DIR}/cmake/OpenCogGccOptions.cmake)
 include(${COGUTIL_DATA_DIR}/cmake/OpenCogLibOptions.cmake)
@@ -76,24 +66,16 @@ include(${COGUTIL_DATA_DIR}/cmake/Summary.cmake)
 # Check for existance of various required, optional packages.
 
 # AtomSpace
-FIND_PACKAGE(AtomSpace 5.0.3 CONFIG REQUIRED)
-IF (ATOMSPACE_FOUND)
-	MESSAGE(STATUS "AtomSpace found.")
-	ADD_DEFINITIONS(-DHAVE_ATOMSPACE)
-	SET(HAVE_ATOMSPACE 1)
-ELSE (ATOMSPACE_FOUND)
+FIND_PACKAGE(AtomSpace 5.2.0 CONFIG REQUIRED)
+IF (NOT ATOMSPACE_FOUND)
 	MESSAGE(FATAL_ERROR "AtomSpace missing: it is needed!")
-ENDIF (ATOMSPACE_FOUND)
+ENDIF ()
 
 # AtomSpace Storage proves s-expression parsing
-FIND_PACKAGE(AtomSpaceStorage CONFIG REQUIRED)
-IF (ATOMSPACE_STORAGE_FOUND)
-	MESSAGE(STATUS "AtomSpace Storage found.")
-	ADD_DEFINITIONS(-DHAVE_ATOMSPACE_STORAGE)
-	SET(HAVE_ATOMSPACE_STORAGE 1)
-ELSE (ATOMSPACE_STORAGE_FOUND)
+FIND_PACKAGE(AtomSpaceStorage 4.3.0 CONFIG REQUIRED)
+IF (NOT ATOMSPACE_STORAGE_FOUND)
 	MESSAGE(FATAL_ERROR "AtomSpace Storage missing: it is needed!")
-ENDIF (ATOMSPACE_STORAGE_FOUND)
+ENDIF ()
 
 FIND_PACKAGE(Asio REQUIRED)
 IF (Asio_FOUND)
@@ -125,33 +107,10 @@ ENDIF (JSONCPP_FOUND)
 
 
 # ----------------------------------------------------------
-# Needed for unit tests
-
-FIND_PACKAGE(Cxxtest)
-IF (NOT CXXTEST_FOUND)
-	MESSAGE(STATUS "CxxTest missing: needed for unit tests.")
-ENDIF (NOT CXXTEST_FOUND)
-
-# ----------------------------------------------------------
 # Guile Python and Cython
 
 include(OpenCogFindGuile)
 include(OpenCogFindPython)
-
-# ----------------------------------------------------------
-# Optional, currently needed only to hush up DRD in util/Logger.cc
-FIND_PACKAGE(VALGRIND)
-IF (VALGRIND_FOUND)
-	MESSAGE(STATUS "VALGRIND was found.")
-	IF (VALGRIND_INCLUDE_DIR)
-		MESSAGE(STATUS "VALGRIND devel headers found.")
-		ADD_DEFINITIONS(-DHAVE_VALGRIND)
-	ELSE (VALGRIND_INCLUDE_DIR)
-		MESSAGE(STATUS "VALGRIND devel headers NOT FOUND: needed for thread debugging.")
-	ENDIF (VALGRIND_INCLUDE_DIR)
-ELSE (VALGRIND_FOUND)
-	MESSAGE(STATUS "VALGRIND missing: needed for thread debugging.")
-ENDIF (VALGRIND_FOUND)
 
 # ===================================================================
 # Include configuration.
@@ -168,53 +127,21 @@ INCLUDE(OpenCogCython)
 # ==========================================================
 # Decide what to build, based on the packages found.
 
-IF(HAVE_ATOMSPACE AND HAVE_COGUTIL)
-	SET(HAVE_SERVER 1)
-ENDIF(HAVE_ATOMSPACE AND HAVE_COGUTIL)
+ADD_SUBDIRECTORY(cmake)
+ADD_SUBDIRECTORY(opencog)
+# ADD_SUBDIRECTORY(examples EXCLUDE_FROM_ALL)
+ADD_SUBDIRECTORY(examples)
 
-IF(HAVE_SERVER)
-	ADD_SUBDIRECTORY(lib)
-	ADD_SUBDIRECTORY(opencog)
-	# ADD_SUBDIRECTORY(examples EXCLUDE_FROM_ALL)
-	ADD_SUBDIRECTORY(examples)
+ADD_CUSTOM_TARGET(examples
+	COMMAND $(MAKE)
+	WORKING_DIRECTORY examples
+	COMMENT "Building examples"
+)
 
-	ADD_CUSTOM_TARGET(examples
-		COMMAND $(MAKE)
-		WORKING_DIRECTORY examples
-		COMMENT "Building examples"
-	)
-ENDIF(HAVE_SERVER)
-
-IF (CXXTEST_FOUND AND HAVE_SERVER)
-	ENABLE_TESTING()
-	ADD_CUSTOM_TARGET(tests)
-	ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
-	IF (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-		# doing coverage stuff while running tests if this is the Coverage build
-		ADD_CUSTOM_TARGET(check
-			# TODO lcov should be found by cmake first
-			# TODO set it up so that we can pick to run coverage per test, or
-			# combined across all tests (the latter is MUCH faster). Use a define?
-			# There is coverage specific stuff in AddCxxTest.cmake now...
-			WORKING_DIRECTORY tests
-			COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure $(ARGS)
-
-			# This script combines the coverage analysis of each test,
-			# then creates html in tests/lcov
-			# Note: this should now be run separately...
-			#COMMAND ${PROJECT_SOURCE_DIR}/scripts/combine_lcov.sh
-			COMMENT "Running tests with coverage..."
-		)
-	ELSE (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-		# If this is a build with coverage enabled then test normally
-		ADD_CUSTOM_TARGET(check
-			DEPENDS tests
-			WORKING_DIRECTORY tests
-			COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure $(ARGS)
-			COMMENT "Running tests..."
-		)
-	ENDIF (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-ENDIF (CXXTEST_FOUND AND HAVE_SERVER)
+# ----------------------------------------------------------
+# Unit tests
+INCLUDE(OpenCogTestOptions)
+OPENCOG_SETUP_TESTING()
 
 ADD_CUSTOM_TARGET(cscope
 	COMMAND find opencog examples tests -name '*.cc' -o -name '*.h' -o -name '*.cxxtest' -o -name '*.scm' > ${CMAKE_SOURCE_DIR}/cscope.files
@@ -236,9 +163,6 @@ STRING(TIMESTAMP UTC_DATE %Y%m%d UTC)
 # that it is owned by the builder thus avoiding 'Permission denied' error when
 # packaging.
 FILE(WRITE "${PROJECT_BINARY_DIR}/install_manifest.txt")
-## It doesn't have a header-file declaring the version similar to cogutil and
-## atomspace.
-SET(SEMANTIC_VERSION 3.3.0)
 
 # Generate version header file
 CONFIGURE_FILE(
@@ -254,7 +178,7 @@ SET(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/packages")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The OpenCog Network Server")
 SET(CPACK_PACKAGE_NAME "cogserver-dev")
 SET(CPACK_PACKAGE_VENDOR "opencog.org")
-SET(CPACK_PACKAGE_VERSION "${SEMANTIC_VERSION}-${UTC_DATE}")
+SET(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}-${UTC_DATE}")
 SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 SET(CPACK_PACKAGE_FILE_NAME
 	"${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${PACKAGE_ARCHITECTURE}")
@@ -263,11 +187,11 @@ SET(CPACK_PACKAGE_EXECUTABLES "cogserver" "The OpenCog Network Server")
 
 ## Debian specific configurations
 SET(DEPENDENCY_LIST
-	"guile-2.2-dev (>= 2.2.2)"
+	"guile-3.0-dev (>= 3.0.0)"
 	"python3-dev (>= 3.6.7)"
 	"libstdc++6 (>= 4.7)"
-	"libcogutil-dev (>= 2.0.2)"
-	"atomspace-dev (>= 5.0.3)"
+	"libcogutil-dev (>= 2.2.1)"
+	"atomspace-dev (>= 5.2.0)"
 )
 
 STRING(REPLACE ";" ", " MAIN_DEPENDENCIES "${DEPENDENCY_LIST}")
@@ -284,7 +208,6 @@ FIND_PACKAGE(Doxygen)
 # ===================================================================
 # Show a summary of what we found, what we will do.
 
-SUMMARY_ADD("CogServer"    "CogServer network server" HAVE_SERVER)
 SUMMARY_ADD("WebSockets"   "WebSockets network server" HAVE_OPENSSL)
 SUMMARY_ADD("MCP"          "Model Context Protocol network server" HAVE_MCP)
 SUMMARY_ADD("Cython"       "Cython (python) bindings" HAVE_CYTHON)

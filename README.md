@@ -85,9 +85,9 @@ This capability is useful in several different ways:
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
 
-Version
--------
-This is **version 3.3.0**. The code is stable, it's been used in
+Status
+------
+This is **version 3.4.0**. The code is stable, it's been used in
 production settings for over a decade.   There are no known bugs.
 
 Using
@@ -214,5 +214,10 @@ TODO
   server wrapper, but how?
 * What about authentication and encryption for the raw telnet/netcat
   interfaces?
+
+* Convert the three network servers to ObjectNodes.
+* Convert the various shells to ObjectNodes.
+* Convert the Requests into messages (So, `(Predicate "list-modules")`,
+  etc.) for the main command shell only.
 
 ----

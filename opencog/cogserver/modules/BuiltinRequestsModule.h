@@ -1,5 +1,5 @@
 /*
- * opencog/cogserver/modules/commands/BuiltinRequestsModule.h
+ * opencog/cogserver/modules/BuiltinRequestsModule.h
  *
  * Copyright (C) 2008 by OpenCog Foundation
  * Written by Gustavo Gama <gama@vettalabs.com>
@@ -9,9 +9,10 @@
 #ifndef _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 #define _OPENCOG_BUILTIN_REQUESTS_MODULE_H
 
-#include <opencog/cogserver/modules/commands/ShutdownRequest.h>
-#include <opencog/cogserver/modules/commands/ModuleManagement.h>
-#include <opencog/cogserver/server/CogServer.h>
+#include <opencog/atoms/base/Handle.h>
+#include <opencog/cogserver/atoms/CogServerNode.h>
+#include <opencog/cogserver/modules/ShutdownRequest.h>
+#include <opencog/cogserver/modules/ModuleManagement.h>
 #include <opencog/cogserver/server/Factory.h>
 #include <opencog/cogserver/server/Module.h>
 
@@ -26,7 +27,6 @@ class BuiltinRequestsModule : public Module
 
 private:
 
-    Factory<ConfigModuleRequest, Request>  configmoduleFactory;
     Factory<ListModulesRequest, Request>  listmodulesFactory;
     Factory<LoadModuleRequest, Request>   loadmoduleFactory;
     Factory<UnloadModuleRequest, Request> unloadmoduleFactory;
@@ -92,10 +92,9 @@ DECLARE_CMD_REQUEST(BuiltinRequestsModule, "stats", do_stats,
 
 public:
     static const char* id();
-    BuiltinRequestsModule(CogServer&);
+    BuiltinRequestsModule(const Handle&);
     virtual ~BuiltinRequestsModule();
     virtual void init();
-    virtual bool config(const char *) { return false; }
 
 }; // class
 
