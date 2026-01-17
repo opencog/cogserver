@@ -4,153 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AtomSpace Visualizer</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="theme.js"></script>
-    <script src="landing.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: #16213e;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #4fc3f7;
+            margin-bottom: 20px;
+        }
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .install-link {
+            display: inline-block;
+            background: #4fc3f7;
+            color: #1a1a2e;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .install-link:hover {
+            background: #81d4fa;
+            text-decoration: none;
+        }
+    </style>
 </head>
-<body data-theme="dark">
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light mode">
-        <span id="theme-icon">☀️</span>
-    </button>
-
+<body>
     <div class="container">
-        <header>
-            <h1>AtomSpace Visualizer</h1>
-            <p class="subtitle">Real-time visualization of the AtomSpace in-RAM database</p>
-        </header>
-
-        <main>
-            <section class="connection-panel">
-                <h2>Connection Settings</h2>
-                <noscript>
-                    <div style="color: red; font-weight: bold; padding: 10px; background: #ffe6e6; border: 2px solid red; border-radius: 4px; margin-bottom: 15px;">
-                        Please enable javascript in your browser to run this demo!
-                    </div>
-                </noscript>
-                <div class="connection-form">
-                    <div class="form-group">
-                        <label for="server-url">CogServer URL:</label>
-                        <input type="text"
-                               id="server-url"
-                               placeholder="ws://172.17.0.2:18080/"
-                               value="">
-                        <span class="hint">Enter the WebSocket URL of your CogServer (JSON endpoint will be used)</span>
-                    </div>
-
-                    <div class="button-group">
-                        <button id="connect-btn" class="btn-primary">
-                            <span class="btn-icon">⚡</span>
-                            <span class="btn-text">Connect</span>
-                        </button>
-                        <button id="stats-btn" class="btn-secondary" onclick="openStatsPage()">
-                            <span class="btn-icon">📊</span>
-                            <span class="btn-text">View Stats</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="status-panel">
-                <h2>Connection Status</h2>
-                <div class="status-grid">
-                    <div class="status-item">
-                        <span class="status-label">Status:</span>
-                        <span id="connection-status" class="status-value disconnected">Disconnected</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Server:</span>
-                        <span id="server-display" class="status-value">Not connected</span>
-                    </div>
-                </div>
-            </section>
-
-            <section id="atomspace-stats" class="stats-panel hidden">
-                <h2>AtomSpace Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="atom-count">-</div>
-                        <div class="stat-label">Total Atoms</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="node-count">-</div>
-                        <div class="stat-label">Nodes</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="link-count">-</div>
-                        <div class="stat-label">Links</div>
-                    </div>
-                    <div class="stat-card clickable" onclick="window.open('type-view.html', '_blank')">
-                        <div class="stat-value" id="type-count">-</div>
-                        <div class="stat-label">Atom Types</div>
-                    </div>
-                </div>
-
-                <div class="refresh-panel">
-                    <button id="refresh-stats" class="btn-secondary" disabled>
-                        <span class="btn-icon">🔄</span>
-                        <span class="btn-text">Refresh Statistics</span>
-                    </button>
-                    <span id="last-update" class="last-update"></span>
-                </div>
-            </section>
-
-            <section id="atom-types-breakdown" class="types-breakdown-panel hidden">
-                <h2>Atoms by Type</h2>
-                <div id="types-list" class="types-list">
-                    <!-- Atom types will be dynamically inserted here -->
-                </div>
-            </section>
-
-            <section id="atom-listing-panel" class="atom-listing-panel hidden">
-                <div class="atom-listing-header">
-                    <h2 id="atom-listing-title">Atoms of Type</h2>
-                    <div class="header-buttons">
-                        <button id="visualize-checked" class="btn-primary">
-                            <span class="btn-icon">🔗</span>
-                            <span class="btn-text">Visualize Checked</span>
-                        </button>
-                        <button id="close-atom-listing" class="btn-secondary">
-                            <span class="btn-icon">✕</span>
-                            <span class="btn-text">Close</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="atom-listing-content" class="atom-listing-content">
-                    <!-- Atom listings will be displayed here -->
-                </div>
-            </section>
-
-            <section id="error-panel" class="error-panel hidden">
-                <div class="error-content">
-                    <span class="error-icon">⚠️</span>
-                    <span id="error-message"></span>
-                </div>
-            </section>
-
-            <section id="debug-panel" class="debug-panel">
-                <details>
-                    <summary>Debug Console</summary>
-                    <div class="debug-content">
-                        <div class="debug-input">
-                            <input type="text"
-                                   id="debug-command"
-                                   placeholder="Enter command (e.g., AtomSpace.version())"
-                                   disabled>
-                            <button id="send-command" class="btn-secondary" disabled>Send</button>
-                        </div>
-                        <div class="debug-output">
-                            <label>Response:</label>
-                            <pre id="debug-response"></pre>
-                        </div>
-                    </div>
-                </details>
-            </section>
-        </main>
-
-        <footer>
-            <p>AtomSpace Visualizer • <a href="https://wiki.opencog.org/w/AtomSpace" target="_blank">Documentation</a></p>
-        </footer>
+        <h1>AtomSpace Visualizer</h1>
+        <p>The AtomSpace Visualizer has moved to a separate repository.</p>
+        <p>To use the visualizer, please install it from:</p>
+        <a href="https://github.com/opencog/atomspace-viz" class="install-link">
+            github.com/opencog/atomspace-viz
+        </a>
     </div>
 </body>
 </html>
