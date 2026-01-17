@@ -29,32 +29,13 @@
 
 using namespace opencog;
 
-/// Implement Jenkins' One-at-a-Time hash for message dispatch.
-static constexpr uint32_t dispatch_hash(const char* s)
-{
-	uint32_t hash = 0;
-
-	for(; *s; ++s)
-	{
-		hash += *s;
-		hash += (hash << 10);
-		hash ^= (hash >> 6);
-	}
-
-	hash += (hash << 3);
-	hash ^= (hash >> 11);
-	hash += (hash << 15);
-
-	return hash;
-}
-
 CogServerNode::CogServerNode(Type t, const std::string&& s)
-	: Node(t, std::move(s)), CogServer()
+	: ObjectCRTP<CogServerNode>(t, std::move(s)), CogServer()
 {
 }
 
 CogServerNode::CogServerNode(const std::string&& s)
-	: Node(COG_SERVER_NODE, std::move(s)), CogServer()
+	: ObjectCRTP<CogServerNode>(COG_SERVER_NODE, std::move(s)), CogServer()
 {
 }
 
@@ -117,45 +98,6 @@ void CogServerNode::stopServers()
 	disableMCPServer();
 	disableWebServer();
 	disableNetworkServer();
-}
-
-HandleSeq CogServerNode::getMessages() const
-{
-	static const HandleSeq msgs = []() {
-		HandleSeq m({
-			Predicate("*-start-*"),
-			Predicate("*-stop-*"),
-			Predicate("*-run-*"),
-			Predicate("*-is-running?-*")
-		});
-		// Mark each message predicate as a message, once at load time.
-		for (const Handle& h : m)
-			h->markIsMessage();
-		return m;
-	}();
-
-	// Copy list above into the local AtomSpace.
-	HandleSeq lms;
-	for (const Handle& m : msgs)
-		lms.emplace_back(_atom_space->add_atom(m));
-	return lms;
-}
-
-bool CogServerNode::usesMessage(const Handle& key) const
-{
-	static const std::unordered_set<uint32_t> msgset({
-		dispatch_hash("*-start-*"),
-		dispatch_hash("*-stop-*"),
-		dispatch_hash("*-run-*"),
-		dispatch_hash("*-is-running?-*")
-	});
-
-	if (PREDICATE_NODE != key->get_type()) return false;
-
-	const std::string& pred = key->get_name();
-	uint32_t dhsh = dispatch_hash(pred.c_str());
-	if (msgset.find(dhsh) != msgset.end()) return true;
-	return false;
 }
 
 ValuePtr CogServerNode::getValue(const Handle& key) const

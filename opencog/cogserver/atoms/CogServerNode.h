@@ -20,7 +20,7 @@
 #ifndef _OPENCOG_COG_SERVER_NODE_H
 #define _OPENCOG_COG_SERVER_NODE_H
 
-#include <opencog/atoms/base/Node.h>
+#include <opencog/atoms/core/ObjectNode.h>
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/cogserver/server/CogServer.h>
 #include <opencog/cogserver/types/atom_types.h>
@@ -37,7 +37,7 @@ namespace opencog
  * to this node to hold server configuration and state.
  */
 
-class CogServerNode : public Node, public CogServer
+class CogServerNode : public ObjectCRTP<CogServerNode>, public CogServer
 {
 public:
 	// Please do NOT use this constructor!
@@ -52,8 +52,6 @@ public:
 	virtual void setValue(const Handle&, const ValuePtr&);
 	virtual ValuePtr getValue(const Handle&) const;
 	virtual void setAtomSpace(AtomSpace*) override;
-	virtual HandleSeq getMessages() const;
-	virtual bool usesMessage(const Handle&) const;
 
 	Handle getHandle() override { return get_handle(); }
 
@@ -63,6 +61,13 @@ private:
 	bool startServers();
 	void stopServers();
 	std::thread* _main_loop = nullptr;
+
+	static constexpr const char* _messages[] = {
+		"*-start-*",
+		"*-stop-*",
+		"*-run-*",
+		"*-is-running?-*"
+	};
 };
 
 NODE_PTR_DECL(CogServerNode)
