@@ -78,9 +78,12 @@ This capability is useful in several different ways:
   JSON/RPC over a TCP/IP socket.
   See the [MCP README](./examples/mcp/README.md) for more info.
 
-* **Demo visualizer.** This is a simple html/js visualizer for the
+* **Visualizer.** This is a simple html/js visualizer for the
   AtomSpace contents, accessible with standard web browsers. Just
   start the CogServer, open http://localhost:18080/ and go.
+  (The visualizer got too big and complicated, and has been moved
+  to it's own github repo. Get it from
+  [atomspace-viz](https://github.com/opencog/atomspace-viz).
 
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
