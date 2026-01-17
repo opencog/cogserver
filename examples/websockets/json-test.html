@@ -49,7 +49,7 @@
         let testQueue = [];
 
         // Set default URL to current hostname
-        urlInput.value = `ws://${window.location.hostname}:18080/json`;
+        urlInput.value = `ws://${window.location.hostname}:${window.location.port}/json`;
 
         function addLog(message, type = 'info') {
             const entry = document.createElement('div');

@@ -49,7 +49,7 @@ function setup()
   connectButton.addEventListener('click', changeConnection);
 
   // Initial server and endpoint - use current hostname.
-  server = `ws://${window.location.hostname}:18080/`;
+  server = `ws://${window.location.hostname}:${window.location.port}/`;
   endpoint = 'json';
   serverURL = server + endpoint;
 
