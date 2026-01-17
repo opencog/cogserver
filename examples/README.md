@@ -18,11 +18,13 @@ All the actual network i/o is done with the
 traffic for a basic JSON session.
 [***Run it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/websockets/json-test.html).
 
-The [visualizer](./visualizer) subdirectory contains a web page that
-provides some basic info about the contents of the AtomSpace. This
-includes the total counts for various atom types, and some basic
-browsing ability.
-[***Run it here***](https://html-preview.github.io/?url=https://github.com/opencog/cogserver/blob/master/examples/visualizer/index.html).
+The visualizer demo has been moved to the
+[atomspace-viz](https://github.com/opencog/atomspace-viz) git repo.
+It works just as before; but you need to git clone and install the
+visualizer to be able to use it. Since it is just a collection of
+javascript and web pages, you should also be able to just run it
+"live", straight out of github.
+[***Run it here***](https://html-preview.github.io/?url=https://github.com/opencog/atomspace-viz/blob/master/visualizer/index.html).
 
 The [mcp](./mcp) subdirectory contains a Model Context Protocol (MCP)
 several prompts, originally written for Claude, that explain what the
