@@ -15,7 +15,7 @@ IF(CMAKE_VERSION VERSION_GREATER 3.31)
 	CMAKE_POLICY(SET CMP0177 NEW)
 ENDIF(CMAKE_VERSION VERSION_GREATER 3.31)
 
-PROJECT(cogserver VERSION 3.4.0)
+PROJECT(cogserver VERSION 3.4.1)
 
 # ----------------------------------------------------------
 # User-modifiable options. Feel free to change these!

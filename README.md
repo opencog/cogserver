@@ -90,7 +90,7 @@ For more info, please consult the
 
 Status
 ------
-This is **version 3.4.0**. The code is stable, it's been used in
+This is **version 3.4.1**. The code is stable, it's been used in
 production settings for over a decade.   There are no known bugs.
 
 Using
