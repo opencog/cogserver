@@ -29,6 +29,8 @@
 
 using namespace opencog;
 
+template class ObjectCRTP<CogServerNode>;
+
 CogServerNode::CogServerNode(Type t, const std::string&& s)
 	: ObjectCRTP<CogServerNode>(t, std::move(s)), CogServer()
 {

@@ -37,8 +37,13 @@ namespace opencog
  * to this node to hold server configuration and state.
  */
 
+class CogServerNode;
+extern template class ObjectCRTP<CogServerNode>;
+
 class CogServerNode : public ObjectCRTP<CogServerNode>, public CogServer
 {
+	friend class ObjectCRTP<CogServerNode>;
+
 public:
 	// Please do NOT use this constructor!
 	CogServerNode(Type, const std::string&&);
