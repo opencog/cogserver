@@ -15,9 +15,28 @@ This prompt explains how to work with the Value system in the AtomSpace using At
 
 ## Atomese Format
 
+### Atoms
 All MCP commands use **s-expressions** for Atoms:
 - Input: `{"atomese": "(Concept \"cat\")"}` (shortened forms accepted)
 - Output: `(ConceptNode "cat")` (full type names always used)
+
+### Values
+Values can also be specified using s-expressions:
+- `{"atomese": "(FloatValue 1.5 2.7 3.14)"}`
+- `{"atomese": "(StringValue \"hello\" \"world\")"}`
+- `{"atomese": "(VoidValue)"}`
+
+**Critical Rule**: Values are NOT Atoms. Links can ONLY contain Atoms in their
+outgoing set - never Values. This means you cannot write Atomese like:
+```
+(SetValue (Concept "x") (Predicate "key") (FloatValue 1.0))  ; ILLEGAL!
+```
+The above is invalid because SetValue is a Link, and FloatValue is a Value,
+not an Atom. Values cannot appear inside Links.
+
+This is why the MCP `setValue` tool exists: it allows you to specify the Value
+as a separate argument, outside of any Link structure. The Value is passed to
+the tool, not embedded in Atomese.
 
 ## Key-Value Pairs
 
@@ -69,13 +88,8 @@ All MCP commands use **s-expressions** for Atoms:
 ```json
 {
   "atomese": "(Concept \"cat\")",
-  "key": {
-    "atomese": "(Predicate \"weight\")"
-  },
-  "value": {
-    "type": "FloatValue",
-    "value": [4.5]
-  }
+  "key": {"atomese": "(Predicate \"weight\")"},
+  "value": {"atomese": "(FloatValue 4.5)"}
 }
 ```
 
@@ -83,13 +97,8 @@ All MCP commands use **s-expressions** for Atoms:
 ```json
 {
   "atomese": "(Concept \"experiment-001\")",
-  "key": {
-    "atomese": "(Predicate \"measurements\")"
-  },
-  "value": {
-    "type": "FloatValue",
-    "value": [1.2, 3.4, 5.6, 7.8, 9.0]
-  }
+  "key": {"atomese": "(Predicate \"measurements\")"},
+  "value": {"atomese": "(FloatValue 1.2 3.4 5.6 7.8 9.0)"}
 }
 ```
 
@@ -97,39 +106,35 @@ All MCP commands use **s-expressions** for Atoms:
 ```json
 {
   "atomese": "(Concept \"document-123\")",
-  "key": {
-    "atomese": "(Predicate \"tags\")"
-  },
-  "value": {
-    "type": "StringValue",
-    "value": ["science", "research", "ai"]
-  }
+  "key": {"atomese": "(Predicate \"tags\")"},
+  "value": {"atomese": "(StringValue \"science\" \"research\" \"ai\")"}
 }
 ```
 
 ## Common Value Types
 
 ### FloatValue
-Stores vectors of floating-point numbers
-```json
-{
-  "type": "FloatValue",
-  "value": [1.0, 2.5, 3.7]
-}
-```
+Stores vectors of floating-point numbers: `(FloatValue 1.0 2.5 3.7)`
 
 **Use cases**: Embeddings, measurements, probabilities, coordinates
 
 ### StringValue
-Stores vectors of strings
-```json
-{
-  "type": "StringValue",
-  "value": ["tag1", "tag2", "tag3"]
-}
-```
+Stores vectors of strings: `(StringValue "tag1" "tag2" "tag3")`
 
 **Use cases**: Labels, categories, annotations, metadata
+
+### VoidValue
+A Value with no content: `(VoidValue)`
+
+**Use cases**: Sending messages to ObjectNodes that require no arguments.
+For example, opening or closing a StorageNode:
+```json
+{
+  "atomese": "(RocksStorageNode \"rocks:///path/to/db\")",
+  "key": {"atomese": "(Predicate \"*-open-*\")"},
+  "value": {"atomese": "(VoidValue)"}
+}
+```
 
 ## Practical Examples
 
@@ -138,21 +143,21 @@ Stores vectors of strings
 **Goal**: Store age and weight for a person
 
 ```json
-// Create the person
+// Create the person (using makeAtom tool)
 {"atomese": "(Concept \"Alice\")"}
 
-// Store age
+// Store age (using setValue tool)
 {
   "atomese": "(Concept \"Alice\")",
   "key": {"atomese": "(Predicate \"age\")"},
-  "value": {"type": "FloatValue", "value": [25.0]}
+  "value": {"atomese": "(FloatValue 25.0)"}
 }
 
-// Store weight
+// Store weight (using setValue tool)
 {
   "atomese": "(Concept \"Alice\")",
   "key": {"atomese": "(Predicate \"weight-kg\")"},
-  "value": {"type": "FloatValue", "value": [65.5]}
+  "value": {"atomese": "(FloatValue 65.5)"}
 }
 ```
 
@@ -164,10 +169,7 @@ Stores vectors of strings
 {
   "atomese": "(Concept \"word-cat\")",
   "key": {"atomese": "(Predicate \"embedding\")"},
-  "value": {
-    "type": "FloatValue",
-    "value": [0.123, -0.456, 0.789]
-  }
+  "value": {"atomese": "(FloatValue 0.123 -0.456 0.789)"}
 }
 ```
 
@@ -179,10 +181,7 @@ Stores vectors of strings
 {
   "atomese": "(Concept \"paper-2024-001\")",
   "key": {"atomese": "(Predicate \"keywords\")"},
-  "value": {
-    "type": "StringValue",
-    "value": ["machine learning", "neural networks", "transformers"]
-  }
+  "value": {"atomese": "(StringValue \"machine learning\" \"neural networks\" \"transformers\")"}
 }
 ```
 
@@ -268,14 +267,14 @@ FilterLink is a pattern matcher (not a query/traversal engine) designed for Valu
 
 ### Store and Retrieve Numeric Data
 ```json
-// Store
+// Store (using setValue tool)
 {
   "atomese": "(Concept \"data\")",
   "key": {"atomese": "(Predicate \"values\")"},
-  "value": {"type": "FloatValue", "value": [1.0, 2.0]}
+  "value": {"atomese": "(FloatValue 1.0 2.0)"}
 }
 
-// Retrieve
+// Retrieve (using getValueAtKey tool)
 {
   "atomese": "(Concept \"data\")",
   "key": {"atomese": "(Predicate \"values\")"}
@@ -284,16 +283,16 @@ FilterLink is a pattern matcher (not a query/traversal engine) designed for Valu
 
 ### Store and Retrieve Metadata
 ```json
-// Store
+// Store (using setValue tool)
 {
   "atomese": "(Concept \"item\")",
   "key": {"atomese": "(Predicate \"metadata\")"},
-  "value": {"type": "StringValue", "value": ["tag1", "tag2"]}
+  "value": {"atomese": "(StringValue \"tag1\" \"tag2\")"}
 }
 
-// Retrieve all keys
+// Retrieve all keys (using getKeys tool)
 {"atomese": "(Concept \"item\")"}
 
-// Retrieve all values
+// Retrieve all values (using getValues tool)
 {"atomese": "(Concept \"item\")"}
 ```
