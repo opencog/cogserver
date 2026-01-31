@@ -163,14 +163,14 @@ This distinction is fundamental to understanding how to work with streams:
 **Attaching to AtomSpace**:
 ```scheme
 ; Attach stream to a well-known location
-(cog-execute!
+(Trigger
   (SetValue (Concept "foo") (Predicate "bar")
     (CollectionOf (Type 'FlatStream) (OrderedLink item-list))))
 
 ; Access via ValueOf
 (define stream-ref (ValueOf (Concept "foo") (Predicate "bar")))
-(cog-execute! stream-ref)  ; Returns next item
-(cog-execute! stream-ref)  ; Returns next item
+(Trigger stream-ref)  ; Returns next item
+(Trigger stream-ref)  ; Returns next item
 ```
 
 **Finite Streams**:
@@ -299,7 +299,7 @@ This distinction is fundamental to understanding how to work with streams:
       (FloatValueOf (Variable "$Y") tvkey))))
 
 ; Wrap in FormulaStream using CollectionOfLink
-(cog-execute!
+(Trigger
   (SetValue (Concept "result") (Predicate "dynamic-sum")
     (CollectionOf (Type 'FormulaStream)
       (OrderedLink
@@ -313,7 +313,7 @@ This distinction is fundamental to understanding how to work with streams:
 
 **Example - Creating FlatStream**:
 ```scheme
-(cog-execute!
+(Trigger
   (SetValue (Anchor "data-source") (Predicate "item-stream")
     (CollectionOf (Type 'FlatStream)
       (OrderedLink
@@ -334,13 +334,13 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
 (define anchor (Anchor "my-anchor"))
 
 ; 2. Attach stream using SetValue
-(cog-execute!
+(Trigger
   (SetValue anchor (Predicate "stream-key")
     (CollectionOf (Type 'FormulaStream) <formula>)))
 
 ; 3. Access via ValueOf
 (define stream-ref (ValueOf anchor (Predicate "stream-key")))
-(cog-execute! stream-ref)
+(Trigger stream-ref)
 ```
 
 **Real Example - Dynamic MI Calculation**:
@@ -362,7 +362,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
 ; Install on specific pair
 (define (install-mi-formula THING-A THING-B)
   (define pair (List THING-A THING-B))
-  (cog-execute!
+  (Trigger
     (SetValue pair (Predicate "MI Key")
       (CollectionOf (Type 'FormulaStream)
         (OrderedLink
@@ -438,7 +438,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
   (LinkSignature (Type 'FlatStream)
     (ValueOf data-anchor (Predicate "test-data"))))
 
-(cog-execute!
+(Trigger
   (SetValue data-anchor (Predicate "data-stream") stream-maker))
 
 ; Define stream reference
@@ -464,7 +464,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
     data-stream))
 
 ; Execute filter - processes one item
-(cog-execute! counter)
+(Trigger counter)
 ```
 
 ### Example: String to Node Conversion
@@ -493,7 +493,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
     (ValueOf (Anchor "anch") (Predicate "words"))))
 
 ; Execute to convert strings to atoms
-(cog-execute! string-converter)
+(Trigger string-converter)
 
 ; Now query the atoms created
 (define words-query
@@ -501,7 +501,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
     (TypedVariable (Variable "$w") (Type 'Concept))
     (Edge (Predicate "word") (Variable "$w"))))
 
-(cog-execute! words-query)  ; Returns all word concepts
+(Trigger words-query)  ; Returns all word concepts
 ```
 
 ### LinkSignature in Patterns
@@ -583,7 +583,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
 
 ```scheme
 ; Convert PredicateNode to ConceptNode
-(cog-execute!
+(Trigger
   (LinkSignature (Type 'Concept) (Predicate "foo")))
 ; Returns (ConceptNode "foo")
 ```
@@ -592,7 +592,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
 
 ```scheme
 ; Extract node name as StringValue
-(cog-execute!
+(Trigger
   (SetValue (Anchor "result") (Predicate "string-key")
     (LinkSignature (Type 'StringValue) (Concept "hello"))))
 
@@ -608,7 +608,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
   (StringValue "world"))
 
 ; Convert to ConceptNode
-(cog-execute!
+(Trigger
   (LinkSignature (Type 'Concept)
     (ValueOf (Anchor "src") (Predicate "key"))))
 ; Returns (ConceptNode "world")
@@ -623,7 +623,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
     (ValueOf (Anchor "data") (Predicate "list-key"))))
 
 ; Execute to get stream instance
-(define stream-instance (cog-execute! stream-creator))
+(define stream-instance (Trigger stream-creator))
 ```
 
 ### LinkSignature in Pipelines
@@ -649,7 +649,7 @@ Since streams are Values (not Atoms), they cannot exist independently in the Ato
 
     (ValueOf (Anchor "input") (Predicate "strings"))))
 
-(cog-execute! converter)
+(Trigger converter)
 ```
 
 ### LinkSignature vs CollectionOfLink
@@ -712,7 +712,7 @@ These represent end-of-file, closed socket, or finite stream completion.
   (LinkSignature (Type 'FlatStream)
     (ValueOf anchor (Predicate "data"))))
 
-(cog-execute!
+(Trigger
   (SetValue anchor (Predicate "stream") stream-maker))
 
 ; Reference stream
@@ -731,7 +731,7 @@ These represent end-of-file, closed socket, or finite stream completion.
     stream-ref))
 
 ; Drain the stream - processes all items
-(cog-execute! (Drain processor))
+(Trigger (Drain processor))
 ```
 
 ### Draining with Processing Pipeline
@@ -756,7 +756,7 @@ These represent end-of-file, closed socket, or finite stream completion.
   (LinkSignature (Type 'FlatStream)
     (ValueOf data-anchor (Predicate "source"))))
 
-(cog-execute!
+(Trigger
   (SetValue data-anchor (Predicate "stream") stream-maker))
 
 (define stream-ref (ValueOf data-anchor (Predicate "stream")))
@@ -784,7 +784,7 @@ These represent end-of-file, closed socket, or finite stream completion.
     stream-ref))
 
 ; Execute drain
-(cog-execute! (Drain counter))
+(Trigger (Drain counter))
 
 ; Verify counts
 ; A appeared 3 times
@@ -806,7 +806,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
 (define infinite-stream <setup-infinite-source>)
 
 ; Process in parallel
-(cog-execute!
+(Trigger
   (ParallelLink
     (Drain <processor>)))
 
@@ -857,7 +857,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
 ; Create implication with dynamic TV
 (define a-implies-b (Implication (Concept "A") (Concept "B")))
 
-(cog-execute!
+(Trigger
   (SetValue a-implies-b tvkey
     (CollectionOf (Type 'FormulaStream)
       (OrderedLink
@@ -905,7 +905,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
     (ValueOf (Anchor "chat") (Predicate "messages"))))
 
 ; Drain the stream - converts all strings to atoms
-(cog-execute! (Drain message-processor))
+(Trigger (Drain message-processor))
 
 ; Query the words that flowed through
 (define chat-words-query
@@ -913,7 +913,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
     (TypedVariable (Variable "$word") (Type 'Concept))
     (Edge (Predicate "chat-word") (Variable "$word"))))
 
-(cog-execute! chat-words-query)
+(Trigger chat-words-query)
 ; Returns: (Set (Concept "hello") (Concept "how")
 ;               (Concept "are") (Concept "you"))
 ```
@@ -991,7 +991,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
 ; Install dynamic MI on pair
 (define (install-mi THING-A THING-B)
   (define pair (List THING-A THING-B))
-  (cog-execute!
+  (Trigger
     (SetValue pair (Predicate "MI Key")
       (CollectionOf (Type 'FormulaStream)
         (OrderedLink
@@ -1030,7 +1030,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
 **DO** attach to well-known locations:
 ```scheme
 ; ✓ CORRECT - stream attached to anchor
-(cog-execute!
+(Trigger
   (SetValue (Anchor "my-anchor") (Predicate "stream-key")
     (CollectionOf (Type 'FormulaStream)
       (OrderedLink (Plus (Number 1) (Number 2))))))
@@ -1100,16 +1100,16 @@ For streams that never end, use ParallelLink to run drain in background thread:
 **DON'T** manually loop over streams:
 ```scheme
 ; ❌ WRONG - manual iteration is error-prone
-(cog-execute! stream)
-(cog-execute! stream)
-(cog-execute! stream)
+(Trigger stream)
+(Trigger stream)
+(Trigger stream)
 ; ... when does it end?
 ```
 
 **DO** use DrainLink to exhaust streams:
 ```scheme
 ; ✓ CORRECT - automatic exhaustion
-(cog-execute! (Drain processor))
+(Trigger (Drain processor))
 ```
 
 ### 6. Use ParallelLink for Long-Running Streams
@@ -1117,13 +1117,13 @@ For streams that never end, use ParallelLink to run drain in background thread:
 **DON'T** block main thread on infinite streams:
 ```scheme
 ; ❌ WRONG - blocks forever
-(cog-execute! (Drain infinite-stream-processor))
+(Trigger (Drain infinite-stream-processor))
 ```
 
 **DO** run in parallel for long-running processing:
 ```scheme
 ; ✓ CORRECT - background processing
-(cog-execute! (ParallelLink (Drain processor)))
+(Trigger (ParallelLink (Drain processor)))
 ```
 
 ### 7. Understand LinkSignature vs CollectionOfLink
@@ -1154,7 +1154,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
   <formula-lambda>)
 
 ; Attach to target with FormulaStream
-(cog-execute!
+(Trigger
   (SetValue <target-atom> <metric-key>
     (CollectionOf (Type 'FormulaStream)
       (OrderedLink
@@ -1170,7 +1170,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
 (cog-set-value! <anchor> <source-key> <data>)
 
 ; 2. Create stream from source
-(cog-execute!
+(Trigger
   (SetValue <anchor> <stream-key>
     (CollectionOf (Type 'FlatStream) <data>)))
 
@@ -1181,7 +1181,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
     (ValueOf <anchor> <stream-key>)))
 
 ; 4. Drain the stream
-(cog-execute! (Drain processor))
+(Trigger (Drain processor))
 ```
 
 ### Pattern 3: Type Conversion in Stream
@@ -1288,7 +1288,7 @@ For streams that never end, use ParallelLink to run drain in background thread:
 ✅ **CORRECT**:
 ```scheme
 ; Wrap with CollectionOfLink
-(cog-execute!
+(Trigger
   (SetValue atom key
     (CollectionOf (Type 'FormulaStream)
       (OrderedLink (ExecutionOutput ...)))))
@@ -1314,13 +1314,13 @@ For streams that never end, use ParallelLink to run drain in background thread:
 ❌ **WRONG**:
 ```scheme
 ; Blocks forever in main thread
-(cog-execute! (Drain infinite-processor))
+(Trigger (Drain infinite-processor))
 ```
 
 ✅ **CORRECT**:
 ```scheme
 ; Run in background thread
-(cog-execute! (ParallelLink (Drain infinite-processor)))
+(Trigger (ParallelLink (Drain infinite-processor)))
 ```
 
 ## Summary

@@ -169,26 +169,26 @@
 (cog-set-value! (Concept "foo") (Predicate "data") (FloatValue 1 2 3))
 
 ; Retrieve it
-(cog-execute! (ValueOf (Concept "foo") (Predicate "data")))
+(Trigger (ValueOf (Concept "foo") (Predicate "data")))
 ; Returns: (FloatValue 1 2 3)
 ```
 
 **Example - Execution:**
 ```scheme
 ; Store an executable computation
-(cog-execute!
+(Trigger
   (SetValue (Concept "foo") (Predicate "compute")
     (DontExec (Plus (Number 2) (Number 3)))))
 
 ; ValueOf retrieves AND executes
-(cog-execute! (ValueOf (Concept "foo") (Predicate "compute")))
+(Trigger (ValueOf (Concept "foo") (Predicate "compute")))
 ; Returns: (Number 5)  ← Plus was executed
 ```
 
 **Pipeline Pattern - Anchor References:**
 ```scheme
 ; Store filter pipeline at anchor
-(cog-execute!
+(Trigger
   (SetValue (Anchor "pipeline") (Predicate "stage1")
     (DontExec
       (Filter <rule> <source>))))
@@ -197,8 +197,8 @@
 (define stage1-output
   (ValueOf (Anchor "pipeline") (Predicate "stage1")))
 
-; Each cog-execute! on stage1-output runs the filter
-(cog-execute! stage1-output)  ; Processes one stream element
+; Each Trigger on stage1-output runs the filter
+(Trigger stage1-output)  ; Processes one stream element
 ```
 
 **Not for Scheme-side Retrieval:** If you just want to read a Value from Scheme without execution, use `(cog-value atom key)`, NOT ValueOfLink.
@@ -232,7 +232,7 @@
 
 **Example - Simple Storage:**
 ```scheme
-(cog-execute!
+(Trigger
   (SetValue (Concept "foo") (Predicate "data")
     (FloatValue 1 2 3)))
 ; Stores FloatValue, returns (FloatValue 1 2 3)
@@ -240,7 +240,7 @@
 
 **Example - Compute Then Store:**
 ```scheme
-(cog-execute!
+(Trigger
   (SetValue (Concept "result") (Predicate "sum")
     (Plus (Number 5) (Number 3))))
 ; Executes Plus, stores (Number 8), returns (Number 8)
@@ -249,7 +249,7 @@
 **Example - Copy Value:**
 ```scheme
 ; Copy from foo to bar
-(cog-execute!
+(Trigger
   (SetValue (Concept "bar") (Predicate "data")
     (ValueOf (Concept "foo") (Predicate "data"))))
 ; ValueOf retrieves from foo, SetValue stores to bar
@@ -257,7 +257,7 @@
 
 **Example - Procedure Call (4-arg form):**
 ```scheme
-(cog-execute!
+(Trigger
   (SetValue (Concept "result") (Predicate "computed")
     (DefinedProcedure "triangle-numbers")
     (List (Number 5))))
@@ -267,7 +267,7 @@
 **Pipeline Pattern - Store DontExec:**
 ```scheme
 ; Store executable pipeline WITHOUT running it
-(cog-execute!
+(Trigger
   (SetValue (Anchor "pipeline") (Predicate "parser")
     (DontExec
       (Filter
@@ -303,7 +303,7 @@
 
 **Example - Without DontExec (executes immediately):**
 ```scheme
-(cog-execute!
+(Trigger
   (SetValue (Anchor "test") (Predicate "data")
     (Plus (Number 2) (Number 3))))
 ; Plus executes NOW, stores (Number 5)
@@ -312,21 +312,21 @@
 
 **Example - With DontExec (stores computation):**
 ```scheme
-(cog-execute!
+(Trigger
   (SetValue (Anchor "test") (Predicate "compute")
     (DontExec (Plus (Number 2) (Number 3)))))
 ; Plus NOT executed, stored as PlusLink
 ; Value at key is the PlusLink itself
 
 ; Later, ValueOf retrieves and executes
-(cog-execute! (ValueOf (Anchor "test") (Predicate "compute")))
+(Trigger (ValueOf (Anchor "test") (Predicate "compute")))
 ; NOW Plus executes, returns (Number 5)
 ```
 
 **Pipeline Setup Pattern:**
 ```scheme
 ; Setup: store entire filter pipeline
-(cog-execute!
+(Trigger
   (SetValue (Anchor "pipeline") (Predicate "stage1")
     (DontExec
       (Filter
@@ -341,7 +341,7 @@
   (ValueOf (Anchor "pipeline") (Predicate "stage1")))
 
 ; Each call processes one element through pipeline
-(cog-execute! parse-stage)
+(Trigger parse-stage)
 ```
 
 **Not Like QuoteLink:** QuoteLink prevents pattern matching. DontExec prevents execution. Different purposes.
@@ -379,21 +379,21 @@ Named reference point for storing stream sources and pipeline stages. By convent
 
 **1. Node → Node Conversion (Type Transformation)**
 ```scheme
-(cog-execute! (LinkSignature (Type 'ConceptNode) (Word "cat")))
+(Trigger (LinkSignature (Type 'ConceptNode) (Word "cat")))
 ; Extracts "cat" from WordNode, creates (ConceptNode "cat")
 ; Critical operation for Link Grammar semantic extraction
 ```
 
 **2. Node → StringValue (Storage to Stream)**
 ```scheme
-(cog-execute! (LinkSignature (Type 'StringValue) (Concept "hello")))
+(Trigger (LinkSignature (Type 'StringValue) (Concept "hello")))
 ; Creates (StringValue "hello") from ConceptNode
 ; AtomSpace acts as "source" - Nodes flow out as Values
 ```
 
 **3. StringValue → Node (Stream to Storage)**
 ```scheme
-(cog-execute!
+(Trigger
   (LinkSignature (Type 'ConceptNode)
     (ValueOf (Anchor "x") (Predicate "key"))))
 ; If anchor holds (StringValue "hello"), creates (ConceptNode "hello")
@@ -402,14 +402,14 @@ Named reference point for storing stream sources and pipeline stages. By convent
 
 **4. FloatValue → NumberNode (Numeric Conversion)**
 ```scheme
-(cog-execute! (LinkSignature (Type 'NumberNode) (Plus (Number 2) (Number 3))))
+(Trigger (LinkSignature (Type 'NumberNode) (Plus (Number 2) (Number 3))))
 ; Converts FloatValue result to (NumberNode "5")
 ; Use when arithmetic results must become Nodes in graph structure
 ```
 
 **5. Creating LinkValues**
 ```scheme
-(cog-execute!
+(Trigger
   (LinkSignature (Type 'LinkValue)
     (Concept "A")
     (Concept "B")
@@ -475,7 +475,7 @@ Result: Stream data becomes queryable Nodes in AtomSpace.
 - **LinkSignatureLink:** Preserves argument structure, best for Value types needing multiple arguments
 - **CollectionOfLink:** Unwraps arguments before construction, best for wrapping executables into streams
 
-**Execution Required:** LinkSignatureLink must be executed via `cog-execute!` to perform the conversion. When used in patterns like FilterLink, execution happens automatically during pattern matching.
+**Execution Required:** LinkSignatureLink must be executed via `Trigger` to perform the conversion. When used in patterns like FilterLink, execution happens automatically during pattern matching.
 
 ### CollectionOfLink
 Converts between Atoms and Values, primarily LinkValue ↔ SetLink/ListLink. Without type argument, defaults to SetLink. Can specify: `(CollectionOf (Type 'ListLink) linkvalue-source)`. Takes a stream of individual Values/Atoms and bundles them into a Link. Used when FilterLink or other stream operations produce LinkValue but you need actual Atoms in AtomSpace. Type-preserving: respects ordered vs unordered. Inverse operation: can convert SetLink to LinkValue for stream processing. Essential bridge between Value-based pipelines and Atom-based queries.
@@ -487,7 +487,7 @@ Returns length of a Value or collection as FloatValue `[n]`. Works on: FloatValu
 Retrieves the incoming set of an Atom as a LinkValue containing all Links that reference it. Non-executable - meant for use with FilterLink or other stream processors. The incoming set is unordered, so LinkValue order is arbitrary. Returns empty LinkValue if no incoming Links. Essential for graph traversal: find all relationships involving an entity. Example: `(IncomingOf (Concept "cat"))` returns LinkValue of all Links containing that Concept. Use with FilterLink to process each incoming Link.
 
 ### TypeOfLink
-Returns the type of an Atom as a TypeNode. Example: `(cog-execute! (TypeOf (Concept "foo")))` → `(Type "ConceptNode")`. Executable. Used in meta-programming and dynamic dispatch: examine atom type to choose processing path. Returns the actual runtime type, not base type. Works with all Atoms. Simple but essential for type introspection.
+Returns the type of an Atom as a TypeNode. Example: `(Trigger (TypeOf (Concept "foo")))` → `(Type "ConceptNode")`. Executable. Used in meta-programming and dynamic dispatch: examine atom type to choose processing path. Returns the actual runtime type, not base type. Works with all Atoms. Simple but essential for type introspection.
 
 ### KeysOfLink
 Returns all keys attached to an Atom as a LinkValue. These are the keys in the Atom's key-value database. Non-executable - use with FilterLink to process. Returns LinkValue of Atoms (usually PredicateNodes). Empty LinkValue if no keys. Essential for discovering what data is attached to an Atom. Use case: find all properties of an entity. Order is arbitrary.
@@ -565,7 +565,7 @@ LinkValue [
 (define flattened
   (LinkSignature (Type 'LinkValue)
     (Promise (Type 'FlatStream) parse-result)))
-; Now each cog-execute! on flattened returns ONE linkage: [words, bonds]
+; Now each Trigger on flattened returns ONE linkage: [words, bonds]
 ```
 
 **Extracting Bonds from Linkage:**
@@ -619,7 +619,7 @@ LinkValue [
 
 **Why Two Elements (words + bonds)?** Parser may tokenize differently or choose different word forms (spell-checker). Word-list shows actual words used in THIS parse. Usually identical across linkages but not guaranteed.
 
-**Executable:** Use `cog-execute!` or MCP `execute` tool
+**Executable:** Use `Trigger` or MCP `execute` tool
 
 **See:** `/sensory/examples/parse-pipeline.scm` (complete pipeline), `/diary/lg_learning/complete_svo_extraction.scm` (extraction patterns)
 
@@ -661,7 +661,7 @@ Specialized parsers returning disjuncts or Section atoms instead of bonds. Disju
 
 **Example:**
 ```scheme
-(cog-execute! (LgConnExpand (Bond "Ss*s")))
+(Trigger (LgConnExpand (Bond "Ss*s")))
 ; Returns: (Connector (LgConnType "S") (LgSubType "s") ...)
 ; Shows: S = subject bond, first lower-case s = singular property
 ```
@@ -696,7 +696,7 @@ You can match by PRIMARY type after expansion:
 
 **Returns:** Connector structure showing decomposed bond components. Exact structure depends on bond complexity.
 
-**Executable:** Yes, via cog-execute!
+**Executable:** Yes, via Trigger
 
 ---
 
@@ -705,7 +705,7 @@ You can match by PRIMARY type after expansion:
 **Purpose:** Core pattern matching constructs for querying AtomSpace
 
 ### MeetLink
-Finds all Atoms matching a pattern, returns results as QueueValue (thread-safe stream). Format: `(Meet vardecls pattern)`. Vardecls can be Variable, TypedVariable, or VariableList. Pattern uses variables as placeholders. Returns QueueValue containing all groundings: each element is the variable binding (single Variable) or ListLink (multiple variables). Non-polluting: doesn't create Atoms in AtomSpace for results. Execute with cog-execute!. For patterns only - no rewriting. See `/pattern-matcher/examples/` for extensive examples.
+Finds all Atoms matching a pattern, returns results as QueueValue (thread-safe stream). Format: `(Meet vardecls pattern)`. Vardecls can be Variable, TypedVariable, or VariableList. Pattern uses variables as placeholders. Returns QueueValue containing all groundings: each element is the variable binding (single Variable) or ListLink (multiple variables). Non-polluting: doesn't create Atoms in AtomSpace for results. Execute with Trigger. For patterns only - no rewriting. See `/pattern-matcher/examples/` for extensive examples.
 
 ### QueryLink
 Pattern matching WITH rewriting: finds matches and creates new Atoms based on template. Format: `(Query vardecls pattern rewrite)`. Like MeetLink but adds third argument: rewrite template. For each match, substitutes variables in rewrite template with matched values. Returns QueueValue of rewritten Atoms. Mathematically: MeetLink + PutLink. Use when you want to transform matches, not just find them. Core tool for inference and rule application.
@@ -1195,7 +1195,7 @@ Like DefinedSchema but for procedures (side effects OK). Named via DefineLink. R
 Named boolean predicate in pure Atomese. Defined via DefineLink with boolean-returning body. Used in pattern matching like GroundedPredicate but implemented in Atomese. Reusable logical conditions.
 
 ### ExecutionOutputLink
-Executes Schema/Procedure with arguments. Format: `(ExecutionOutput schema (List arg1 arg2 ...))`. Schema can be Grounded* or Defined*. Passes arguments to function/procedure, returns result. Execute with cog-execute!. Essential for actually calling external code or defined functions. Arguments available to external function as list of Atoms.
+Executes Schema/Procedure with arguments. Format: `(ExecutionOutput schema (List arg1 arg2 ...))`. Schema can be Grounded* or Defined*. Passes arguments to function/procedure, returns result. Execute with Trigger. Essential for actually calling external code or defined functions. Arguments available to external function as list of Atoms.
 
 ### SchemaNode, ProcedureNode
 Base classes. SchemaNode for functions, ProcedureNode for procedures. Not usually instantiated directly - use Grounded* or Defined* subtypes. Provide type hierarchy for callable entities.
@@ -1601,7 +1601,7 @@ Foreign AST representations. Stores external language syntax trees in AtomSpace.
 
 ## Notes
 
-- **All executable Atoms** use `cog-execute!` in Scheme, MCP `execute` tool in this interface
+- **All executable Atoms** use `Trigger` in Scheme, MCP `execute` tool in this interface
 - **Stream types:** QueueValue (FIFO, thread-safe), LinkValue (vector), SetLink (unordered Atoms)
 - **FlatStream** unbundles batched results via `(Promise (Type 'FlatStream) source)`
 - **Glob** currently matches 1+, not 0+ (may change - check latest docs)
