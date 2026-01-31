@@ -291,6 +291,14 @@ void McpEval::eval_expr(const std::string &expr)
 			streams_resource["mimeType"] = "text/markdown";
 			resources.append(streams_resource);
 
+			// Add Using Storage guide
+			Json::Value storage_resource;
+			storage_resource["uri"] = "atomspace://docs/using-storage";
+			storage_resource["name"] = "Using StorageNodes";
+			storage_resource["description"] = "Guide for using StorageNodes to persist Atoms to databases and remote systems";
+			storage_resource["mimeType"] = "text/markdown";
+			resources.append(storage_resource);
+
 			response["result"]["resources"] = resources;
 		} else if (method == "resources/read") {
 			std::string uri = params.isMember("uri") ? params["uri"].asString() : "";
@@ -320,6 +328,8 @@ void McpEval::eval_expr(const std::string &expr)
 				publish_resource(doc_base, uri, "AdvancedPatternMatching-Resource.md", response);
 			} else if (uri == "atomspace://docs/streams") {
 				publish_resource(doc_base, uri, "Streams-Resource.md", response);
+			} else if (uri == "atomspace://docs/using-storage") {
+				publish_resource(doc_base, uri, "UsingStorage.md", response);
 			} else {
 				response["error"]["code"] = -32602;
 				response["error"]["message"] = "Resource not found: " + uri;

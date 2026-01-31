@@ -10,6 +10,7 @@ INSTALL(FILES
 	DesigningStructures-Resource.md
 	QueryAtom-Resource.md
 	Streams-Resource.md
+	UsingStorage.md
 	WorkingWithValues-Resource.md
 	PatternMatching-Resource.md
 	DESTINATION share/cogserver/mcp
