@@ -22,6 +22,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <memory>
 #include <json/json.h>
 
 #include "McpPlugEcho.h"
