@@ -56,6 +56,9 @@ private:
     // Read _content_length bytes
     std::string get_http_body(asio::streambuf&);
 
+    // Read a single size-prefixed binary 9P2000 message.
+    std::string get_9p_message(asio::streambuf&);
+
     // Send an asio buffer that has data in it.
     void Send(const asio::const_buffer&);
 
@@ -75,6 +78,9 @@ protected:
     bool _is_http_socket;
     bool _got_websock_header;
     bool _is_mcp_socket;
+
+    // 9P2000 sockets carry length-prefixed binary messages.
+    bool _is_9p_socket;
 
     // KeepAlive connections will repeatedly send HTTP headers.
     bool _keep_alive;
@@ -113,6 +119,16 @@ public:
     virtual ~ServerSocket();
     void act_as_http_socket(void) { _is_http_socket = true; }
     void act_as_mcp(void) { _is_mcp_socket = true; }
+
+    /**
+     * Switch this socket into 9P2000 mode. All 9P messages are binary
+     * and length-prefixed: `size[4] type[1] tag[2] ...` where size is
+     * a little-endian byte count that includes the four size bytes
+     * themselves. In this mode, OnLine() is called once per complete
+     * message, with the raw message bytes (including the size prefix)
+     * passed through untouched; no line-discipline processing is done.
+     */
+    void act_as_9p(void) { _is_9p_socket = true; }
 
     // Access to socket manager for derived classes
     SocketManager* get_socket_manager() { return _socket_manager; }

@@ -11,6 +11,7 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <time.h>
+#include <cstdint>
 #include <mutex>
 #include <set>
 
@@ -59,7 +60,8 @@ std::string ServerSocket::connection_stats(void)
         sbuff, _tid, _status, _line_count, abuff,
         _do_frame_io?'W':
             (_is_http_socket?'H':
-                (_is_mcp_socket?'M':'T')));
+                (_is_mcp_socket?'M':
+                    (_is_9p_socket?'9':'T'))));
 
     return bf;
 }
@@ -83,6 +85,7 @@ ServerSocket::ServerSocket(SocketManager* mgr) :
     _is_http_socket(false),
     _got_websock_header(false),
     _is_mcp_socket(false),
+    _is_9p_socket(false),
     _keep_alive(false),
     _in_barrier(false),
     _content_length(0),
@@ -302,6 +305,51 @@ std::string ServerSocket::get_http_body(asio::streambuf& b)
     return body;
 }
 
+// Maximum allowed 9P message size. The actual working message size
+// is negotiated by Tversion/Rversion in some higher layer; this is
+// only a sanity check, protecting against malformed junk arriving
+// on the socket.
+#define MAX_9P_MSIZE (16*1024*1024)
+
+/// Read a single 9P2000 message from the socket. All 9P messages
+/// are binary, and are length-prefixed: `size[4] type[1] tag[2] ...`
+/// where size is a little-endian byte count that includes the four
+/// size bytes themselves. The complete message, including the size
+/// prefix, is returned, so that upper layers can decode it.
+std::string ServerSocket::get_9p_message(asio::streambuf& b)
+{
+    if (b.size() < 4)
+        asio::read(*_socket, b,
+            asio::transfer_at_least(4 - b.size()));
+
+    std::istream is(&b);
+    std::string msg;
+    msg.resize(4);
+    is.read(&msg[0], 4);
+
+    uint32_t msize =
+        ((uint32_t)(unsigned char)msg[0]) |
+        ((uint32_t)(unsigned char)msg[1] << 8) |
+        ((uint32_t)(unsigned char)msg[2] << 16) |
+        ((uint32_t)(unsigned char)msg[3] << 24);
+
+    // The smallest valid 9P message is size[4] type[1] tag[2].
+    if (msize < 7 or MAX_9P_MSIZE < msize)
+    {
+        logger().warn("ServerSocket: insane 9P message size %u", msize);
+        throw SilentException();
+    }
+
+    size_t rest = msize - 4;
+    if (b.size() < rest)
+        asio::read(*_socket, b,
+            asio::transfer_at_least(rest - b.size()));
+
+    msg.resize(msize);
+    is.read(&msg[4], rest);
+    return msg;
+}
+
 // ==================================================================
 
 // This method is called in a new thread, when a new network connection
@@ -323,10 +371,24 @@ void ServerSocket::handle_connection(void)
         {
             _status = IWAIT;
             std::string line;
-            if (not _do_frame_io)
+            if (_is_9p_socket)
+                line = get_9p_message(b);
+            else if (not _do_frame_io)
                 line = get_telnet_line(b);
             else
                 line = get_websocket_line();
+
+            // 9P messages are framed, complete and binary. Hand them
+            // off as-is, bypassing all text-based line discipline.
+            if (_is_9p_socket)
+            {
+                _last_activity = time(nullptr);
+                _line_count++;
+                total_line_count++;
+                _status = QUING;
+                OnLine(line);
+                continue;
+            }
 
             // Some local Linux D-Bus daemon desperately wants to
             // talk to us, sending us binary garbage of some kind.
@@ -412,8 +474,9 @@ void ServerSocket::handle_connection(void)
     _last_activity = time(nullptr);
     _status = CLOSE;
 
-    // Perform cleanup at end, if in telnet mode.
-    if (not _is_http_socket)
+    // Perform cleanup at end, if in telnet mode. (9P data is binary
+    // and framed; any leftover partial frame cannot be processed.)
+    if (not _is_http_socket and not _is_9p_socket)
     {
         // If the data sent to us is not new-line terminated, then
         // there may still be some bytes sitting in the buffer. Get
