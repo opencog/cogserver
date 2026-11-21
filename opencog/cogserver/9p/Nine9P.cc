@@ -131,7 +131,10 @@ std::string nine_encode_stat(const NineStat& st)
 	putstr(body, st.muid);
 
 	// The leading size[2] records the length of everything that
-	// follows it (not including itself), per stat(5).
+	// follows it (not including itself), per stat(5). The body must
+	// fit in that 16-bit field, else the prefix would silently wrap.
+	if (body.size() > 0xffff)
+		throw std::runtime_error("9P: stat entry exceeds 65535 bytes");
 	std::string out;
 	put16(out, (uint16_t) body.size());
 	out.append(body);
@@ -142,8 +145,12 @@ NineStat nine_decode_stat(const std::string& blob)
 {
 	size_t p = 0;
 	uint16_t size = get16(blob, p);
-	if (p + size > blob.size())
-		throw std::runtime_error("9P: truncated stat entry");
+
+	// The blob must be exactly one stat entry: the declared size[2]
+	// bounds every field, so a lying prefix can neither truncate the
+	// entry nor borrow trailing bytes beyond its declared end.
+	if (p + size != blob.size())
+		throw std::runtime_error("9P: stat entry size mismatch");
 
 	NineStat st;
 	st.type = get16(blob, p);
@@ -157,6 +164,10 @@ NineStat nine_decode_stat(const std::string& blob)
 	st.uid = getstr(blob, p);
 	st.gid = getstr(blob, p);
 	st.muid = getstr(blob, p);
+
+	// Every declared byte must belong to a field just parsed.
+	if (p != blob.size())
+		throw std::runtime_error("9P: stat entry has trailing bytes");
 	return st;
 }
 
@@ -212,12 +223,16 @@ std::string nine_encode(const NineMsg& m)
 		case Twalk:
 			put32(body, m.fid);
 			put32(body, m.newfid);
+			if (m.wname.size() > NINE_MAXWELEM)
+				throw std::runtime_error("9P: Twalk exceeds 16 names");
 			put16(body, (uint16_t) m.wname.size());
 			for (const auto& n : m.wname)
 				putstr(body, n);
 			break;
 
 		case Rwalk:
+			if (m.wqid.size() > NINE_MAXWELEM)
+				throw std::runtime_error("9P: Rwalk exceeds 16 qids");
 			put16(body, (uint16_t) m.wqid.size());
 			for (const auto& q : m.wqid)
 				putqid(body, q);
@@ -364,6 +379,8 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 			m.fid = get32(frame, p);
 			m.newfid = get32(frame, p);
 			uint16_t n = get16(frame, p);
+			if (n > NINE_MAXWELEM)
+				throw std::runtime_error("9P: Twalk exceeds 16 names");
 			for (uint16_t i = 0; i < n; i++)
 				m.wname.push_back(getstr(frame, p));
 			break;
@@ -372,6 +389,8 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 		case Rwalk:
 		{
 			uint16_t n = get16(frame, p);
+			if (n > NINE_MAXWELEM)
+				throw std::runtime_error("9P: Rwalk exceeds 16 qids");
 			for (uint16_t i = 0; i < n; i++)
 				m.wqid.push_back(getqid(frame, p));
 			break;
@@ -454,6 +473,13 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 		default:
 			throw std::runtime_error("9P: unknown message type");
 	}
+
+	// Every byte of the declared frame must have been parsed; a
+	// frame with unclaimed trailing bytes is malformed, not a
+	// carrier for parts of the next message (that one starts at
+	// offset `size` in the caller's buffer, untouched by us).
+	if (p != size)
+		throw std::runtime_error("9P: message has trailing bytes");
 
 	return size;
 }

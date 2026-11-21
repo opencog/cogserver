@@ -382,4 +382,80 @@ public:
 		TS_ASSERT_THROWS(nine_decode_stat(blob.substr(0, blob.size() - 2)),
 		                 const std::runtime_error&);
 	}
+
+	// ----------------------------------------------------------
+	// Protocol limits: 16-bit stat sizes, MAXWELEM, exact framing.
+	void test_protocol_limits(void)
+	{
+		NineMsg out;
+
+		// A stat body larger than 65535 bytes cannot be encoded;
+		// narrowing its length would corrupt directory framing.
+		NineStat big;
+		big.name.assign(65535, 'x');
+		TS_ASSERT_THROWS(nine_encode_stat(big), const std::runtime_error&);
+
+		// A stat blob whose size[2] disagrees with its actual length
+		// is rejected: zeroed prefix, or trailing garbage appended.
+		NineStat st;
+		st.name = "x";
+		std::string blob = nine_encode_stat(st);
+		std::string zeroed = blob;
+		zeroed[0] = 0; zeroed[1] = 0;
+		TS_ASSERT_THROWS(nine_decode_stat(zeroed), const std::runtime_error&);
+		TS_ASSERT_THROWS(nine_decode_stat(blob + '\0'),
+		                 const std::runtime_error&);
+
+		// Walks carry at most 16 elements (walk(5)). 16 is fine...
+		NineMsg w;
+		w.type = Twalk;
+		w.tag = 20;
+		w.wname.assign(NINE_MAXWELEM, "a");
+		NineMsg wout = round_trip(w);
+		TS_ASSERT_EQUALS(wout.wname.size(), NINE_MAXWELEM);
+
+		// ... but 17 must be rejected by the encoder...
+		w.wname.push_back("a");
+		TS_ASSERT_THROWS(nine_encode(w), const std::runtime_error&);
+		NineMsg rw;
+		rw.type = Rwalk;
+		rw.tag = 20;
+		rw.wqid.assign(NINE_MAXWELEM + 1, NineQid());
+		TS_ASSERT_THROWS(nine_encode(rw), const std::runtime_error&);
+
+		// ... and by the decoder: hand-build a Twalk with 17 empty
+		// names, so only the element-count check can fire.
+		std::string body;
+		auto p16 = [&body](uint16_t v) {
+			body.push_back((char) (v & 0xff));
+			body.push_back((char) (v >> 8));
+		};
+		auto p32 = [&body](uint32_t v) {
+			for (int i = 0; i < 4; i++)
+				body.push_back((char) ((v >> (8 * i)) & 0xff));
+		};
+		body.push_back((char) Twalk);
+		p16(21);            // tag
+		p32(1); p32(2);     // fid, newfid
+		p16(17);            // nwname: over the limit
+		for (int i = 0; i < 17; i++)
+			p16(0);         // empty names
+		std::string wire;
+		uint32_t size = (uint32_t) (4 + body.size());
+		for (int i = 0; i < 4; i++)
+			wire.push_back((char) ((size >> (8 * i)) & 0xff));
+		wire += body;
+		TS_ASSERT_THROWS(nine_decode(wire, out), const std::runtime_error&);
+
+		// A frame whose declared size exceeds its parsed content is
+		// malformed: an Rflush padded with one unclaimed byte.
+		NineMsg f;
+		f.type = Rflush;
+		f.tag = 22;
+		std::string padded = nine_encode(f);
+		padded.push_back('\0');
+		padded[0] = (char) padded.size();  // still < 256 bytes
+		TS_ASSERT_THROWS(nine_decode(padded, out),
+		                 const std::runtime_error&);
+	}
 };

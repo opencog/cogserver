@@ -69,6 +69,9 @@ static const uint32_t NINE_DMDIR = 0x80000000u;
 
 static const uint32_t NINE_NOFID = 0xFFFFFFFFu;
 static const uint16_t NINE_NOTAG = 0xFFFFu;
+
+/// Maximum number of wname/wqid elements in Twalk/Rwalk (walk(5)).
+static const size_t NINE_MAXWELEM = 16;
 static const uint32_t NINE_DEFAULT_MSIZE = 8192;
 static const char* const NINE_VERSION = "9P2000";
 
