@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <ctime>
 #include <string>
 #include <thread>
 
@@ -35,9 +36,24 @@ using namespace opencog;
 class NineEchoSocket : public ServerSocket
 {
 public:
+	static NineEchoSocket* last_instance;
+
 	NineEchoSocket(SocketManager* mgr) : ServerSocket(mgr)
 	{
 		act_as_9p();
+		last_instance = this;
+	}
+	~NineEchoSocket()
+	{
+		if (last_instance == this) last_instance = nullptr;
+	}
+
+	// Backdate the activity clock so that the socket looks idle
+	// to SocketManager::half_ping().
+	static void make_last_idle(void)
+	{
+		if (last_instance)
+			last_instance->_last_activity = time(nullptr) - 100;
 	}
 protected:
 	void OnConnection(void) {}
@@ -48,6 +64,8 @@ protected:
 		Send(reply);
 	}
 };
+
+NineEchoSocket* NineEchoSocket::last_instance = nullptr;
 
 #define TEST_PORT 16909
 
@@ -251,6 +269,46 @@ public:
 		std::string reply = recv_exact(fd, msg.size());
 		TS_ASSERT_EQUALS(reply.size(), msg.size());
 		TS_ASSERT_EQUALS(reply, expected_reply(msg));
+
+		::close(fd);
+		logger().info("END TEST: %s", __FUNCTION__);
+	}
+
+	// ----------------------------------------------------------
+	// The idle-connection keepalive probe (SocketManager::half_ping,
+	// triggered by the statistics display and by connection-limit
+	// enforcement) must not inject any bytes into a 9P stream; an
+	// unframed byte would corrupt the length-prefixed protocol.
+	void test_idle_probe_not_sent(void)
+	{
+		logger().info("BEGIN TEST: %s", __FUNCTION__);
+
+		int fd = connect_to_server();
+
+		// Exchange one message so the connection is established
+		// and the handler goes back to waiting for input.
+		std::string m1 = mk_msg(100 /* Tversion-ish */, 3, "hello");
+		TS_ASSERT(send_all(fd, m1.data(), m1.size()));
+		std::string r1 = recv_exact(fd, m1.size());
+		TS_ASSERT_EQUALS(r1, expected_reply(m1));
+
+		// Let the handler thread re-enter the input-wait state,
+		// then backdate its activity clock so that it looks idle.
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		NineEchoSocket::make_last_idle();
+
+		// Displaying statistics probes all idle connections.
+		_mgr->display_stats_full("probe test", time(nullptr));
+
+		// Give any (erroneous) probe byte time to arrive.
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		// The next reply must start exactly at the frame boundary;
+		// a stray probe byte would shift it and fail the compare.
+		std::string m2 = mk_msg(102 /* Tauth-ish */, 4, "after probe");
+		TS_ASSERT(send_all(fd, m2.data(), m2.size()));
+		std::string r2 = recv_exact(fd, m2.size());
+		TS_ASSERT_EQUALS(r2, expected_reply(m2));
 
 		::close(fd);
 		logger().info("END TEST: %s", __FUNCTION__);
