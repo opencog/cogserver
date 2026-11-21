@@ -1,0 +1,316 @@
+/*
+ * tests/network/NineFramingUTest.cxxtest
+ *
+ * Test the 9P2000 binary message framing provided by
+ * ServerSocket::act_as_9p(). This only tests the transport-level
+ * framing (message reassembly and binary-safe echo); it does not
+ * test any 9P protocol semantics, which live in higher layers.
+ *
+ * Copyright (C) 2026 OpenCog Foundation
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cxxtest/TestSuite.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+#include <chrono>
+#include <cstring>
+#include <ctime>
+#include <string>
+#include <thread>
+
+#include <opencog/network/NetworkServer.h>
+#include <opencog/network/ServerSocket.h>
+#include <opencog/network/SocketManager.h>
+#include <opencog/util/Logger.h>
+
+using namespace opencog;
+
+// A minimal 9P-mode socket that echoes every message back,
+// with the type byte incremented (the 9P T-to-R convention).
+class NineEchoSocket : public ServerSocket
+{
+public:
+	static NineEchoSocket* last_instance;
+
+	NineEchoSocket(SocketManager* mgr) : ServerSocket(mgr)
+	{
+		act_as_9p();
+		last_instance = this;
+	}
+	~NineEchoSocket()
+	{
+		if (last_instance == this) last_instance = nullptr;
+	}
+
+	// Backdate the activity clock so that the socket looks idle
+	// to SocketManager::half_ping().
+	static void make_last_idle(void)
+	{
+		if (last_instance)
+			last_instance->_last_activity = time(nullptr) - 100;
+	}
+protected:
+	void OnConnection(void) {}
+	void OnLine(const std::string& msg)
+	{
+		std::string reply(msg);
+		reply[4] = (char) (reply[4] + 1);
+		Send(reply);
+	}
+};
+
+NineEchoSocket* NineEchoSocket::last_instance = nullptr;
+
+#define TEST_PORT 16909
+
+class NineFramingUTest : public CxxTest::TestSuite
+{
+private:
+	SocketManager* _mgr;
+	NetworkServer* _server;
+
+	// Build a 9P-style message: size[4] type[1] tag[2] payload.
+	static std::string mk_msg(uint8_t type, uint16_t tag,
+	                          const std::string& payload)
+	{
+		uint32_t size = 7 + payload.size();
+		std::string m;
+		m.push_back((char) (size & 0xff));
+		m.push_back((char) ((size >> 8) & 0xff));
+		m.push_back((char) ((size >> 16) & 0xff));
+		m.push_back((char) ((size >> 24) & 0xff));
+		m.push_back((char) type);
+		m.push_back((char) (tag & 0xff));
+		m.push_back((char) ((tag >> 8) & 0xff));
+		m += payload;
+		return m;
+	}
+
+	int connect_to_server(void)
+	{
+		int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+		TS_ASSERT_LESS_THAN_EQUALS(0, fd);
+
+		// Don't hang the test suite if the server fails to reply.
+		struct timeval tv;
+		tv.tv_sec = 10;
+		tv.tv_usec = 0;
+		::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+		struct sockaddr_in addr;
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(TEST_PORT);
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+		int rc = ::connect(fd, (struct sockaddr*) &addr, sizeof(addr));
+		TS_ASSERT_EQUALS(0, rc);
+		return fd;
+	}
+
+	static bool send_all(int fd, const char* data, size_t len)
+	{
+		size_t sent = 0;
+		while (sent < len)
+		{
+			ssize_t n = ::send(fd, data + sent, len - sent, 0);
+			if (n <= 0) return false;
+			sent += n;
+		}
+		return true;
+	}
+
+	static std::string recv_exact(int fd, size_t len)
+	{
+		std::string buf;
+		buf.resize(len);
+		size_t got = 0;
+		while (got < len)
+		{
+			ssize_t n = ::recv(fd, &buf[got], len - got, 0);
+			if (n <= 0) return buf.substr(0, got);
+			got += n;
+		}
+		return buf;
+	}
+
+	// The expected echo: same message, type incremented.
+	static std::string expected_reply(const std::string& msg)
+	{
+		std::string rep(msg);
+		rep[4] = (char) (rep[4] + 1);
+		return rep;
+	}
+
+public:
+	NineFramingUTest(void)
+	{
+		logger().set_level(Logger::INFO);
+		logger().set_print_to_stdout_flag(true);
+
+		_mgr = new SocketManager();
+		_server = new NetworkServer(TEST_PORT, "9P Framing Test Server", _mgr);
+		_server->run([](SocketManager* mgr)->ServerSocket*
+			{ return new NineEchoSocket(mgr); });
+
+		// Give the listener thread time to start.
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	}
+
+	~NineFramingUTest()
+	{
+		delete _server;
+		delete _mgr;
+	}
+
+	void setUp(void) {}
+	void tearDown(void) {}
+
+	// ----------------------------------------------------------
+	// A single whole message is echoed back intact.
+	void test_single_message(void)
+	{
+		logger().info("BEGIN TEST: %s", __FUNCTION__);
+
+		int fd = connect_to_server();
+
+		// A Tversion-like message: msize[4] version[s]
+		std::string payload;
+		uint32_t msize = 8192;
+		payload.push_back((char) (msize & 0xff));
+		payload.push_back((char) ((msize >> 8) & 0xff));
+		payload.push_back((char) ((msize >> 16) & 0xff));
+		payload.push_back((char) ((msize >> 24) & 0xff));
+		std::string ver = "9P2000";
+		payload.push_back((char) ver.size());
+		payload.push_back(0);
+		payload += ver;
+
+		std::string msg = mk_msg(100 /* Tversion */, 0xffff, payload);
+		TS_ASSERT(send_all(fd, msg.data(), msg.size()));
+
+		std::string reply = recv_exact(fd, msg.size());
+		TS_ASSERT_EQUALS(reply, expected_reply(msg));
+
+		::close(fd);
+		logger().info("END TEST: %s", __FUNCTION__);
+	}
+
+	// ----------------------------------------------------------
+	// A message dribbled in one byte at a time is reassembled.
+	void test_split_delivery(void)
+	{
+		logger().info("BEGIN TEST: %s", __FUNCTION__);
+
+		int fd = connect_to_server();
+
+		std::string msg = mk_msg(110 /* Twalk-ish */, 42, "some walk data");
+		for (size_t i = 0; i < msg.size(); i++)
+		{
+			TS_ASSERT(send_all(fd, msg.data() + i, 1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(2));
+		}
+
+		std::string reply = recv_exact(fd, msg.size());
+		TS_ASSERT_EQUALS(reply, expected_reply(msg));
+
+		::close(fd);
+		logger().info("END TEST: %s", __FUNCTION__);
+	}
+
+	// ----------------------------------------------------------
+	// Two messages coalesced into a single write are both handled.
+	void test_coalesced_messages(void)
+	{
+		logger().info("BEGIN TEST: %s", __FUNCTION__);
+
+		int fd = connect_to_server();
+
+		std::string m1 = mk_msg(112 /* Topen-ish */, 1, "first");
+		std::string m2 = mk_msg(116 /* Tread-ish */, 2, "the second one");
+		std::string both = m1 + m2;
+		TS_ASSERT(send_all(fd, both.data(), both.size()));
+
+		std::string r1 = recv_exact(fd, m1.size());
+		std::string r2 = recv_exact(fd, m2.size());
+		TS_ASSERT_EQUALS(r1, expected_reply(m1));
+		TS_ASSERT_EQUALS(r2, expected_reply(m2));
+
+		::close(fd);
+		logger().info("END TEST: %s", __FUNCTION__);
+	}
+
+	// ----------------------------------------------------------
+	// Binary payloads pass through untouched: embedded NULs,
+	// newlines, carriage returns, ctrl-D, telnet IAC, and the
+	// 0x01 0x21 pattern that the telnet path discards as D-Bus
+	// garbage must all survive the round trip.
+	void test_binary_payload(void)
+	{
+		logger().info("BEGIN TEST: %s", __FUNCTION__);
+
+		int fd = connect_to_server();
+
+		const char raw[] = {
+			0x01, 0x21, '\0', '\n', '\r', 0x04,
+			(char) 0xff, (char) 0xf0, 'e', 'n', 'd'
+		};
+		std::string payload(raw, sizeof(raw));
+
+		std::string msg = mk_msg(118 /* Twrite-ish */, 7, payload);
+		TS_ASSERT(send_all(fd, msg.data(), msg.size()));
+
+		std::string reply = recv_exact(fd, msg.size());
+		TS_ASSERT_EQUALS(reply.size(), msg.size());
+		TS_ASSERT_EQUALS(reply, expected_reply(msg));
+
+		::close(fd);
+		logger().info("END TEST: %s", __FUNCTION__);
+	}
+
+	// ----------------------------------------------------------
+	// The idle-connection keepalive probe (SocketManager::half_ping,
+	// triggered by the statistics display and by connection-limit
+	// enforcement) must not inject any bytes into a 9P stream; an
+	// unframed byte would corrupt the length-prefixed protocol.
+	void test_idle_probe_not_sent(void)
+	{
+		logger().info("BEGIN TEST: %s", __FUNCTION__);
+
+		int fd = connect_to_server();
+
+		// Exchange one message so the connection is established
+		// and the handler goes back to waiting for input.
+		std::string m1 = mk_msg(100 /* Tversion-ish */, 3, "hello");
+		TS_ASSERT(send_all(fd, m1.data(), m1.size()));
+		std::string r1 = recv_exact(fd, m1.size());
+		TS_ASSERT_EQUALS(r1, expected_reply(m1));
+
+		// Let the handler thread re-enter the input-wait state,
+		// then backdate its activity clock so that it looks idle.
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		NineEchoSocket::make_last_idle();
+
+		// Displaying statistics probes all idle connections.
+		_mgr->display_stats_full("probe test", time(nullptr));
+
+		// Give any (erroneous) probe byte time to arrive.
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		// The next reply must start exactly at the frame boundary;
+		// a stray probe byte would shift it and fail the compare.
+		std::string m2 = mk_msg(102 /* Tauth-ish */, 4, "after probe");
+		TS_ASSERT(send_all(fd, m2.data(), m2.size()));
+		std::string r2 = recv_exact(fd, m2.size());
+		TS_ASSERT_EQUALS(r2, expected_reply(m2));
+
+		::close(fd);
+		logger().info("END TEST: %s", __FUNCTION__);
+	}
+};

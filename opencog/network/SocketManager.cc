@@ -250,8 +250,12 @@ void SocketManager::half_ping(void)
 		{
 			if (ss->_do_frame_io)
 				ss->send_websocket_pong();
-			else
+			else if (not ss->_is_9p_socket)
 				ss->Send(buf);
+			// Don't ping 9P sockets at all. 9P servers may never
+			// send unsolicited bytes: anything other than an
+			// R-message reply would corrupt the length-prefixed
+			// message stream and desynchronize the client.
 		}
 	}
 }

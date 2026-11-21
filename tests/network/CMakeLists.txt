@@ -1,0 +1,6 @@
+LINK_LIBRARIES(
+	network
+	${COGUTIL_LIBRARIES}
+)
+
+ADD_CXXTEST(NineFramingUTest)
