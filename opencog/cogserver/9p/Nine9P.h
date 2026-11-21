@@ -58,10 +58,12 @@ enum NineQidType : uint8_t
 /// Open/create mode bits (open(5)), subset actually used here.
 enum NineOpenMode : uint8_t
 {
-	OREAD  = 0,
-	OWRITE = 1,
-	ORDWR  = 2,
-	OTRUNC = 0x10,
+	OREAD   = 0,
+	OWRITE  = 1,
+	ORDWR   = 2,
+	OEXEC   = 3,
+	OTRUNC  = 0x10,
+	ORCLOSE = 0x40,
 };
 
 /// Directory permission bit, as used in Stat.mode and Tcreate.perm.
@@ -73,6 +75,10 @@ static const uint16_t NINE_NOTAG = 0xFFFFu;
 /// Maximum number of wname/wqid elements in Twalk/Rwalk (walk(5)).
 static const size_t NINE_MAXWELEM = 16;
 static const uint32_t NINE_DEFAULT_MSIZE = 8192;
+/// Smallest msize this server will negotiate; anything less cannot
+/// usefully carry replies (an Rread header alone is 11 bytes, and
+/// stat entries routinely approach 100 bytes).
+static const uint32_t NINE_MIN_MSIZE = 256;
 static const char* const NINE_VERSION = "9P2000";
 
 /// A 13-byte Qid: server-unique file identity plus type/version.

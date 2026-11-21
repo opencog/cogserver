@@ -122,12 +122,15 @@ private:
 /// <confidence>" from the atom's truth_key() value (when it is a
 /// FloatValue with at least two components), and, when the
 /// AtomSpace is writable, accepts writes of the same format to
-/// replace it.
+/// replace it. Updates go through AtomSpace::set_value(), so
+/// writing an atom inherited from a read-only parent frame copies
+/// it into the exported space (copy-on-write) instead of mutating
+/// the parent; the cached handle tracks the returned (local) atom.
 class TvFileNode : public NineNode
 {
 public:
-	TvFileNode(Handle h, uint64_t qid_path) :
-		_h(std::move(h)), _qid_path(qid_path)
+	TvFileNode(AtomSpacePtr as, Handle h, uint64_t qid_path) :
+		_as(std::move(as)), _h(std::move(h)), _qid_path(qid_path)
 	{}
 
 	std::string name() const override { return "tv"; }
@@ -136,10 +139,10 @@ public:
 	{
 		NineQid q; q.type = QTFILE; q.path = _qid_path; return q;
 	}
+	uint64_t length() const override { return render().size(); }
 	bool is_writable() const override
 	{
-		AtomSpace* as = _h->getAtomSpace();
-		return nullptr != as and not as->get_read_only();
+		return not _as->get_read_only();
 	}
 	std::string read(uint64_t offset, uint32_t count) const override
 	{
@@ -160,15 +163,31 @@ public:
 		if (2 != sscanf(data.c_str(), "%lf %lf", &s, &c))
 			throw std::runtime_error(
 				"tv: expected \"<strength> <confidence>\"");
-		_h->setValue(truth_key(),
+		// set_value() performs the COW copy when `_h` lives in a
+		// read-only parent frame, and returns the local atom.
+		Handle h;
+		{
+			std::lock_guard<std::mutex> lock(_mtx);
+			h = _h;
+		}
+		Handle local = _as->set_value(h, truth_key(),
 			createFloatValue(std::vector<double>({s, c})));
+		std::lock_guard<std::mutex> lock(_mtx);
+		_h = local;
 		return (uint32_t) data.size();
 	}
 
 private:
 	std::string render() const
 	{
-		FloatValuePtr fv = FloatValueCast(_h->getValue(truth_key()));
+		// The node is shared between connections: take a consistent
+		// copy of the handle, which write() may be replacing.
+		Handle h;
+		{
+			std::lock_guard<std::mutex> lock(_mtx);
+			h = _h;
+		}
+		FloatValuePtr fv = FloatValueCast(h->getValue(truth_key()));
 		if (nullptr == fv or fv->value().size() < 2)
 			return "1 0\n";
 		std::ostringstream oss;
@@ -176,8 +195,10 @@ private:
 		return oss.str();
 	}
 
+	AtomSpacePtr _as;
 	Handle _h;
 	uint64_t _qid_path;
+	mutable std::mutex _mtx;
 };
 
 /// A named alias for another node: same Qid, children, and
@@ -351,7 +372,12 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 	const std::string id = id_of(h);
 
 	NineNodePtr name_file(new TextFileNode("name", mix_id(qbase, "name"),
-		[atom]() { return atom->get_name() + "\n"; }));
+		[atom]() -> std::string
+		{
+			// get_name() throws for Links; they have no name.
+			if (not atom->is_node()) return std::string();
+			return atom->get_name() + "\n";
+		}));
 
 	NineNodePtr type_file(new TextFileNode("type", mix_id(qbase, "type"),
 		[atom]() { return nameserver().getTypeName(atom->get_type()) + "\n"; }));
@@ -360,13 +386,16 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 		mix_id(qbase, "to_string"),
 		[atom]() { return atom->to_string() + "\n"; }));
 
-	NineNodePtr tv_file(new TvFileNode(atom, mix_id(qbase, "tv")));
+	NineNodePtr tv_file(new TvFileNode(_as, atom, mix_id(qbase, "tv")));
 
 	NineNodePtr outgoing_dir(new FuncDirNode("outgoing",
 		mix_id(qbase, "outgoing"),
 		[self, atom]() -> std::vector<NineNodePtr>
 		{
 			std::vector<NineNodePtr> out;
+			// getOutgoingSet() throws for Nodes; they have no
+			// outgoing set, so their outgoing/ is simply empty.
+			if (not atom->is_link()) return out;
 			const HandleSeq& oset = atom->getOutgoingSet();
 			out.reserve(oset.size());
 			for (size_t i = 0; i < oset.size(); i++)
@@ -400,15 +429,18 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 			HandleSet keys = atom->getKeys();
 			for (const Handle& key : keys)
 			{
-				ValuePtr v = atom->getValue(key);
 				std::string label = AtomFsIndex::id_of(key);
 				// The qid must mix in the owning atom too: different
 				// atoms holding a value under the same key are
-				// different files, and must not share a qid.
+				// different files, and must not share a qid. The
+				// value itself is fetched fresh on every read, so an
+				// open fid never serves stale data after the value
+				// is replaced.
 				out.push_back(NineNodePtr(new TextFileNode(label,
 					mix_id(mix_id(qbase, "value-entry"), label),
-					[key, v]()
+					[atom, key]()
 					{
+						ValuePtr v = atom->getValue(key);
 						return key->to_short_string() + " = " +
 							(v ? v->to_string() : std::string("()")) + "\n";
 					})));

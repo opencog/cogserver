@@ -42,7 +42,8 @@ struct NineFid
  * the underlying node tree (see AtomFs.h) is shared between them.
  *
  * The tree is structurally read-only: Tcreate and Twstat are
- * rejected, and Tremove merely clunks the fid, per remove(5).
+ * rejected, and Tremove is refused with Rerror (though the fid is
+ * still clunked, per remove(5)).
  * Individual files may still accept Twrite (e.g. the per-atom `tv`
  * file) when their node reports is_writable().
  */

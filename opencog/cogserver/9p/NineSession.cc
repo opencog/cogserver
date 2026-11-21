@@ -148,12 +148,26 @@ std::string NineSession::handle_message(const std::string& request)
 	size_t used = nine_decode(request, req);
 	if (0 == used)
 		throw std::runtime_error("9P: incomplete message");
-	NineMsg rep = dispatch(req);
+	// The negotiated msize bounds frames in both directions
+	// (version(5)); reject oversized requests rather than
+	// processing them.
+	NineMsg rep = (used > _msize)
+		? nine_error(req.tag, "message exceeds negotiated msize")
+		: dispatch(req);
 	return nine_encode(rep);
 }
 
 NineMsg NineSession::do_version(const NineMsg& req)
 {
+	// Refuse an msize too small to carry useful replies, rather
+	// than negotiating an unusable session.
+	if (req.msize < NINE_MIN_MSIZE)
+		return nine_error(req.tag, "version: msize too small");
+
+	// Version negotiation (re)starts the session: any fids from an
+	// earlier negotiation are clunked, per version(5).
+	_fids.clear();
+
 	NineMsg rep;
 	rep.type = Rversion;
 	rep.tag = req.tag;
@@ -166,6 +180,10 @@ NineMsg NineSession::do_version(const NineMsg& req)
 
 NineMsg NineSession::do_attach(const NineMsg& req)
 {
+	// A fid already in use may not be rebound (attach(5)).
+	if (_fids.count(req.fid))
+		return nine_error(req.tag, "attach: fid already in use");
+
 	std::string path = req.aname.empty() ? "/" : canon(req.aname);
 	NineNodePtr node = resolve(path);
 	if (nullptr == node)
@@ -185,6 +203,12 @@ NineMsg NineSession::do_walk(const NineMsg& req)
 	auto it = _fids.find(req.fid);
 	if (it == _fids.end())
 		return nine_error(req.tag, "walk: unknown fid");
+	// The source fid must not have been opened for I/O, and the
+	// destination must be free unless it is fid itself (walk(5)).
+	if (it->second.opened)
+		return nine_error(req.tag, "walk: fid is open for I/O");
+	if (req.newfid != req.fid and _fids.count(req.newfid))
+		return nine_error(req.tag, "walk: newfid already in use");
 
 	std::string path = it->second.path;
 	NineNodePtr node = it->second.node;
@@ -192,7 +216,8 @@ NineMsg NineSession::do_walk(const NineMsg& req)
 
 	for (const auto& comp : req.wname)
 	{
-		if (nullptr == node)
+		// Every step, including "..", walks *from* a directory.
+		if (nullptr == node or not node->is_dir())
 			break;
 		NineNodePtr next;
 		std::string candidate;
@@ -203,7 +228,7 @@ NineMsg NineSession::do_walk(const NineMsg& req)
 			candidate = parent_path(path);
 			next = resolve(candidate);
 		}
-		else if (node->is_dir())
+		else
 		{
 			// Walk incrementally from the current node: one lookup
 			// per component, not a re-resolution from the root.
@@ -239,10 +264,23 @@ NineMsg NineSession::do_open(const NineMsg& req)
 	auto it = _fids.find(req.fid);
 	if (it == _fids.end())
 		return nine_error(req.tag, "open: unknown fid");
+	// A fid already opened by a successful open may not be opened
+	// again (open(5)).
+	if (it->second.opened)
+		return nine_error(req.tag, "open: fid already open");
+
+	// Flags whose required behavior this tree cannot provide are
+	// refused rather than silently ignored (open(5)).
+	if (req.mode & ORCLOSE)
+		return nine_error(req.tag,
+			"open: ORCLOSE not supported (read-only tree)");
 
 	uint8_t rw = req.mode & 3;
-	if ((rw == OWRITE or rw == ORDWR) and
-	    not (it->second.node and it->second.node->is_writable()))
+	if (OEXEC == rw)
+		return nine_error(req.tag, "open: exec not supported");
+	bool writable = it->second.node and it->second.node->is_writable();
+	if ((rw == OWRITE or rw == ORDWR or (req.mode & OTRUNC))
+	    and not writable)
 	{
 		return nine_error(req.tag, "open: permission denied");
 	}
@@ -365,14 +403,14 @@ NineMsg NineSession::do_clunk(const NineMsg& req)
 
 NineMsg NineSession::do_remove(const NineMsg& req)
 {
-	// This tree is structurally read-only (atoms/dirs cannot be
-	// deleted through it); Tremove still clunks the fid, per remove(5)
-	// ("whether or not the remove succeeds, the fid is clunked").
-	_fids.erase(req.fid);
-	NineMsg rep;
-	rep.type = Rremove;
-	rep.tag = req.tag;
-	return rep;
+	// This tree is structurally read-only: the removal is refused.
+	// Even a refused Tremove clunks its fid, per remove(5), so the
+	// fid is erased before the error is reported.
+	auto it = _fids.find(req.fid);
+	if (it == _fids.end())
+		return nine_error(req.tag, "remove: unknown fid");
+	_fids.erase(it);
+	return nine_error(req.tag, "remove: read-only file tree");
 }
 
 NineMsg NineSession::do_stat(const NineMsg& req)

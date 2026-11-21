@@ -50,7 +50,8 @@ are genuine hard links (identical Qids) to the `by-handle` entries.
 Simplifications
 ---------------
 * The tree is structurally read-only: Tcreate and Twstat are
-  rejected; Tremove merely clunks the fid, per remove(5).
+  rejected; Tremove is refused with an error, though the fid is
+  still clunked, per remove(5).
 * A directory Tread at offset 0 snapshots the listing for that fid;
   subsequent sequential reads page through the snapshot, each reply
   carrying an integral number of stat entries, per read(5).
