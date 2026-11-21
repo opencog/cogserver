@@ -28,6 +28,11 @@ struct NineFid
 {
 	std::string path;
 	NineNodePtr node;
+	// The union stack resolved when this fid was attached/walked.
+	// Directory reads use this captured view, so later namespace
+	// rearrangements (mount/unmount) affect new walks only, never
+	// the target of an already-established fid.
+	std::vector<NineNodePtr> stack;
 	uint8_t mode = 0;
 	bool opened = false;
 };
@@ -84,10 +89,6 @@ private:
 	NineMsg do_remove(const NineMsg&);
 	NineMsg do_stat(const NineMsg&);
 	NineMsg do_flush(const NineMsg&);
-
-	/// Resolve a canonical absolute path to its (shadowing) node via
-	/// the namespace; returns nullptr if any component is missing.
-	NineNodePtr resolve(const std::string& path) const;
 
 	static std::string parent_path(const std::string& path);
 	static std::string join_path(const std::string& path, const std::string& c);

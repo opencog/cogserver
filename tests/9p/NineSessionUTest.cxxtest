@@ -437,6 +437,22 @@ public:
 		tbad.data = "this is not an atom";
 		NineMsg rbad = ses.dispatch(tbad);
 		TS_ASSERT_EQUALS(rbad.type, Rerror);
+
+		// So do empty, whitespace-only, unbalanced, and
+		// trailing-garbage writes.
+		tbad.data = "";
+		TS_ASSERT_EQUALS(ses.dispatch(tbad).type, Rerror);
+		tbad.data = " \t\n";
+		TS_ASSERT_EQUALS(ses.dispatch(tbad).type, Rerror);
+		tbad.data = "(Concept \"unclosed\"";
+		TS_ASSERT_EQUALS(ses.dispatch(tbad).type, Rerror);
+		tbad.data = "(Concept \"first\") garbage";
+		TS_ASSERT_EQUALS(ses.dispatch(tbad).type, Rerror);
+
+		// None of the failed writes disturbed the last-created path.
+		NineMsg rr3 = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr3.type, Rread);
+		TS_ASSERT_EQUALS(rr3.data, expect);
 	}
 
 	// ----------------------------------------------------------
@@ -490,5 +506,55 @@ public:
 		start(fresh);
 		NineMsg r3 = walk(fresh, 0, 1, {"concepts"});
 		TS_ASSERT_EQUALS(r3.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// An open directory fid keeps the view it was walked with:
+	// rearranging the namespace afterward changes what new walks
+	// see, but not what the existing fid reads.
+	void test_open_dir_stable_across_rebind(void)
+	{
+		NineNamespace ns(_index->root());
+		NineSession ses(ns);
+		start(ses);
+
+		std::string foo_id = AtomFsIndex::id_of(_foo);
+
+		// Walk to /by-type and open it before the rearrangement.
+		NineMsg rw = walk(ses, 0, 1, {"by-type"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		// Replace /by-type with the by-handle tree.
+		ses.ns().bind("/by-type", "/by-handle", MREPL);
+
+		// The already-open fid still reads the original listing.
+		NineMsg rr = read(ses, 1, 0, 65536);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		bool old_has_type = false, old_has_id = false;
+		for (const NineStat& st : parse_dir(rr.data))
+		{
+			if (st.name == "ConceptNode") old_has_type = true;
+			if (st.name == foo_id) old_has_id = true;
+		}
+		TS_ASSERT(old_has_type);
+		TS_ASSERT(not old_has_id);
+
+		// A fresh walk sees the rebound tree instead.
+		NineMsg r2 = walk(ses, 0, 2, {"by-type"});
+		TS_ASSERT_EQUALS(r2.type, Rwalk);
+		NineMsg ro2 = open(ses, 2, OREAD);
+		TS_ASSERT_EQUALS(ro2.type, Ropen);
+		NineMsg rr2 = read(ses, 2, 0, 65536);
+		TS_ASSERT_EQUALS(rr2.type, Rread);
+		bool new_has_type = false, new_has_id = false;
+		for (const NineStat& st : parse_dir(rr2.data))
+		{
+			if (st.name == "ConceptNode") new_has_type = true;
+			if (st.name == foo_id) new_has_id = true;
+		}
+		TS_ASSERT(not new_has_type);
+		TS_ASSERT(new_has_id);
 	}
 };

@@ -71,16 +71,21 @@ std::vector<NineNodePtr> NineNamespace::walk_union(const std::string& path) cons
 			continue;
 		}
 
-		std::vector<NineNodePtr> next;
+		// Union semantics apply only at explicit mount points: when
+		// descending through an ordinary name, the first tree in the
+		// stack that provides it wins, and the walk continues in that
+		// single tree. Keeping every same-named child would let an
+		// entry shadowed here become visible again one level down.
+		NineNodePtr child;
 		for (const auto& n : stack)
 		{
 			if (not n or not n->is_dir()) continue;
-			NineNodePtr child = n->lookup(c);
-			if (child) next.push_back(child);
+			child = n->lookup(c);
+			if (child) break;
 		}
-		if (next.empty())
+		if (not child)
 			return {};
-		stack = std::move(next);
+		stack = { std::move(child) };
 	}
 	return stack;
 }
@@ -91,10 +96,15 @@ NineNodePtr NineNamespace::walk(const std::string& path) const
 	return stack.empty() ? nullptr : stack.front();
 }
 
-std::vector<NineNodePtr> NineNamespace::list(const std::string& path) const
+std::vector<NineDirEnt> NineNamespace::list(const std::string& path) const
 {
-	std::vector<NineNodePtr> stack = walk_union(path);
-	std::vector<NineNodePtr> out;
+	return list_union(canon(path), walk_union(path));
+}
+
+std::vector<NineDirEnt> NineNamespace::list_union(const std::string& path,
+                              const std::vector<NineNodePtr>& stack) const
+{
+	std::vector<NineDirEnt> out;
 	std::unordered_set<std::string> seen;
 
 	for (const auto& n : stack)
@@ -103,8 +113,23 @@ std::vector<NineNodePtr> NineNamespace::list(const std::string& path) const
 		for (const auto& child : n->children())
 		{
 			if (not child) continue;
-			if (seen.insert(child->name()).second)
-				out.push_back(child);
+			std::string name = child->name();
+			if (not seen.insert(name).second) continue;
+
+			// A mount/bind at the child's own path overrides the
+			// underlying entry, so the listed metadata matches what
+			// walk() would resolve there. The directory-entry name
+			// stays the underlying one, even if the mounted node is
+			// named differently.
+			NineNodePtr shown = child;
+			std::string childpath =
+				(path == "/") ? "/" + name : path + "/" + name;
+			auto ov = _mounts.find(childpath);
+			if (ov != _mounts.end() and not ov->second.empty()
+			    and ov->second.front())
+				shown = ov->second.front();
+
+			out.push_back(NineDirEnt{ std::move(name), std::move(shown) });
 		}
 	}
 	return out;

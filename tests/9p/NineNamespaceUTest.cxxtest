@@ -178,24 +178,79 @@ public:
 			"only in overlay\n");
 
 		// list() dedups by name, first (shadowing) occurrence wins.
-		std::vector<NineNodePtr> ls = before.list("/docs");
+		std::vector<NineDirEnt> ls = before.list("/docs");
 		size_t readmes = 0;
 		bool have_base = false, have_extra = false;
 		std::string readme_content;
-		for (const auto& n : ls)
+		for (const auto& e : ls)
 		{
-			if (n->name() == "readme")
+			if (e.name == "readme")
 			{
 				readmes++;
-				readme_content = n->read(0, 100);
+				readme_content = e.node->read(0, 100);
 			}
-			if (n->name() == "base") have_base = true;
-			if (n->name() == "extra") have_extra = true;
+			if (e.name == "base") have_base = true;
+			if (e.name == "extra") have_extra = true;
 		}
 		TS_ASSERT_EQUALS(readmes, 1u);
 		TS_ASSERT_EQUALS(readme_content, "overlay readme\n");
 		TS_ASSERT(have_base);
 		TS_ASSERT(have_extra);
+	}
+
+	// ----------------------------------------------------------
+	// Union shadowing applies to whole subtrees: when the first
+	// tree of a union provides a name, a same-named entry in a
+	// later tree stays hidden even for deeper path components.
+	void test_shadow_no_resurrection(void)
+	{
+		auto first = std::make_shared<StaticDir>("first", 30);
+		first->add(NineNodePtr(new StaticFile("sub", 31, "a file\n")));
+
+		auto second = std::make_shared<StaticDir>("second", 32);
+		auto subdir = std::make_shared<StaticDir>("sub", 33);
+		subdir->add(NineNodePtr(new StaticFile("secret", 34, "ssh\n")));
+		second->add(subdir);
+
+		NineNamespace ns(_root);
+		ns.mount("/u", first, MREPL);
+		ns.mount("/u", second, MAFTER);
+
+		// "sub" resolves to the shadowing file ...
+		NineNodePtr sub = ns.walk("/u/sub");
+		TS_ASSERT(nullptr != sub);
+		TS_ASSERT(not sub->is_dir());
+
+		// ... and the hidden directory does not leak through.
+		TS_ASSERT(nullptr == ns.walk("/u/sub/secret"));
+
+		// With the directory shadowing instead, the deep path works.
+		NineNamespace rev(_root);
+		rev.mount("/u", second, MREPL);
+		rev.mount("/u", first, MAFTER);
+		TS_ASSERT_EQUALS(rev.walk("/u/sub/secret")->read(0, 100), "ssh\n");
+	}
+
+	// ----------------------------------------------------------
+	// Listing a directory resolves each child through the mount
+	// table: a mount on a child is reflected in the parent listing,
+	// under the child's original name.
+	void test_list_reflects_mounts(void)
+	{
+		NineNamespace ns(_root);
+		ns.mount("/docs", _overlay, MREPL);
+
+		bool found = false;
+		for (const auto& e : ns.list("/"))
+		{
+			if (e.name != "docs") continue;
+			found = true;
+			// Same node walk() resolves, keeping the entry name.
+			TS_ASSERT(e.node == _overlay);
+			TS_ASSERT(e.node == ns.walk("/docs"));
+			TS_ASSERT_EQUALS(e.node->qid().path, 20u);
+		}
+		TS_ASSERT(found);
 	}
 
 	// ----------------------------------------------------------

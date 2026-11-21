@@ -39,6 +39,16 @@ namespace plan9
 /// tree earlier (shadowing it), MAFTER puts it later (shadowed by it).
 enum NineMountOrder { MREPL, MBEFORE, MAFTER };
 
+/// One directory entry as seen through the namespace: the name the
+/// entry has in its containing directory, plus the node that should
+/// supply its metadata/contents (which, under a mount/bind override,
+/// may be a differently-named node from another tree).
+struct NineDirEnt
+{
+	std::string name;
+	NineNodePtr node;
+};
+
 class NineNamespace
 {
 public:
@@ -69,13 +79,26 @@ public:
 
 	/// Resolve `path` to its full union stack (outermost/shadowing
 	/// entry first), for directory-listing purposes. Empty if `path`
-	/// does not resolve at all.
+	/// does not resolve at all. Union stacks exist only at explicit
+	/// mount points: descending through an ordinary name keeps only
+	/// the first (shadowing) tree that provides it, so entries
+	/// shadowed at one level cannot reappear deeper down.
 	std::vector<NineNodePtr> walk_union(const std::string& path) const;
 
 	/// The union of all (name-deduplicated, first-occurrence-wins)
 	/// children visible at `path`, honoring the same shadow order as
-	/// walk_union().
-	std::vector<NineNodePtr> list(const std::string& path) const;
+	/// walk_union(). Each child with a mount/bind override at its own
+	/// path is listed under its original name but with the overriding
+	/// node, so listed metadata agrees with walk().
+	std::vector<NineDirEnt> list(const std::string& path) const;
+
+	/// As list(), but over an already-resolved union stack for the
+	/// canonical directory path `path` -- used to read a directory
+	/// through the view captured when it was walked (so later
+	/// mounts/unmounts at that path do not retarget it), while still
+	/// resolving per-child overrides through the current mount table.
+	std::vector<NineDirEnt> list_union(const std::string& path,
+	                     const std::vector<NineNodePtr>& stack) const;
 
 	/// Canonicalize a path: collapse repeated/trailing slashes,
 	/// always returning a leading "/" (root is "/").

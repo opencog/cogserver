@@ -57,7 +57,9 @@ s-expression, then read back the new atom's path --
     cat /mnt/atomspace/new
     /by-handle/0123...cdef
 
-A malformed s-expression makes the write fail (Rerror). If the
+A malformed s-expression makes the write fail (Rerror): each write
+must hold exactly one complete, balanced expression, with nothing
+but whitespace around it. If the
 AtomSpace is read-only, `/new` reports itself non-writable.
 
 Namespaces
@@ -67,7 +69,16 @@ Namespaces
 and `MAFTER` ordering. A path with several trees mounted on it is a
 union directory: lookups try each tree in order (the first match
 shadows the rest) and directory reads list the name-deduplicated
-union of all of them, exactly as described in bind(2).
+union of all of them, exactly as described in bind(2). The union
+applies only at the mount point itself: descending through an
+ordinary name continues in the single (first-matching) tree, so an
+entry shadowed at one level cannot resurface deeper down. Directory
+listings resolve each child through the mount table, so an entry
+with something mounted on it is listed under its own name but with
+the mounted tree's Qid and permissions -- matching what a walk to
+that entry returns. An already-open directory fid keeps the union
+view captured when it was walked; mounts and unmounts made afterward
+affect new walks only.
 
 Each `NineSession` owns a private *copy* of the namespace it is
 constructed from -- the rfork(RFNAMEG) model -- so per-connection
