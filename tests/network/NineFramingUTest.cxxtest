@@ -21,6 +21,7 @@
 #include <chrono>
 #include <cstring>
 #include <ctime>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -36,15 +37,21 @@ using namespace opencog;
 class NineEchoSocket : public ServerSocket
 {
 public:
+	// last_instance is published by the listener thread (constructor),
+	// cleared by handler threads (destructor), and read by the test
+	// thread (make_last_idle); last_mutex serializes all access.
+	static std::mutex last_mutex;
 	static NineEchoSocket* last_instance;
 
 	NineEchoSocket(SocketManager* mgr) : ServerSocket(mgr)
 	{
 		act_as_9p();
+		std::lock_guard<std::mutex> lock(last_mutex);
 		last_instance = this;
 	}
 	~NineEchoSocket()
 	{
+		std::lock_guard<std::mutex> lock(last_mutex);
 		if (last_instance == this) last_instance = nullptr;
 	}
 
@@ -52,6 +59,7 @@ public:
 	// to SocketManager::half_ping().
 	static void make_last_idle(void)
 	{
+		std::lock_guard<std::mutex> lock(last_mutex);
 		if (last_instance)
 			last_instance->_last_activity = time(nullptr) - 100;
 	}
@@ -65,6 +73,7 @@ protected:
 	}
 };
 
+std::mutex NineEchoSocket::last_mutex;
 NineEchoSocket* NineEchoSocket::last_instance = nullptr;
 
 #define TEST_PORT 16909

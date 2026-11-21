@@ -16,18 +16,28 @@
 using namespace opencog;
 
 // Each AtomSpace gets exactly one AtomFsIndex, shared by every
-// connection serving that AtomSpace, so that the same atom always
-// maps to the same NineNode (and thus the same Qid) regardless of
-// which connection is asking.
+// *live* connection serving that AtomSpace, so that the same atom
+// always maps to the same NineNode (and thus the same Qid)
+// regardless of which connection is asking. The map holds weak
+// references: when the last connection for an AtomSpace closes, its
+// index (and its grip on the AtomSpace) is released rather than
+// pinned forever. Qids are deterministic, so a rebuilt index serves
+// identical Qids.
 static plan9::AtomFsIndexPtr get_index(const AtomSpacePtr& as)
 {
 	static std::mutex mtx;
-	static std::map<AtomSpace*, plan9::AtomFsIndexPtr> indexes;
+	static std::map<AtomSpace*, std::weak_ptr<plan9::AtomFsIndex>> indexes;
 
 	std::lock_guard<std::mutex> lock(mtx);
-	plan9::AtomFsIndexPtr& idx = indexes[as.get()];
+	for (auto it = indexes.begin(); it != indexes.end(); )
+		it = it->second.expired() ? indexes.erase(it) : std::next(it);
+
+	plan9::AtomFsIndexPtr idx = indexes[as.get()].lock();
 	if (nullptr == idx)
+	{
 		idx = std::make_shared<plan9::AtomFsIndex>(as);
+		indexes[as.get()] = idx;
+	}
 	return idx;
 }
 
@@ -49,9 +59,10 @@ void NineServer::OnConnection(void)
 {
 	logger().info("9P client connected");
 
-	plan9::AtomFsIndexPtr index =
-		get_index(AtomSpaceCast(_hcsn->getAtomSpace()));
-	_session.reset(new plan9::NineSession(index->root()));
+	// Hold the index for the lifetime of the connection: it must
+	// outlive the session (and every node the session's fids hold).
+	_index = get_index(AtomSpaceCast(_hcsn->getAtomSpace()));
+	_session.reset(new plan9::NineSession(_index->root()));
 }
 
 // Called for each complete 9P frame received (the socket is in

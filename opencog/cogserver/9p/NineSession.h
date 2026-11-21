@@ -35,6 +35,10 @@ struct NineFid
 	std::vector<NineNodePtr> stack;
 	uint8_t mode = 0;
 	bool opened = false;
+	/// Snapshot of this directory's encoded listing, (re)taken at
+	/// each Tread at offset 0, through which subsequent sequential
+	/// reads page (read(5) directory semantics).
+	std::string dir_snapshot;
 };
 
 /**
@@ -46,7 +50,8 @@ struct NineFid
  * trees (see AtomFs.h) are shared between them.
  *
  * The tree is structurally read-only: Tcreate and Twstat are
- * rejected, and Tremove merely clunks the fid, per remove(5).
+ * rejected, and Tremove is refused with Rerror (though the fid is
+ * still clunked, per remove(5)).
  * Individual files may still accept Twrite (e.g. the per-atom `tv`
  * file, or the /new control file) when their node reports
  * is_writable().

@@ -33,6 +33,9 @@ class NineServer : public ConsoleSocket
 {
 private:
 	Handle _hcsn;
+	// Declared before _session: the session (whose fids hold nodes
+	// handed out by the index) must be destroyed first.
+	plan9::AtomFsIndexPtr _index;
 	std::unique_ptr<plan9::NineSession> _session;
 
 protected:
