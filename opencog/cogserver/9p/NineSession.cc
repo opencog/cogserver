@@ -242,11 +242,15 @@ NineMsg NineSession::do_open(const NineMsg& req)
 	if (OEXEC == rw)
 		return nine_error(req.tag, "open: exec not supported");
 	bool writable = it->second.node and it->second.node->is_writable();
-	if ((rw == OWRITE or rw == ORDWR or (req.mode & OTRUNC))
-	    and not writable)
-	{
+	if ((rw == OWRITE or rw == ORDWR) and not writable)
 		return nine_error(req.tag, "open: permission denied");
-	}
+	// These generated files have no stored contents to truncate; a
+	// write always replaces the whole rendering, which is the only
+	// truncation semantics this tree can honor. OTRUNC is therefore
+	// accepted only together with a write mode (where it is
+	// subsumed by the replacing write) and refused otherwise.
+	if ((req.mode & OTRUNC) and not (rw == OWRITE or rw == ORDWR))
+		return nine_error(req.tag, "open: OTRUNC requires write mode");
 
 	it->second.opened = true;
 	it->second.mode = req.mode;
