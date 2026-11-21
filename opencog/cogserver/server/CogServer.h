@@ -59,6 +59,7 @@ private:
     NetworkServer* _consoleServer;
     NetworkServer* _webServer;
     NetworkServer* _mcpServer;
+    NetworkServer* _nineServer;
     std::atomic<bool> _running;
 
 protected:
@@ -81,10 +82,14 @@ protected:
     /** Starts the MCP Model Context Protocol server. */
     void enableMCPServer(const Handle&);
 
+    /** Starts the Plan 9 (9P2000) filesystem server. */
+    void enableNineServer(const Handle&);
+
     /** Stops the network server and closes all the open server sockets. */
     void disableNetworkServer(void);
     void disableWebServer(void);
     void disableMCPServer(void);
+    void disableNineServer(void);
 
     /** Server's main loop. Executed while the 'running' flag is set
      *  to true. It processes the request queue.

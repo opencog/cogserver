@@ -25,6 +25,7 @@
 #include <opencog/cogserver/server/ServerConsole.h>
 #include <opencog/cogserver/server/WebServer.h>
 #include <opencog/cogserver/server/MCPServer.h>
+#include <opencog/cogserver/server/NineServer.h>
 
 #include "CogServer.h"
 
@@ -61,6 +62,7 @@ CogServer::CogServer(void) :
     _consoleServer(nullptr),
     _webServer(nullptr),
     _mcpServer(nullptr),
+    _nineServer(nullptr),
     _running(false)
 {
 }
@@ -171,6 +173,35 @@ void CogServer::enableMCPServer(const Handle& hcsn)
 #endif // HAVE_MCP
 }
 
+/// Open the given port number for Plan 9 filesystem service.
+void CogServer::enableNineServer(const Handle& hcsn)
+{
+    if (_nineServer) return;
+    int port = get_port(hcsn, "*-nine-port-*");
+    if (0 >= port) return;
+
+    try
+    {
+        _nineServer = new NetworkServer(port, "Plan 9 Filesystem Server", &_socket_manager);
+    }
+    catch (const std::system_error& ex)
+    {
+        fprintf(stderr, "Error: Cannot enable 9P server at port %d: %s\n",
+            port, ex.what());
+        logger().info("Error: Cannot enable 9P server at port %d: %s\n",
+            port, ex.what());
+        std::rethrow_exception(std::current_exception());
+    }
+
+    auto make_console = [hcsn, this](SocketManager* mgr)->ServerSocket* {
+        ServerSocket* ss = new NineServer(hcsn, mgr);
+        ss->act_as_9p();
+        return ss;
+    };
+    _nineServer->run(make_console);
+    logger().info("9P server running on port %d", port);
+}
+
 void CogServer::disableNetworkServer()
 {
     // No-op for backwards-compat. Actual cleanup performed on
@@ -182,6 +213,10 @@ void CogServer::disableWebServer()
 }
 
 void CogServer::disableMCPServer()
+{
+}
+
+void CogServer::disableNineServer()
 {
 }
 
@@ -219,6 +254,8 @@ void CogServer::serverLoop()
 
     // Prevent the Network server from accepting any more connections,
     // and from queueing any more Requests.
+    if (_nineServer)
+        _nineServer->stop_listening();
     if (_mcpServer)
         _mcpServer->stop_listening();
     if (_webServer)
@@ -231,6 +268,11 @@ void CogServer::serverLoop()
         processRequests();
 
     // Join handler threads. Do this after the drain to avoid deadlock.
+    if (_nineServer)
+    {
+        _nineServer->join_threads();
+        delete _nineServer;
+    }
     if (_mcpServer)
     {
         _mcpServer->join_threads();
@@ -247,6 +289,7 @@ void CogServer::serverLoop()
         delete _consoleServer;
     }
 
+    _nineServer = nullptr;
     _mcpServer = nullptr;
     _webServer = nullptr;
     _consoleServer = nullptr;

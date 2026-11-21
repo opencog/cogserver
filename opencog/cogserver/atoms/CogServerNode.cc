@@ -53,6 +53,8 @@ void CogServerNode::setAtomSpace(AtomSpace* as)
 	               createFloatValue(18080.0));
 	Atom::setValue(as->add_atom(Predicate("*-mcp-port-*")),
 	               createFloatValue(18888.0));
+	Atom::setValue(as->add_atom(Predicate("*-nine-port-*")),
+	               createFloatValue(17564.0));
 
 	// Prompt defaults
 	Atom::setValue(as->add_atom(Predicate("*-ansi-prompt-*")),
@@ -86,6 +88,7 @@ bool CogServerNode::startServers()
 		enableNetworkServer(h);
 		enableWebServer(h);
 		enableMCPServer(h);
+		enableNineServer(h);
 	}
 	catch (const std::exception& ex)
 	{
@@ -97,6 +100,7 @@ bool CogServerNode::startServers()
 /// Disable the network servers
 void CogServerNode::stopServers()
 {
+	disableNineServer();
 	disableMCPServer();
 	disableWebServer();
 	disableNetworkServer();

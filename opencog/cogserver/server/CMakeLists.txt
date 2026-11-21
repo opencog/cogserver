@@ -4,6 +4,7 @@ ADD_LIBRARY (server SHARED
 	CogServer.cc
 	MCPServer.cc
 	ModuleManager.cc
+	NineServer.cc
 	PageServer.cc
 	Request.cc
 	RequestManager.cc
@@ -13,6 +14,7 @@ ADD_LIBRARY (server SHARED
 
 TARGET_LINK_LIBRARIES(server
 	network
+	ninefs
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}
 	${OPENSSL_LIBRARIES}
@@ -53,6 +55,7 @@ INSTALL (FILES
 	MCPServer.h
 	Module.h
 	ModuleManager.h
+	NineServer.h
 	PageServer.h
 	Request.h
 	RequestClassInfo.h
