@@ -1,0 +1,5 @@
+LINK_LIBRARIES(
+	nine9p
+)
+
+ADD_CXXTEST(Nine9PUTest)
