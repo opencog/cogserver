@@ -142,18 +142,28 @@ public:
 		NineMsg rr = read(ses, 1, 0, 65536);
 		TS_ASSERT_EQUALS(rr.type, Rread);
 		std::vector<NineStat> ents = parse_dir(rr.data);
-		TS_ASSERT_EQUALS(ents.size(), 2u);
+		TS_ASSERT_EQUALS(ents.size(), 3u);
 
-		bool have_by_type = false, have_by_handle = false;
+		bool have_by_type = false, have_by_handle = false, have_new = false;
 		for (const NineStat& st : ents)
 		{
-			if (st.name == "by-type") have_by_type = true;
-			if (st.name == "by-handle") have_by_handle = true;
-			TS_ASSERT_EQUALS(st.qid.type, QTDIR);
-			TS_ASSERT(st.mode & NINE_DMDIR);
+			if (st.name == "by-type" or st.name == "by-handle")
+			{
+				if (st.name == "by-type") have_by_type = true;
+				else have_by_handle = true;
+				TS_ASSERT_EQUALS(st.qid.type, QTDIR);
+				TS_ASSERT(st.mode & NINE_DMDIR);
+			}
+			else if (st.name == "new")
+			{
+				have_new = true;
+				TS_ASSERT_EQUALS(st.qid.type, QTFILE);
+				TS_ASSERT(st.mode & 0222u);
+			}
 		}
 		TS_ASSERT(have_by_type);
 		TS_ASSERT(have_by_handle);
+		TS_ASSERT(have_new);
 
 		// A second read (nonzero offset) is EOF.
 		NineMsg r2 = read(ses, 1, rr.data.size(), 65536);
@@ -373,5 +383,112 @@ public:
 		// A truncated frame is a hard error.
 		TS_ASSERT_THROWS(ses.handle_message(std::string("\x13", 1)),
 			const std::runtime_error&);
+	}
+
+	// ----------------------------------------------------------
+	// The /new control file: writing an Atomese s-expression creates
+	// the atom; reading back returns its /by-handle path; malformed
+	// input is an Rerror.
+	void test_new_control(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1, {"new"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 1u);
+		TS_ASSERT_EQUALS(rw.wqid[0].type, QTFILE);
+
+		NineMsg ro = open(ses, 1, ORDWR);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 11;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "(Concept \"made-via-9p\")";
+		NineMsg rwr = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		TS_ASSERT_EQUALS(rwr.count, tw.data.size());
+
+		// The atom now exists in the AtomSpace.
+		Handle h = _as->get_node(CONCEPT_NODE, "made-via-9p");
+		TS_ASSERT(nullptr != h);
+
+		// Reading back yields its by-handle path...
+		NineMsg rr = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		std::string expect = "/by-handle/" + AtomFsIndex::id_of(h) + "\n";
+		TS_ASSERT_EQUALS(rr.data, expect);
+
+		// ... and that path resolves to the atom's directory.
+		NineMsg r2 = walk(ses, 0, 2,
+			{"by-handle", AtomFsIndex::id_of(h), "name"});
+		TS_ASSERT_EQUALS(r2.type, Rwalk);
+		TS_ASSERT_EQUALS(r2.wqid.size(), 3u);
+
+		// Malformed input makes the write fail.
+		NineMsg tbad;
+		tbad.type = Twrite;
+		tbad.tag = 12;
+		tbad.fid = 1;
+		tbad.offset = 0;
+		tbad.data = "this is not an atom";
+		NineMsg rbad = ses.dispatch(tbad);
+		TS_ASSERT_EQUALS(rbad.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// A session built over a namespace sees its binds: the walk
+	// resolves through the bind, and a union directory lists the
+	// merged children.
+	void test_namespace_bind(void)
+	{
+		NineNamespace ns(_index->root());
+		// Make the ConceptNode directory also appear at /concepts,
+		// and union by-handle under the root of /everything.
+		ns.bind("/concepts", "/by-type/ConceptNode");
+		ns.bind("/everything", "/by-type");
+		ns.bind("/everything", "/by-handle", MAFTER);
+
+		NineSession ses(ns);
+		start(ses);
+
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw = walk(ses, 0, 1, {"concepts", id, "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 3u);
+
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+		NineMsg rr = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr.data, "foo\n");
+
+		// The union directory lists both trees' children: the type
+		// directories and the per-atom id directories.
+		NineMsg r2 = walk(ses, 0, 2, {"everything"});
+		TS_ASSERT_EQUALS(r2.type, Rwalk);
+		NineMsg ro2 = open(ses, 2, OREAD);
+		TS_ASSERT_EQUALS(ro2.type, Ropen);
+		NineMsg rr2 = read(ses, 2, 0, 65536);
+		TS_ASSERT_EQUALS(rr2.type, Rread);
+		std::vector<NineStat> ents = parse_dir(rr2.data);
+
+		bool have_type_dir = false, have_id_dir = false;
+		for (const NineStat& st : ents)
+		{
+			if (st.name == "ConceptNode") have_type_dir = true;
+			if (st.name == id) have_id_dir = true;
+		}
+		TS_ASSERT(have_type_dir);
+		TS_ASSERT(have_id_dir);
+
+		// The bind is private to this session's namespace copy: a
+		// fresh session over the bare root does not see /concepts.
+		NineSession fresh(_index->root());
+		start(fresh);
+		NineMsg r3 = walk(fresh, 0, 1, {"concepts"});
+		TS_ASSERT_EQUALS(r3.type, Rerror);
 	}
 };

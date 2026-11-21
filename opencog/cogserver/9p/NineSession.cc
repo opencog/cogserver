@@ -15,40 +15,18 @@ namespace opencog
 namespace plan9
 {
 
-NineSession::NineSession(NineNodePtr root) : _root(std::move(root))
+NineSession::NineSession(NineNodePtr root) : _ns(std::move(root))
+{}
+
+NineSession::NineSession(const NineNamespace& ns) : _ns(ns)
 {}
 
 // ---------------------------------------------------------------
 // Path helpers.
 
-std::vector<std::string> NineSession::split(const std::string& path)
-{
-	std::vector<std::string> out;
-	std::string cur;
-	for (char c : path)
-	{
-		if (c == '/')
-		{
-			if (not cur.empty()) { out.push_back(cur); cur.clear(); }
-		}
-		else cur.push_back(c);
-	}
-	if (not cur.empty()) out.push_back(cur);
-	return out;
-}
-
-std::string NineSession::canon(const std::string& path)
-{
-	std::vector<std::string> comps = split(path);
-	if (comps.empty()) return "/";
-	std::string out;
-	for (const auto& c : comps) { out += "/"; out += c; }
-	return out;
-}
-
 std::string NineSession::parent_path(const std::string& path)
 {
-	std::string canonical = canon(path);
+	std::string canonical = NineNamespace::canon(path);
 	size_t slash = canonical.find_last_of('/');
 	if (slash == std::string::npos or slash == 0)
 		return "/";
@@ -63,14 +41,7 @@ std::string NineSession::join_path(const std::string& path, const std::string& c
 
 NineNodePtr NineSession::resolve(const std::string& path) const
 {
-	NineNodePtr node = _root;
-	for (const auto& comp : split(path))
-	{
-		if (nullptr == node or not node->is_dir())
-			return nullptr;
-		node = node->lookup(comp);
-	}
-	return node;
+	return _ns.walk(path);
 }
 
 NineQid NineSession::qid_of(const NineNodePtr& node)
@@ -166,7 +137,7 @@ NineMsg NineSession::do_version(const NineMsg& req)
 
 NineMsg NineSession::do_attach(const NineMsg& req)
 {
-	std::string path = req.aname.empty() ? "/" : canon(req.aname);
+	std::string path = req.aname.empty() ? "/" : NineNamespace::canon(req.aname);
 	NineNodePtr node = resolve(path);
 	if (nullptr == node)
 		return nine_error(req.tag, "attach: no such path: " + req.aname);
@@ -271,7 +242,9 @@ NineMsg NineSession::do_read(const NineMsg& req)
 			return rep;
 		}
 
-		std::vector<NineNodePtr> kids = node->children();
+		// List through the namespace, so union directories show the
+		// merged (name-deduplicated, shadow-ordered) view.
+		std::vector<NineNodePtr> kids = _ns.list(it->second.path);
 		std::string blob;
 		for (const auto& k : kids)
 		{

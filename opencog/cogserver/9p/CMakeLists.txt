@@ -11,12 +11,14 @@ ADD_LIBRARY (nine9p SHARED
 # 9P session dispatcher that serves it.
 ADD_LIBRARY (ninefs SHARED
 	AtomFs.cc
+	NineNamespace.cc
 	NineNode.cc
 	NineSession.cc
 )
 
 TARGET_LINK_LIBRARIES(ninefs
 	nine9p
+	${ATOMSPACE_STORAGE_LIBRARIES}
 	${ATOMSPACE_LIBRARIES}
 	${COGUTIL_LIBRARY}
 )
@@ -31,6 +33,7 @@ INSTALL (TARGETS nine9p ninefs
 INSTALL (FILES
 	AtomFs.h
 	Nine9P.h
+	NineNamespace.h
 	NineNode.h
 	NineSession.h
 	DESTINATION "include/opencog/cogserver/9p"

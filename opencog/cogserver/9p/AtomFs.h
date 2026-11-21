@@ -5,6 +5,10 @@
  *
  *   /by-type/<TYPE_NAME>/<id>/          -- one directory per atom
  *   /by-handle/<id>/                    -- the same directories, by id
+ *   /new                                -- control file: write an
+ *                                          Atomese s-expression to
+ *                                          create an atom, then read
+ *                                          back its /by-handle path
  *
  * Per atom directory <id>/ contains:
  *   name                                -- Node name (empty for Links)
@@ -56,7 +60,7 @@ namespace plan9
 /**
  * Owns the mapping from an AtomSpace's atoms to their (memoized)
  * NineNode representations, and builds the top-level directory
- * tree (by-type/, by-handle/) for that AtomSpace.
+ * tree (by-type/, by-handle/, new) for that AtomSpace.
  *
  * An AtomFsIndex must outlive every NineNode it has handed out, and
  * outlive any NineSession built on top of its root().
