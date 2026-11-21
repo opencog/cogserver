@@ -125,7 +125,10 @@ private:
 /// replace it. Updates go through AtomSpace::set_value(), so
 /// writing an atom inherited from a read-only parent frame copies
 /// it into the exported space (copy-on-write) instead of mutating
-/// the parent; the cached handle tracks the returned (local) atom.
+/// the parent. Every read and write first resolves the atom through
+/// the exported space, so all views of the atom (other fids, other
+/// node instances, the values/ directory) observe the same
+/// shallowest copy; nothing is cached across operations.
 class TvFileNode : public NineNode
 {
 public:
@@ -163,31 +166,29 @@ public:
 		if (2 != sscanf(data.c_str(), "%lf %lf", &s, &c))
 			throw std::runtime_error(
 				"tv: expected \"<strength> <confidence>\"");
-		// set_value() performs the COW copy when `_h` lives in a
-		// read-only parent frame, and returns the local atom.
-		Handle h;
-		{
-			std::lock_guard<std::mutex> lock(_mtx);
-			h = _h;
-		}
-		Handle local = _as->set_value(h, truth_key(),
+		// Resolve first, so that an existing child-frame copy is
+		// updated in place; set_value() performs the COW copy (and
+		// returns the local atom) only on the first write to an
+		// atom still inherited from a read-only parent frame.
+		_as->set_value(live(), truth_key(),
 			createFloatValue(std::vector<double>({s, c})));
-		std::lock_guard<std::mutex> lock(_mtx);
-		_h = local;
 		return (uint32_t) data.size();
 	}
 
 private:
+	// The atom as currently visible in the exported space: the
+	// child-frame COW copy when one exists, otherwise the inherited
+	// original. Resolved fresh on every operation, so updates made
+	// through any other view of this atom are observed immediately.
+	Handle live() const
+	{
+		Handle cur = _as->get_atom(_h);
+		return cur ? cur : _h;
+	}
+
 	std::string render() const
 	{
-		// The node is shared between connections: take a consistent
-		// copy of the handle, which write() may be replacing.
-		Handle h;
-		{
-			std::lock_guard<std::mutex> lock(_mtx);
-			h = _h;
-		}
-		FloatValuePtr fv = FloatValueCast(h->getValue(truth_key()));
+		FloatValuePtr fv = FloatValueCast(live()->getValue(truth_key()));
 		if (nullptr == fv or fv->value().size() < 2)
 			return "1 0\n";
 		std::ostringstream oss;
@@ -198,7 +199,6 @@ private:
 	AtomSpacePtr _as;
 	Handle _h;
 	uint64_t _qid_path;
-	mutable std::mutex _mtx;
 };
 
 /// A named alias for another node: same Qid, children, and
@@ -368,8 +368,19 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 
 	AtomFsIndex* self = this;
 	Handle atom = h;
+	AtomSpacePtr sas = _as;
 	const uint64_t qbase = key;
 	const std::string id = id_of(h);
+
+	// The atom as currently visible in the exported space: the
+	// child-frame COW copy when one exists, otherwise the original.
+	// Mutable state (values, truth value) must be read through this,
+	// never through a handle captured at directory-build time.
+	auto live = [sas, atom]() -> Handle
+	{
+		Handle cur = sas->get_atom(atom);
+		return cur ? cur : atom;
+	};
 
 	NineNodePtr name_file(new TextFileNode("name", mix_id(qbase, "name"),
 		[atom]() -> std::string
@@ -384,7 +395,7 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 
 	NineNodePtr to_string_file(new TextFileNode("to_string",
 		mix_id(qbase, "to_string"),
-		[atom]() { return atom->to_string() + "\n"; }));
+		[live]() { return live()->to_string() + "\n"; }));
 
 	NineNodePtr tv_file(new TvFileNode(_as, atom, mix_id(qbase, "tv")));
 
@@ -423,24 +434,25 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 
 	NineNodePtr values_dir(new FuncDirNode("values",
 		mix_id(qbase, "values"),
-		[atom, qbase]() -> std::vector<NineNodePtr>
+		[live, qbase]() -> std::vector<NineNodePtr>
 		{
 			std::vector<NineNodePtr> out;
-			HandleSet keys = atom->getKeys();
+			HandleSet keys = live()->getKeys();
 			for (const Handle& key : keys)
 			{
 				std::string label = AtomFsIndex::id_of(key);
 				// The qid must mix in the owning atom too: different
 				// atoms holding a value under the same key are
 				// different files, and must not share a qid. The
-				// value itself is fetched fresh on every read, so an
-				// open fid never serves stale data after the value
-				// is replaced.
+				// value itself is fetched fresh on every read, from
+				// the currently visible (COW) copy of the atom, so
+				// an open fid never serves stale data after the
+				// value is replaced.
 				out.push_back(NineNodePtr(new TextFileNode(label,
 					mix_id(mix_id(qbase, "value-entry"), label),
-					[atom, key]()
+					[live, key]()
 					{
-						ValuePtr v = atom->getValue(key);
+						ValuePtr v = live()->getValue(key);
 						return key->to_short_string() + " = " +
 							(v ? v->to_string() : std::string("()")) + "\n";
 					})));

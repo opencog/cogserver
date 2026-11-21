@@ -270,6 +270,52 @@ public:
 	}
 
 	// ----------------------------------------------------------
+	// Copy-on-write frames: writing the tv of an atom inherited
+	// from a read-only parent copies it into the exported child
+	// space; the parent atom is untouched, and the write is
+	// visible through every other fid onto the same file.
+	void test_cow_frames(void)
+	{
+		_as->set_read_only();
+		AtomSpacePtr child = createAtomSpace(_as);
+		AtomFsIndexPtr index = std::make_shared<AtomFsIndex>(child);
+		NineSession ses(index->root());
+		start(ses);
+
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw1 = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw1.type, Rwalk);
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		TS_ASSERT_EQUALS(open(ses, 1, OWRITE).type, Ropen);
+		TS_ASSERT_EQUALS(open(ses, 2, OREAD).type, Ropen);
+
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 30;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "0.5 0.25\n";
+		NineMsg rwr = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+
+		// The write is visible through the other, independently
+		// walked fid.
+		NineMsg rr = read(ses, 2, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT_EQUALS(rr.data, "0.5 0.25\n");
+
+		// The value landed on a child-frame copy; the read-only
+		// parent atom still carries no values at all.
+		Handle local = child->get_atom(_foo);
+		TS_ASSERT(nullptr != local);
+		TS_ASSERT(not local->getKeys().empty());
+		TS_ASSERT(_foo->getKeys().empty());
+
+		_as->set_read_write();
+	}
+
+	// ----------------------------------------------------------
 	// A walk that fails partway reports the Qids found and does
 	// not create newfid (walk(5) semantics).
 	void test_partial_walk(void)
@@ -383,6 +429,16 @@ public:
 		TS_ASSERT_EQUALS(o3.type, Rerror);
 		NineMsg o4 = open(ses, 2, OREAD | ORCLOSE);
 		TS_ASSERT_EQUALS(o4.type, Rerror);
+
+		// On the writable tv file, OTRUNC is accepted only with a
+		// write mode: a Twrite replaces the whole rendering, which
+		// is the only truncation this generated file supports.
+		NineMsg rwt = walk(ses, 0, 3, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rwt.type, Rwalk);
+		NineMsg o5 = open(ses, 3, OREAD | OTRUNC);
+		TS_ASSERT_EQUALS(o5.type, Rerror);
+		NineMsg o6 = open(ses, 3, OWRITE | OTRUNC);
+		TS_ASSERT_EQUALS(o6.type, Ropen);
 
 		// A new Tversion restarts the session: old fids are clunked.
 		NineMsg tv;
@@ -735,5 +791,24 @@ public:
 		// A truncated frame is a hard error.
 		TS_ASSERT_THROWS(ses.handle_message(std::string("\x13", 1)),
 			const std::runtime_error&);
+
+		// Renegotiate the smallest allowed msize, then send a frame
+		// larger than it: the frame is rejected before dispatch.
+		tv.msize = NINE_MIN_MSIZE;
+		reply = ses.handle_message(nine_encode(tv));
+		nine_decode(reply, rv);
+		TS_ASSERT_EQUALS(rv.type, Rversion);
+		TS_ASSERT_EQUALS(rv.msize, NINE_MIN_MSIZE);
+
+		NineMsg big;
+		big.type = Twrite;
+		big.tag = 8;
+		big.fid = 99;
+		big.offset = 0;
+		big.data = std::string(NINE_MIN_MSIZE, 'x');
+		reply = ses.handle_message(nine_encode(big));
+		NineMsg re;
+		nine_decode(reply, re);
+		TS_ASSERT_EQUALS(re.type, Rerror);
 	}
 };
