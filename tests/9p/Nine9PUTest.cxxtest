@@ -384,6 +384,72 @@ public:
 	}
 
 	// ----------------------------------------------------------
+	// 9P text strings (intro(5)) must not contain NUL characters;
+	// binary payloads and stat[] blobs may.
+	void test_text_nul(void)
+	{
+		const std::string nulstr("a\0b", 3);
+		NineMsg out;
+
+		// The encoder rejects NUL in every text field.
+		NineMsg m;
+		m.type = Tattach;
+		m.tag = 30;
+		m.uname = nulstr;
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		m = NineMsg();
+		m.type = Tcreate;
+		m.tag = 30;
+		m.name = nulstr;
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		m = NineMsg();
+		m.type = Twalk;
+		m.tag = 30;
+		m.wname = {nulstr};
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		m = NineMsg();
+		m.type = Rerror;
+		m.tag = 30;
+		m.ename = nulstr;
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		NineStat st;
+		st.name = nulstr;
+		TS_ASSERT_THROWS(nine_encode_stat(st), const std::runtime_error&);
+
+		// The decoder rejects a hand-built Rerror whose ename
+		// smuggles a NUL past the length prefix.
+		std::string body;
+		body.push_back((char) Rerror);
+		body.push_back((char) 31); body.push_back((char) 0);  // tag
+		body.push_back((char) 3); body.push_back((char) 0);   // len 3
+		body.append(nulstr);
+		std::string wire;
+		uint32_t size = (uint32_t) (4 + body.size());
+		for (int i = 0; i < 4; i++)
+			wire.push_back((char) ((size >> (8 * i)) & 0xff));
+		wire += body;
+		TS_ASSERT_THROWS(nine_decode(wire, out), const std::runtime_error&);
+
+		// But the binary stat[] blob of Rstat/Twstat legitimately
+		// contains NUL bytes (zeroed fields) and must still pass.
+		NineStat ok;
+		ok.name = "x";
+		std::string blob = nine_encode_stat(ok);
+		TS_ASSERT(blob.find('\0') != std::string::npos);
+		m = NineMsg();
+		m.type = Twstat;
+		m.tag = 32;
+		m.fid = 1;
+		m.stat = blob;
+		NineMsg rt = round_trip(m);
+		TS_ASSERT_EQUALS(rt.stat, blob);
+	}
+
+	// ----------------------------------------------------------
 	// Protocol limits: 16-bit stat sizes, MAXWELEM, exact framing.
 	void test_protocol_limits(void)
 	{

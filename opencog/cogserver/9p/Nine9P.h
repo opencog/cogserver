@@ -160,9 +160,11 @@ size_t nine_decode(const std::string& bytes, NineMsg& out);
 /// Build an Rerror reply for `tag` with the given error text.
 NineMsg nine_error(uint16_t tag, const std::string& ename);
 
-/// Encode a NineStat as the byte-counted stat[] blob used inside
-/// Rstat/Twstat (and, doubly length-prefixed, inside a directory's
-/// Rread payload).
+/// Encode a NineStat as the stat[] blob of stat(5): a size[2]
+/// prefix followed by the entry body. A directory's Rread payload
+/// is the direct concatenation of such already-prefixed blobs;
+/// Rstat/Twstat instead wrap the whole blob in one more length
+/// prefix (doubly prefixed) when carrying it in NineMsg::stat.
 std::string nine_encode_stat(const NineStat& st);
 
 /// Decode a stat[] blob produced by nine_encode_stat().
