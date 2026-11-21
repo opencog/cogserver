@@ -75,7 +75,9 @@ public:
 	}
 
 	/// Write `data` at `offset` into a file node; returns the number
-	/// of bytes accepted. The default implementation is read-only.
+	/// of bytes accepted. May throw std::runtime_error to reject a
+	/// write (reported to the 9P client as an Rerror). The default
+	/// implementation is read-only.
 	virtual uint32_t write(uint64_t offset, const std::string& data)
 	{
 		(void) offset;

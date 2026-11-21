@@ -29,6 +29,10 @@ struct NineFid
 	NineNodePtr node;
 	uint8_t mode = 0;
 	bool opened = false;
+	/// Snapshot of this directory's encoded listing, (re)taken at
+	/// each Tread at offset 0, through which subsequent sequential
+	/// reads page (read(5) directory semantics).
+	std::string dir_snapshot;
 };
 
 /**

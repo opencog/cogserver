@@ -51,8 +51,11 @@ Simplifications
 ---------------
 * The tree is structurally read-only: Tcreate and Twstat are
   rejected; Tremove merely clunks the fid, per remove(5).
-* Directory reads return the whole listing at offset 0 and EOF at
-  any nonzero offset, rather than supporting incremental paging.
+* A directory Tread at offset 0 snapshots the listing for that fid;
+  subsequent sequential reads page through the snapshot, each reply
+  carrying an integral number of stat entries, per read(5).
+* Rread replies are clamped to the negotiated msize, and oversized
+  Twrite payloads are rejected.
 * Tauth is rejected (no authentication) and Tflush is acknowledged
   trivially (dispatch is strictly synchronous).
 * Plan 9 namespace composition (bind/mount, union directories) and

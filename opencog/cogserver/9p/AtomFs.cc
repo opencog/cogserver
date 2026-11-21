@@ -7,9 +7,13 @@
 
 #include <opencog/cogserver/9p/AtomFs.h>
 
+#include <cctype>
 #include <cstdio>
+#include <cstdlib>
+#include <algorithm>
 #include <functional>
 #include <sstream>
+#include <stdexcept>
 
 #include <opencog/atoms/atom_types/atom_types.h>
 #include <opencog/atoms/atom_types/NameServer.h>
@@ -79,14 +83,19 @@ private:
 };
 
 /// A generic directory node whose children are supplied by a functor,
-/// evaluated fresh on every children()/lookup() call.
+/// evaluated fresh on every children()/lookup() call. An optional
+/// lookup functor lets directories with many children (by-handle/,
+/// by-type/<T>/) resolve a single name directly instead of listing
+/// every child -- walks are the hot path of every 9P file access.
 class FuncDirNode : public NineNode
 {
 public:
 	FuncDirNode(std::string name, uint64_t qid_path,
-	            std::function<std::vector<NineNodePtr>()> lister) :
+	            std::function<std::vector<NineNodePtr>()> lister,
+	            std::function<NineNodePtr(const std::string&)> finder =
+	                nullptr) :
 		_name(std::move(name)), _qid_path(qid_path),
-		_lister(std::move(lister))
+		_lister(std::move(lister)), _finder(std::move(finder))
 	{}
 
 	std::string name() const override { return _name; }
@@ -96,11 +105,17 @@ public:
 		NineQid q; q.type = QTDIR; q.path = _qid_path; return q;
 	}
 	std::vector<NineNodePtr> children() const override { return _lister(); }
+	NineNodePtr lookup(const std::string& child_name) const override
+	{
+		if (_finder) return _finder(child_name);
+		return NineNode::lookup(child_name);
+	}
 
 private:
 	std::string _name;
 	uint64_t _qid_path;
 	std::function<std::vector<NineNodePtr>()> _lister;
+	std::function<NineNodePtr(const std::string&)> _finder;
 };
 
 /// The truth-value convenience file: reads back "<strength>
@@ -132,13 +147,19 @@ public:
 		if (offset >= s.size()) return std::string();
 		return s.substr(offset, count);
 	}
+	// Failed writes throw: the dispatcher reports the exception as an
+	// Rerror, as write(5) requires, rather than a misleading
+	// zero-count Rwrite.
 	uint32_t write(uint64_t offset, const std::string& data) override
 	{
-		if (offset != 0 or not is_writable())
-			return 0;
+		if (not is_writable())
+			throw std::runtime_error("tv: read-only AtomSpace");
+		if (offset != 0)
+			throw std::runtime_error("tv: writes must be at offset 0");
 		double s = 1.0, c = 0.0;
 		if (2 != sscanf(data.c_str(), "%lf %lf", &s, &c))
-			return 0;
+			throw std::runtime_error(
+				"tv: expected \"<strength> <confidence>\"");
 		_h->setValue(truth_key(),
 			createFloatValue(std::vector<double>({s, c})));
 		return (uint32_t) data.size();
@@ -220,6 +241,10 @@ AtomFsIndex::AtomFsIndex(const AtomSpacePtr& as) :
 			for (const Handle& h : all)
 				out.push_back(self->dir_for(h));
 			return out;
+		},
+		[self](const std::string& n) -> NineNodePtr
+		{
+			return self->atom_by_id(n, ATOM, true);
 		}));
 
 	NineNodePtr by_type(new FuncDirNode("by-type", mix_id(0, "by-type"),
@@ -236,22 +261,15 @@ AtomFsIndex::AtomFsIndex(const AtomSpacePtr& as) :
 				for (Type s : seen) if (s == t) { dup = true; break; }
 				if (dup) continue;
 				seen.push_back(t);
-
-				const std::string tname = nameserver().getTypeName(t);
-				out.push_back(NineNodePtr(new FuncDirNode(
-					tname, mix_id((uint64_t) t, "by-type-entry"),
-					[self, t]() -> std::vector<NineNodePtr>
-					{
-						HandleSeq hs;
-						self->_as->get_handles_by_type(hs, t, false);
-						std::vector<NineNodePtr> kids;
-						kids.reserve(hs.size());
-						for (const Handle& h : hs)
-							kids.push_back(self->dir_for(h));
-						return kids;
-					})));
+				out.push_back(self->type_dir(t));
 			}
 			return out;
+		},
+		[self](const std::string& n) -> NineNodePtr
+		{
+			Type t = nameserver().getType(n);
+			if (NOTYPE == t) return nullptr;
+			return self->type_dir(t);
 		}));
 
 	_root = NineNodePtr(new FuncDirNode("/", mix_id(0, "root"),
@@ -261,6 +279,59 @@ AtomFsIndex::AtomFsIndex(const AtomSpacePtr& as) :
 		}));
 }
 
+NineNodePtr AtomFsIndex::type_dir(Type t)
+{
+	AtomFsIndex* self = this;
+	const std::string tname = nameserver().getTypeName(t);
+	return NineNodePtr(new FuncDirNode(
+		tname, mix_id((uint64_t) t, "by-type-entry"),
+		[self, t]() -> std::vector<NineNodePtr>
+		{
+			HandleSeq hs;
+			self->_as->get_handles_by_type(hs, t, false);
+			std::vector<NineNodePtr> kids;
+			kids.reserve(hs.size());
+			for (const Handle& h : hs)
+				kids.push_back(self->dir_for(h));
+			return kids;
+		},
+		[self, t](const std::string& n) -> NineNodePtr
+		{
+			return self->atom_by_id(n, t, false);
+		}));
+}
+
+NineNodePtr AtomFsIndex::atom_by_id(const std::string& name,
+                                    Type t, bool subclass)
+{
+	// Ids are exactly 16 lower-case hex digits (see id_of()).
+	if (16 != name.size()) return nullptr;
+	for (char c : name)
+		if (not isxdigit((unsigned char) c)) return nullptr;
+	ContentHash want =
+		(ContentHash) std::strtoull(name.c_str(), nullptr, 16);
+
+	// A cached node resolves the name without touching the AtomSpace.
+	{
+		std::lock_guard<std::mutex> lock(_mtx);
+		auto it = _cache.find(want);
+		if (it != _cache.end())
+		{
+			NineNodePtr live = it->second.lock();
+			if (live) return live;
+		}
+	}
+
+	// Scan for the matching atom; only the match gets a node built,
+	// so a walk does not materialize the whole AtomSpace.
+	HandleSeq hs;
+	_as->get_handles_by_type(hs, t, subclass);
+	for (const Handle& h : hs)
+		if (h.value() == want)
+			return dir_for(h);
+	return nullptr;
+}
+
 NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 {
 	std::lock_guard<std::mutex> lock(_mtx);
@@ -268,7 +339,11 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 	ContentHash key = h.value();
 	auto it = _cache.find(key);
 	if (it != _cache.end())
-		return it->second;
+	{
+		NineNodePtr live = it->second.lock();
+		if (live) return live;
+		_cache.erase(it);
+	}
 
 	AtomFsIndex* self = this;
 	Handle atom = h;
@@ -319,7 +394,7 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 
 	NineNodePtr values_dir(new FuncDirNode("values",
 		mix_id(qbase, "values"),
-		[atom]() -> std::vector<NineNodePtr>
+		[atom, qbase]() -> std::vector<NineNodePtr>
 		{
 			std::vector<NineNodePtr> out;
 			HandleSet keys = atom->getKeys();
@@ -327,8 +402,11 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 			{
 				ValuePtr v = atom->getValue(key);
 				std::string label = AtomFsIndex::id_of(key);
+				// The qid must mix in the owning atom too: different
+				// atoms holding a value under the same key are
+				// different files, and must not share a qid.
 				out.push_back(NineNodePtr(new TextFileNode(label,
-					mix_id(key.value(), "value-entry"),
+					mix_id(mix_id(qbase, "value-entry"), label),
 					[key, v]()
 					{
 						return key->to_short_string() + " = " +
@@ -346,6 +424,17 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 		[kids]() -> std::vector<NineNodePtr> { return kids; }));
 
 	_cache[key] = dir;
+
+	// The cache holds weak references (fids keep live nodes pinned);
+	// sweep the dead entries occasionally so the map itself stays
+	// proportional to the number of *live* nodes, not to every atom
+	// ever visited.
+	if (_cache.size() >= _sweep_mark)
+	{
+		for (auto i = _cache.begin(); i != _cache.end(); )
+			i = i->second.expired() ? _cache.erase(i) : std::next(i);
+		_sweep_mark = std::max<size_t>(64, 2 * _cache.size());
+	}
 	return dir;
 }
 

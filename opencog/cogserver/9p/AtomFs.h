@@ -58,6 +58,14 @@ namespace plan9
  * NineNode representations, and builds the top-level directory
  * tree (by-type/, by-handle/) for that AtomSpace.
  *
+ * The per-atom node cache holds weak references: nodes stay alive
+ * for exactly as long as something (a fid, a directory listing in
+ * progress) references them, so the index never pins deleted atoms
+ * and its memory use is bounded by the number of nodes actually in
+ * use, not by the number of atoms ever visited. Qids are derived
+ * deterministically from atom content hashes, so a rebuilt node is
+ * indistinguishable from the original.
+ *
  * An AtomFsIndex must outlive every NineNode it has handed out, and
  * outlive any NineSession built on top of its root().
  */
@@ -79,9 +87,18 @@ public:
 	static std::string id_of(const Handle& h);
 
 private:
+	/// Directory node for one atom type (a by-type/<TYPE_NAME>/ entry).
+	NineNodePtr type_dir(Type t);
+
+	/// Resolve one <id> path component directly to its atom's node,
+	/// searching atoms of type `t` (with subtypes if `subclass`);
+	/// nullptr if the name is not a valid id or no atom matches.
+	NineNodePtr atom_by_id(const std::string& name, Type t, bool subclass);
+
 	AtomSpacePtr _as;
 	std::mutex _mtx;
-	std::unordered_map<ContentHash, NineNodePtr> _cache;
+	std::unordered_map<ContentHash, std::weak_ptr<NineNode>> _cache;
+	size_t _sweep_mark = 64;
 	NineNodePtr _root;
 };
 

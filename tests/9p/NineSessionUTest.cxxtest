@@ -351,6 +351,192 @@ public:
 	}
 
 	// ----------------------------------------------------------
+	// Directory listings page through successive reads: each reply
+	// fits the negotiated msize, carries whole stat entries, and
+	// together they cover every atom (read(5) semantics).
+	void test_directory_paging(void)
+	{
+		// Enough atoms that the listing exceeds one msize-limited read.
+		const size_t natoms = 300;
+		for (size_t i = 0; i < natoms; i++)
+			_as->add_node(CONCEPT_NODE, "page-" + std::to_string(i));
+
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1, {"by-handle"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		std::string all;
+		uint64_t off = 0;
+		size_t reads = 0;
+		while (true)
+		{
+			NineMsg rr = read(ses, 1, off, 65536);
+			TS_ASSERT_EQUALS(rr.type, Rread);
+			// The whole Rread frame must fit the negotiated msize.
+			TS_ASSERT_LESS_THAN_EQUALS(rr.data.size(),
+				(size_t) NINE_DEFAULT_MSIZE - 11);
+			if (rr.data.empty()) break;
+			all += rr.data;
+			off += rr.data.size();
+			if (1000 < ++reads) { TS_FAIL("unterminated listing"); break; }
+		}
+		TS_ASSERT_LESS_THAN_EQUALS(2u, reads);
+
+		// Every atom is present exactly once: the 300 new ones plus
+		// foo, bar and the ListLink from setUp().
+		std::vector<NineStat> ents = parse_dir(all);
+		TS_ASSERT_EQUALS(ents.size(), natoms + 3);
+	}
+
+	// ----------------------------------------------------------
+	// The mode a fid was opened with is enforced on later reads
+	// and writes (open(5)/read(5)/write(5)).
+	void test_open_mode_enforced(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		// tv opened OREAD must not accept writes.
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 11;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "0.9 0.9\n";
+		NineMsg rwr = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(rwr.type, Rerror);
+
+		// tv opened OWRITE must not serve reads.
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		NineMsg ro2 = open(ses, 2, OWRITE);
+		TS_ASSERT_EQUALS(ro2.type, Ropen);
+		NineMsg rr = read(ses, 2, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// A rejected tv write is an Rerror, not a zero-count Rwrite.
+	void test_tv_write_errors(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, ORDWR);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 12;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "junk";
+		NineMsg r1 = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(r1.type, Rerror);
+
+		tw.offset = 4;
+		tw.data = "0.5 0.5\n";
+		NineMsg r2 = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(r2.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// Value files of *different* atoms under the *same* key are
+	// different files and must not share a Qid.
+	void test_value_qids_distinct(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		// Give both foo and bar a value under the truth key.
+		for (const Handle& h : { _foo, _bar })
+		{
+			std::string id = AtomFsIndex::id_of(h);
+			uint32_t fid = (h == _foo) ? 1 : 2;
+			NineMsg rw = walk(ses, 0, fid, {"by-handle", id, "tv"});
+			TS_ASSERT_EQUALS(rw.type, Rwalk);
+			NineMsg ro = open(ses, fid, OWRITE);
+			TS_ASSERT_EQUALS(ro.type, Ropen);
+			NineMsg tw;
+			tw.type = Twrite;
+			tw.tag = 13;
+			tw.fid = fid;
+			tw.offset = 0;
+			tw.data = "0.5 0.25\n";
+			NineMsg rwr = ses.dispatch(tw);
+			TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		}
+
+		// List values/ of each atom; the (single) truth-key entries
+		// carry the same name but distinct Qids.
+		std::vector<NineStat> foo_vals, bar_vals;
+		for (const Handle& h : { _foo, _bar })
+		{
+			std::string id = AtomFsIndex::id_of(h);
+			uint32_t fid = (h == _foo) ? 3 : 4;
+			NineMsg rw = walk(ses, 0, fid, {"by-handle", id, "values"});
+			TS_ASSERT_EQUALS(rw.type, Rwalk);
+			NineMsg ro = open(ses, fid, OREAD);
+			TS_ASSERT_EQUALS(ro.type, Ropen);
+			NineMsg rr = read(ses, fid, 0, 8192);
+			TS_ASSERT_EQUALS(rr.type, Rread);
+			((h == _foo) ? foo_vals : bar_vals) = parse_dir(rr.data);
+		}
+		TS_ASSERT_EQUALS(foo_vals.size(), 1u);
+		TS_ASSERT_EQUALS(bar_vals.size(), 1u);
+		TS_ASSERT_EQUALS(foo_vals[0].name, bar_vals[0].name);
+		TS_ASSERT(foo_vals[0].qid != bar_vals[0].qid);
+	}
+
+	// ----------------------------------------------------------
+	// File reads are clamped so the reply fits the negotiated
+	// msize, and the remainder stays reachable at later offsets.
+	void test_msize_clamp(void)
+	{
+		const size_t len = 20000;
+		Handle big = _as->add_node(CONCEPT_NODE, std::string(len, 'x'));
+
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1,
+			{"by-handle", AtomFsIndex::id_of(big), "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 3u);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		// One read asking for far more than msize is clamped...
+		NineMsg rr = read(ses, 1, 0, 65536);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT_EQUALS(rr.data.size(),
+			(size_t) NINE_DEFAULT_MSIZE - 11);
+
+		// ...and sequential reads retrieve the whole file.
+		std::string all = rr.data;
+		while (true)
+		{
+			NineMsg rn = read(ses, 1, all.size(), 65536);
+			TS_ASSERT_EQUALS(rn.type, Rread);
+			if (rn.data.empty()) break;
+			all += rn.data;
+		}
+		TS_ASSERT_EQUALS(all.size(), len + 1); // name + trailing \n
+	}
+
+	// ----------------------------------------------------------
 	// The whole-frame entry point: raw bytes in, raw bytes out;
 	// incomplete frames throw.
 	void test_handle_message(void)
