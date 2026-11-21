@@ -2,12 +2,14 @@
 LINK_DIRECTORIES(
 	${PROJECT_BINARY_DIR}/opencog/atomspace
 	${PROJECT_BINARY_DIR}/opencog/cogserver/server
+	${PROJECT_BINARY_DIR}/opencog/cogserver/mcp-eval
 )
 
 LINK_LIBRARIES(
 	server
 	servernode
 	cogserver-types
+	mcp-eval
 	${ATOMSPACE_LIBRARIES}
 )
 

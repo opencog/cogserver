@@ -146,21 +146,23 @@ void WebServer::OnLine(const std::string& line)
 	if (strcmp(_shell->_name, "mcp") == 0 || strcmp(_shell->_name, "json") == 0)
 		content_type = "application/json";
 
-	if (!result.empty())
+	if (result.empty() && strcmp(_shell->_name, "mcp") == 0)
 	{
-		SendWithHeader(result, content_type);
-	}
-	else
-	{
-		// Empty result: the input was a JSON-RPC notification, which
-		// must not get a JSON-RPC response. However, every HTTP POST
-		// needs an HTTP reply; per the MCP Streamable HTTP spec,
-		// notifications are acknowledged with "202 Accepted" and no
-		// body.
+		// An empty MCP result means the input was a JSON-RPC
+		// notification, which must not get a JSON-RPC response.
+		// (McpEval always produces a reply for everything else,
+		// including errors.) However, every HTTP POST needs an
+		// HTTP reply; per the MCP Streamable HTTP spec,
+		// notifications are acknowledged with "202 Accepted" and
+		// no body. Other shells keep the old empty-body reply.
 		Send("HTTP/1.1 202 Accepted\r\n"
 		     "Server: CogServer\r\n"
 		     "Content-Length: 0\r\n"
 		     "\r\n");
+	}
+	else
+	{
+		SendWithHeader(result, content_type);
 	}
 }
 

@@ -25,6 +25,7 @@
 #include <opencog/atoms/value/FloatValue.h>
 #include <opencog/atoms/value/VoidValue.h>
 #include <opencog/cogserver/atoms/CogServerNode.h>
+#include <opencog/cogserver/mcp-eval/McpEval.h>
 
 using namespace opencog;
 
@@ -86,6 +87,66 @@ public:
 		rc = system(PROJECT_BINARY_DIR "/examples/mcp/mcp-checker --port 17445");
 		if (rc != 0) printf("Error: cannot run mcp checker\n");
 		TS_ASSERT_EQUALS(rc, 0);
+
+		logger().debug("END TEST: %s", __FUNCTION__);
+	}
+
+	// Helper: run one JSON-RPC line through the evaluator.
+	std::string mcp_eval(McpEval* ev, const std::string& line)
+	{
+		ev->begin_eval();
+		ev->eval_expr(line);
+		return ev->poll_result();
+	}
+
+	// Per JSON-RPC 2.0, notifications (no id) must never get a reply,
+	// while malformed input and id-bearing requests always must.
+	void test_notification_handling()
+	{
+		logger().debug("BEGIN TEST: %s", __FUNCTION__);
+
+		McpEval* ev = McpEval::get_evaluator(asp);
+
+		// Notifications produce no output at all.
+		TS_ASSERT(mcp_eval(ev,
+			"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n").empty());
+		TS_ASSERT(mcp_eval(ev,
+			"{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}\n").empty());
+		TS_ASSERT(mcp_eval(ev,
+			"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\"}\n").empty());
+
+		// Even an unknown-method notification stays silent.
+		TS_ASSERT(mcp_eval(ev,
+			"{\"jsonrpc\":\"2.0\",\"method\":\"no/such/method\"}\n").empty());
+
+		// Unparseable input must get a -32700 reply, not silence.
+		std::string r = mcp_eval(ev, "this is not json\n");
+		TS_ASSERT(r.find("-32700") != std::string::npos);
+
+		// Wrong jsonrpc version must get a -32600 reply.
+		r = mcp_eval(ev, "{\"jsonrpc\":\"1.0\",\"method\":\"ping\",\"id\":7}\n");
+		TS_ASSERT(r.find("-32600") != std::string::npos);
+
+		// Missing method is an invalid Request, not a notification.
+		r = mcp_eval(ev, "{\"jsonrpc\":\"2.0\",\"id\":8}\n");
+		TS_ASSERT(r.find("-32600") != std::string::npos);
+		r = mcp_eval(ev, "{\"jsonrpc\":\"2.0\"}\n");
+		TS_ASSERT(r.find("-32600") != std::string::npos);
+
+		// An id-bearing "initialized" is an ordinary call; it must
+		// get a reply (an error), never silence.
+		r = mcp_eval(ev,
+			"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"id\":9}\n");
+		TS_ASSERT(!r.empty());
+		TS_ASSERT(r.find("-32600") != std::string::npos);
+
+		// A normal id-bearing request still gets its result, and the
+		// evaluator correlates correctly after a notification.
+		TS_ASSERT(mcp_eval(ev,
+			"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n").empty());
+		r = mcp_eval(ev, "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":10}\n");
+		TS_ASSERT(r.find("\"result\"") != std::string::npos);
+		TS_ASSERT(r.find("10") != std::string::npos);
 
 		logger().debug("END TEST: %s", __FUNCTION__);
 	}
