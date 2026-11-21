@@ -40,12 +40,27 @@ static void put64(std::string& s, uint64_t v)
 		s.push_back((char) ((v >> (8 * i)) & 0xff));
 }
 
+// Counted byte sequence: size[2] followed by raw bytes. Used both
+// for 9P text strings and for binary blobs (the stat[n] carried by
+// Rstat/Twstat), so no content restrictions are imposed here.
 static void putstr(std::string& s, const std::string& v)
 {
 	if (v.size() > 0xffff)
 		throw std::runtime_error("9P: string exceeds 65535 bytes");
 	put16(s, (uint16_t) v.size());
 	s.append(v);
+}
+
+// 9P text string: same wire form as putstr(), but intro(5) forbids
+// NUL characters in text fields ("Text strings ... are not
+// NUL-terminated: n counts the bytes of UTF-8 data, which include
+// no final zero byte."). A NUL smuggled into a name or identity
+// would be read differently by C-string-based peers.
+static void puttext(std::string& s, const std::string& v)
+{
+	if (v.find('\0') != std::string::npos)
+		throw std::runtime_error("9P: text string contains NUL");
+	putstr(s, v);
 }
 
 static void putqid(std::string& s, const NineQid& q)
@@ -93,6 +108,7 @@ static uint64_t get64(const std::string& s, size_t& p)
 	return v;
 }
 
+// Counted byte sequence; see putstr().
 static std::string getstr(const std::string& s, size_t& p)
 {
 	uint16_t n = get16(s, p);
@@ -100,6 +116,15 @@ static std::string getstr(const std::string& s, size_t& p)
 		throw std::runtime_error("9P: truncated message (string)");
 	std::string v = s.substr(p, n);
 	p += n;
+	return v;
+}
+
+// 9P text string; see puttext().
+static std::string gettext(const std::string& s, size_t& p)
+{
+	std::string v = getstr(s, p);
+	if (v.find('\0') != std::string::npos)
+		throw std::runtime_error("9P: text string contains NUL");
 	return v;
 }
 
@@ -125,10 +150,10 @@ std::string nine_encode_stat(const NineStat& st)
 	put32(body, st.atime);
 	put32(body, st.mtime);
 	put64(body, st.length);
-	putstr(body, st.name);
-	putstr(body, st.uid);
-	putstr(body, st.gid);
-	putstr(body, st.muid);
+	puttext(body, st.name);
+	puttext(body, st.uid);
+	puttext(body, st.gid);
+	puttext(body, st.muid);
 
 	// The leading size[2] records the length of everything that
 	// follows it (not including itself), per stat(5). The body must
@@ -160,10 +185,10 @@ NineStat nine_decode_stat(const std::string& blob)
 	st.atime = get32(blob, p);
 	st.mtime = get32(blob, p);
 	st.length = get64(blob, p);
-	st.name = getstr(blob, p);
-	st.uid = getstr(blob, p);
-	st.gid = getstr(blob, p);
-	st.muid = getstr(blob, p);
+	st.name = gettext(blob, p);
+	st.uid = gettext(blob, p);
+	st.gid = gettext(blob, p);
+	st.muid = gettext(blob, p);
 
 	// Every declared byte must belong to a field just parsed.
 	if (p != blob.size())
@@ -185,13 +210,13 @@ std::string nine_encode(const NineMsg& m)
 		case Tversion:
 		case Rversion:
 			put32(body, m.msize);
-			putstr(body, m.version);
+			puttext(body, m.version);
 			break;
 
 		case Tauth:
 			put32(body, m.afid);
-			putstr(body, m.uname);
-			putstr(body, m.aname);
+			puttext(body, m.uname);
+			puttext(body, m.aname);
 			break;
 
 		case Rauth:
@@ -201,8 +226,8 @@ std::string nine_encode(const NineMsg& m)
 		case Tattach:
 			put32(body, m.fid);
 			put32(body, m.afid);
-			putstr(body, m.uname);
-			putstr(body, m.aname);
+			puttext(body, m.uname);
+			puttext(body, m.aname);
 			break;
 
 		case Rattach:
@@ -210,7 +235,7 @@ std::string nine_encode(const NineMsg& m)
 			break;
 
 		case Rerror:
-			putstr(body, m.ename);
+			puttext(body, m.ename);
 			break;
 
 		case Tflush:
@@ -227,7 +252,7 @@ std::string nine_encode(const NineMsg& m)
 				throw std::runtime_error("9P: Twalk exceeds 16 names");
 			put16(body, (uint16_t) m.wname.size());
 			for (const auto& n : m.wname)
-				putstr(body, n);
+				puttext(body, n);
 			break;
 
 		case Rwalk:
@@ -250,7 +275,7 @@ std::string nine_encode(const NineMsg& m)
 
 		case Tcreate:
 			put32(body, m.fid);
-			putstr(body, m.name);
+			puttext(body, m.name);
 			put32(body, m.perm);
 			put8(body, m.mode);
 			break;
@@ -306,6 +331,12 @@ std::string nine_encode(const NineMsg& m)
 			throw std::runtime_error("9P: cannot encode unknown message type");
 	}
 
+	// The size[4] prefix counts the whole frame, including itself.
+	// A frame longer than UINT32_MAX is unrepresentable: narrowing
+	// would silently wrap the prefix (a ~4GiB Rread would declare
+	// size zero), so refuse to emit it.
+	if (body.size() > UINT32_MAX - 4)
+		throw std::runtime_error("9P: message exceeds 4GiB frame limit");
 	std::string out;
 	put32(out, (uint32_t) (4 + body.size()));
 	out.append(body);
@@ -339,13 +370,13 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 		case Tversion:
 		case Rversion:
 			m.msize = get32(frame, p);
-			m.version = getstr(frame, p);
+			m.version = gettext(frame, p);
 			break;
 
 		case Tauth:
 			m.afid = get32(frame, p);
-			m.uname = getstr(frame, p);
-			m.aname = getstr(frame, p);
+			m.uname = gettext(frame, p);
+			m.aname = gettext(frame, p);
 			break;
 
 		case Rauth:
@@ -355,8 +386,8 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 		case Tattach:
 			m.fid = get32(frame, p);
 			m.afid = get32(frame, p);
-			m.uname = getstr(frame, p);
-			m.aname = getstr(frame, p);
+			m.uname = gettext(frame, p);
+			m.aname = gettext(frame, p);
 			break;
 
 		case Rattach:
@@ -364,7 +395,7 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 			break;
 
 		case Rerror:
-			m.ename = getstr(frame, p);
+			m.ename = gettext(frame, p);
 			break;
 
 		case Tflush:
@@ -382,7 +413,7 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 			if (n > NINE_MAXWELEM)
 				throw std::runtime_error("9P: Twalk exceeds 16 names");
 			for (uint16_t i = 0; i < n; i++)
-				m.wname.push_back(getstr(frame, p));
+				m.wname.push_back(gettext(frame, p));
 			break;
 		}
 
@@ -408,7 +439,7 @@ size_t nine_decode(const std::string& bytes, NineMsg& m)
 
 		case Tcreate:
 			m.fid = get32(frame, p);
-			m.name = getstr(frame, p);
+			m.name = gettext(frame, p);
 			m.perm = get32(frame, p);
 			m.mode = get8(frame, p);
 			break;
