@@ -155,20 +155,15 @@ void McpEval::eval_expr(const std::string &expr)
             "messages to those Atoms that implement an Object interface.";
 		} else if (method == "notifications/initialized" or
 		           method == "initialized") {
-#define WTF_INIT
-#ifdef WTF_INIT
-			// Notifications (requests without id) should not send a
-			// response per JSON-RPC spec.
-			// But HTTP clients need some response to be sent back.
-			// Return an empty result object to keep HTTP happy.
-			response["result"] = Json::objectValue;
-			response.removeMember("id");
-#else
-			// Notification - no response
+			// Notifications (requests without id) must not get a
+			// response, per the JSON-RPC spec. Strict MCP clients
+			// (e.g. Google Antigravity) reject the connection if a
+			// response is sent. The HTTP transport handles the
+			// empty result by replying "202 Accepted" (see
+			// WebServer::OnLine), per the MCP Streamable HTTP spec.
 			_result = "";
 			_done = true;
 			return;
-#endif
 		} else if (method == "notifications/cancelled") {
 			// XXX FIXME .. the currently running tool should be killed.
 			// To do this, the Mcpplugin API would need to get a new
@@ -388,6 +383,14 @@ void McpEval::eval_expr(const std::string &expr)
 		} else {
 			response["error"]["code"] = -32601;
 			response["error"]["message"] = "Method not found: " + method;
+		}
+
+		// Per JSON-RPC 2.0, notifications (requests without an id)
+		// must never receive a response, not even an error reply.
+		if (!request.isMember("id")) {
+			_result = "";
+			_done = true;
+			return;
 		}
 
 		logger().debug("[McpEval] replying: %s", json_to_string(response).c_str());

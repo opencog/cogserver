@@ -141,14 +141,26 @@ void WebServer::OnLine(const std::string& line)
 	} while (!chunk.empty());
 
 	// Send with appropriate HTTP headers
+	// Determine content type based on shell type
+	std::string content_type = "text/plain";
+	if (strcmp(_shell->_name, "mcp") == 0 || strcmp(_shell->_name, "json") == 0)
+		content_type = "application/json";
+
 	if (!result.empty())
 	{
-		// Determine content type based on shell type
-		std::string content_type = "text/plain";
-		if (strcmp(_shell->_name, "mcp") == 0 || strcmp(_shell->_name, "json") == 0)
-			content_type = "application/json";
-
 		SendWithHeader(result, content_type);
+	}
+	else
+	{
+		// Empty result: the input was a JSON-RPC notification, which
+		// must not get a JSON-RPC response. However, every HTTP POST
+		// needs an HTTP reply; per the MCP Streamable HTTP spec,
+		// notifications are acknowledged with "202 Accepted" and no
+		// body.
+		Send("HTTP/1.1 202 Accepted\r\n"
+		     "Server: CogServer\r\n"
+		     "Content-Length: 0\r\n"
+		     "\r\n");
 	}
 }
 
