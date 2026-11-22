@@ -91,6 +91,12 @@ void McpEval::eval_expr(const std::string &expr)
 	if (0 == expr.compare("\n")) return;
 
 	logger().debug("[McpEval] received %s", expr.c_str());
+
+	// Per JSON-RPC 2.0, a request without an id is a notification,
+	// and notifications must never receive a response, not even an
+	// error reply. Track this across every response-producing exit,
+	// including the exception handlers.
+	bool is_notification = false;
 	try
 	{
 		Json::Value request;
@@ -105,10 +111,14 @@ void McpEval::eval_expr(const std::string &expr)
 			error_response["error"]["code"] = -32700;
 			error_response["error"]["message"] = "Parse error: " + errors;
 			_result = json_to_string(error_response) + "\n";
+			_done = true;
 			return;
 		}
 
-		if (!request.isMember("jsonrpc") || request["jsonrpc"].asString() != "2.0")
+		if (!request.isObject() ||
+		    !request.isMember("jsonrpc") ||
+		    !request["jsonrpc"].isString() ||
+		    request["jsonrpc"].asString() != "2.0")
 		{
 			Json::Value error_response;
 			error_response["jsonrpc"] = "2.0";
@@ -116,12 +126,30 @@ void McpEval::eval_expr(const std::string &expr)
 			error_response["error"]["code"] = -32600;
 			error_response["error"]["message"] = "Invalid Request - missing jsonrpc 2.0";
 			_result = json_to_string(error_response) + "\n";
+			_done = true;
 			return;
 		}
 
-		std::string method = request.isMember("method") ? request["method"].asString() : "";
+		// A valid Request object must have a string method. Only after
+		// the envelope has been validated may the absence of an id be
+		// given notification semantics.
+		if (!request.isMember("method") || !request["method"].isString())
+		{
+			Json::Value error_response;
+			error_response["jsonrpc"] = "2.0";
+			error_response["id"] = request.isMember("id") ?
+				request["id"] : Json::Value::null;
+			error_response["error"]["code"] = -32600;
+			error_response["error"]["message"] = "Invalid Request - missing method";
+			_result = json_to_string(error_response) + "\n";
+			_done = true;
+			return;
+		}
+
+		std::string method = request["method"].asString();
 		Json::Value params = request.isMember("params") ? request["params"] : Json::objectValue;
 		Json::Value id = request.isMember("id") ? request["id"] : Json::Value::null;
+		is_notification = !request.isMember("id");
 
 		logger().debug("[McpEval] method %s", method.c_str());
 		Json::Value response;
@@ -155,28 +183,35 @@ void McpEval::eval_expr(const std::string &expr)
             "messages to those Atoms that implement an Object interface.";
 		} else if (method == "notifications/initialized" or
 		           method == "initialized") {
-#define WTF_INIT
-#ifdef WTF_INIT
-			// Notifications (requests without id) should not send a
-			// response per JSON-RPC spec.
-			// But HTTP clients need some response to be sent back.
-			// Return an empty result object to keep HTTP happy.
-			response["result"] = Json::objectValue;
-			response.removeMember("id");
-#else
-			// Notification - no response
-			_result = "";
-			_done = true;
-			return;
-#endif
+			// Notifications (requests without id) must not get a
+			// response, per the JSON-RPC spec. Strict MCP clients
+			// (e.g. Google Antigravity) reject the connection if a
+			// response is sent. The HTTP transport handles the
+			// empty result by replying "202 Accepted" (see
+			// WebServer::OnLine), per the MCP Streamable HTTP spec.
+			if (is_notification) {
+				_result = "";
+				_done = true;
+				return;
+			}
+			// An id-bearing "initialized" is an ordinary JSON-RPC
+			// call, not a notification; it must get a reply.
+			response["error"]["code"] = -32600;
+			response["error"]["message"] =
+				"Invalid Request - initialized must be a notification";
 		} else if (method == "notifications/cancelled") {
 			// XXX FIXME .. the currently running tool should be killed.
 			// To do this, the Mcpplugin API would need to get a new
 			// kill method that would get called to do this. Later.
 			// This method is supposed to not have any response.
-			_result = "";
-			_done = true;
-			return;
+			if (is_notification) {
+				_result = "";
+				_done = true;
+				return;
+			}
+			response["error"]["code"] = -32600;
+			response["error"]["message"] =
+				"Invalid Request - cancelled must be a notification";
 		} else if (method == "ping") {
 			response["result"] = Json::objectValue;
 		} else if (method == "tools/list") {
@@ -349,6 +384,13 @@ void McpEval::eval_expr(const std::string &expr)
 				try {
 					tool_result_json = it->second->invoke_tool(tool_name, arguments_json);
 				} catch (const std::exception& e) {
+					// Notifications never get a reply, even on error.
+					if (is_notification) {
+						_result = "";
+						_done = true;
+						return;
+					}
+
 					// Convert exception to MCP content format error
 					// Per MCP spec: tool execution errors use {"content": [...], "isError": true}
 					Json::Value error_content;
@@ -390,6 +432,14 @@ void McpEval::eval_expr(const std::string &expr)
 			response["error"]["message"] = "Method not found: " + method;
 		}
 
+		// Per JSON-RPC 2.0, notifications (requests without an id)
+		// must never receive a response, not even an error reply.
+		if (is_notification) {
+			_result = "";
+			_done = true;
+			return;
+		}
+
 		logger().debug("[McpEval] replying: %s", json_to_string(response).c_str());
 
 		// Trailing newline is mandatory; jsonrpc uses line discipline.
@@ -398,6 +448,13 @@ void McpEval::eval_expr(const std::string &expr)
 	}
 	catch (const std::exception& e)
 	{
+		// Notifications never get a reply, even on error.
+		if (is_notification) {
+			_result = "";
+			_done = true;
+			return;
+		}
+
 		Json::Value error_response;
 		error_response["jsonrpc"] = "2.0";
 		error_response["id"] = Json::Value::null;
