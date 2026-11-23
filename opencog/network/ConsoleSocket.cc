@@ -90,7 +90,10 @@ std::string ConsoleSocket::connection_stats(void)
             _shell->pending());
         rc += buf;
     }
-    else rc += "cogs           ";
+    else if (_is_9p_socket)
+        rc += " 9p            ";
+    else
+        rc += "cogs           ";
 
     return rc;
 }
