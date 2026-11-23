@@ -122,7 +122,7 @@ private:
 };
 
 /// The truth-value convenience file: reads back "<strength>
-/// <confidence>" from the atom's truth_key() value (when it is a
+/// <confidence>" from the atom's truf_key() value (when it is a
 /// FloatValue with at least two components), and, when the
 /// AtomSpace is writable, accepts writes of the same format to
 /// replace it. Updates go through AtomSpace::set_value(), so
@@ -173,12 +173,18 @@ public:
 		// updated in place; set_value() performs the COW copy (and
 		// returns the local atom) only on the first write to an
 		// atom still inherited from a read-only parent frame.
-		_as->set_value(live(), truth_key(),
+		_as->set_value(live(), truf_key(),
 			createFloatValue(std::vector<double>({s, c})));
 		return (uint32_t) data.size();
 	}
 
 private:
+	static const Handle& truf_key()
+	{
+		static Handle tk(createNode(PREDICATE_NODE, "*-TruthValueKey-*"));
+		return tk;
+	}
+
 	// The atom as currently visible in the exported space: the
 	// child-frame COW copy when one exists, otherwise the inherited
 	// original. Resolved fresh on every operation, so updates made
@@ -191,7 +197,7 @@ private:
 
 	std::string render() const
 	{
-		FloatValuePtr fv = FloatValueCast(live()->getValue(truth_key()));
+		FloatValuePtr fv = FloatValueCast(live()->getValue(truf_key()));
 		if (nullptr == fv or fv->value().size() < 2)
 			return "1 0\n";
 		std::ostringstream oss;
