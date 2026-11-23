@@ -1,0 +1,527 @@
+/*
+ * tests/9p/Nine9PUTest.cxxtest
+ *
+ * Test the 9P2000 wire-format codec: round-trip encode/decode of
+ * every supported message type, incremental (partial-buffer)
+ * decoding, stat entries, and rejection of malformed input.
+ *
+ * Copyright (C) 2026 OpenCog Foundation
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cxxtest/TestSuite.h>
+
+#include <stdexcept>
+#include <string>
+
+#include <opencog/cogserver/9p/Nine9P.h>
+
+using namespace opencog::plan9;
+
+class Nine9PUTest : public CxxTest::TestSuite
+{
+private:
+	// Encode, then decode, and check the frame bookkeeping.
+	static NineMsg round_trip(const NineMsg& in)
+	{
+		std::string wire = nine_encode(in);
+
+		// The size[4] prefix must be little-endian and must count
+		// the whole message, including itself.
+		uint32_t size = (uint8_t) wire[0]
+			| ((uint32_t) (uint8_t) wire[1] << 8)
+			| ((uint32_t) (uint8_t) wire[2] << 16)
+			| ((uint32_t) (uint8_t) wire[3] << 24);
+		TS_ASSERT_EQUALS(size, wire.size());
+
+		NineMsg out;
+		size_t used = nine_decode(wire, out);
+		TS_ASSERT_EQUALS(used, wire.size());
+		TS_ASSERT_EQUALS(out.type, in.type);
+		TS_ASSERT_EQUALS(out.tag, in.tag);
+		return out;
+	}
+
+public:
+	// ----------------------------------------------------------
+	void test_version(void)
+	{
+		NineMsg m;
+		m.type = Tversion;
+		m.tag = NINE_NOTAG;
+		m.msize = 8192;
+		m.version = NINE_VERSION;
+
+		NineMsg out = round_trip(m);
+		TS_ASSERT_EQUALS(out.msize, 8192u);
+		TS_ASSERT_EQUALS(out.version, "9P2000");
+
+		m.type = Rversion;
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.version, "9P2000");
+	}
+
+	void test_auth_attach(void)
+	{
+		NineMsg m;
+		m.type = Tauth;
+		m.tag = 1;
+		m.afid = NINE_NOFID;
+		m.uname = "glenda";
+		m.aname = "/atomspace";
+		NineMsg out = round_trip(m);
+		TS_ASSERT_EQUALS(out.afid, NINE_NOFID);
+		TS_ASSERT_EQUALS(out.uname, "glenda");
+		TS_ASSERT_EQUALS(out.aname, "/atomspace");
+
+		m = NineMsg();
+		m.type = Rauth;
+		m.tag = 1;
+		m.qid.type = QTAUTH;
+		m.qid.path = 77;
+		out = round_trip(m);
+		TS_ASSERT(out.qid == m.qid);
+
+		m = NineMsg();
+		m.type = Tattach;
+		m.tag = 2;
+		m.fid = 0;
+		m.afid = NINE_NOFID;
+		m.uname = "glenda";
+		m.aname = "";
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.fid, 0u);
+		TS_ASSERT_EQUALS(out.afid, NINE_NOFID);
+		TS_ASSERT_EQUALS(out.uname, "glenda");
+		TS_ASSERT_EQUALS(out.aname, "");
+
+		m = NineMsg();
+		m.type = Rattach;
+		m.tag = 2;
+		m.qid.type = QTDIR;
+		m.qid.version = 3;
+		m.qid.path = 0xdeadbeefcafeULL;
+		out = round_trip(m);
+		TS_ASSERT(out.qid == m.qid);
+	}
+
+	void test_error_flush(void)
+	{
+		NineMsg e = nine_error(9, "no such atom");
+		TS_ASSERT_EQUALS(e.type, Rerror);
+		TS_ASSERT_EQUALS(e.tag, 9);
+		NineMsg out = round_trip(e);
+		TS_ASSERT_EQUALS(out.ename, "no such atom");
+
+		NineMsg m;
+		m.type = Tflush;
+		m.tag = 3;
+		m.oldtag = 2;
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.oldtag, 2);
+
+		m = NineMsg();
+		m.type = Rflush;
+		m.tag = 3;
+		round_trip(m);
+	}
+
+	void test_walk(void)
+	{
+		NineMsg m;
+		m.type = Twalk;
+		m.tag = 4;
+		m.fid = 1;
+		m.newfid = 2;
+		m.wname = {"ConceptNode", "foo", ".."};
+		NineMsg out = round_trip(m);
+		TS_ASSERT_EQUALS(out.fid, 1u);
+		TS_ASSERT_EQUALS(out.newfid, 2u);
+		TS_ASSERT_EQUALS(out.wname.size(), 3u);
+		TS_ASSERT_EQUALS(out.wname[0], "ConceptNode");
+		TS_ASSERT_EQUALS(out.wname[1], "foo");
+		TS_ASSERT_EQUALS(out.wname[2], "..");
+
+		m = NineMsg();
+		m.type = Rwalk;
+		m.tag = 4;
+		NineQid q1; q1.type = QTDIR; q1.path = 1;
+		NineQid q2; q2.type = QTFILE; q2.path = 2; q2.version = 5;
+		m.wqid = {q1, q2};
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.wqid.size(), 2u);
+		TS_ASSERT(out.wqid[0] == q1);
+		TS_ASSERT(out.wqid[1] == q2);
+	}
+
+	void test_open_create(void)
+	{
+		NineMsg m;
+		m.type = Topen;
+		m.tag = 5;
+		m.fid = 2;
+		m.mode = ORDWR;
+		NineMsg out = round_trip(m);
+		TS_ASSERT_EQUALS(out.mode, ORDWR);
+
+		m = NineMsg();
+		m.type = Ropen;
+		m.tag = 5;
+		m.qid.path = 42;
+		m.iounit = 8169;
+		out = round_trip(m);
+		TS_ASSERT(out.qid == m.qid);
+		TS_ASSERT_EQUALS(out.iounit, 8169u);
+
+		m = NineMsg();
+		m.type = Tcreate;
+		m.tag = 6;
+		m.fid = 3;
+		m.name = "NumberNode";
+		m.perm = NINE_DMDIR | 0755;
+		m.mode = OREAD;
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.name, "NumberNode");
+		TS_ASSERT_EQUALS(out.perm, NINE_DMDIR | 0755);
+		TS_ASSERT_EQUALS(out.mode, OREAD);
+
+		m = NineMsg();
+		m.type = Rcreate;
+		m.tag = 6;
+		m.qid.type = QTDIR;
+		m.iounit = 0;
+		out = round_trip(m);
+		TS_ASSERT(out.qid == m.qid);
+	}
+
+	void test_read_write(void)
+	{
+		NineMsg m;
+		m.type = Tread;
+		m.tag = 7;
+		m.fid = 2;
+		m.offset = 0x123456789abcULL;
+		m.count = 4096;
+		NineMsg out = round_trip(m);
+		TS_ASSERT_EQUALS(out.offset, 0x123456789abcULL);
+		TS_ASSERT_EQUALS(out.count, 4096u);
+
+		// Binary payload with embedded NULs and newlines.
+		const char raw[] = { 'a', '\0', '\n', (char) 0xff, '\r', 'z' };
+		std::string payload(raw, sizeof(raw));
+
+		m = NineMsg();
+		m.type = Rread;
+		m.tag = 7;
+		m.data = payload;
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.data, payload);
+
+		m = NineMsg();
+		m.type = Twrite;
+		m.tag = 8;
+		m.fid = 2;
+		m.offset = 16;
+		m.data = payload;
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.offset, 16u);
+		TS_ASSERT_EQUALS(out.data, payload);
+
+		m = NineMsg();
+		m.type = Rwrite;
+		m.tag = 8;
+		m.count = (uint32_t) payload.size();
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.count, payload.size());
+	}
+
+	void test_clunk_remove_stat(void)
+	{
+		for (uint8_t t : { (uint8_t) Tclunk, (uint8_t) Tremove,
+		                   (uint8_t) Tstat })
+		{
+			NineMsg m;
+			m.type = t;
+			m.tag = 10;
+			m.fid = 5;
+			NineMsg out = round_trip(m);
+			TS_ASSERT_EQUALS(out.fid, 5u);
+		}
+
+		for (uint8_t t : { (uint8_t) Rclunk, (uint8_t) Rremove,
+		                   (uint8_t) Rwstat })
+		{
+			NineMsg m;
+			m.type = t;
+			m.tag = 10;
+			round_trip(m);
+		}
+	}
+
+	void test_stat_entry(void)
+	{
+		NineStat st;
+		st.qid.type = QTDIR;
+		st.qid.path = 99;
+		st.mode = NINE_DMDIR | 0555;
+		st.atime = 1000000;
+		st.mtime = 2000000;
+		st.length = 0;
+		st.name = "ConceptNode";
+		st.uid = "cogserver";
+		st.gid = "cogserver";
+		st.muid = "cogserver";
+
+		std::string blob = nine_encode_stat(st);
+
+		// The leading size[2] counts everything after itself.
+		uint16_t sz = (uint8_t) blob[0] | ((uint16_t) (uint8_t) blob[1] << 8);
+		TS_ASSERT_EQUALS(sz + 2u, blob.size());
+
+		NineStat back = nine_decode_stat(blob);
+		TS_ASSERT(back.qid == st.qid);
+		TS_ASSERT_EQUALS(back.mode, st.mode);
+		TS_ASSERT_EQUALS(back.atime, st.atime);
+		TS_ASSERT_EQUALS(back.mtime, st.mtime);
+		TS_ASSERT_EQUALS(back.length, st.length);
+		TS_ASSERT_EQUALS(back.name, st.name);
+		TS_ASSERT_EQUALS(back.uid, st.uid);
+		TS_ASSERT_EQUALS(back.gid, st.gid);
+		TS_ASSERT_EQUALS(back.muid, st.muid);
+
+		// An Rstat carries the blob as a counted string.
+		NineMsg m;
+		m.type = Rstat;
+		m.tag = 11;
+		m.stat = blob;
+		NineMsg out = round_trip(m);
+		TS_ASSERT_EQUALS(out.stat, blob);
+
+		m = NineMsg();
+		m.type = Twstat;
+		m.tag = 12;
+		m.fid = 6;
+		m.stat = blob;
+		out = round_trip(m);
+		TS_ASSERT_EQUALS(out.fid, 6u);
+		TS_ASSERT_EQUALS(out.stat, blob);
+	}
+
+	// ----------------------------------------------------------
+	// A partial buffer decodes to zero (try again later); a buffer
+	// holding one-and-a-half messages consumes exactly the first.
+	void test_incremental_decode(void)
+	{
+		NineMsg m;
+		m.type = Tclunk;
+		m.tag = 13;
+		m.fid = 7;
+		std::string wire = nine_encode(m);
+
+		NineMsg out;
+		for (size_t i = 0; i < wire.size(); i++)
+			TS_ASSERT_EQUALS(nine_decode(wire.substr(0, i), out), 0u);
+
+		// Two messages back to back: decode consumes only the first.
+		NineMsg m2;
+		m2.type = Tstat;
+		m2.tag = 14;
+		m2.fid = 8;
+		std::string both = wire + nine_encode(m2);
+
+		size_t used = nine_decode(both, out);
+		TS_ASSERT_EQUALS(used, wire.size());
+		TS_ASSERT_EQUALS(out.type, (uint8_t) Tclunk);
+		TS_ASSERT_EQUALS(out.tag, 13);
+
+		size_t used2 = nine_decode(both.substr(used), out);
+		TS_ASSERT_EQUALS(used + used2, both.size());
+		TS_ASSERT_EQUALS(out.type, (uint8_t) Tstat);
+		TS_ASSERT_EQUALS(out.tag, 14);
+	}
+
+	// ----------------------------------------------------------
+	// Malformed input must throw, never crash or decode garbage.
+	void test_malformed(void)
+	{
+		NineMsg out;
+
+		// Declared size below the minimum header size.
+		std::string tiny("\x06\x00\x00\x00\x78\x0d", 6);
+		TS_ASSERT_THROWS(nine_decode(tiny, out), const std::runtime_error&);
+
+		// Unknown message type code.
+		std::string unk("\x08\x00\x00\x00\xfe\x00\x00\x00", 8);
+		TS_ASSERT_THROWS(nine_decode(unk, out), const std::runtime_error&);
+
+		// A Tversion whose string runs past the declared size.
+		NineMsg m;
+		m.type = Tversion;
+		m.tag = NINE_NOTAG;
+		m.version = "9P2000";
+		std::string wire = nine_encode(m);
+		std::string cut = wire.substr(0, wire.size() - 3);
+		cut[0] = (char) cut.size();  // fix up size to the short length
+		TS_ASSERT_THROWS(nine_decode(cut, out), const std::runtime_error&);
+
+		// Encoding an unknown type must throw too.
+		NineMsg bad;
+		bad.type = 0xfe;
+		TS_ASSERT_THROWS(nine_encode(bad), const std::runtime_error&);
+
+		// Strings longer than 65535 bytes cannot be encoded.
+		NineMsg big;
+		big.type = Tattach;
+		big.uname.assign(70000, 'x');
+		TS_ASSERT_THROWS(nine_encode(big), const std::runtime_error&);
+
+		// Truncated stat blob.
+		NineStat st;
+		st.name = "x";
+		std::string blob = nine_encode_stat(st);
+		TS_ASSERT_THROWS(nine_decode_stat(blob.substr(0, blob.size() - 2)),
+		                 const std::runtime_error&);
+	}
+
+	// ----------------------------------------------------------
+	// 9P text strings (intro(5)) must not contain NUL characters;
+	// binary payloads and stat[] blobs may.
+	void test_text_nul(void)
+	{
+		const std::string nulstr("a\0b", 3);
+		NineMsg out;
+
+		// The encoder rejects NUL in every text field.
+		NineMsg m;
+		m.type = Tattach;
+		m.tag = 30;
+		m.uname = nulstr;
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		m = NineMsg();
+		m.type = Tcreate;
+		m.tag = 30;
+		m.name = nulstr;
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		m = NineMsg();
+		m.type = Twalk;
+		m.tag = 30;
+		m.wname = {nulstr};
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		m = NineMsg();
+		m.type = Rerror;
+		m.tag = 30;
+		m.ename = nulstr;
+		TS_ASSERT_THROWS(nine_encode(m), const std::runtime_error&);
+
+		NineStat st;
+		st.name = nulstr;
+		TS_ASSERT_THROWS(nine_encode_stat(st), const std::runtime_error&);
+
+		// The decoder rejects a hand-built Rerror whose ename
+		// smuggles a NUL past the length prefix.
+		std::string body;
+		body.push_back((char) Rerror);
+		body.push_back((char) 31); body.push_back((char) 0);  // tag
+		body.push_back((char) 3); body.push_back((char) 0);   // len 3
+		body.append(nulstr);
+		std::string wire;
+		uint32_t size = (uint32_t) (4 + body.size());
+		for (int i = 0; i < 4; i++)
+			wire.push_back((char) ((size >> (8 * i)) & 0xff));
+		wire += body;
+		TS_ASSERT_THROWS(nine_decode(wire, out), const std::runtime_error&);
+
+		// But the binary stat[] blob of Rstat/Twstat legitimately
+		// contains NUL bytes (zeroed fields) and must still pass.
+		NineStat ok;
+		ok.name = "x";
+		std::string blob = nine_encode_stat(ok);
+		TS_ASSERT(blob.find('\0') != std::string::npos);
+		m = NineMsg();
+		m.type = Twstat;
+		m.tag = 32;
+		m.fid = 1;
+		m.stat = blob;
+		NineMsg rt = round_trip(m);
+		TS_ASSERT_EQUALS(rt.stat, blob);
+	}
+
+	// ----------------------------------------------------------
+	// Protocol limits: 16-bit stat sizes, MAXWELEM, exact framing.
+	void test_protocol_limits(void)
+	{
+		NineMsg out;
+
+		// A stat body larger than 65535 bytes cannot be encoded;
+		// narrowing its length would corrupt directory framing.
+		NineStat big;
+		big.name.assign(65535, 'x');
+		TS_ASSERT_THROWS(nine_encode_stat(big), const std::runtime_error&);
+
+		// A stat blob whose size[2] disagrees with its actual length
+		// is rejected: zeroed prefix, or trailing garbage appended.
+		NineStat st;
+		st.name = "x";
+		std::string blob = nine_encode_stat(st);
+		std::string zeroed = blob;
+		zeroed[0] = 0; zeroed[1] = 0;
+		TS_ASSERT_THROWS(nine_decode_stat(zeroed), const std::runtime_error&);
+		TS_ASSERT_THROWS(nine_decode_stat(blob + '\0'),
+		                 const std::runtime_error&);
+
+		// Walks carry at most 16 elements (walk(5)). 16 is fine...
+		NineMsg w;
+		w.type = Twalk;
+		w.tag = 20;
+		w.wname.assign(NINE_MAXWELEM, "a");
+		NineMsg wout = round_trip(w);
+		TS_ASSERT_EQUALS(wout.wname.size(), NINE_MAXWELEM);
+
+		// ... but 17 must be rejected by the encoder...
+		w.wname.push_back("a");
+		TS_ASSERT_THROWS(nine_encode(w), const std::runtime_error&);
+		NineMsg rw;
+		rw.type = Rwalk;
+		rw.tag = 20;
+		rw.wqid.assign(NINE_MAXWELEM + 1, NineQid());
+		TS_ASSERT_THROWS(nine_encode(rw), const std::runtime_error&);
+
+		// ... and by the decoder: hand-build a Twalk with 17 empty
+		// names, so only the element-count check can fire.
+		std::string body;
+		auto p16 = [&body](uint16_t v) {
+			body.push_back((char) (v & 0xff));
+			body.push_back((char) (v >> 8));
+		};
+		auto p32 = [&body](uint32_t v) {
+			for (int i = 0; i < 4; i++)
+				body.push_back((char) ((v >> (8 * i)) & 0xff));
+		};
+		body.push_back((char) Twalk);
+		p16(21);            // tag
+		p32(1); p32(2);     // fid, newfid
+		p16(17);            // nwname: over the limit
+		for (int i = 0; i < 17; i++)
+			p16(0);         // empty names
+		std::string wire;
+		uint32_t size = (uint32_t) (4 + body.size());
+		for (int i = 0; i < 4; i++)
+			wire.push_back((char) ((size >> (8 * i)) & 0xff));
+		wire += body;
+		TS_ASSERT_THROWS(nine_decode(wire, out), const std::runtime_error&);
+
+		// A frame whose declared size exceeds its parsed content is
+		// malformed: an Rflush padded with one unclaimed byte.
+		NineMsg f;
+		f.type = Rflush;
+		f.tag = 22;
+		std::string padded = nine_encode(f);
+		padded.push_back('\0');
+		padded[0] = (char) padded.size();  // still < 256 bytes
+		TS_ASSERT_THROWS(nine_decode(padded, out),
+		                 const std::runtime_error&);
+	}
+};
