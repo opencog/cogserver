@@ -10,3 +10,5 @@ LINK_LIBRARIES(
 )
 
 ADD_CXXTEST(NineSessionUTest)
+
+ADD_CXXTEST(NineNamespaceUTest)

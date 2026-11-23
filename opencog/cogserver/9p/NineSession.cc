@@ -15,40 +15,18 @@ namespace opencog
 namespace plan9
 {
 
-NineSession::NineSession(NineNodePtr root) : _root(std::move(root))
+NineSession::NineSession(NineNodePtr root) : _ns(std::move(root))
+{}
+
+NineSession::NineSession(const NineNamespace& ns) : _ns(ns)
 {}
 
 // ---------------------------------------------------------------
 // Path helpers.
 
-std::vector<std::string> NineSession::split(const std::string& path)
-{
-	std::vector<std::string> out;
-	std::string cur;
-	for (char c : path)
-	{
-		if (c == '/')
-		{
-			if (not cur.empty()) { out.push_back(cur); cur.clear(); }
-		}
-		else cur.push_back(c);
-	}
-	if (not cur.empty()) out.push_back(cur);
-	return out;
-}
-
-std::string NineSession::canon(const std::string& path)
-{
-	std::vector<std::string> comps = split(path);
-	if (comps.empty()) return "/";
-	std::string out;
-	for (const auto& c : comps) { out += "/"; out += c; }
-	return out;
-}
-
 std::string NineSession::parent_path(const std::string& path)
 {
-	std::string canonical = canon(path);
+	std::string canonical = NineNamespace::canon(path);
 	size_t slash = canonical.find_last_of('/');
 	if (slash == std::string::npos or slash == 0)
 		return "/";
@@ -59,18 +37,6 @@ std::string NineSession::join_path(const std::string& path, const std::string& c
 {
 	if (path == "/") return "/" + c;
 	return path + "/" + c;
-}
-
-NineNodePtr NineSession::resolve(const std::string& path) const
-{
-	NineNodePtr node = _root;
-	for (const auto& comp : split(path))
-	{
-		if (nullptr == node or not node->is_dir())
-			return nullptr;
-		node = node->lookup(comp);
-	}
-	return node;
 }
 
 NineQid NineSession::qid_of(const NineNodePtr& node)
@@ -184,12 +150,13 @@ NineMsg NineSession::do_attach(const NineMsg& req)
 	if (_fids.count(req.fid))
 		return nine_error(req.tag, "attach: fid already in use");
 
-	std::string path = req.aname.empty() ? "/" : canon(req.aname);
-	NineNodePtr node = resolve(path);
-	if (nullptr == node)
+	std::string path = req.aname.empty() ? "/" : NineNamespace::canon(req.aname);
+	std::vector<NineNodePtr> stack = _ns.walk_union(path);
+	if (stack.empty() or nullptr == stack.front())
 		return nine_error(req.tag, "attach: no such path: " + req.aname);
+	NineNodePtr node = stack.front();
 
-	_fids[req.fid] = NineFid{ path, node, 0, false };
+	_fids[req.fid] = NineFid{ path, node, std::move(stack), 0, false };
 
 	NineMsg rep;
 	rep.type = Rattach;
@@ -212,6 +179,10 @@ NineMsg NineSession::do_walk(const NineMsg& req)
 
 	std::string path = it->second.path;
 	NineNodePtr node = it->second.node;
+	// A pure clone (empty wname) keeps the source fid's captured
+	// union view; walking components re-resolves through the
+	// current namespace.
+	std::vector<NineNodePtr> stack = it->second.stack;
 	std::vector<NineQid> qids;
 
 	for (const auto& comp : req.wname)
@@ -219,26 +190,18 @@ NineMsg NineSession::do_walk(const NineMsg& req)
 		// Every step, including "..", walks *from* a directory.
 		if (nullptr == node or not node->is_dir())
 			break;
-		NineNodePtr next;
-		std::string candidate;
-		if (comp == "..")
-		{
-			// ".." needs the parent, which nodes do not record;
-			// resolve the (strictly shorter) parent path instead.
-			candidate = parent_path(path);
-			next = resolve(candidate);
-		}
-		else
-		{
-			// Walk incrementally from the current node: one lookup
-			// per component, not a re-resolution from the root.
-			candidate = join_path(path, comp);
-			next = node->lookup(comp);
-		}
-		if (nullptr == next)
+		// Each component re-resolves through the mount table, so a
+		// tree grafted anywhere along the path is honored; ".."
+		// resolves the (strictly shorter) parent path, which nodes
+		// do not record.
+		std::string candidate =
+			(comp == "..") ? parent_path(path) : join_path(path, comp);
+		std::vector<NineNodePtr> next = _ns.walk_union(candidate);
+		if (next.empty() or nullptr == next.front())
 			break; // Partial walk; per 9P this is not itself an error.
 		path = candidate;
-		node = next;
+		stack = std::move(next);
+		node = stack.front();
 		qids.push_back(qid_of(node));
 	}
 
@@ -254,7 +217,7 @@ NineMsg NineSession::do_walk(const NineMsg& req)
 	// a partial walk reports what it found without creating newfid,
 	// matching walk(5)'s semantics.
 	if (qids.size() == req.wname.size())
-		_fids[req.newfid] = NineFid{ path, node, 0, false };
+		_fids[req.newfid] = NineFid{ path, node, std::move(stack), 0, false };
 
 	return rep;
 }
@@ -331,12 +294,19 @@ NineMsg NineSession::do_read(const NineMsg& req)
 		// the read(5) directory contract.
 		if (0 == req.offset)
 		{
+			// The listing is the union view captured when this fid
+			// was walked, so mounts/unmounts made since then do not
+			// retarget an open directory; per-child mount overrides
+			// still resolve through the current namespace so dirent
+			// metadata matches Rwalk.
+			std::vector<NineDirEnt> kids =
+				_ns.list_union(f.path, f.stack);
 			std::string blob;
-			for (const auto& k : node->children())
+			for (const auto& k : kids)
 			{
-				if (not k) continue;
-				std::string childpath = join_path(f.path, k->name());
-				blob += nine_encode_stat(stat_for(childpath, k));
+				if (not k.node) continue;
+				std::string childpath = join_path(f.path, k.name);
+				blob += nine_encode_stat(stat_for(childpath, k.node));
 			}
 			f.dir_snapshot = std::move(blob);
 		}

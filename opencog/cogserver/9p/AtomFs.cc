@@ -12,13 +12,16 @@
 #include <cstdlib>
 #include <algorithm>
 #include <functional>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_map>
 
 #include <opencog/atoms/atom_types/atom_types.h>
 #include <opencog/atoms/atom_types/NameServer.h>
 #include <opencog/atoms/base/Atom.h>
 #include <opencog/atoms/value/FloatValue.h>
+#include <opencog/persist/sexpr/Sexpr.h>
 
 namespace opencog
 {
@@ -242,6 +245,116 @@ private:
 	NineNodePtr _target;
 };
 
+/// Return true iff `data` holds exactly one nonempty, balanced
+/// s-expression, optionally surrounded by whitespace. Parentheses
+/// inside double-quoted strings (with backslash escapes) do not
+/// count. Upstream Sexpr::decode_atom() is laxer than this: it can
+/// crash on empty input, accepts unbalanced expressions, and
+/// silently ignores trailing text, so we gate writes here instead.
+static bool is_single_sexpr(const std::string& data)
+{
+	size_t i = 0;
+	const size_t len = data.size();
+	while (i < len and std::isspace((unsigned char) data[i])) i++;
+	if (i >= len or data[i] != '(') return false;
+
+	int depth = 0;
+	bool quoted = false;
+	for (; i < len; i++)
+	{
+		char c = data[i];
+		if (quoted)
+		{
+			if (c == '\\') { i++; continue; }
+			if (c == '"') quoted = false;
+			continue;
+		}
+		if (c == '"') quoted = true;
+		else if (c == '(') depth++;
+		else if (c == ')')
+		{
+			if (0 == --depth) { i++; break; }
+		}
+	}
+	if (0 != depth or quoted) return false;
+
+	// Only trailing whitespace may follow the expression.
+	while (i < len and std::isspace((unsigned char) data[i])) i++;
+	return i == len;
+}
+
+/// The "new" control file: writing an Atomese s-expression (the same
+/// format the sexpr shell speaks, e.g. `(Concept "foo")`) decodes it
+/// and adds the atom to the AtomSpace; reading back then returns the
+/// new atom's /by-handle path. Malformed or non-atom input makes the
+/// write fail with an Rerror. One instance is shared by every
+/// connection to the same AtomSpace, so the last-created path is a
+/// server-wide convenience, not per-connection state.
+class NewControlNode : public NineNode
+{
+public:
+	explicit NewControlNode(AtomFsIndex* index) : _index(index) {}
+
+	std::string name() const override { return "new"; }
+	bool is_dir() const override { return false; }
+	NineQid qid() const override
+	{
+		NineQid q; q.type = QTFILE; q.path = mix_id(0, "new-control");
+		return q;
+	}
+	bool is_writable() const override
+	{
+		return not _index->atomspace()->get_read_only();
+	}
+	uint64_t length() const override
+	{
+		std::lock_guard<std::mutex> lock(_mtx);
+		return _last_reply.size();
+	}
+	std::string read(uint64_t offset, uint32_t count) const override
+	{
+		std::lock_guard<std::mutex> lock(_mtx);
+		if (offset >= _last_reply.size()) return std::string();
+		return _last_reply.substr(offset, count);
+	}
+	uint32_t write(uint64_t offset, const std::string& data) override
+	{
+		(void) offset;
+		if (not is_writable())
+			throw std::runtime_error("new: read-only AtomSpace");
+
+		// Require exactly one complete expression per write; the
+		// decoder itself would accept unbalanced input, ignore
+		// trailing text, and can crash on empty writes.
+		if (not is_single_sexpr(data))
+			throw std::runtime_error(
+				"new: expecting exactly one s-expression");
+
+		// Sexpr::decode_atom throws on malformed input; let that
+		// propagate so the client sees an Rerror for the Twrite.
+		// Use the explicit-cache overload with a local cache: the
+		// implicit overload shares a process-wide static cache that
+		// concurrent writers would race on.
+		std::unordered_map<std::string, Handle> cache;
+		size_t pos = 0;
+		Handle h = Sexpr::decode_atom(data, pos, cache);
+		if (nullptr == h)
+			throw std::runtime_error("new: not an atom");
+		h = _index->atomspace()->add_atom(h);
+		if (nullptr == h)
+			throw std::runtime_error("new: atom was not inserted");
+
+		std::lock_guard<std::mutex> lock(_mtx);
+		_last_reply = "/by-handle/" + AtomFsIndex::id_of(h) + "\n";
+		return (uint32_t) data.size();
+	}
+
+private:
+	AtomFsIndex* _index;
+	mutable std::mutex _mtx;
+	std::string _last_reply;
+};
+
 } // anonymous namespace
 
 // ---------------------------------------------------------------
@@ -293,10 +406,12 @@ AtomFsIndex::AtomFsIndex(const AtomSpacePtr& as) :
 			return self->type_dir(t);
 		}));
 
+	NineNodePtr new_ctl(new NewControlNode(self));
+
 	_root = NineNodePtr(new FuncDirNode("/", mix_id(0, "root"),
-		[by_type, by_handle]() -> std::vector<NineNodePtr>
+		[by_type, by_handle, new_ctl]() -> std::vector<NineNodePtr>
 		{
-			return { by_type, by_handle };
+			return { by_type, by_handle, new_ctl };
 		}));
 }
 

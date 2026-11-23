@@ -17,8 +17,9 @@ The code is layered into two libraries:
   AtomSpace.
 
 * `ninefs` -- the synthetic filesystem (`NineNode.{h,cc}`,
-  `AtomFs.{h,cc}`) and the session dispatcher (`NineSession.{h,cc}`),
-  linking `nine9p` and the AtomSpace.
+  `AtomFs.{h,cc}`), Plan 9 style namespaces (`NineNamespace.{h,cc}`),
+  and the session dispatcher (`NineSession.{h,cc}`), linking `nine9p`
+  and the AtomSpace.
 
 The cogserver listens for 9P connections on a dedicated port
 (17564 by default; `cogserver -n <port>` or the `*-nine-port-*`
@@ -39,19 +40,59 @@ The file tree
 
     /by-type/<TYPE_NAME>/<id>/     one directory per atom
     /by-handle/<id>/               the same directories, by id
+    /new                           atom-creation control file
 
 where `<id>` is the atom's content hash as fixed-width hex, and each
 atom directory holds `name`, `type`, `to_string`, `tv`, `outgoing/`,
 `incoming/` and `values/` entries. The `tv` file is writable
-("<strength> <confidence>"); everything else is read-only. The same
-atom is always the same NineNode, so `outgoing/`/`incoming/` entries
-are genuine hard links (identical Qids) to the `by-handle` entries.
+("<strength> <confidence>"); the atom entries are otherwise
+read-only. The same atom is always the same NineNode, so
+`outgoing/`/`incoming/` entries are genuine hard links (identical
+Qids) to the `by-handle` entries.
+
+The `/new` control file creates atoms: write an Atomese
+s-expression, then read back the new atom's path --
+
+    echo '(Concept "foo")' > /mnt/atomspace/new
+    cat /mnt/atomspace/new
+    /by-handle/0123...cdef
+
+A malformed s-expression makes the write fail (Rerror): each write
+must hold exactly one complete, balanced expression, with nothing
+but whitespace around it. If the
+AtomSpace is read-only, `/new` reports itself non-writable.
+
+Namespaces
+----------
+`NineNamespace` provides Plan 9 namespace composition: `mount()` and
+`bind()` splice extra trees into the view, with `MREPL`, `MBEFORE`
+and `MAFTER` ordering. A path with several trees mounted on it is a
+union directory: lookups try each tree in order (the first match
+shadows the rest) and directory reads list the name-deduplicated
+union of all of them, exactly as described in bind(2). The union
+applies only at the mount point itself: descending through an
+ordinary name continues in the single (first-matching) tree, so an
+entry shadowed at one level cannot resurface deeper down. Directory
+listings resolve each child through the mount table, so an entry
+with something mounted on it is listed under its own name but with
+the mounted tree's Qid and permissions -- matching what a walk to
+that entry returns. An already-open directory fid keeps the union
+view captured when it was walked; mounts and unmounts made afterward
+affect new walks only.
+
+Each `NineSession` owns a private *copy* of the namespace it is
+constructed from -- the rfork(RFNAMEG) model -- so per-connection
+rearrangements never leak into other connections. A bind may also
+graft a tree onto a fresh path that no underlying tree contains;
+such a path is walkable but does not appear in its parent
+directory's listing.
 
 Simplifications
 ---------------
 * The tree is structurally read-only: Tcreate and Twstat are
   rejected; Tremove is refused with an error, though the fid is
-  still clunked, per remove(5).
+  still clunked, per remove(5). New atoms are made through the
+  `/new` control file instead.
 * A directory Tread at offset 0 snapshots the listing for that fid;
   subsequent sequential reads page through the snapshot, each reply
   carrying an integral number of stat entries, per read(5).
@@ -59,8 +100,9 @@ Simplifications
   Twrite payloads are rejected.
 * Tauth is rejected (no authentication) and Tflush is acknowledged
   trivially (dispatch is strictly synchronous).
-* Plan 9 namespace composition (bind/mount, union directories) and
-  an atom-creation control file are left for a later layer.
+* Namespace rearrangement is a server-side (C++) API; there is no
+  in-protocol mount/bind (9P2000 itself has none -- in Plan 9 those
+  are system calls on the client).
 
 The transport is handled elsewhere: `nine_decode()` consumes exactly
 one complete message from the front of a byte buffer, returning 0 if

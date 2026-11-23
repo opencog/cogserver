@@ -1,0 +1,305 @@
+/*
+ * tests/9p/NineNamespaceUTest.cxxtest
+ *
+ * Test the Plan 9 style namespace: path canonicalization, walks,
+ * mount order (replace/before/after), bind, unmount, union-directory
+ * listing with shadowing, and copy-on-fork independence.
+ *
+ * Copyright (C) 2026 OpenCog Foundation
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cxxtest/TestSuite.h>
+
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <opencog/cogserver/9p/NineNamespace.h>
+#include <opencog/cogserver/9p/NineNode.h>
+
+using namespace opencog::plan9;
+
+// ---------------------------------------------------------------
+// Minimal static fixtures: a file with fixed content, and a
+// directory with a fixed child list.
+
+class StaticFile : public NineNode
+{
+public:
+	StaticFile(std::string name, uint64_t qid_path, std::string content) :
+		_name(std::move(name)), _qid_path(qid_path),
+		_content(std::move(content))
+	{}
+
+	std::string name() const override { return _name; }
+	bool is_dir() const override { return false; }
+	NineQid qid() const override
+	{
+		NineQid q; q.type = QTFILE; q.path = _qid_path; return q;
+	}
+	uint64_t length() const override { return _content.size(); }
+	std::string read(uint64_t offset, uint32_t count) const override
+	{
+		if (offset >= _content.size()) return std::string();
+		return _content.substr(offset, count);
+	}
+
+private:
+	std::string _name;
+	uint64_t _qid_path;
+	std::string _content;
+};
+
+class StaticDir : public NineNode
+{
+public:
+	StaticDir(std::string name, uint64_t qid_path) :
+		_name(std::move(name)), _qid_path(qid_path)
+	{}
+
+	void add(NineNodePtr child) { _kids.push_back(std::move(child)); }
+
+	std::string name() const override { return _name; }
+	bool is_dir() const override { return true; }
+	NineQid qid() const override
+	{
+		NineQid q; q.type = QTDIR; q.path = _qid_path; return q;
+	}
+	std::vector<NineNodePtr> children() const override { return _kids; }
+
+private:
+	std::string _name;
+	uint64_t _qid_path;
+	std::vector<NineNodePtr> _kids;
+};
+
+class NineNamespaceUTest : public CxxTest::TestSuite
+{
+private:
+	// /            (root)
+	//   docs/
+	//     readme   "base readme\n"
+	//     base     "only in base\n"
+	//   etc/
+	//     motd     "hello\n"
+	std::shared_ptr<StaticDir> _root, _docs, _etc;
+
+	// An overlay tree used as a mount device:
+	//   readme     "overlay readme\n"
+	//   extra      "only in overlay\n"
+	std::shared_ptr<StaticDir> _overlay;
+
+public:
+	void setUp(void)
+	{
+		_root = std::make_shared<StaticDir>("/", 1);
+		_docs = std::make_shared<StaticDir>("docs", 2);
+		_etc = std::make_shared<StaticDir>("etc", 3);
+		_root->add(_docs);
+		_root->add(_etc);
+
+		_docs->add(NineNodePtr(new StaticFile("readme", 10,
+			"base readme\n")));
+		_docs->add(NineNodePtr(new StaticFile("base", 11,
+			"only in base\n")));
+		_etc->add(NineNodePtr(new StaticFile("motd", 12, "hello\n")));
+
+		_overlay = std::make_shared<StaticDir>("overlay", 20);
+		_overlay->add(NineNodePtr(new StaticFile("readme", 21,
+			"overlay readme\n")));
+		_overlay->add(NineNodePtr(new StaticFile("extra", 22,
+			"only in overlay\n")));
+	}
+
+	// ----------------------------------------------------------
+	void test_canon(void)
+	{
+		TS_ASSERT_EQUALS(NineNamespace::canon(""), "/");
+		TS_ASSERT_EQUALS(NineNamespace::canon("/"), "/");
+		TS_ASSERT_EQUALS(NineNamespace::canon("docs"), "/docs");
+		TS_ASSERT_EQUALS(NineNamespace::canon("//docs///readme/"),
+			"/docs/readme");
+	}
+
+	// ----------------------------------------------------------
+	void test_walk(void)
+	{
+		NineNamespace ns(_root);
+
+		TS_ASSERT(ns.walk("/") == _root);
+		TS_ASSERT(ns.walk("/docs") == _docs);
+
+		NineNodePtr readme = ns.walk("/docs/readme");
+		TS_ASSERT(nullptr != readme);
+		TS_ASSERT_EQUALS(readme->read(0, 100), "base readme\n");
+
+		TS_ASSERT(nullptr == ns.walk("/no/such/path"));
+		TS_ASSERT(nullptr == ns.walk("/docs/readme/deeper"));
+	}
+
+	// ----------------------------------------------------------
+	// MREPL completely replaces the view at the mount point.
+	void test_mount_replace(void)
+	{
+		NineNamespace ns(_root);
+		ns.mount("/docs", _overlay, MREPL);
+
+		NineNodePtr readme = ns.walk("/docs/readme");
+		TS_ASSERT_EQUALS(readme->read(0, 100), "overlay readme\n");
+
+		// The base-only file is shadowed away entirely.
+		TS_ASSERT(nullptr == ns.walk("/docs/base"));
+		TS_ASSERT(nullptr != ns.walk("/docs/extra"));
+
+		// Other paths are untouched.
+		TS_ASSERT(nullptr != ns.walk("/etc/motd"));
+	}
+
+	// ----------------------------------------------------------
+	// MBEFORE shadows the base; MAFTER is shadowed by it; in both
+	// cases the union of children is visible.
+	void test_mount_union(void)
+	{
+		NineNamespace before(_root);
+		before.mount("/docs", _overlay, MBEFORE);
+		TS_ASSERT_EQUALS(before.walk("/docs/readme")->read(0, 100),
+			"overlay readme\n");
+		TS_ASSERT_EQUALS(before.walk("/docs/base")->read(0, 100),
+			"only in base\n");
+		TS_ASSERT_EQUALS(before.walk("/docs/extra")->read(0, 100),
+			"only in overlay\n");
+
+		NineNamespace after(_root);
+		after.mount("/docs", _overlay, MAFTER);
+		TS_ASSERT_EQUALS(after.walk("/docs/readme")->read(0, 100),
+			"base readme\n");
+		TS_ASSERT_EQUALS(after.walk("/docs/extra")->read(0, 100),
+			"only in overlay\n");
+
+		// list() dedups by name, first (shadowing) occurrence wins.
+		std::vector<NineDirEnt> ls = before.list("/docs");
+		size_t readmes = 0;
+		bool have_base = false, have_extra = false;
+		std::string readme_content;
+		for (const auto& e : ls)
+		{
+			if (e.name == "readme")
+			{
+				readmes++;
+				readme_content = e.node->read(0, 100);
+			}
+			if (e.name == "base") have_base = true;
+			if (e.name == "extra") have_extra = true;
+		}
+		TS_ASSERT_EQUALS(readmes, 1u);
+		TS_ASSERT_EQUALS(readme_content, "overlay readme\n");
+		TS_ASSERT(have_base);
+		TS_ASSERT(have_extra);
+	}
+
+	// ----------------------------------------------------------
+	// Union shadowing applies to whole subtrees: when the first
+	// tree of a union provides a name, a same-named entry in a
+	// later tree stays hidden even for deeper path components.
+	void test_shadow_no_resurrection(void)
+	{
+		auto first = std::make_shared<StaticDir>("first", 30);
+		first->add(NineNodePtr(new StaticFile("sub", 31, "a file\n")));
+
+		auto second = std::make_shared<StaticDir>("second", 32);
+		auto subdir = std::make_shared<StaticDir>("sub", 33);
+		subdir->add(NineNodePtr(new StaticFile("secret", 34, "ssh\n")));
+		second->add(subdir);
+
+		NineNamespace ns(_root);
+		ns.mount("/u", first, MREPL);
+		ns.mount("/u", second, MAFTER);
+
+		// "sub" resolves to the shadowing file ...
+		NineNodePtr sub = ns.walk("/u/sub");
+		TS_ASSERT(nullptr != sub);
+		TS_ASSERT(not sub->is_dir());
+
+		// ... and the hidden directory does not leak through.
+		TS_ASSERT(nullptr == ns.walk("/u/sub/secret"));
+
+		// With the directory shadowing instead, the deep path works.
+		NineNamespace rev(_root);
+		rev.mount("/u", second, MREPL);
+		rev.mount("/u", first, MAFTER);
+		TS_ASSERT_EQUALS(rev.walk("/u/sub/secret")->read(0, 100), "ssh\n");
+	}
+
+	// ----------------------------------------------------------
+	// Listing a directory resolves each child through the mount
+	// table: a mount on a child is reflected in the parent listing,
+	// under the child's original name.
+	void test_list_reflects_mounts(void)
+	{
+		NineNamespace ns(_root);
+		ns.mount("/docs", _overlay, MREPL);
+
+		bool found = false;
+		for (const auto& e : ns.list("/"))
+		{
+			if (e.name != "docs") continue;
+			found = true;
+			// Same node walk() resolves, keeping the entry name.
+			TS_ASSERT(e.node == _overlay);
+			TS_ASSERT(e.node == ns.walk("/docs"));
+			TS_ASSERT_EQUALS(e.node->qid().path, 20u);
+		}
+		TS_ASSERT(found);
+	}
+
+	// ----------------------------------------------------------
+	// bind() makes an existing subtree visible at another path,
+	// including a fresh path no underlying tree contains.
+	void test_bind(void)
+	{
+		NineNamespace ns(_root);
+		ns.bind("/aka", "/docs");
+
+		TS_ASSERT(nullptr != ns.walk("/aka"));
+		TS_ASSERT_EQUALS(ns.walk("/aka/readme")->read(0, 100),
+			"base readme\n");
+
+		// The bound view and the original resolve to the same node.
+		TS_ASSERT(ns.walk("/aka") == ns.walk("/docs"));
+
+		// Binding a nonexistent source throws.
+		TS_ASSERT_THROWS(ns.bind("/x", "/no/such"),
+			const std::runtime_error&);
+	}
+
+	// ----------------------------------------------------------
+	void test_unmount(void)
+	{
+		NineNamespace ns(_root);
+		ns.mount("/docs", _overlay, MREPL);
+		TS_ASSERT(nullptr != ns.walk("/docs/extra"));
+
+		ns.unmount("/docs");
+		TS_ASSERT(nullptr == ns.walk("/docs/extra"));
+		TS_ASSERT(nullptr != ns.walk("/docs/base"));
+
+		TS_ASSERT_THROWS(ns.unmount("/"), const std::runtime_error&);
+	}
+
+	// ----------------------------------------------------------
+	// A copied namespace diverges independently (rfork(RFNAMEG)).
+	void test_copy_independent(void)
+	{
+		NineNamespace parent(_root);
+		NineNamespace child(parent);
+
+		child.mount("/docs", _overlay, MREPL);
+		TS_ASSERT(nullptr != child.walk("/docs/extra"));
+		TS_ASSERT(nullptr == parent.walk("/docs/extra"));
+
+		parent.bind("/aka", "/etc");
+		TS_ASSERT(nullptr != parent.walk("/aka/motd"));
+		TS_ASSERT(nullptr == child.walk("/aka"));
+	}
+};

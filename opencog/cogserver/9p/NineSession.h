@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <opencog/cogserver/9p/Nine9P.h>
+#include <opencog/cogserver/9p/NineNamespace.h>
 #include <opencog/cogserver/9p/NineNode.h>
 
 namespace opencog
@@ -27,6 +28,11 @@ struct NineFid
 {
 	std::string path;
 	NineNodePtr node;
+	// The union stack resolved when this fid was attached/walked.
+	// Directory reads use this captured view, so later namespace
+	// rearrangements (mount/unmount) affect new walks only, never
+	// the target of an already-established fid.
+	std::vector<NineNodePtr> stack;
 	uint8_t mode = 0;
 	bool opened = false;
 	/// Snapshot of this directory's encoded listing, (re)taken at
@@ -37,20 +43,31 @@ struct NineFid
 
 /**
  * One 9P2000 protocol session: the per-connection fid table and
- * message dispatcher, serving the synthetic file tree rooted at a
- * single NineNode. Each network connection gets its own NineSession;
- * the underlying node tree (see AtomFs.h) is shared between them.
+ * message dispatcher, serving the file tree visible through a
+ * NineNamespace. Each network connection gets its own NineSession
+ * (and with it, its own private copy of the namespace, so binds and
+ * mounts in one session never affect another); the underlying node
+ * trees (see AtomFs.h) are shared between them.
  *
  * The tree is structurally read-only: Tcreate and Twstat are
  * rejected, and Tremove is refused with Rerror (though the fid is
  * still clunked, per remove(5)).
  * Individual files may still accept Twrite (e.g. the per-atom `tv`
- * file) when their node reports is_writable().
+ * file, or the /new control file) when their node reports
+ * is_writable().
  */
 class NineSession
 {
 public:
+	/// Serve the tree rooted at `root`, with no additional binds.
 	explicit NineSession(NineNodePtr root);
+
+	/// Serve a private copy of `ns` (Plan 9 rfork(RFNAMEG) style).
+	explicit NineSession(const NineNamespace& ns);
+
+	/// This session's namespace, for programmatic bind()/mount()
+	/// composition before (or while) serving.
+	NineNamespace& ns() { return _ns; }
 
 	/// Process one already-decoded 9P message and produce the reply.
 	NineMsg dispatch(const NineMsg& req);
@@ -63,7 +80,7 @@ public:
 	std::string handle_message(const std::string& request);
 
 private:
-	NineNodePtr _root;
+	NineNamespace _ns;
 	std::unordered_map<uint32_t, NineFid> _fids;
 	uint32_t _msize = NINE_DEFAULT_MSIZE;
 
@@ -78,12 +95,6 @@ private:
 	NineMsg do_stat(const NineMsg&);
 	NineMsg do_flush(const NineMsg&);
 
-	/// Resolve a canonical absolute path to its node, starting from
-	/// _root; returns nullptr if any component is missing.
-	NineNodePtr resolve(const std::string& path) const;
-
-	static std::vector<std::string> split(const std::string& path);
-	static std::string canon(const std::string& path);
 	static std::string parent_path(const std::string& path);
 	static std::string join_path(const std::string& path, const std::string& c);
 	static NineQid qid_of(const NineNodePtr&);
