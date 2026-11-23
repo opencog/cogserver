@@ -13,6 +13,11 @@ TARGET_LINK_LIBRARIES(network
 	${COGUTIL_LIBRARY}
 )
 
+# WebSocket.cc uses the OpenSSL SHA1 hash for the websocket handshake.
+IF (HAVE_OPENSSL)
+	TARGET_LINK_LIBRARIES(network ${OPENSSL_LIBRARIES})
+ENDIF (HAVE_OPENSSL)
+
 # The EXPORT is needed to autogenerate CMake boilerplate files in the
 # lib directory that lets other packages FIND_PACKAGE(CogServer)
 INSTALL (TARGETS network

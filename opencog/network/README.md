@@ -16,6 +16,16 @@ It is weakly assumed that the console is working with text data; it uses
 `std::string` as the main API. I suppose it could be tweaked to handle
 binary data, but this has not been a requirement.
 
+Two binary framing modes are supported as special cases: WebSockets
+(RFC 6455 frames, after an HTTP upgrade handshake) and the Plan 9
+9P2000 protocol. Calling `ServerSocket::act_as_9p()` switches a socket
+into 9P mode: each 9P message is length-prefixed on the wire as
+`size[4] type[1] tag[2] ...` (little-endian size, counting itself), and
+`OnLine()` is invoked once per complete message with the raw message
+bytes (including the size prefix). Replies are sent with the usual
+`Send()`, which is binary-safe. Decoding the 9P message contents is
+left to higher layers.
+
 Why?
 ----
 The idea of a network console server seems to be so generic that you
