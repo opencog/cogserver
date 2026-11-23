@@ -85,12 +85,20 @@ This capability is useful in several different ways:
   to it's own github repo. Get it from
   [atomspace-viz](https://github.com/opencog/atomspace-viz).
 
+* **Plan9.** Experimental support for accessing the AtomSpace with
+  the 9P2000 filesystem protocol. Install the Plan9 tools
+  (`sudo apt install 9mount` in Debian) and then mount:
+  ```
+  mount -t 9p -o trans=tcp,port=17564,version=9p2000 127.0.0.1 /mnt/atomspace
+  ```
+  See the [Plan9 README](./opencog/cogserver/9p/README.md) for details.
+
 For more info, please consult the
 [CogServer wiki page](https://wiki.opencog.org/w/CogServer).
 
 Status
 ------
-This is **version 3.4.1**. The code is stable, it's been used in
+This is **version 3.5.0**. The code is stable, it's been used in
 production settings for over a decade.   There are no known bugs.
 
 Using
