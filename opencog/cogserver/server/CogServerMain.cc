@@ -49,13 +49,14 @@ using namespace opencog;
 static void usage(const char* progname)
 {
     std::cerr << "Usage: " << progname
-        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-v] [-DOPTION=\"VALUE\"]\n"
+        << " [-p <console port>] [-w <webserver port>] [-m <mcp port>] [-n <9p port>] [-v] [-DOPTION=\"VALUE\"]\n"
         << "  -v    Print version and exit\n"
         << "\n"
         << "Supported options and default values:\n"
         << "SERVER_PORT = 17001\n"
         << "WEB_PORT = 18080\n"
         << "MCP_PORT = 18888\n"
+        << "NINE_PORT = 17564\n"
         << "LOG_FILE = /tmp/cogserver.log\n"
         << "LOG_LEVEL = info\n"
         << "LOG_TO_STDOUT = false\n"
@@ -99,7 +100,7 @@ int main(int argc, char *argv[])
     Handle hcsn = asp->add_node(COG_SERVER_NODE, "cogserver");
     CogServerNodePtr csn = CogServerNodeCast(hcsn);
 
-    static const char *optString = "p:w:m:D:hv";
+    static const char *optString = "p:w:m:n:D:hv";
     std::string progname = argv[0];
 
     // parse command line
@@ -143,6 +144,9 @@ int main(int argc, char *argv[])
                           createFloatValue(atof(optarg)));
         } else if (c == 'm') {
             csn->setValue(asp->add_atom(Predicate("*-mcp-port-*")),
+                          createFloatValue(atof(optarg)));
+        } else if (c == 'n') {
+            csn->setValue(asp->add_atom(Predicate("*-nine-port-*")),
                           createFloatValue(atof(optarg)));
         } else if (c == 'v') {
             std::cout << "CogServer version " << COGSERVER_VERSION_STRING << std::endl;

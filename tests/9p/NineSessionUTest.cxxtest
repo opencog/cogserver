@@ -1,0 +1,814 @@
+/*
+ * tests/9p/NineSessionUTest.cxxtest
+ *
+ * Test the 9P session dispatcher serving the AtomSpace-backed
+ * synthetic file tree: version/attach, walks (full, clone and
+ * partial), directory listings, file reads, hard-link Qid equality,
+ * truth-value writes, and the read-only error paths.
+ *
+ * Copyright (C) 2026 OpenCog Foundation
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+#include <cxxtest/TestSuite.h>
+
+#include <string>
+#include <vector>
+
+#include <opencog/atomspace/AtomSpace.h>
+#include <opencog/atoms/atom_types/atom_types.h>
+#include <opencog/cogserver/9p/AtomFs.h>
+#include <opencog/cogserver/9p/NineSession.h>
+
+using namespace opencog;
+using namespace opencog::plan9;
+
+class NineSessionUTest : public CxxTest::TestSuite
+{
+private:
+	AtomSpacePtr _as;
+	AtomFsIndexPtr _index;
+	Handle _foo, _bar, _list;
+
+	// Split a directory Rread payload into its stat entries. Each
+	// entry carries its own leading size[2] (which does not count
+	// itself).
+	static std::vector<NineStat> parse_dir(const std::string& blob)
+	{
+		std::vector<NineStat> out;
+		size_t p = 0;
+		while (p + 2 <= blob.size())
+		{
+			uint16_t sz = (uint8_t) blob[p]
+				| ((uint16_t) (uint8_t) blob[p+1] << 8);
+			size_t total = (size_t) sz + 2;
+			TS_ASSERT_LESS_THAN_EQUALS(p + total, blob.size());
+			out.push_back(nine_decode_stat(blob.substr(p, total)));
+			p += total;
+		}
+		TS_ASSERT_EQUALS(p, blob.size());
+		return out;
+	}
+
+	// Start a session: negotiate the version and attach fid 0 to "/".
+	static void start(NineSession& ses)
+	{
+		NineMsg tv;
+		tv.type = Tversion;
+		tv.tag = NINE_NOTAG;
+		tv.msize = 65536;
+		tv.version = NINE_VERSION;
+		NineMsg rv = ses.dispatch(tv);
+		TS_ASSERT_EQUALS(rv.type, Rversion);
+		TS_ASSERT_EQUALS(rv.version, "9P2000");
+		TS_ASSERT_EQUALS(rv.msize, NINE_DEFAULT_MSIZE);
+
+		NineMsg ta;
+		ta.type = Tattach;
+		ta.tag = 1;
+		ta.fid = 0;
+		ta.afid = NINE_NOFID;
+		ta.uname = "tester";
+		ta.aname = "";
+		NineMsg ra = ses.dispatch(ta);
+		TS_ASSERT_EQUALS(ra.type, Rattach);
+		TS_ASSERT_EQUALS(ra.qid.type, QTDIR);
+	}
+
+	static NineMsg walk(NineSession& ses, uint32_t fid, uint32_t newfid,
+	                    const std::vector<std::string>& names)
+	{
+		NineMsg tw;
+		tw.type = Twalk;
+		tw.tag = 2;
+		tw.fid = fid;
+		tw.newfid = newfid;
+		tw.wname = names;
+		return ses.dispatch(tw);
+	}
+
+	static NineMsg open(NineSession& ses, uint32_t fid, uint8_t mode)
+	{
+		NineMsg to;
+		to.type = Topen;
+		to.tag = 3;
+		to.fid = fid;
+		to.mode = mode;
+		return ses.dispatch(to);
+	}
+
+	static NineMsg read(NineSession& ses, uint32_t fid,
+	                    uint64_t offset, uint32_t count)
+	{
+		NineMsg tr;
+		tr.type = Tread;
+		tr.tag = 4;
+		tr.fid = fid;
+		tr.offset = offset;
+		tr.count = count;
+		return ses.dispatch(tr);
+	}
+
+public:
+	void setUp(void)
+	{
+		_as = createAtomSpace();
+		_foo = _as->add_node(CONCEPT_NODE, "foo");
+		_bar = _as->add_node(CONCEPT_NODE, "bar");
+		_list = _as->add_link(LIST_LINK, HandleSeq({_foo, _bar}));
+		_index = std::make_shared<AtomFsIndex>(_as);
+	}
+
+	void tearDown(void)
+	{
+		_index = nullptr;
+		_as = nullptr;
+	}
+
+	// ----------------------------------------------------------
+	// The root directory lists by-type/ and by-handle/.
+	void test_root_listing(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1, {});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT(rw.wqid.empty());
+
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		NineMsg rr = read(ses, 1, 0, 65536);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		std::vector<NineStat> ents = parse_dir(rr.data);
+		TS_ASSERT_EQUALS(ents.size(), 2u);
+
+		bool have_by_type = false, have_by_handle = false;
+		for (const NineStat& st : ents)
+		{
+			if (st.name == "by-type") have_by_type = true;
+			if (st.name == "by-handle") have_by_handle = true;
+			TS_ASSERT_EQUALS(st.qid.type, QTDIR);
+			TS_ASSERT(st.mode & NINE_DMDIR);
+		}
+		TS_ASSERT(have_by_type);
+		TS_ASSERT(have_by_handle);
+
+		// A second read (nonzero offset) is EOF.
+		NineMsg r2 = read(ses, 1, rr.data.size(), 65536);
+		TS_ASSERT_EQUALS(r2.type, Rread);
+		TS_ASSERT(r2.data.empty());
+	}
+
+	// ----------------------------------------------------------
+	// Walk to an atom's name file and read it.
+	void test_read_name_file(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw = walk(ses, 0, 1,
+			{"by-type", "ConceptNode", id, "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 4u);
+		TS_ASSERT_EQUALS(rw.wqid[3].type, QTFILE);
+
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		NineMsg rr = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT_EQUALS(rr.data, "foo\n");
+
+		// Offset past EOF reads empty.
+		NineMsg r2 = read(ses, 1, 100, 8192);
+		TS_ASSERT(r2.data.empty());
+
+		// A walk from a fid opened for I/O is rejected (walk(5)).
+		NineMsg rup = walk(ses, 1, 2, {"..", ".."});
+		TS_ASSERT_EQUALS(rup.type, Rerror);
+
+		// ".." from an unopened directory fid walks back up:
+		// atom dir -> ConceptNode dir -> by-type.
+		NineMsg rw2 = walk(ses, 0, 2, {"by-type", "ConceptNode", id});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		NineMsg r3 = walk(ses, 2, 3, {"..", ".."});
+		TS_ASSERT_EQUALS(r3.type, Rwalk);
+		TS_ASSERT_EQUALS(r3.wqid.size(), 2u);
+		TS_ASSERT_EQUALS(r3.wqid[1].type, QTDIR);
+
+		// ".." from a plain file is not a legal walk either.
+		NineMsg rw4 = walk(ses, 0, 4, {"by-handle", id, "name"});
+		TS_ASSERT_EQUALS(rw4.type, Rwalk);
+		NineMsg r5 = walk(ses, 4, 5, {".."});
+		TS_ASSERT_EQUALS(r5.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// The same atom reached via different paths has the same Qid
+	// (hard-link semantics).
+	void test_hard_link_qids(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		std::string list_id = AtomFsIndex::id_of(_list);
+		std::string foo_id = AtomFsIndex::id_of(_foo);
+
+		NineMsg r1 = walk(ses, 0, 1,
+			{"by-handle", list_id, "outgoing", "0"});
+		TS_ASSERT_EQUALS(r1.type, Rwalk);
+		TS_ASSERT_EQUALS(r1.wqid.size(), 4u);
+
+		NineMsg r2 = walk(ses, 0, 2,
+			{"by-type", "ConceptNode", foo_id});
+		TS_ASSERT_EQUALS(r2.type, Rwalk);
+		TS_ASSERT_EQUALS(r2.wqid.size(), 3u);
+
+		TS_ASSERT(r1.wqid[3] == r2.wqid[2]);
+
+		// And the incoming set of foo leads back to the ListLink.
+		NineMsg r3 = walk(ses, 2, 3, {"incoming", list_id});
+		TS_ASSERT_EQUALS(r3.type, Rwalk);
+		TS_ASSERT_EQUALS(r3.wqid.size(), 2u);
+
+		NineMsg r4 = walk(ses, 0, 4, {"by-handle", list_id});
+		TS_ASSERT_EQUALS(r4.type, Rwalk);
+		TS_ASSERT(r3.wqid[1] == r4.wqid[1]);
+	}
+
+	// ----------------------------------------------------------
+	// The tv file accepts "<strength> <confidence>" writes.
+	void test_tv_write(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw = walk(ses, 0, 1,
+			{"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+
+		NineMsg ro = open(ses, 1, ORDWR);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 5;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "0.5 0.25\n";
+		NineMsg rwr = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		TS_ASSERT_EQUALS(rwr.count, tw.data.size());
+
+		NineMsg rr = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT_EQUALS(rr.data, "0.5 0.25\n");
+	}
+
+	// ----------------------------------------------------------
+	// Copy-on-write frames: writing the tv of an atom inherited
+	// from a read-only parent copies it into the exported child
+	// space; the parent atom is untouched, and the write is
+	// visible through every other fid onto the same file.
+	void test_cow_frames(void)
+	{
+		_as->set_read_only();
+		AtomSpacePtr child = createAtomSpace(_as);
+		AtomFsIndexPtr index = std::make_shared<AtomFsIndex>(child);
+		NineSession ses(index->root());
+		start(ses);
+
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw1 = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw1.type, Rwalk);
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		TS_ASSERT_EQUALS(open(ses, 1, OWRITE).type, Ropen);
+		TS_ASSERT_EQUALS(open(ses, 2, OREAD).type, Ropen);
+
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 30;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "0.5 0.25\n";
+		NineMsg rwr = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+
+		// The write is visible through the other, independently
+		// walked fid.
+		NineMsg rr = read(ses, 2, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT_EQUALS(rr.data, "0.5 0.25\n");
+
+		// The value landed on a child-frame copy; the read-only
+		// parent atom still carries no values at all.
+		Handle local = child->get_atom(_foo);
+		TS_ASSERT(nullptr != local);
+		TS_ASSERT(not local->getKeys().empty());
+		TS_ASSERT(_foo->getKeys().empty());
+
+		_as->set_read_write();
+	}
+
+	// ----------------------------------------------------------
+	// A walk that fails partway reports the Qids found and does
+	// not create newfid (walk(5) semantics).
+	void test_partial_walk(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 7,
+			{"by-type", "NoSuchTypeName", "xyzzy"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 1u);
+
+		// newfid was not created.
+		NineMsg ro = open(ses, 7, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Rerror);
+
+		// A walk that fails on the very first component is an error.
+		NineMsg r2 = walk(ses, 0, 8, {"no-such-entry"});
+		TS_ASSERT_EQUALS(r2.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// The read-only paths: create, wstat, and writes to read-only
+	// files are all rejected; remove still clunks the fid.
+	void test_read_only(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg tc;
+		tc.type = Tcreate;
+		tc.tag = 6;
+		tc.fid = 0;
+		tc.name = "junk";
+		NineMsg rc = ses.dispatch(tc);
+		TS_ASSERT_EQUALS(rc.type, Rerror);
+
+		NineMsg tws;
+		tws.type = Twstat;
+		tws.tag = 7;
+		tws.fid = 0;
+		NineMsg rws = ses.dispatch(tws);
+		TS_ASSERT_EQUALS(rws.type, Rerror);
+
+		// The name file is read-only: opening for write must fail.
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, OWRITE);
+		TS_ASSERT_EQUALS(ro.type, Rerror);
+
+		// Tremove is refused with an error, but still clunks.
+		NineMsg r2 = walk(ses, 0, 2, {"by-type"});
+		TS_ASSERT_EQUALS(r2.type, Rwalk);
+		NineMsg trm;
+		trm.type = Tremove;
+		trm.tag = 8;
+		trm.fid = 2;
+		NineMsg rrm = ses.dispatch(trm);
+		TS_ASSERT_EQUALS(rrm.type, Rerror);
+		NineMsg rst;
+		rst.type = Tstat;
+		rst.tag = 9;
+		rst.fid = 2;
+		NineMsg rs = ses.dispatch(rst);
+		TS_ASSERT_EQUALS(rs.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// Fid lifecycle rules: attaching a live fid, walking onto an
+	// occupied newfid, double Topen, unsupported open flags, and a
+	// fresh Tversion clunking everything (attach(5)/walk(5)/
+	// open(5)/version(5)).
+	void test_fid_rules(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		// Attaching a fid that is already in use is an error.
+		NineMsg ta;
+		ta.type = Tattach;
+		ta.tag = 20;
+		ta.fid = 0;
+		ta.afid = NINE_NOFID;
+		ta.uname = "tester";
+		ta.aname = "";
+		NineMsg ra = ses.dispatch(ta);
+		TS_ASSERT_EQUALS(ra.type, Rerror);
+
+		// Walking onto an occupied newfid is an error...
+		NineMsg r1 = walk(ses, 0, 1, {"by-type"});
+		TS_ASSERT_EQUALS(r1.type, Rwalk);
+		NineMsg r2 = walk(ses, 0, 1, {"by-handle"});
+		TS_ASSERT_EQUALS(r2.type, Rerror);
+		// ...unless newfid == fid, which moves the fid in place.
+		NineMsg r3 = walk(ses, 1, 1, {});
+		TS_ASSERT_EQUALS(r3.type, Rwalk);
+
+		// A second Topen on an already-open fid is an error.
+		NineMsg o1 = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(o1.type, Ropen);
+		NineMsg o2 = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(o2.type, Rerror);
+
+		// OTRUNC on a read-only file and ORCLOSE anywhere are
+		// refused rather than silently ignored.
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw = walk(ses, 0, 2, {"by-handle", id, "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg o3 = open(ses, 2, OREAD | OTRUNC);
+		TS_ASSERT_EQUALS(o3.type, Rerror);
+		NineMsg o4 = open(ses, 2, OREAD | ORCLOSE);
+		TS_ASSERT_EQUALS(o4.type, Rerror);
+
+		// On the writable tv file, OTRUNC is accepted only with a
+		// write mode: a Twrite replaces the whole rendering, which
+		// is the only truncation this generated file supports.
+		NineMsg rwt = walk(ses, 0, 3, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rwt.type, Rwalk);
+		NineMsg o5 = open(ses, 3, OREAD | OTRUNC);
+		TS_ASSERT_EQUALS(o5.type, Rerror);
+		NineMsg o6 = open(ses, 3, OWRITE | OTRUNC);
+		TS_ASSERT_EQUALS(o6.type, Ropen);
+
+		// A new Tversion restarts the session: old fids are clunked.
+		NineMsg tv;
+		tv.type = Tversion;
+		tv.tag = NINE_NOTAG;
+		tv.msize = 65536;
+		tv.version = NINE_VERSION;
+		NineMsg rv = ses.dispatch(tv);
+		TS_ASSERT_EQUALS(rv.type, Rversion);
+		NineMsg rr = read(ses, 1, 0, 100);
+		TS_ASSERT_EQUALS(rr.type, Rerror);
+
+		// An unusably small msize is refused.
+		tv.msize = 64;
+		NineMsg rv2 = ses.dispatch(tv);
+		TS_ASSERT_EQUALS(rv2.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// Tstat on an atom directory reports a sane stat entry.
+	void test_stat(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		std::string id = AtomFsIndex::id_of(_foo);
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+
+		NineMsg ts;
+		ts.type = Tstat;
+		ts.tag = 10;
+		ts.fid = 1;
+		NineMsg rs = ses.dispatch(ts);
+		TS_ASSERT_EQUALS(rs.type, Rstat);
+
+		NineStat st = nine_decode_stat(rs.stat);
+		TS_ASSERT_EQUALS(st.name, id);
+		TS_ASSERT_EQUALS(st.qid.type, QTDIR);
+		TS_ASSERT(st.mode & NINE_DMDIR);
+		TS_ASSERT_EQUALS(st.uid, "cogserver");
+
+		// The tv file reports its rendered size (here the default
+		// "1 0\n"), not zero, so stat-driven readers work.
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		NineMsg ts2;
+		ts2.type = Tstat;
+		ts2.tag = 11;
+		ts2.fid = 2;
+		NineMsg rs2 = ses.dispatch(ts2);
+		TS_ASSERT_EQUALS(rs2.type, Rstat);
+		TS_ASSERT_EQUALS(nine_decode_stat(rs2.stat).length, 4u);
+	}
+
+	// ----------------------------------------------------------
+	// Node/Link asymmetry: a Link's name file reads empty (Links
+	// have no name), a Node's outgoing/ lists nothing, and listing
+	// a Link's directory (which stats every child, name included)
+	// succeeds.
+	void test_node_link_asymmetry(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		std::string list_id = AtomFsIndex::id_of(_list);
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", list_id, "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 3u);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+		NineMsg rr = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT(rr.data.empty());
+
+		std::string foo_id = AtomFsIndex::id_of(_foo);
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", foo_id, "outgoing"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		NineMsg ro2 = open(ses, 2, OREAD);
+		TS_ASSERT_EQUALS(ro2.type, Ropen);
+		NineMsg rr2 = read(ses, 2, 0, 8192);
+		TS_ASSERT_EQUALS(rr2.type, Rread);
+		TS_ASSERT(rr2.data.empty());
+
+		NineMsg rw3 = walk(ses, 0, 3, {"by-handle", list_id});
+		TS_ASSERT_EQUALS(rw3.type, Rwalk);
+		NineMsg ro3 = open(ses, 3, OREAD);
+		TS_ASSERT_EQUALS(ro3.type, Ropen);
+		NineMsg rr3 = read(ses, 3, 0, 8192);
+		TS_ASSERT_EQUALS(rr3.type, Rread);
+		TS_ASSERT_EQUALS(parse_dir(rr3.data).size(), 7u);
+	}
+
+	// ----------------------------------------------------------
+	// An open values/ file tracks the live value: replacing the
+	// value is visible to the next read, not frozen at lookup time.
+	void test_value_file_live(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		// Give foo a truth value so values/ has one entry.
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, ORDWR);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 30;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "0.5 0.25\n";
+		TS_ASSERT_EQUALS(ses.dispatch(tw).type, Rwrite);
+
+		// Find and open the single values/ entry.
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "values"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		NineMsg ro2 = open(ses, 2, OREAD);
+		TS_ASSERT_EQUALS(ro2.type, Ropen);
+		NineMsg rl = read(ses, 2, 0, 8192);
+		TS_ASSERT_EQUALS(rl.type, Rread);
+		std::vector<NineStat> ents = parse_dir(rl.data);
+		TS_ASSERT_EQUALS(ents.size(), 1u);
+
+		NineMsg rw3 = walk(ses, 0, 3,
+			{"by-handle", id, "values", ents[0].name});
+		TS_ASSERT_EQUALS(rw3.type, Rwalk);
+		NineMsg ro3 = open(ses, 3, OREAD);
+		TS_ASSERT_EQUALS(ro3.type, Ropen);
+		NineMsg r1 = read(ses, 3, 0, 8192);
+		TS_ASSERT_EQUALS(r1.type, Rread);
+		TS_ASSERT(r1.data.find("0.5") != std::string::npos);
+
+		// Replace the value; the already-open fid sees the new one.
+		tw.tag = 31;
+		tw.data = "0.75 0.5\n";
+		TS_ASSERT_EQUALS(ses.dispatch(tw).type, Rwrite);
+		NineMsg r2 = read(ses, 3, 0, 8192);
+		TS_ASSERT_EQUALS(r2.type, Rread);
+		TS_ASSERT(r2.data.find("0.75") != std::string::npos);
+	}
+
+	// ----------------------------------------------------------
+	// Directory listings page through successive reads: each reply
+	// fits the negotiated msize, carries whole stat entries, and
+	// together they cover every atom (read(5) semantics).
+	void test_directory_paging(void)
+	{
+		// Enough atoms that the listing exceeds one msize-limited read.
+		const size_t natoms = 300;
+		for (size_t i = 0; i < natoms; i++)
+			_as->add_node(CONCEPT_NODE, "page-" + std::to_string(i));
+
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1, {"by-handle"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		std::string all;
+		uint64_t off = 0;
+		size_t reads = 0;
+		while (true)
+		{
+			NineMsg rr = read(ses, 1, off, 65536);
+			TS_ASSERT_EQUALS(rr.type, Rread);
+			// The whole Rread frame must fit the negotiated msize.
+			TS_ASSERT_LESS_THAN_EQUALS(rr.data.size(),
+				(size_t) NINE_DEFAULT_MSIZE - 11);
+			if (rr.data.empty()) break;
+			all += rr.data;
+			off += rr.data.size();
+			if (1000 < ++reads) { TS_FAIL("unterminated listing"); break; }
+		}
+		TS_ASSERT_LESS_THAN_EQUALS(2u, reads);
+
+		// Every atom is present exactly once: the 300 new ones plus
+		// foo, bar and the ListLink from setUp().
+		std::vector<NineStat> ents = parse_dir(all);
+		TS_ASSERT_EQUALS(ents.size(), natoms + 3);
+	}
+
+	// ----------------------------------------------------------
+	// The mode a fid was opened with is enforced on later reads
+	// and writes (open(5)/read(5)/write(5)).
+	void test_open_mode_enforced(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		// tv opened OREAD must not accept writes.
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 11;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "0.9 0.9\n";
+		NineMsg rwr = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(rwr.type, Rerror);
+
+		// tv opened OWRITE must not serve reads.
+		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+		NineMsg ro2 = open(ses, 2, OWRITE);
+		TS_ASSERT_EQUALS(ro2.type, Ropen);
+		NineMsg rr = read(ses, 2, 0, 8192);
+		TS_ASSERT_EQUALS(rr.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// A rejected tv write is an Rerror, not a zero-count Rwrite.
+	void test_tv_write_errors(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		NineMsg ro = open(ses, 1, ORDWR);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 12;
+		tw.fid = 1;
+		tw.offset = 0;
+		tw.data = "junk";
+		NineMsg r1 = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(r1.type, Rerror);
+
+		tw.offset = 4;
+		tw.data = "0.5 0.5\n";
+		NineMsg r2 = ses.dispatch(tw);
+		TS_ASSERT_EQUALS(r2.type, Rerror);
+	}
+
+	// ----------------------------------------------------------
+	// Value files of *different* atoms under the *same* key are
+	// different files and must not share a Qid.
+	void test_value_qids_distinct(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		// Give both foo and bar a value under the truth key.
+		for (const Handle& h : { _foo, _bar })
+		{
+			std::string id = AtomFsIndex::id_of(h);
+			uint32_t fid = (h == _foo) ? 1 : 2;
+			NineMsg rw = walk(ses, 0, fid, {"by-handle", id, "tv"});
+			TS_ASSERT_EQUALS(rw.type, Rwalk);
+			NineMsg ro = open(ses, fid, OWRITE);
+			TS_ASSERT_EQUALS(ro.type, Ropen);
+			NineMsg tw;
+			tw.type = Twrite;
+			tw.tag = 13;
+			tw.fid = fid;
+			tw.offset = 0;
+			tw.data = "0.5 0.25\n";
+			NineMsg rwr = ses.dispatch(tw);
+			TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		}
+
+		// List values/ of each atom; the (single) truth-key entries
+		// carry the same name but distinct Qids.
+		std::vector<NineStat> foo_vals, bar_vals;
+		for (const Handle& h : { _foo, _bar })
+		{
+			std::string id = AtomFsIndex::id_of(h);
+			uint32_t fid = (h == _foo) ? 3 : 4;
+			NineMsg rw = walk(ses, 0, fid, {"by-handle", id, "values"});
+			TS_ASSERT_EQUALS(rw.type, Rwalk);
+			NineMsg ro = open(ses, fid, OREAD);
+			TS_ASSERT_EQUALS(ro.type, Ropen);
+			NineMsg rr = read(ses, fid, 0, 8192);
+			TS_ASSERT_EQUALS(rr.type, Rread);
+			((h == _foo) ? foo_vals : bar_vals) = parse_dir(rr.data);
+		}
+		TS_ASSERT_EQUALS(foo_vals.size(), 1u);
+		TS_ASSERT_EQUALS(bar_vals.size(), 1u);
+		TS_ASSERT_EQUALS(foo_vals[0].name, bar_vals[0].name);
+		TS_ASSERT(foo_vals[0].qid != bar_vals[0].qid);
+	}
+
+	// ----------------------------------------------------------
+	// File reads are clamped so the reply fits the negotiated
+	// msize, and the remainder stays reachable at later offsets.
+	void test_msize_clamp(void)
+	{
+		const size_t len = 20000;
+		Handle big = _as->add_node(CONCEPT_NODE, std::string(len, 'x'));
+
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1,
+			{"by-handle", AtomFsIndex::id_of(big), "name"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 3u);
+		NineMsg ro = open(ses, 1, OREAD);
+		TS_ASSERT_EQUALS(ro.type, Ropen);
+
+		// One read asking for far more than msize is clamped...
+		NineMsg rr = read(ses, 1, 0, 65536);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		TS_ASSERT_EQUALS(rr.data.size(),
+			(size_t) NINE_DEFAULT_MSIZE - 11);
+
+		// ...and sequential reads retrieve the whole file.
+		std::string all = rr.data;
+		while (true)
+		{
+			NineMsg rn = read(ses, 1, all.size(), 65536);
+			TS_ASSERT_EQUALS(rn.type, Rread);
+			if (rn.data.empty()) break;
+			all += rn.data;
+		}
+		TS_ASSERT_EQUALS(all.size(), len + 1); // name + trailing \n
+	}
+
+	// ----------------------------------------------------------
+	// The whole-frame entry point: raw bytes in, raw bytes out;
+	// incomplete frames throw.
+	void test_handle_message(void)
+	{
+		NineSession ses(_index->root());
+
+		NineMsg tv;
+		tv.type = Tversion;
+		tv.tag = NINE_NOTAG;
+		tv.msize = 8192;
+		tv.version = NINE_VERSION;
+
+		std::string reply = ses.handle_message(nine_encode(tv));
+		NineMsg rv;
+		size_t used = nine_decode(reply, rv);
+		TS_ASSERT_EQUALS(used, reply.size());
+		TS_ASSERT_EQUALS(rv.type, Rversion);
+		TS_ASSERT_EQUALS(rv.version, "9P2000");
+
+		// A truncated frame is a hard error.
+		TS_ASSERT_THROWS(ses.handle_message(std::string("\x13", 1)),
+			const std::runtime_error&);
+
+		// Renegotiate the smallest allowed msize, then send a frame
+		// larger than it: the frame is rejected before dispatch.
+		tv.msize = NINE_MIN_MSIZE;
+		reply = ses.handle_message(nine_encode(tv));
+		nine_decode(reply, rv);
+		TS_ASSERT_EQUALS(rv.type, Rversion);
+		TS_ASSERT_EQUALS(rv.msize, NINE_MIN_MSIZE);
+
+		NineMsg big;
+		big.type = Twrite;
+		big.tag = 8;
+		big.fid = 99;
+		big.offset = 0;
+		big.data = std::string(NINE_MIN_MSIZE, 'x');
+		reply = ses.handle_message(nine_encode(big));
+		NineMsg re;
+		nine_decode(reply, re);
+		TS_ASSERT_EQUALS(re.type, Rerror);
+	}
+};
