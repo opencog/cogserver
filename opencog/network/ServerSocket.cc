@@ -373,28 +373,30 @@ void ServerSocket::handle_connection(void)
             std::string line;
             if (_is_9p_socket)
                 line = get_9p_message(b);
-            else if (not _do_frame_io)
-                line = get_telnet_line(b);
-            else
+            else if (_do_frame_io)
                 line = get_websocket_line();
+            else
+                line = get_telnet_line(b);
+
+            // Some local Linux D-Bus daemon desperately wants to
+            // talk to us, sending us binary garbage of some kind.
+            // Desperately ignore it.
+            if ((not _is_9p_socket) and
+                1 < line.size() and
+                0x1 == line.c_str()[0] and 0x21 == line.c_str()[1]) break;
+
+            _last_activity = time(nullptr);
+            _line_count++;
+            total_line_count++;
+            _status = QUING;
 
             // 9P messages are framed, complete and binary. Hand them
             // off as-is, bypassing all text-based line discipline.
             if (_is_9p_socket)
             {
-                _last_activity = time(nullptr);
-                _line_count++;
-                total_line_count++;
-                _status = QUING;
                 OnLine(line);
                 continue;
             }
-
-            // Some local Linux D-Bus daemon desperately wants to
-            // talk to us, sending us binary garbage of some kind.
-            // Desperately ignore it.
-            if (1 < line.size() and
-                0x1 == line.c_str()[0] and 0x21 == line.c_str()[1]) break;
 
             // Strip off carriage returns. The line already stripped
             // newlines.
@@ -402,37 +404,34 @@ void ServerSocket::handle_connection(void)
                 line.erase(line.end()-1);
             }
 
-            _last_activity = time(nullptr);
-            _line_count++;
-            total_line_count++;
-            _status = QUING;
-
             // If its not an http sock, then the API is simple.
             if (not _is_http_socket)
-                OnLine(line);
-            else
             {
-                // Bypass until we've received the full HTTP header.
-                if (not _got_http_header)
-                    HandshakeLine(line);
-                if (_got_http_header)
-                {
-                    // Process the complete HTTP request
-                    // If we're running websockets, then we're doing
-                    // frame I/O and we've already got the line.
-                    // Otherwise, we use http Content-Length.
-                    if (_do_frame_io)
-                        OnLine(line);
-                    else
-                    {
-                        std::string http_body(get_http_body(b));
-                        OnLine(http_body);
+                OnLine(line);
+                continue;
+            }
 
-                        // Reset for next HTTP request.
-                        _got_http_header = false;
-                        _got_first_line = false;
-                        _content_length = 0;
-                    }
+            // If we are here, we're an http socket. Do the HTTP header.
+            // Bypass until we've received the full HTTP header.
+            if (not _got_http_header)
+                HandshakeLine(line);
+            if (_got_http_header)
+            {
+                // Process the complete HTTP request
+                // If we're running websockets, then we're doing
+                // frame I/O and we've already got the line.
+                // Otherwise, we use http Content-Length.
+                if (_do_frame_io)
+                    OnLine(line);
+                else
+                {
+                    std::string http_body(get_http_body(b));
+                    OnLine(http_body);
+
+                    // Reset for next HTTP request.
+                    _got_http_header = false;
+                    _got_first_line = false;
+                    _content_length = 0;
                 }
             }
         }
