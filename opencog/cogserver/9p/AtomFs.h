@@ -3,35 +3,52 @@
  *
  * Maps an AtomSpace onto a synthetic Plan 9 style file tree:
  *
- *   /by-type/<TYPE_NAME>/<id>/          -- one directory per atom
+ *   /by-type/<TYPE_NAME>/<atom>/        -- one directory per atom
  *   /by-handle/<id>/                    -- the same directories, by id
  *   /new                                -- control file: write an
  *                                          Atomese s-expression to
  *                                          create an atom, then read
  *                                          back its /by-handle path
  *
- * Per atom directory <id>/ contains:
+ * Each atom directory contains:
  *   name                                -- Node name (empty for Links)
  *   type                                -- type name
  *   to_string                           -- full to_string() rendering
- *   tv                                  -- convenience view of the
- *                                          truth-value key, if any
  *   outgoing/0, outgoing/1, ...         -- hard-links to each element
  *                                          of the outgoing set, in order
- *   incoming/<id>, ...                  -- hard-links to each element
+ *   incoming/<atom>, ...                -- hard-links to each element
  *                                          of the incoming set
- *   values/<id>                         -- one file per (key . value)
- *                                          pair attached to the atom
+ *   values/<key>                        -- one file per (key . value)
+ *                                          pair attached to the atom,
+ *                                          named by the key and
+ *                                          holding the value
  *
- * `<id>` is the atom's content hash (Handle::value()), rendered as a
- * fixed-width hex string, so it is stable for a given atom's content
- * and safe to use as a path component.
+ * Names. `<atom>` and `<key>` are the atom's s-expression, written
+ * on one line with full type names, e.g. `(ConceptNode "foo")` or
+ * `(ListLink (ConceptNode "foo")(ConceptNode "bar"))` -- see
+ * name_of(). `<id>` is the atom's content hash (Handle::value()),
+ * as fixed-width hex -- see id_of(). An s-expression that cannot
+ * serve as a file name (it contains a slash or a control character,
+ * or exceeds 255 bytes) is listed under its id instead. Lookups are
+ * more liberal than listings: wherever an atom is listed by its
+ * s-expression, it also answers to its id and to any other spelling
+ * that decodes to the same atom, such as `(Concept "foo")`.
+ *
+ * Values. A values/ file holds the value as an s-expression, e.g.
+ * `(FloatValue 0.5 0.25)`, and the outgoing/ and values/
+ * directories are otherwise alike: the first is positional and
+ * anonymous, the second is keyed by name. Unless the AtomSpace is
+ * read-only, writing an s-expression to a values/ file replaces the
+ * value, creating a file named by a key attaches a new value, and
+ * removing the file deletes it. Nothing else in an atom directory
+ * can be changed.
  *
  * Every atom maps to exactly one, shared NineNode instance (see
  * AtomFsIndex::dir_for()), no matter how many different paths lead
- * to it -- outgoing/incoming "links" are the *same* object as the
- * corresponding by-handle/<id> entry, giving genuine hard-link
- * semantics (identical Qids) as in a real Plan 9 namespace.
+ * to it -- by-type/, outgoing/ and incoming/ entries are the *same*
+ * object as the corresponding by-handle/<id> entry, giving genuine
+ * hard-link semantics (identical Qids) as in a real Plan 9
+ * namespace.
  *
  * Copyright (c) 2024 OpenCog Foundation
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -56,6 +73,8 @@ namespace plan9
 /** \addtogroup grp_server
  *  @{
  */
+
+struct ValueSlots;
 
 /**
  * Owns the mapping from an AtomSpace's atoms to their (memoized)
@@ -90,9 +109,28 @@ public:
 	/// hash, rendered as fixed-width lower-case hex.
 	static std::string id_of(const Handle& h);
 
+	/// The name an atom is listed under: its one-line s-expression
+	/// when that can serve as a file name, else its id_of().
+	static std::string name_of(const Handle& h);
+
+	/// The atom of this AtomSpace that `name` spells as an
+	/// s-expression, or Handle::UNDEFINED if `name` is not a
+	/// well-formed atom or no such atom exists. Never adds
+	/// anything to the AtomSpace.
+	Handle atom_named(const std::string& name) const;
+
 private:
 	/// Directory node for one atom type (a by-type/<TYPE_NAME>/ entry).
 	NineNodePtr type_dir(Type t);
+
+	/// The directory entry for `h` wherever atoms are listed by
+	/// name: its shared directory node, under its name_of().
+	NineNodePtr entry_for(const Handle& h);
+
+	/// Resolve one path component, naming an atom of exactly type
+	/// `t` by id or by s-expression, to its node; nullptr if there
+	/// is no such atom.
+	NineNodePtr atom_entry(const std::string& name, Type t);
 
 	/// Resolve one <id> path component directly to its atom's node,
 	/// searching atoms of type `t` (with subtypes if `subclass`);
@@ -102,6 +140,7 @@ private:
 	AtomSpacePtr _as;
 	std::mutex _mtx;
 	std::unordered_map<ContentHash, std::weak_ptr<NineNode>> _cache;
+	std::unordered_map<ContentHash, std::weak_ptr<ValueSlots>> _slots;
 	size_t _sweep_mark = 64;
 	NineNodePtr _root;
 };

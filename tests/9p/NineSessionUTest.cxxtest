@@ -3,8 +3,9 @@
  *
  * Test the 9P session dispatcher serving the AtomSpace-backed
  * synthetic file tree: version/attach, walks (full, clone and
- * partial), directory listings, file reads, hard-link Qid equality,
- * truth-value writes, and the read-only error paths.
+ * partial), directory listings, file reads, atom naming, hard-link
+ * Qid equality, value files (write, create, remove), Twstat, and
+ * the error paths.
  *
  * Copyright (C) 2026 OpenCog Foundation
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -12,11 +13,13 @@
 
 #include <cxxtest/TestSuite.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
 #include <opencog/atomspace/AtomSpace.h>
 #include <opencog/atoms/atom_types/atom_types.h>
+#include <opencog/atoms/value/FloatValue.h>
 #include <opencog/cogserver/9p/AtomFs.h>
 #include <opencog/cogserver/9p/NineSession.h>
 
@@ -109,6 +112,99 @@ private:
 		return ses.dispatch(tr);
 	}
 
+	static NineMsg write(NineSession& ses, uint32_t fid,
+	                     const std::string& data, uint64_t offset = 0)
+	{
+		NineMsg tw;
+		tw.type = Twrite;
+		tw.tag = 5;
+		tw.fid = fid;
+		tw.offset = offset;
+		tw.data = data;
+		return ses.dispatch(tw);
+	}
+
+	static NineMsg fid_op(NineSession& ses, uint8_t type, uint32_t fid)
+	{
+		NineMsg t;
+		t.type = type;
+		t.tag = 6;
+		t.fid = fid;
+		return ses.dispatch(t);
+	}
+	static NineMsg clunk(NineSession& ses, uint32_t fid)
+	{
+		return fid_op(ses, Tclunk, fid);
+	}
+	static NineMsg remove(NineSession& ses, uint32_t fid)
+	{
+		return fid_op(ses, Tremove, fid);
+	}
+	static NineMsg stat(NineSession& ses, uint32_t fid)
+	{
+		return fid_op(ses, Tstat, fid);
+	}
+
+	static NineMsg create(NineSession& ses, uint32_t fid,
+	                      const std::string& name, uint32_t perm,
+	                      uint8_t mode)
+	{
+		NineMsg tc;
+		tc.type = Tcreate;
+		tc.tag = 7;
+		tc.fid = fid;
+		tc.name = name;
+		tc.perm = perm;
+		tc.mode = mode;
+		return ses.dispatch(tc);
+	}
+
+	// A stat whose every field holds its "don't touch" value, as a
+	// client builds before filling in what a Twstat should change.
+	static NineStat blank_stat(void)
+	{
+		NineStat st;
+		st.type = 0xffff;
+		st.dev = 0xffffffffu;
+		st.qid.type = 0xff;
+		st.qid.version = 0xffffffffu;
+		st.qid.path = 0xffffffffffffffffULL;
+		st.mode = 0xffffffffu;
+		st.atime = 0xffffffffu;
+		st.mtime = 0xffffffffu;
+		st.length = 0xffffffffffffffffULL;
+		return st;
+	}
+
+	static NineMsg wstat(NineSession& ses, uint32_t fid,
+	                     const NineStat& st)
+	{
+		NineMsg tw;
+		tw.type = Twstat;
+		tw.tag = 8;
+		tw.fid = fid;
+		tw.stat = nine_encode_stat(st);
+		return ses.dispatch(tw);
+	}
+
+	// Attach (FloatValue a b) to `atom` under (Predicate "key"),
+	// directly through the AtomSpace; returns the key.
+	Handle set_fv(const Handle& atom, double a, double b)
+	{
+		Handle key = _as->add_node(PREDICATE_NODE, "key");
+		_as->set_value(atom, key,
+			createFloatValue(std::vector<double>({a, b})));
+		return key;
+	}
+
+	// Path of the file holding the value of `atom` at `key`.
+	static std::vector<std::string> value_path(const Handle& atom,
+	                                           const Handle& key)
+	{
+		return { "by-handle", AtomFsIndex::id_of(atom), "values",
+		         AtomFsIndex::name_of(key) };
+	}
+
 public:
 	void setUp(void)
 	{
@@ -180,7 +276,7 @@ public:
 
 		std::string id = AtomFsIndex::id_of(_foo);
 		NineMsg rw = walk(ses, 0, 1,
-			{"by-type", "ConceptNode", id, "name"});
+			{"by-type", "ConceptNode", "(ConceptNode \"foo\")", "name"});
 		TS_ASSERT_EQUALS(rw.type, Rwalk);
 		TS_ASSERT_EQUALS(rw.wqid.size(), 4u);
 		TS_ASSERT_EQUALS(rw.wqid[3].type, QTFILE);
@@ -239,7 +335,8 @@ public:
 
 		TS_ASSERT(r1.wqid[3] == r2.wqid[2]);
 
-		// And the incoming set of foo leads back to the ListLink.
+		// And the incoming set of foo leads back to the ListLink,
+		// by its s-expression as well as by its id.
 		NineMsg r3 = walk(ses, 2, 3, {"incoming", list_id});
 		TS_ASSERT_EQUALS(r3.type, Rwalk);
 		TS_ASSERT_EQUALS(r3.wqid.size(), 2u);
@@ -247,80 +344,198 @@ public:
 		NineMsg r4 = walk(ses, 0, 4, {"by-handle", list_id});
 		TS_ASSERT_EQUALS(r4.type, Rwalk);
 		TS_ASSERT(r3.wqid[1] == r4.wqid[1]);
+
+		NineMsg r5 = walk(ses, 2, 5,
+			{"incoming", AtomFsIndex::name_of(_list)});
+		TS_ASSERT_EQUALS(r5.type, Rwalk);
+		TS_ASSERT_EQUALS(r5.wqid.size(), 2u);
+		TS_ASSERT(r5.wqid[1] == r4.wqid[1]);
 	}
 
 	// ----------------------------------------------------------
-	// The tv file accepts "<strength> <confidence>" writes.
-	void test_tv_write(void)
+	// Atoms are listed by their one-line s-expression, and answer
+	// to that, to any other spelling of it, and to their id; an
+	// s-expression that cannot be a file name is listed by id.
+	void test_atom_names(void)
 	{
+		Handle slashed = _as->add_node(CONCEPT_NODE, "a/b");
+		Handle lengthy = _as->add_node(CONCEPT_NODE, std::string(300, 'x'));
+
+		TS_ASSERT_EQUALS(AtomFsIndex::name_of(_foo), "(ConceptNode \"foo\")");
+		TS_ASSERT_EQUALS(AtomFsIndex::name_of(_list),
+			"(ListLink (ConceptNode \"foo\")(ConceptNode \"bar\"))");
+		TS_ASSERT_EQUALS(AtomFsIndex::name_of(slashed),
+			AtomFsIndex::id_of(slashed));
+		TS_ASSERT_EQUALS(AtomFsIndex::name_of(lengthy),
+			AtomFsIndex::id_of(lengthy));
+
 		NineSession ses(_index->root());
 		start(ses);
 
-		std::string id = AtomFsIndex::id_of(_foo);
-		NineMsg rw = walk(ses, 0, 1,
-			{"by-handle", id, "tv"});
+		// The ConceptNode directory lists the four of them so.
+		NineMsg rw = walk(ses, 0, 1, {"by-type", "ConceptNode"});
 		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(open(ses, 1, OREAD).type, Ropen);
+		NineMsg rr = read(ses, 1, 0, 65536);
+		TS_ASSERT_EQUALS(rr.type, Rread);
+		std::vector<std::string> names;
+		for (const NineStat& st : parse_dir(rr.data))
+		{
+			TS_ASSERT_EQUALS(st.qid.type, QTDIR);
+			names.push_back(st.name);
+		}
+		std::sort(names.begin(), names.end());
+		std::vector<std::string> expect = {
+			"(ConceptNode \"foo\")", "(ConceptNode \"bar\")",
+			AtomFsIndex::id_of(slashed), AtomFsIndex::id_of(lengthy) };
+		std::sort(expect.begin(), expect.end());
+		TS_ASSERT(names == expect);
+
+		// Listed name, short spelling and id all reach the one atom.
+		NineMsg byid = walk(ses, 0, 2,
+			{"by-handle", AtomFsIndex::id_of(_foo)});
+		TS_ASSERT_EQUALS(byid.type, Rwalk);
+		uint32_t fid = 3;
+		for (const std::string& n : { std::string("(ConceptNode \"foo\")"),
+		                              std::string("(Concept \"foo\")"),
+		                              AtomFsIndex::id_of(_foo) })
+		{
+			NineMsg r = walk(ses, 0, fid++, {"by-type", "ConceptNode", n});
+			TS_ASSERT_EQUALS(r.type, Rwalk);
+			TS_ASSERT_EQUALS(r.wqid.size(), 3u);
+			if (3 == r.wqid.size())
+				TS_ASSERT(r.wqid[2] == byid.wqid[1]);
+		}
+
+		// The unnameable ones are reachable by id.
+		NineMsg rs = walk(ses, 0, fid++,
+			{"by-type", "ConceptNode", AtomFsIndex::id_of(slashed), "name"});
+		TS_ASSERT_EQUALS(rs.type, Rwalk);
+		TS_ASSERT_EQUALS(rs.wqid.size(), 4u);
+
+		// An atom that does not exist is not found -- and looking
+		// for it must not create it.
+		size_t before = _as->get_size();
+		NineMsg rn = walk(ses, 0, fid++,
+			{"by-type", "ConceptNode", "(ConceptNode \"nope\")"});
+		TS_ASSERT_EQUALS(rn.type, Rwalk);
+		TS_ASSERT_EQUALS(rn.wqid.size(), 2u);
+		NineMsg rd = walk(ses, 0, fid, {"by-type", "ConceptNode"});
+		TS_ASSERT_EQUALS(rd.type, Rwalk);
+		NineMsg rn2 = walk(ses, fid, fid + 1, {"(ConceptNode \"nope\")"});
+		TS_ASSERT_EQUALS(rn2.type, Rerror);
+		TS_ASSERT_EQUALS(rn2.ename, NINE_ERR_NOT_FOUND);
+		TS_ASSERT_EQUALS(_as->get_size(), before);
+		fid += 2;
+
+		// An atom is listed under its own type only.
+		NineMsg rt = walk(ses, 0, fid++,
+			{"by-type", "ListLink", "(ConceptNode \"foo\")"});
+		TS_ASSERT_EQUALS(rt.type, Rwalk);
+		TS_ASSERT_EQUALS(rt.wqid.size(), 2u);
+
+		// incoming/ lists the ListLink by its s-expression.
+		NineMsg ri = walk(ses, 2, fid, {"incoming"});
+		TS_ASSERT_EQUALS(ri.type, Rwalk);
+		TS_ASSERT_EQUALS(open(ses, fid, OREAD).type, Ropen);
+		std::vector<NineStat> in = parse_dir(read(ses, fid, 0, 8192).data);
+		TS_ASSERT_EQUALS(in.size(), 1u);
+		if (1 == in.size())
+			TS_ASSERT_EQUALS(in[0].name, AtomFsIndex::name_of(_list));
+	}
+
+	// ----------------------------------------------------------
+	// A value file is named by its key and holds the value as an
+	// s-expression; writing one replaces the value.
+	void test_value_write(void)
+	{
+		Handle key = set_fv(_foo, 1, 0);
+
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1, value_path(_foo, key));
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		TS_ASSERT_EQUALS(rw.wqid.size(), 4u);
 
 		NineMsg ro = open(ses, 1, ORDWR);
 		TS_ASSERT_EQUALS(ro.type, Ropen);
 
-		NineMsg tw;
-		tw.type = Twrite;
-		tw.tag = 5;
-		tw.fid = 1;
-		tw.offset = 0;
-		tw.data = "0.5 0.25\n";
-		NineMsg rwr = ses.dispatch(tw);
+		NineMsg rr0 = read(ses, 1, 0, 8192);
+		TS_ASSERT_EQUALS(rr0.type, Rread);
+		TS_ASSERT_EQUALS(rr0.data, "(FloatValue 1 0)\n");
+
+		std::string text = "(FloatValue 0.5 0.25)\n";
+		NineMsg rwr = write(ses, 1, text);
 		TS_ASSERT_EQUALS(rwr.type, Rwrite);
-		TS_ASSERT_EQUALS(rwr.count, tw.data.size());
+		TS_ASSERT_EQUALS(rwr.count, text.size());
 
 		NineMsg rr = read(ses, 1, 0, 8192);
 		TS_ASSERT_EQUALS(rr.type, Rread);
-		TS_ASSERT_EQUALS(rr.data, "0.5 0.25\n");
+		TS_ASSERT_EQUALS(rr.data, text);
+
+		FloatValuePtr fv = FloatValueCast(_foo->getValue(key));
+		TS_ASSERT(nullptr != fv);
+		if (fv)
+			TS_ASSERT(fv->value() == std::vector<double>({0.5, 0.25}));
+
+		// The key also answers to its short spelling.
+		NineMsg rs = walk(ses, 0, 2, {"by-handle",
+			AtomFsIndex::id_of(_foo), "values", "(Predicate \"key\")"});
+		TS_ASSERT_EQUALS(rs.type, Rwalk);
+		TS_ASSERT_EQUALS(rs.wqid.size(), 4u);
+		if (4 == rs.wqid.size())
+			TS_ASSERT(rs.wqid[3] == rw.wqid[3]);
+
+		// A value may hold atoms, which then join the AtomSpace.
+		NineMsg rl = write(ses, 1,
+			"(LinkValue (Concept \"held\") (StringValue \"s\"))");
+		TS_ASSERT_EQUALS(rl.type, Rwrite);
+		TS_ASSERT(nullptr != _as->get_node(CONCEPT_NODE, "held"));
 	}
 
 	// ----------------------------------------------------------
-	// Copy-on-write frames: writing the tv of an atom inherited
-	// from a read-only parent copies it into the exported child
-	// space; the parent atom is untouched, and the write is
+	// Copy-on-write frames: writing a value of an atom inherited
+	// from a read-only parent copies the atom into the exported
+	// child space; the parent atom is untouched, and the write is
 	// visible through every other fid onto the same file.
 	void test_cow_frames(void)
 	{
+		Handle key = set_fv(_foo, 1, 0);
 		_as->set_read_only();
 		AtomSpacePtr child = createAtomSpace(_as);
 		AtomFsIndexPtr index = std::make_shared<AtomFsIndex>(child);
 		NineSession ses(index->root());
 		start(ses);
 
-		std::string id = AtomFsIndex::id_of(_foo);
-		NineMsg rw1 = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		NineMsg rw1 = walk(ses, 0, 1, value_path(_foo, key));
 		TS_ASSERT_EQUALS(rw1.type, Rwalk);
-		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		NineMsg rw2 = walk(ses, 0, 2, value_path(_foo, key));
 		TS_ASSERT_EQUALS(rw2.type, Rwalk);
 		TS_ASSERT_EQUALS(open(ses, 1, OWRITE).type, Ropen);
 		TS_ASSERT_EQUALS(open(ses, 2, OREAD).type, Ropen);
 
-		NineMsg tw;
-		tw.type = Twrite;
-		tw.tag = 30;
-		tw.fid = 1;
-		tw.offset = 0;
-		tw.data = "0.5 0.25\n";
-		NineMsg rwr = ses.dispatch(tw);
-		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		std::string text = "(FloatValue 0.5 0.25)\n";
+		TS_ASSERT_EQUALS(write(ses, 1, text).type, Rwrite);
 
 		// The write is visible through the other, independently
 		// walked fid.
 		NineMsg rr = read(ses, 2, 0, 8192);
 		TS_ASSERT_EQUALS(rr.type, Rread);
-		TS_ASSERT_EQUALS(rr.data, "0.5 0.25\n");
+		TS_ASSERT_EQUALS(rr.data, text);
 
 		// The value landed on a child-frame copy; the read-only
-		// parent atom still carries no values at all.
+		// parent atom still carries the original.
 		Handle local = child->get_atom(_foo);
 		TS_ASSERT(nullptr != local);
-		TS_ASSERT(not local->getKeys().empty());
-		TS_ASSERT(_foo->getKeys().empty());
+		FloatValuePtr mine = FloatValueCast(local->getValue(key));
+		FloatValuePtr theirs = FloatValueCast(_foo->getValue(key));
+		TS_ASSERT(nullptr != mine and nullptr != theirs);
+		if (mine and theirs)
+		{
+			TS_ASSERT(mine->value() == std::vector<double>({0.5, 0.25}));
+			TS_ASSERT(theirs->value() == std::vector<double>({1, 0}));
+		}
 
 		_as->set_read_write();
 	}
@@ -348,27 +563,22 @@ public:
 	}
 
 	// ----------------------------------------------------------
-	// The read-only paths: create, wstat, and writes to read-only
-	// files are all rejected; remove still clunks the fid.
-	void test_read_only(void)
+	// What cannot be changed says so, with an error a client can
+	// interpret: creating in, removing from, or writing to the
+	// fixed parts of the tree.
+	void test_immutable_parts(void)
 	{
 		NineSession ses(_index->root());
 		start(ses);
 
-		NineMsg tc;
-		tc.type = Tcreate;
-		tc.tag = 6;
-		tc.fid = 0;
-		tc.name = "junk";
-		NineMsg rc = ses.dispatch(tc);
+		// Nothing can be created at the root...
+		NineMsg rc0 = walk(ses, 0, 5, {});
+		TS_ASSERT_EQUALS(rc0.type, Rwalk);
+		NineMsg rc = create(ses, 5, "junk", 0644, OWRITE);
 		TS_ASSERT_EQUALS(rc.type, Rerror);
-
-		NineMsg tws;
-		tws.type = Twstat;
-		tws.tag = 7;
-		tws.fid = 0;
-		NineMsg rws = ses.dispatch(tws);
-		TS_ASSERT_EQUALS(rws.type, Rerror);
+		TS_ASSERT_EQUALS(rc.ename, NINE_ERR_PERM);
+		// ... and a refused create leaves the fid on the directory.
+		TS_ASSERT_EQUALS(open(ses, 5, OREAD).type, Ropen);
 
 		// The name file is read-only: opening for write must fail.
 		std::string id = AtomFsIndex::id_of(_foo);
@@ -376,22 +586,306 @@ public:
 		TS_ASSERT_EQUALS(rw.type, Rwalk);
 		NineMsg ro = open(ses, 1, OWRITE);
 		TS_ASSERT_EQUALS(ro.type, Rerror);
+		TS_ASSERT_EQUALS(ro.ename, NINE_ERR_PERM);
+
+		// A directory cannot be opened for writing at all.
+		NineMsg rv = walk(ses, 0, 3, {"by-handle", id, "values"});
+		TS_ASSERT_EQUALS(rv.type, Rwalk);
+		NineMsg rvo = open(ses, 3, OWRITE);
+		TS_ASSERT_EQUALS(rvo.type, Rerror);
+		TS_ASSERT_EQUALS(rvo.ename, NINE_ERR_IS_DIR);
 
 		// Tremove is refused with an error, but still clunks.
 		NineMsg r2 = walk(ses, 0, 2, {"by-type"});
 		TS_ASSERT_EQUALS(r2.type, Rwalk);
-		NineMsg trm;
-		trm.type = Tremove;
-		trm.tag = 8;
-		trm.fid = 2;
-		NineMsg rrm = ses.dispatch(trm);
+		NineMsg rrm = remove(ses, 2);
 		TS_ASSERT_EQUALS(rrm.type, Rerror);
-		NineMsg rst;
-		rst.type = Tstat;
-		rst.tag = 9;
-		rst.fid = 2;
-		NineMsg rs = ses.dispatch(rst);
+		TS_ASSERT_EQUALS(rrm.ename, NINE_ERR_PERM);
+		NineMsg rs = stat(ses, 2);
 		TS_ASSERT_EQUALS(rs.type, Rerror);
+		TS_ASSERT_EQUALS(rs.ename, NINE_ERR_UNKNOWN_FID);
+
+		// Removing one name of an atom is not removing the atom.
+		NineMsg r4 = walk(ses, 0, 4,
+			{"by-type", "ConceptNode", "(ConceptNode \"foo\")"});
+		TS_ASSERT_EQUALS(r4.type, Rwalk);
+		TS_ASSERT_EQUALS(remove(ses, 4).type, Rerror);
+		TS_ASSERT(nullptr != _as->get_node(CONCEPT_NODE, "foo"));
+	}
+
+	// ----------------------------------------------------------
+	// The regression for "echo ... > /mnt/atomspace/new" failing
+	// with "Unknown error 526": a shell redirection opens with
+	// O_TRUNC, which the Linux v9fs client carries out as a Twstat
+	// setting the length to zero -- sent after the Topen and ahead
+	// of the Twrite. Replay that exact sequence.
+	void test_truncating_write_to_new(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+
+		NineMsg rw = walk(ses, 0, 1, {"new"});
+		TS_ASSERT_EQUALS(rw.type, Rwalk);
+		// A second fid on the file, for the truncation, as the
+		// kernel uses.
+		NineMsg rw2 = walk(ses, 0, 2, {"new"});
+		TS_ASSERT_EQUALS(rw2.type, Rwalk);
+
+		TS_ASSERT_EQUALS(open(ses, 1, OWRITE | OTRUNC).type, Ropen);
+
+		NineStat trunc = blank_stat();
+		trunc.length = 0;
+		trunc.mtime = 1700000000;
+		NineMsg rws = wstat(ses, 2, trunc);
+		TS_ASSERT_EQUALS(rws.type, Rwstat);
+
+		std::string text = "(Concept \"made-by-echo\")\n";
+		NineMsg rwr = write(ses, 1, text);
+		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		TS_ASSERT_EQUALS(rwr.count, text.size());
+		TS_ASSERT_EQUALS(clunk(ses, 1).type, Rclunk);
+
+		Handle h = _as->get_node(CONCEPT_NODE, "made-by-echo");
+		TS_ASSERT(nullptr != h);
+
+		// The truncation alone, with no modification time, and the
+		// whole request through the wire codec, work as well.
+		trunc.mtime = 0xffffffffu;
+		TS_ASSERT_EQUALS(wstat(ses, 2, trunc).type, Rwstat);
+
+		NineMsg tw;
+		tw.type = Twstat;
+		tw.tag = 9;
+		tw.fid = 2;
+		tw.stat = nine_encode_stat(trunc);
+		NineMsg back;
+		nine_decode(ses.handle_message(nine_encode(tw)), back);
+		TS_ASSERT_EQUALS(back.type, Rwstat);
+
+		// An appending redirection (>>) writes at the current end
+		// of the file rather than at zero; that works too.
+		NineMsg rw3 = walk(ses, 0, 3, {"new"});
+		TS_ASSERT_EQUALS(rw3.type, Rwalk);
+		TS_ASSERT_EQUALS(open(ses, 3, OWRITE).type, Ropen);
+		NineMsg rap = write(ses, 3, "(Concept \"appended\")\n", 28);
+		TS_ASSERT_EQUALS(rap.type, Rwrite);
+		TS_ASSERT(nullptr != _as->get_node(CONCEPT_NODE, "appended"));
+	}
+
+	// ----------------------------------------------------------
+	// Twstat: a request that changes nothing succeeds anywhere (the
+	// all-"don't touch" form is a sync); a writable file may be
+	// truncated to nothing and have its times set; nothing can be
+	// renamed, re-moded or re-owned.
+	void test_wstat(void)
+	{
+		Handle key = set_fv(_foo, 1, 0);
+
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		TS_ASSERT_EQUALS(walk(ses, 0, 1, {"by-type"}).type, Rwalk);
+		TS_ASSERT_EQUALS(walk(ses, 0, 2, {"by-handle", id, "name"}).type, Rwalk);
+		TS_ASSERT_EQUALS(walk(ses, 0, 3, {"new"}).type, Rwalk);
+		TS_ASSERT_EQUALS(walk(ses, 0, 4, value_path(_foo, key)).type, Rwalk);
+
+		// Sync: fine on a directory and on a read-only file.
+		TS_ASSERT_EQUALS(wstat(ses, 1, blank_stat()).type, Rwstat);
+		TS_ASSERT_EQUALS(wstat(ses, 2, blank_stat()).type, Rwstat);
+
+		// Restating what is already so is no change either.
+		NineStat same = nine_decode_stat(stat(ses, 2).stat);
+		TS_ASSERT_EQUALS(wstat(ses, 2, same).type, Rwstat);
+
+		// Truncating a value file: accepted, and the value stays
+		// until a write replaces it.
+		NineStat trunc = blank_stat();
+		trunc.length = 0;
+		TS_ASSERT_EQUALS(wstat(ses, 4, trunc).type, Rwstat);
+		TS_ASSERT(nullptr != _foo->getValue(key));
+
+		// Only truncation to nothing is on offer.
+		NineStat grow = blank_stat();
+		grow.length = 5;
+		NineMsg rg = wstat(ses, 3, grow);
+		TS_ASSERT_EQUALS(rg.type, Rerror);
+		TS_ASSERT_EQUALS(rg.ename, NINE_ERR_TRUNCATE);
+
+		// A read-only file cannot be truncated, nor a directory
+		// touched.
+		NineMsg rt = wstat(ses, 2, trunc);
+		TS_ASSERT_EQUALS(rt.type, Rerror);
+		TS_ASSERT_EQUALS(rt.ename, NINE_ERR_WSTAT);
+		NineStat touch = blank_stat();
+		touch.mtime = 1700000000;
+		TS_ASSERT_EQUALS(wstat(ses, 1, touch).type, Rerror);
+		TS_ASSERT_EQUALS(wstat(ses, 3, touch).type, Rwstat);
+
+		// Renaming, and changing mode or owner, are refused even
+		// on a writable file.
+		NineStat ren = blank_stat();
+		ren.name = "renamed";
+		NineMsg rr = wstat(ses, 3, ren);
+		TS_ASSERT_EQUALS(rr.type, Rerror);
+		TS_ASSERT_EQUALS(rr.ename, NINE_ERR_WSTAT);
+		NineStat chm = blank_stat();
+		chm.mode = 0600;
+		TS_ASSERT_EQUALS(wstat(ses, 3, chm).type, Rerror);
+		NineStat chown = blank_stat();
+		chown.uid = "somebody";
+		TS_ASSERT_EQUALS(wstat(ses, 3, chown).type, Rerror);
+
+		// A malformed stat, and an unknown fid.
+		NineMsg bad;
+		bad.type = Twstat;
+		bad.tag = 9;
+		bad.fid = 3;
+		bad.stat = "garbage";
+		NineMsg rb = ses.dispatch(bad);
+		TS_ASSERT_EQUALS(rb.type, Rerror);
+		TS_ASSERT_EQUALS(rb.ename, NINE_ERR_BAD_WSTAT);
+		NineMsg ru = wstat(ses, 99, blank_stat());
+		TS_ASSERT_EQUALS(ru.type, Rerror);
+		TS_ASSERT_EQUALS(ru.ename, NINE_ERR_UNKNOWN_FID);
+	}
+
+	// ----------------------------------------------------------
+	// Creating a file in values/, named by a key, attaches a new
+	// value; removing it deletes the value. The sequence is the one
+	// the Linux client uses for `echo ... > values/<key>`: a failed
+	// lookup, Tcreate on a clone of the directory fid, a walk to
+	// and stat of the new file, and only then the Twrite. No fid is
+	// held on the atom's own directory throughout.
+	void test_value_create_remove(void)
+	{
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+		std::string kname = "(PredicateNode \"fresh\")";
+		std::vector<std::string> kpath = {"by-handle", id, "values", kname};
+
+		NineMsg rd = walk(ses, 0, 1, {"by-handle", id, "values"});
+		TS_ASSERT_EQUALS(rd.type, Rwalk);
+		// values/ is writable, where it can be created in.
+		TS_ASSERT(nine_decode_stat(stat(ses, 1).stat).mode & 0222u);
+
+		NineMsg miss = walk(ses, 1, 9, {kname});
+		TS_ASSERT_EQUALS(miss.type, Rerror);
+		TS_ASSERT_EQUALS(miss.ename, NINE_ERR_NOT_FOUND);
+
+		TS_ASSERT_EQUALS(walk(ses, 1, 2, {}).type, Rwalk);
+		NineMsg rc = create(ses, 2, kname, 0644, OWRITE);
+		TS_ASSERT_EQUALS(rc.type, Rcreate);
+		TS_ASSERT_EQUALS(rc.qid.type, QTFILE);
+
+		// The new file is there at once, empty; the AtomSpace has
+		// not been touched yet.
+		NineMsg rn = walk(ses, 0, 3, kpath);
+		TS_ASSERT_EQUALS(rn.type, Rwalk);
+		TS_ASSERT_EQUALS(rn.wqid.size(), 4u);
+		if (4 == rn.wqid.size())
+			TS_ASSERT(rn.wqid[3] == rc.qid);
+		NineStat st = nine_decode_stat(stat(ses, 3).stat);
+		TS_ASSERT_EQUALS(st.name, kname);
+		TS_ASSERT_EQUALS(st.length, 0u);
+		TS_ASSERT(nullptr == _as->get_node(PREDICATE_NODE, "fresh"));
+		TS_ASSERT(_foo->getKeys().empty());
+
+		// Creating it a second time is an error.
+		TS_ASSERT_EQUALS(walk(ses, 1, 4, {}).type, Rwalk);
+		NineMsg rdup = create(ses, 4, kname, 0644, OWRITE);
+		TS_ASSERT_EQUALS(rdup.type, Rerror);
+		TS_ASSERT_EQUALS(rdup.ename, NINE_ERR_EXISTS);
+
+		// The fid Tcreate was sent on is the open file: write it.
+		std::string text = "(FloatValue 1 2)\n";
+		NineMsg rwr = write(ses, 2, text);
+		TS_ASSERT_EQUALS(rwr.type, Rwrite);
+		Handle key = _as->get_node(PREDICATE_NODE, "fresh");
+		TS_ASSERT(nullptr != key);
+		FloatValuePtr fv = FloatValueCast(_foo->getValue(key));
+		TS_ASSERT(nullptr != fv);
+		if (fv)
+			TS_ASSERT(fv->value() == std::vector<double>({1, 2}));
+		TS_ASSERT_EQUALS(nine_decode_stat(stat(ses, 3).stat).length,
+			text.size());
+
+		// The directory lists it, exactly once.
+		TS_ASSERT_EQUALS(open(ses, 1, OREAD).type, Ropen);
+		std::vector<NineStat> ents = parse_dir(read(ses, 1, 0, 8192).data);
+		TS_ASSERT_EQUALS(ents.size(), 1u);
+		if (1 == ents.size())
+			TS_ASSERT_EQUALS(ents[0].name, kname);
+
+		// A file name that is not a key, and a directory, cannot
+		// be created.
+		NineMsg rj = create(ses, 4, "junk", 0644, OWRITE);
+		TS_ASSERT_EQUALS(rj.type, Rerror);
+		TS_ASSERT_EQUALS(rj.ename, NINE_ERR_INVALID);
+		NineMsg rdir = create(ses, 4, "(Predicate \"dir\")",
+			NINE_DMDIR | 0755, OREAD);
+		TS_ASSERT_EQUALS(rdir.type, Rerror);
+		TS_ASSERT_EQUALS(rdir.ename, NINE_ERR_PERM);
+
+		// Removing the file deletes the value, and clunks the fid.
+		NineMsg rrm = remove(ses, 3);
+		TS_ASSERT_EQUALS(rrm.type, Rremove);
+		TS_ASSERT(nullptr == _foo->getValue(key));
+		TS_ASSERT(_foo->getKeys().empty());
+		TS_ASSERT_EQUALS(stat(ses, 3).type, Rerror);
+		NineMsg gone = walk(ses, 0, 5, kpath);
+		TS_ASSERT_EQUALS(gone.type, Rwalk);
+		TS_ASSERT_EQUALS(gone.wqid.size(), 3u);
+
+		// A file created but never written leaves nothing behind
+		// once it is let go of.
+		for (uint32_t f : {1u, 2u, 4u})
+			TS_ASSERT_EQUALS(clunk(ses, f).type, Rclunk);
+		TS_ASSERT_EQUALS(walk(ses, 0, 6, {"by-handle", id, "values"}).type,
+			Rwalk);
+		NineMsg rc2 = create(ses, 6, "(Predicate \"abandoned\")", 0644, OWRITE);
+		TS_ASSERT_EQUALS(rc2.type, Rcreate);
+		TS_ASSERT_EQUALS(clunk(ses, 6).type, Rclunk);
+		NineMsg rab = walk(ses, 0, 7,
+			{"by-handle", id, "values", "(Predicate \"abandoned\")"});
+		TS_ASSERT_EQUALS(rab.type, Rwalk);
+		TS_ASSERT_EQUALS(rab.wqid.size(), 3u);
+		TS_ASSERT(_foo->getKeys().empty());
+	}
+
+	// ----------------------------------------------------------
+	// A read-only AtomSpace exports a tree nothing can be written
+	// to: no write permission is advertised, and attempts fail.
+	void test_read_only_space(void)
+	{
+		Handle key = set_fv(_foo, 1, 0);
+		_as->set_read_only();
+
+		NineSession ses(_index->root());
+		start(ses);
+		std::string id = AtomFsIndex::id_of(_foo);
+
+		TS_ASSERT_EQUALS(walk(ses, 0, 1, {"new"}).type, Rwalk);
+		TS_ASSERT(not (nine_decode_stat(stat(ses, 1).stat).mode & 0222u));
+		NineMsg ro = open(ses, 1, OWRITE);
+		TS_ASSERT_EQUALS(ro.type, Rerror);
+		TS_ASSERT_EQUALS(ro.ename, NINE_ERR_PERM);
+
+		TS_ASSERT_EQUALS(walk(ses, 0, 2, value_path(_foo, key)).type, Rwalk);
+		TS_ASSERT_EQUALS(open(ses, 2, OWRITE).type, Rerror);
+		NineMsg rrm = remove(ses, 2);
+		TS_ASSERT_EQUALS(rrm.type, Rerror);
+		TS_ASSERT_EQUALS(rrm.ename, NINE_ERR_READ_ONLY);
+		TS_ASSERT(nullptr != _foo->getValue(key));
+
+		TS_ASSERT_EQUALS(walk(ses, 0, 3, {"by-handle", id, "values"}).type,
+			Rwalk);
+		NineMsg rc = create(ses, 3, "(Predicate \"k2\")", 0644, OWRITE);
+		TS_ASSERT_EQUALS(rc.type, Rerror);
+		TS_ASSERT_EQUALS(rc.ename, NINE_ERR_READ_ONLY);
+
+		_as->set_read_write();
 	}
 
 	// ----------------------------------------------------------
@@ -414,6 +908,7 @@ public:
 		ta.aname = "";
 		NineMsg ra = ses.dispatch(ta);
 		TS_ASSERT_EQUALS(ra.type, Rerror);
+		TS_ASSERT_EQUALS(ra.ename, NINE_ERR_FID_IN_USE);
 
 		// Walking onto an occupied newfid is an error...
 		NineMsg r1 = walk(ses, 0, 1, {"by-type"});
@@ -429,6 +924,7 @@ public:
 		TS_ASSERT_EQUALS(o1.type, Ropen);
 		NineMsg o2 = open(ses, 1, OREAD);
 		TS_ASSERT_EQUALS(o2.type, Rerror);
+		TS_ASSERT_EQUALS(o2.ename, NINE_ERR_BAD_FID_USE);
 
 		// OTRUNC on a read-only file and ORCLOSE anywhere are
 		// refused rather than silently ignored.
@@ -440,13 +936,13 @@ public:
 		NineMsg o4 = open(ses, 2, OREAD | ORCLOSE);
 		TS_ASSERT_EQUALS(o4.type, Rerror);
 
-		// On the writable tv file, OTRUNC is accepted only with a
-		// write mode: a Twrite replaces the whole rendering, which
-		// is the only truncation this generated file supports.
-		NineMsg rwt = walk(ses, 0, 3, {"by-handle", id, "tv"});
+		// On the writable /new file, OTRUNC is accepted only with a
+		// write mode: truncating is a modification.
+		NineMsg rwt = walk(ses, 0, 3, {"new"});
 		TS_ASSERT_EQUALS(rwt.type, Rwalk);
 		NineMsg o5 = open(ses, 3, OREAD | OTRUNC);
 		TS_ASSERT_EQUALS(o5.type, Rerror);
+		TS_ASSERT_EQUALS(o5.ename, NINE_ERR_BAD_MODE);
 		NineMsg o6 = open(ses, 3, OWRITE | OTRUNC);
 		TS_ASSERT_EQUALS(o6.type, Ropen);
 
@@ -471,6 +967,8 @@ public:
 	// Tstat on an atom directory reports a sane stat entry.
 	void test_stat(void)
 	{
+		Handle key = set_fv(_foo, 0.5, 0.25);
+
 		NineSession ses(_index->root());
 		start(ses);
 
@@ -489,19 +987,20 @@ public:
 		TS_ASSERT_EQUALS(st.name, id);
 		TS_ASSERT_EQUALS(st.qid.type, QTDIR);
 		TS_ASSERT(st.mode & NINE_DMDIR);
+		TS_ASSERT(not (st.mode & 0222u));
 		TS_ASSERT_EQUALS(st.uid, "cogserver");
 
-		// The tv file reports its rendered size (here the default
-		// "1 0\n"), not zero, so stat-driven readers work.
-		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		// A value file is named by its key, is writable, and
+		// reports the size of its rendering, not zero, so
+		// stat-driven readers work.
+		NineMsg rw2 = walk(ses, 0, 2, value_path(_foo, key));
 		TS_ASSERT_EQUALS(rw2.type, Rwalk);
-		NineMsg ts2;
-		ts2.type = Tstat;
-		ts2.tag = 11;
-		ts2.fid = 2;
-		NineMsg rs2 = ses.dispatch(ts2);
-		TS_ASSERT_EQUALS(rs2.type, Rstat);
-		TS_ASSERT_EQUALS(nine_decode_stat(rs2.stat).length, 4u);
+		NineStat vs = nine_decode_stat(stat(ses, 2).stat);
+		TS_ASSERT_EQUALS(vs.name, "(PredicateNode \"key\")");
+		TS_ASSERT_EQUALS(vs.qid.type, QTFILE);
+		TS_ASSERT(vs.mode & 0222u);
+		TS_ASSERT_EQUALS(vs.length,
+			std::string("(FloatValue 0.5 0.25)\n").size());
 	}
 
 	// ----------------------------------------------------------
@@ -539,7 +1038,7 @@ public:
 		TS_ASSERT_EQUALS(ro3.type, Ropen);
 		NineMsg rr3 = read(ses, 3, 0, 8192);
 		TS_ASSERT_EQUALS(rr3.type, Rread);
-		TS_ASSERT_EQUALS(parse_dir(rr3.data).size(), 7u);
+		TS_ASSERT_EQUALS(parse_dir(rr3.data).size(), 6u);
 	}
 
 	// ----------------------------------------------------------
@@ -547,22 +1046,11 @@ public:
 	// value is visible to the next read, not frozen at lookup time.
 	void test_value_file_live(void)
 	{
+		Handle key = set_fv(_foo, 0.5, 0.25);
+
 		NineSession ses(_index->root());
 		start(ses);
 		std::string id = AtomFsIndex::id_of(_foo);
-
-		// Give foo a truth value so values/ has one entry.
-		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
-		TS_ASSERT_EQUALS(rw.type, Rwalk);
-		NineMsg ro = open(ses, 1, ORDWR);
-		TS_ASSERT_EQUALS(ro.type, Ropen);
-		NineMsg tw;
-		tw.type = Twrite;
-		tw.tag = 30;
-		tw.fid = 1;
-		tw.offset = 0;
-		tw.data = "0.5 0.25\n";
-		TS_ASSERT_EQUALS(ses.dispatch(tw).type, Rwrite);
 
 		// Find and open the single values/ entry.
 		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "values"});
@@ -573,6 +1061,7 @@ public:
 		TS_ASSERT_EQUALS(rl.type, Rread);
 		std::vector<NineStat> ents = parse_dir(rl.data);
 		TS_ASSERT_EQUALS(ents.size(), 1u);
+		TS_ASSERT_EQUALS(ents[0].name, "(PredicateNode \"key\")");
 
 		NineMsg rw3 = walk(ses, 0, 3,
 			{"by-handle", id, "values", ents[0].name});
@@ -581,15 +1070,14 @@ public:
 		TS_ASSERT_EQUALS(ro3.type, Ropen);
 		NineMsg r1 = read(ses, 3, 0, 8192);
 		TS_ASSERT_EQUALS(r1.type, Rread);
-		TS_ASSERT(r1.data.find("0.5") != std::string::npos);
+		TS_ASSERT_EQUALS(r1.data, "(FloatValue 0.5 0.25)\n");
 
-		// Replace the value; the already-open fid sees the new one.
-		tw.tag = 31;
-		tw.data = "0.75 0.5\n";
-		TS_ASSERT_EQUALS(ses.dispatch(tw).type, Rwrite);
+		// Replace the value behind the file system's back; the
+		// already-open fid sees the new one.
+		set_fv(_foo, 0.75, 0.5);
 		NineMsg r2 = read(ses, 3, 0, 8192);
 		TS_ASSERT_EQUALS(r2.type, Rread);
-		TS_ASSERT(r2.data.find("0.75") != std::string::npos);
+		TS_ASSERT_EQUALS(r2.data, "(FloatValue 0.75 0.5)\n");
 	}
 
 	// ----------------------------------------------------------
@@ -639,59 +1127,66 @@ public:
 	// and writes (open(5)/read(5)/write(5)).
 	void test_open_mode_enforced(void)
 	{
+		Handle key = set_fv(_foo, 1, 0);
+
 		NineSession ses(_index->root());
 		start(ses);
-		std::string id = AtomFsIndex::id_of(_foo);
 
-		// tv opened OREAD must not accept writes.
-		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		// A value file opened OREAD must not accept writes.
+		NineMsg rw = walk(ses, 0, 1, value_path(_foo, key));
 		TS_ASSERT_EQUALS(rw.type, Rwalk);
 		NineMsg ro = open(ses, 1, OREAD);
 		TS_ASSERT_EQUALS(ro.type, Ropen);
-		NineMsg tw;
-		tw.type = Twrite;
-		tw.tag = 11;
-		tw.fid = 1;
-		tw.offset = 0;
-		tw.data = "0.9 0.9\n";
-		NineMsg rwr = ses.dispatch(tw);
+		NineMsg rwr = write(ses, 1, "(FloatValue 0.9 0.9)\n");
 		TS_ASSERT_EQUALS(rwr.type, Rerror);
+		TS_ASSERT_EQUALS(rwr.ename, NINE_ERR_BAD_FID_USE);
 
-		// tv opened OWRITE must not serve reads.
-		NineMsg rw2 = walk(ses, 0, 2, {"by-handle", id, "tv"});
+		// Opened OWRITE, it must not serve reads.
+		NineMsg rw2 = walk(ses, 0, 2, value_path(_foo, key));
 		TS_ASSERT_EQUALS(rw2.type, Rwalk);
 		NineMsg ro2 = open(ses, 2, OWRITE);
 		TS_ASSERT_EQUALS(ro2.type, Ropen);
 		NineMsg rr = read(ses, 2, 0, 8192);
 		TS_ASSERT_EQUALS(rr.type, Rerror);
+
+		// And a fid that was never opened does neither.
+		NineMsg rw3 = walk(ses, 0, 3, value_path(_foo, key));
+		TS_ASSERT_EQUALS(rw3.type, Rwalk);
+		TS_ASSERT_EQUALS(read(ses, 3, 0, 8192).type, Rerror);
+		TS_ASSERT_EQUALS(write(ses, 3, "(FloatValue 0 0)").type, Rerror);
 	}
 
 	// ----------------------------------------------------------
-	// A rejected tv write is an Rerror, not a zero-count Rwrite.
-	void test_tv_write_errors(void)
+	// A rejected value write is an Rerror, not a zero-count Rwrite,
+	// carries an error a client can interpret, and leaves the
+	// value as it was.
+	void test_value_write_errors(void)
 	{
+		Handle key = set_fv(_foo, 1, 0);
+
 		NineSession ses(_index->root());
 		start(ses);
-		std::string id = AtomFsIndex::id_of(_foo);
 
-		NineMsg rw = walk(ses, 0, 1, {"by-handle", id, "tv"});
+		NineMsg rw = walk(ses, 0, 1, value_path(_foo, key));
 		TS_ASSERT_EQUALS(rw.type, Rwalk);
 		NineMsg ro = open(ses, 1, ORDWR);
 		TS_ASSERT_EQUALS(ro.type, Ropen);
 
-		NineMsg tw;
-		tw.type = Twrite;
-		tw.tag = 12;
-		tw.fid = 1;
-		tw.offset = 0;
-		tw.data = "junk";
-		NineMsg r1 = ses.dispatch(tw);
-		TS_ASSERT_EQUALS(r1.type, Rerror);
+		for (const char* bad : { "junk", "", "(FloatValue 1 0",
+		                         "(FloatValue 1 0) trailing",
+		                         "(NoSuchValue 1 0)", "(FloatValue x y)" })
+		{
+			NineMsg r = write(ses, 1, bad);
+			TS_ASSERT_EQUALS(r.type, Rerror);
+			TS_ASSERT_EQUALS(r.ename, NINE_ERR_INVALID);
+		}
 
-		tw.offset = 4;
-		tw.data = "0.5 0.5\n";
-		NineMsg r2 = ses.dispatch(tw);
+		// A value is replaced whole: no writing into the middle.
+		NineMsg r2 = write(ses, 1, "(FloatValue 0.5 0.5)\n", 4);
 		TS_ASSERT_EQUALS(r2.type, Rerror);
+		TS_ASSERT_EQUALS(r2.ename, NINE_ERR_INVALID);
+
+		TS_ASSERT_EQUALS(read(ses, 1, 0, 8192).data, "(FloatValue 1 0)\n");
 	}
 
 	// ----------------------------------------------------------
@@ -699,30 +1194,15 @@ public:
 	// different files and must not share a Qid.
 	void test_value_qids_distinct(void)
 	{
+		// Give both foo and bar a value under the same key.
+		set_fv(_foo, 0.5, 0.25);
+		set_fv(_bar, 0.5, 0.25);
+
 		NineSession ses(_index->root());
 		start(ses);
 
-		// Give both foo and bar a value under the truth key.
-		for (const Handle& h : { _foo, _bar })
-		{
-			std::string id = AtomFsIndex::id_of(h);
-			uint32_t fid = (h == _foo) ? 1 : 2;
-			NineMsg rw = walk(ses, 0, fid, {"by-handle", id, "tv"});
-			TS_ASSERT_EQUALS(rw.type, Rwalk);
-			NineMsg ro = open(ses, fid, OWRITE);
-			TS_ASSERT_EQUALS(ro.type, Ropen);
-			NineMsg tw;
-			tw.type = Twrite;
-			tw.tag = 13;
-			tw.fid = fid;
-			tw.offset = 0;
-			tw.data = "0.5 0.25\n";
-			NineMsg rwr = ses.dispatch(tw);
-			TS_ASSERT_EQUALS(rwr.type, Rwrite);
-		}
-
-		// List values/ of each atom; the (single) truth-key entries
-		// carry the same name but distinct Qids.
+		// List values/ of each atom; the (single) entries carry
+		// the same name but distinct Qids.
 		std::vector<NineStat> foo_vals, bar_vals;
 		for (const Handle& h : { _foo, _bar })
 		{
@@ -874,6 +1354,7 @@ public:
 		tbad.data = "this is not an atom";
 		NineMsg rbad = ses.dispatch(tbad);
 		TS_ASSERT_EQUALS(rbad.type, Rerror);
+		TS_ASSERT_EQUALS(rbad.ename, NINE_ERR_INVALID);
 
 		// So do empty, whitespace-only, unbalanced, and
 		// trailing-garbage writes.
@@ -890,6 +1371,21 @@ public:
 		NineMsg rr3 = read(ses, 1, 0, 8192);
 		TS_ASSERT_EQUALS(rr3.type, Rread);
 		TS_ASSERT_EQUALS(rr3.data, expect);
+
+		// An atom may bring values along, as an association list;
+		// they are attached even when the atom already exists.
+		NineMsg rwv = write(ses, 1, "(Concept \"foo\" (alist "
+			"(cons (Predicate \"k\") (FloatValue 3 4))))");
+		TS_ASSERT_EQUALS(rwv.type, Rwrite);
+		Handle k = _as->get_node(PREDICATE_NODE, "k");
+		TS_ASSERT(nullptr != k);
+		if (k)
+		{
+			FloatValuePtr fv = FloatValueCast(_foo->getValue(k));
+			TS_ASSERT(nullptr != fv);
+			if (fv)
+				TS_ASSERT(fv->value() == std::vector<double>({3, 4}));
+		}
 	}
 
 	// ----------------------------------------------------------

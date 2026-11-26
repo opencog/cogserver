@@ -81,6 +81,57 @@ static const uint32_t NINE_DEFAULT_MSIZE = 8192;
 static const uint32_t NINE_MIN_MSIZE = 256;
 static const char* const NINE_VERSION = "9P2000";
 
+/**
+ * Rerror texts.
+ *
+ * A 9P2000 Rerror carries nothing but a string. Plan 9 clients show
+ * it to the user as is; the Linux v9fs client instead converts it
+ * to an errno by exact, case-sensitive match against a fixed table
+ * (net/9p/error.c), and reports anything it does not find there as
+ * the opaque "Unknown error 526" (ESERVERFAULT). Every error this
+ * server sends is therefore one of the strings below, each of which
+ * is an entry of that table; the errno Linux derives from it is
+ * noted alongside. Use these (normally by throwing a NineError, see
+ * NineNode.h) instead of ad-hoc text; descriptive detail belongs in
+ * the log, not on the wire.
+ */
+static const char* const NINE_ERR_UNKNOWN_FID =
+	"fid unknown or out of range";                      // EBADF
+static const char* const NINE_ERR_FID_IN_USE =
+	"fid already in use";                               // EBADF
+static const char* const NINE_ERR_BAD_FID_USE =
+	"bad use of fid";                                   // EBADF
+static const char* const NINE_ERR_NOT_FOUND =
+	"file not found";                                   // ENOENT
+static const char* const NINE_ERR_EXISTS =
+	"file already exists";                              // EEXIST
+static const char* const NINE_ERR_PERM =
+	"permission denied";                                // EACCES
+static const char* const NINE_ERR_READ_ONLY =
+	"read only file system";                            // EROFS
+static const char* const NINE_ERR_BAD_MODE =
+	"illegal mode";                                     // EINVAL
+static const char* const NINE_ERR_INVALID =
+	"Invalid argument";                                 // EINVAL
+static const char* const NINE_ERR_IS_DIR =
+	"Is a directory";                                   // EISDIR
+static const char* const NINE_ERR_NOT_DIR =
+	"not a directory";                                  // ENOTDIR
+static const char* const NINE_ERR_WSTAT =
+	"wstat prohibited";                                 // EPERM
+static const char* const NINE_ERR_BAD_WSTAT =
+	"bogus wstat buffer";                               // EPROTO
+static const char* const NINE_ERR_TRUNCATE =
+	"only support truncation to zero length";           // EPERM
+static const char* const NINE_ERR_DIR_OFFSET =
+	"bad offset in directory read";                     // ESPIPE
+static const char* const NINE_ERR_TOO_LARGE =
+	"i/o count too large";                              // EIO
+static const char* const NINE_ERR_IO =
+	"i/o error";                                        // EIO
+static const char* const NINE_ERR_NOT_IMPL =
+	"Function not implemented";                         // ENOSYS
+
 /// A 13-byte Qid: server-unique file identity plus type/version.
 struct NineQid
 {

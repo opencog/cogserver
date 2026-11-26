@@ -49,12 +49,19 @@ struct NineFid
  * mounts in one session never affect another); the underlying node
  * trees (see AtomFs.h) are shared between them.
  *
- * The tree is structurally read-only: Tcreate and Twstat are
- * rejected, and Tremove is refused with Rerror (though the fid is
- * still clunked, per remove(5)).
- * Individual files may still accept Twrite (e.g. the per-atom `tv`
- * file, or the /new control file) when their node reports
- * is_writable().
+ * The session owns no file semantics of its own. It enforces the
+ * protocol rules (fid lifecycle, open modes, msize, directory read
+ * paging) and hands every change to the node concerned: Twrite to
+ * NineNode::write(), Topen(OTRUNC) and a length-changing Twstat to
+ * truncate(), Tcreate to create(), Tremove to remove(). A node
+ * that does not override those is immutable, and the request is
+ * refused. Twstat can change nothing else: renames and changes of
+ * mode or ownership are refused, while a Twstat that changes
+ * nothing (including the all-"don't touch" sync form) succeeds.
+ *
+ * Every Rerror carries one of the NINE_ERR_* strings of Nine9P.h,
+ * which the Linux v9fs client can map to an errno; nodes signal
+ * failure by throwing a NineError.
  */
 class NineSession
 {
@@ -88,11 +95,13 @@ private:
 	NineMsg do_attach(const NineMsg&);
 	NineMsg do_walk(const NineMsg&);
 	NineMsg do_open(const NineMsg&);
+	NineMsg do_create(const NineMsg&);
 	NineMsg do_read(const NineMsg&);
 	NineMsg do_write(const NineMsg&);
 	NineMsg do_clunk(const NineMsg&);
 	NineMsg do_remove(const NineMsg&);
 	NineMsg do_stat(const NineMsg&);
+	NineMsg do_wstat(const NineMsg&);
 	NineMsg do_flush(const NineMsg&);
 
 	static std::string parent_path(const std::string& path);
