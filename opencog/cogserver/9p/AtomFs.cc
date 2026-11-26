@@ -14,6 +14,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <set>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -54,7 +55,9 @@ std::string AtomFsIndex::id_of(const Handle& h)
 // names an atom or reads Atomese from a client goes through here.
 
 /// Longest directory-entry name handed out: NAME_MAX on Linux,
-/// whose v9fs client cannot look up anything longer.
+/// whose v9fs client cannot look up anything longer. A stat entry
+/// with a name this long must still fit in a directory read at the
+/// smallest negotiable msize; see NINE_MIN_MSIZE.
 static const size_t ATOMFS_NAME_MAX = 255;
 
 /// True if `s` can serve as a directory-entry name on every client:
@@ -542,28 +545,48 @@ public:
 		// The file name says which key the value goes under.
 		Handle key = parse_atom(child_name);
 		std::string spelling = spell(key);
-		for (const Handle& have : keys())
+
+		// Checking that the name is free and reserving it are one
+		// step: of two clients creating the same key at once,
+		// exactly one must succeed.
+		std::lock_guard<std::mutex> lock(_slots->mtx);
+		for (const Handle& have : keys_locked())
 			if (spell(have) == spelling)
 				throw NineError(NINE_ERR_EXISTS);
-
-		std::lock_guard<std::mutex> lock(_slots->mtx);
 		_slots->pending[spelling] = key;
 		return std::make_shared<ValueFileNode>(_slots, key);
 	}
 
 private:
-	/// Every key with a value, then those created but not yet
+	/// Every key with a value, then every key created but not yet
 	/// written.
 	HandleSeq keys() const
 	{
-		Handle atom = _slots->live();
-		HandleSet have = atom->getKeys();
-		HandleSeq out(have.begin(), have.end());
-
 		std::lock_guard<std::mutex> lock(_slots->mtx);
+		return keys_locked();
+	}
+
+	/// As keys(), for a caller that holds the slots' mutex.
+	///
+	/// The order of the two reads matters. The first write to a
+	/// new file sets the value and only then drops the pending
+	/// entry, so a key that is no longer pending here has its
+	/// value by the time the values are read: a file never goes
+	/// missing while it turns from pending into stored.
+	HandleSeq keys_locked() const
+	{
+		HandleSeq out;
+		std::set<std::string> waiting;
 		for (const auto& p : _slots->pending)
-			if (nullptr == atom->getValue(p.second))
-				out.push_back(p.second);
+			waiting.insert(p.first);
+
+		for (const Handle& key : _slots->live()->getKeys())
+		{
+			waiting.erase(spell(key));
+			out.push_back(key);
+		}
+		for (const std::string& spelling : waiting)
+			out.push_back(_slots->pending.at(spelling));
 		return out;
 	}
 
@@ -863,8 +886,14 @@ NineNodePtr AtomFsIndex::dir_for(const Handle& h)
 		[self, atom](const std::string& n) -> NineNodePtr
 		{
 			// As under by-type/: the listed name, any other
-			// spelling of it, or the id.
-			Handle named = self->atom_named(n);
+			// spelling of it, or the id. The name is compared with
+			// the incoming links themselves rather than looked up
+			// in the exported space, because an incoming set can
+			// hold links that live in another frame.
+			Handle named;
+			try { named = parse_atom(n); }
+			catch (const NineError&) {}
+
 			for (const Handle& ih : atom->getIncomingSet())
 			{
 				bool hit = named ? (*ih == *named)

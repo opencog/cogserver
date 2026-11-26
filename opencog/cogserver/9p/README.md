@@ -94,6 +94,17 @@ a read-only parent frame copies it into the exported space
 value file (which `>` does before writing) leaves the value in
 place, so a redirection whose write is rejected loses nothing.
 
+A value file is a view of one slot, the value of that atom at that
+key, not a snapshot of it. The AtomSpace can change underneath the
+file system at any time, so an open file follows the slot: it reads
+whatever value is there now, and writing through it sets the value
+even if the value was removed in the meantime.
+
+The contents of a value are checked by the AtomSpace's s-expression
+decoder, which is strict about some types and lenient about others:
+`(FloatValue x)` is refused, but `(BoolValue x)` is accepted as an
+empty BoolValue.
+
 There is no separate truth-value file: TruthValues are gone from the
 AtomSpace, and a truth value is simply the `FloatValue` stored under
 `(PredicateNode "*-TruthValueKey-*")`, as above.

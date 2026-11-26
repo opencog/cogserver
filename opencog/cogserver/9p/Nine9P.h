@@ -75,10 +75,13 @@ static const uint16_t NINE_NOTAG = 0xFFFFu;
 /// Maximum number of wname/wqid elements in Twalk/Rwalk (walk(5)).
 static const size_t NINE_MAXWELEM = 16;
 static const uint32_t NINE_DEFAULT_MSIZE = 8192;
-/// Smallest msize this server will negotiate; anything less cannot
-/// usefully carry replies (an Rread header alone is 11 bytes, and
-/// stat entries routinely approach 100 bytes).
-static const uint32_t NINE_MIN_MSIZE = 256;
+/// Smallest msize this server will negotiate. A directory read
+/// returns whole stat entries, which cannot be split, so the
+/// smallest msize must carry the largest entry the server lists or
+/// the rest of that directory becomes unreadable. With the longest
+/// name handed out (255 bytes) and the fixed owner strings, an
+/// entry is 333 bytes, and an Rread header adds 11.
+static const uint32_t NINE_MIN_MSIZE = 512;
 static const char* const NINE_VERSION = "9P2000";
 
 /**
