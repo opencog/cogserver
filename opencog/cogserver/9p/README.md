@@ -38,18 +38,83 @@ The file tree
 -------------
 `AtomFs.h` documents the layout in detail. In brief:
 
-    /by-type/<TYPE_NAME>/<id>/     one directory per atom
+    /by-type/<TYPE_NAME>/<atom>/   one directory per atom
     /by-handle/<id>/               the same directories, by id
     /new                           atom-creation control file
 
-where `<id>` is the atom's content hash as fixed-width hex, and each
-atom directory holds `name`, `type`, `to_string`, `tv`, `outgoing/`,
-`incoming/` and `values/` entries. The `tv` file is writable
-("<strength> <confidence>"); the atom entries are otherwise
-read-only. The same atom is always the same NineNode, so
-`outgoing/`/`incoming/` entries are genuine hard links (identical
-Qids) to the `by-handle` entries.
+Each atom directory holds `name`, `type`, `to_string`, `outgoing/`,
+`incoming/` and `values/` entries. The same atom is always the same
+NineNode, so the `by-type`, `outgoing/` and `incoming/` entries are
+genuine hard links (identical Qids) to the `by-handle` entries.
 
+Atoms are named by their s-expression, written on one line with full
+type names; `<id>` is the atom's content hash as fixed-width hex:
+
+    $ ls /mnt/atomspace/by-type/ConceptNode
+    '(ConceptNode "bar")'  '(ConceptNode "foo")'
+    $ ls '/mnt/atomspace/by-type/ConceptNode/(ConceptNode "foo")/incoming'
+    '(ListLink (ConceptNode "foo")(ConceptNode "bar"))'
+
+An s-expression that cannot serve as a file name -- it contains a
+slash or a control character, or is longer than 255 bytes -- is
+listed under its id instead. Lookups are more liberal than listings:
+wherever an atom is listed by s-expression it also answers to its
+id, and to any other spelling that decodes to the same atom, so
+`cd '(Concept "foo")'` works too. Looking a name up never adds
+anything to the AtomSpace.
+
+Values
+------
+`outgoing/` and `values/` are alike, except that the first is
+positional and anonymous (`0`, `1`, ...) while the second is keyed
+by name. Each value is a file named by its key and holding the value
+as an s-expression:
+
+    $ cd '/mnt/atomspace/by-type/ConceptNode/(ConceptNode "foo")/values'
+    $ ls
+    '(PredicateNode "*-TruthValueKey-*")'
+    $ cat '(PredicateNode "*-TruthValueKey-*")'
+    (FloatValue 0.5 0.25)
+
+Unless the AtomSpace is read-only, values can be changed with
+ordinary file operations:
+
+    $ echo '(FloatValue 0.9 0.1)' > '(PredicateNode "*-TruthValueKey-*")'
+    $ echo '(StringValue "hello")' > '(Predicate "greeting")'
+    $ rm '(PredicateNode "greeting")'
+
+Writing replaces the value, creating a file attaches a value under a
+new key (the file name is the key's s-expression), and removing the
+file deletes the value. Each write must hold exactly one complete
+value, written at the start of the file. Atoms appearing in a value,
+and a newly created key, are added to the AtomSpace. Changes go
+through `AtomSpace::set_value()`, so changing an atom inherited from
+a read-only parent frame copies it into the exported space
+(copy-on-write) rather than touching the parent. Truncating a
+value file (which `>` does before writing) leaves the value in
+place, so a redirection whose write is rejected loses nothing.
+
+A value file is a view of one slot, the value of that atom at that
+key, not a snapshot of it. The AtomSpace can change underneath the
+file system at any time, so an open file follows the slot: it reads
+whatever value is there now, and writing through it sets the value
+even if the value was removed in the meantime.
+
+The contents of a value are checked by the AtomSpace's s-expression
+decoder, which is strict about some types and lenient about others:
+`(FloatValue x)` is refused, but `(BoolValue x)` is accepted as an
+empty BoolValue.
+
+There is no separate truth-value file: TruthValues are gone from the
+AtomSpace, and a truth value is simply the `FloatValue` stored under
+`(PredicateNode "*-TruthValueKey-*")`, as above.
+
+A value that is itself an Atom or a LinkValue is shown as a file
+holding its s-expression, like any other; presenting such values as
+directories is an open design question.
+
+Creating atoms
+--------------
 The `/new` control file creates atoms: write an Atomese
 s-expression, then read back the new atom's path --
 
@@ -57,10 +122,17 @@ s-expression, then read back the new atom's path --
     cat /mnt/atomspace/new
     /by-handle/0123...cdef
 
+The expression may carry values with it, which are attached whether
+or not the atom already existed:
+
+    echo '(Concept "foo" (alist (cons (Predicate "k") (FloatValue 1 2))))' \
+        > /mnt/atomspace/new
+
 A malformed s-expression makes the write fail (Rerror): each write
 must hold exactly one complete, balanced expression, with nothing
 but whitespace around it. If the
-AtomSpace is read-only, `/new` reports itself non-writable.
+AtomSpace is read-only, `/new` and the value files report themselves
+non-writable, and nothing can be changed.
 
 Namespaces
 ----------
@@ -87,17 +159,60 @@ graft a tree onto a fresh path that no underlying tree contains;
 such a path is walkable but does not appear in its parent
 directory's listing.
 
+Changing the tree
+-----------------
+The session implements no file semantics of its own. It enforces the
+protocol rules and hands every change to the node concerned, through
+four hooks on `NineNode`, all of which refuse by default:
+
+    Twrite                          write()
+    Topen with OTRUNC,
+      Twstat changing the length    truncate()
+    Tcreate                         create()     (on the directory)
+    Tremove                         remove()
+
+A node is therefore immutable unless it overrides one of these, and
+making some part of the tree changeable is a matter of overriding
+them there; the session needs no change. At present `/new` accepts
+`write()` and `truncate()`, a `values/` directory `create()`, and a
+value file `write()`, `truncate()` and `remove()`.
+
+Twstat can do nothing beyond that: renames and changes of mode or
+ownership are refused. A Twstat that changes nothing succeeds -- in
+particular the all-"don't touch" form, which asks for a sync -- and
+on a writable file the times may be "set" (none are kept). This
+matters on Linux, whose v9fs client truncates by Twstat: a shell
+`>` redirection opens the file, sends a Twstat setting the length to
+zero, and only then writes.
+
+Errors
+------
+A 9P2000 Rerror carries only a string. Plan 9 shows it to the user;
+the Linux v9fs client turns it into an errno by exact match against
+a fixed table (`net/9p/error.c` in the kernel), and reports any
+string it does not know as `Unknown error 526`. Every error this
+server sends is therefore one of the `NINE_ERR_*` strings of
+`Nine9P.h`, all of them entries of that table (`file not found` is
+ENOENT, `permission denied` is EACCES, `read only file system` is
+EROFS, `Invalid argument` is EINVAL, and so on). Nodes report
+failure by throwing a `NineError` naming one of those strings; the
+description of what actually went wrong goes to the cogserver log
+(at debug level), not onto the wire.
+
 Simplifications
 ---------------
-* The tree is structurally read-only: Tcreate and Twstat are
-  rejected; Tremove is refused with an error, though the fid is
-  still clunked, per remove(5). New atoms are made through the
-  `/new` control file instead.
+* Only values can be changed in place. Atoms are created through
+  `/new`, and cannot be removed or renamed; directories cannot be
+  created.
+* Each write to `/new` or to a value file must carry one complete
+  s-expression, so it must fit in a single Twrite (the negotiated
+  msize, 8192 bytes at most, less 23).
 * A directory Tread at offset 0 snapshots the listing for that fid;
   subsequent sequential reads page through the snapshot, each reply
   carrying an integral number of stat entries, per read(5).
 * Rread replies are clamped to the negotiated msize, and oversized
   Twrite payloads are rejected.
+* Opening with ORCLOSE is refused, and no timestamps are kept.
 * Tauth is rejected (no authentication) and Tflush is acknowledged
   trivially (dispatch is strictly synchronous).
 * Namespace rearrangement is a server-side (C++) API; there is no
